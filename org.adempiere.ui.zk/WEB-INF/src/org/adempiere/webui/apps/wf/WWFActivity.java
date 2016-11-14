@@ -56,7 +56,6 @@ import org.compiere.util.Trx;
 import org.compiere.util.ValueNamePair;
 import org.compiere.wf.IWorkflowAware;
 import org.compiere.wf.MWFActivity;
-import org.compiere.wf.MWFActivity.ClauseAndParams;
 import org.compiere.wf.MWFNode;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
