@@ -39,7 +39,6 @@ import org.adempiere.webui.editor.WSearchEditor;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.panel.StatusBarPanel;
 import org.adempiere.webui.theme.ThemeManager;
-import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
 import org.compiere.model.MColumn;
 import org.compiere.model.MLookup;
@@ -55,7 +54,9 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.ValueNamePair;
+import org.compiere.wf.IWorkflowAware;
 import org.compiere.wf.MWFActivity;
+import org.compiere.wf.MWFActivity.ClauseAndParams;
 import org.compiere.wf.MWFNode;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
@@ -64,15 +65,17 @@ import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
-import org.zkoss.zul.North;
-import org.zkoss.zul.South;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Html;
+import org.zkoss.zul.North;
+import org.zkoss.zul.South;
 
 /**
  * Direct port from WFActivity
  * @author hengsin
+ * @author Silvano Trinchero, www.freepath.it
+ *  	   <li>IDEMPIERE-3209 support for IWorkflowAware on forms
  *
  */
 public class WWFActivity extends ADForm implements EventListener<Event>
@@ -147,8 +150,8 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 	private void init()
 	{
 		Grid grid = new Grid();
-		ZKUpdateUtil.setWidth(grid, "100%");
-		ZKUpdateUtil.setHeight(grid, "100%");
+		grid.setWidth("100%");
+        grid.setHeight("100%");
         grid.setStyle("margin:0; padding:0; position: absolute; align: center; valign: center;");
         grid.makeNoStrip();
         grid.setOddRowSclass("even");
@@ -163,8 +166,8 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 		div.appendChild(lNode);
 		row.appendChild(div);
 		row.appendChild(fNode);
-		ZKUpdateUtil.setWidth(fNode, "100%");
-		ZKUpdateUtil.setHflex(fNode, "true");
+		fNode.setWidth("100%");
+		fNode.setHflex("true");
 		fNode.setReadonly(true);
 
 		row = new Row();
@@ -176,8 +179,8 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 		row.appendChild(div);
 		row.appendChild(fDescription);
 		fDescription.setMultiline(true);
-		ZKUpdateUtil.setWidth(fDescription, "100%");
-		ZKUpdateUtil.setHflex(fDescription, "true");
+		fDescription.setWidth("100%");
+		fDescription.setHflex("true");
 		fDescription.setReadonly(true);
 
 		row = new Row();
@@ -189,9 +192,9 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 		row.appendChild(fHelp);
 		fHelp.setMultiline(true);
 		fHelp.setRows(3);
-		ZKUpdateUtil.setWidth(fHelp, "100%");
-		ZKUpdateUtil.setHeight(fHelp, "100%");
-		ZKUpdateUtil.setHflex(fHelp, "true");
+		fHelp.setWidth("100%");
+		fHelp.setHeight("100%");
+		fHelp.setHflex("true");
 		fHelp.setReadonly(true);
 		row.appendChild(new Label());
 
@@ -202,7 +205,7 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 		div.appendChild(lHistory);
 		row.appendChild(div);
 		row.appendChild(fHistory);
-		ZKUpdateUtil.setHflex(fHistory, "true");
+		fHistory.setHflex("true");
 		row.appendChild(new Label());
 
 		row = new Row();
@@ -213,7 +216,7 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 		row.appendChild(div);
 		Hbox hbox = new Hbox();
 		hbox.appendChild(fAnswerText);
-		ZKUpdateUtil.setHflex(fAnswerText, "true");
+		fAnswerText.setHflex("true");
 		hbox.appendChild(fAnswerList);
 		hbox.appendChild(fAnswerButton);
 		fAnswerButton.addEventListener(Events.ON_CLICK, this);
@@ -228,9 +231,9 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 		div.appendChild(lTextMsg);
 		row.appendChild(div);
 		row.appendChild(fTextMsg);
-		ZKUpdateUtil.setHflex(fTextMsg, "true");
+		fTextMsg.setHflex("true");
 		fTextMsg.setMultiline(true);
-		ZKUpdateUtil.setWidth(fTextMsg, "100%");
+		fTextMsg.setWidth("100%");
 		row.appendChild(new Label());
 
 		row = new Row();
@@ -247,16 +250,16 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 		bOK.addEventListener(Events.ON_CLICK, this);
 
 		Borderlayout layout = new Borderlayout();
-		ZKUpdateUtil.setWidth(layout, "100%");
-		ZKUpdateUtil.setHeight(layout, "100%");
+		layout.setWidth("100%");
+		layout.setHeight("100%");
 		layout.setStyle("background-color: transparent; position: absolute;");
 
 		North north = new North();
 		north.appendChild(listbox);
 		north.setSplittable(true);
-		ZKUpdateUtil.setVflex(listbox, "1");
-		ZKUpdateUtil.setHflex(listbox, "1");
-		ZKUpdateUtil.setHeight(north, "50%");
+		listbox.setVflex("1");
+		listbox.setHflex("1");
+		north.setHeight("50%");
 		layout.appendChild(north);
 		north.setStyle("background-color: transparent");
 		listbox.addEventListener(Events.ON_SELECT, this);
@@ -265,8 +268,8 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 		center.appendChild(grid);
 		layout.appendChild(center);
 		center.setStyle("background-color: transparent");
-		ZKUpdateUtil.setVflex(grid, "1");
-		ZKUpdateUtil.setHflex(grid, "1");
+		grid.setVflex("1");
+		grid.setHflex("1");
 
 		South south = new South();
 		south.appendChild(statusBar);
@@ -418,13 +421,13 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 
 		WListItemRenderer renderer = new WListItemRenderer(Arrays.asList(columns));
 		ListHeader header = new ListHeader();
-		ZKUpdateUtil.setWidth(header, "60px");
+		header.setWidth("60px");
 		renderer.setListHeader(0, header);
 		header = new ListHeader();
-		ZKUpdateUtil.setWidth(header, null);
+		header.setWidth(null);
 		renderer.setListHeader(1, header);
 		header = new ListHeader();
-		ZKUpdateUtil.setWidth(header, null);
+		header.setWidth(null);
 		renderer.setListHeader(2, header);
 		renderer.addTableValueChangeListener(listbox);
 		model.setNoColumns(columns.length);
@@ -437,6 +440,9 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 	}	//	loadActivities
 
 	private String getWhereActivities() {
+		
+		ClauseAndParams cap = MWFActivity.getActivitiesWhere();
+		
 		final String where =
 			"a.Processed='N' AND a.WFState='OS' AND ("
 			//	Owner of Activity
@@ -604,8 +610,29 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 			int AD_Form_ID = node.getAD_Form_ID();
 
 			ADForm form = ADForm.openForm(AD_Form_ID);
+			
+			// IDEMPIERE-3209 support for IWorkflowAware on forms
+			
+			if(form instanceof IWorkflowAware)
+			{
+				((IWorkflowAware)form).setWFActivity(m_activity);
+			}
+			
 			form.setAttribute(Window.MODE_KEY, form.getWindowMode());
 			AEnv.showWindow(form);
+			
+			// IDEMPIERE-3209 support for IWorkflowAware on forms
+			
+			if(form instanceof IWorkflowAware)
+			{
+				boolean bRefresh = ((IWorkflowAware) form).isShouldRefreshActivityList();
+				
+				if(bRefresh)
+				{
+					loadActivities();
+					display(-1);
+				}				
+			}
 		}
 		else
 			log.log(Level.SEVERE, "No User Action:" + node.getAction());

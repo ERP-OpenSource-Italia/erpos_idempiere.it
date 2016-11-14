@@ -71,6 +71,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.ValueNamePair;
+import org.compiere.wf.IWorkflowAware;
 import org.compiere.wf.MWFActivity;
 import org.compiere.wf.MWFNode;
 
@@ -85,6 +86,8 @@ import org.compiere.wf.MWFNode;
  * 			<li> BF[2992649] Issue in Workflow Activities when the records are ordered
  * 			<li> https://sourceforge.net/tracker/?func=detail&aid=2992649&group_id=176962&atid=879332
  *  @author     Compiere - CarlosRuiz integrate code for table selection on workflow present at GPL version of Compiere 3.2.0
+ *  @author 	Silvano Trinchero, www.freepath.it
+ *  	   		<li>IDEMPIERE-3209 support for IWorkflowAware on forms
  */
 public class WFActivity extends CPanel 
 	implements FormPanel, ActionListener, ListSelectionListener
@@ -685,10 +688,32 @@ public class WFActivity extends CPanel
 		{
 			int AD_Form_ID = node.getAD_Form_ID();
 			FormFrame ff = new FormFrame(null);
+			
+			// IDEMPIERE-3209 support for IWorkflowAware on forms
+			
+			FormPanel fp = ff.getFormPanel();
+			
+			if(fp instanceof IWorkflowAware)
+			{
+				((IWorkflowAware) fp).setWFActivity(m_activity);
+			}
+			
 			ff.openForm(AD_Form_ID);
 			ff.pack();
 			AEnv.addToWindowManager(ff);
 			AEnv.showCenterScreen(ff);
+			
+			// IDEMPIERE-3209 support for IWorkflowAware on forms
+			
+			if(fp instanceof IWorkflowAware)
+			{
+				boolean bRefresh = ((IWorkflowAware) fp).isShouldRefreshActivityList();
+				
+				if(bRefresh)
+				{
+					loadActivities();
+				}
+			}	
 		}
 		/*
 		else if (MWFNode.ACTION_UserWorkbench.equals(node.getAction()))
