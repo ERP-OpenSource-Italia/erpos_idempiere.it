@@ -440,9 +440,6 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 	}	//	loadActivities
 
 	private String getWhereActivities() {
-		
-		ClauseAndParams cap = MWFActivity.getActivitiesWhere();
-		
 		final String where =
 			"a.Processed='N' AND a.WFState='OS' AND ("
 			//	Owner of Activity
@@ -460,6 +457,7 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 			+ ") AND a.AD_Client_ID=?";	//	#5
 		return where;
 	}
+
 
 	/**
 	 * 	Reset Display
