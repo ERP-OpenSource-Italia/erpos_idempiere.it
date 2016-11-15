@@ -16,6 +16,8 @@
  *****************************************************************************/
 package org.compiere.wf;
 
+import static org.compiere.model.SystemIDs.MESSAGE_WORKFLOWRESULT;
+
 import java.io.File;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
@@ -31,6 +33,7 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 
+import org.adempiere.base.Service;
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MAttachment;
 import org.compiere.model.MBPartner;
@@ -51,7 +54,6 @@ import org.compiere.model.MUser;
 import org.compiere.model.MUserRoles;
 import org.compiere.model.PO;
 import org.compiere.model.Query;
-import static org.compiere.model.SystemIDs.*;
 import org.compiere.model.X_AD_WF_Activity;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.DocAction;
@@ -64,6 +66,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.Trace;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
+import org.compiere.util.WhereClauseAndParams;
 
 /**
  *	Workflow Activity Model.
@@ -1923,5 +1926,50 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		}
 		return sb.toString();
 	}	//	getSummary
-
+	
+	/** Get the where clause for activities, and the set of parameters needed
+	 * 
+	 * @return where clause and list of params
+	 */
+	public static WhereClauseAndParams getActivitiesWhere(Properties env)
+	{
+		String where = "a.Processed='N' AND a.WFState='OS' AND ("
+				//	Owner of Activity
+				+ " a.AD_User_ID=?"	//	#1
+				//	Invoker (if no invoker = all)
+				+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID"
+				+ " AND r.ResponsibleType='H' AND COALESCE(r.AD_User_ID,0)=0 AND COALESCE(r.AD_Role_ID,0)=0 AND (a.AD_User_ID=? OR a.AD_User_ID IS NULL))"	//	#2
+				//  Responsible User
+				+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID"
+				+ " AND r.ResponsibleType='H' AND r.AD_User_ID=?)"		//	#3
+				//	Responsible Role
+				+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r INNER JOIN AD_User_Roles ur ON (r.AD_Role_ID=ur.AD_Role_ID)"
+				+ " WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID AND r.ResponsibleType='R' AND ur.AD_User_ID=?)"	//	#4
+				//
+				+ ") AND a.AD_Client_ID=?";	//	#5
+		
+		int AD_User_ID = Env.getAD_User_ID(env);
+		int AD_Client_ID = Env.getAD_Client_ID(env);
+		
+		List<Object> params = new ArrayList<Object>();
+		params.add(AD_User_ID);
+		params.add(AD_User_ID);
+		params.add(AD_User_ID);
+		params.add(AD_User_ID);
+		params.add(AD_Client_ID);
+		
+		WhereClauseAndParams cap = new WhereClauseAndParams(where,params);
+		
+		List<IActivitiesQuery> aqs = Service.locator().list(IActivitiesQuery.class).getServices();
+		
+		if (aqs != null) 
+		{
+			for(IActivitiesQuery aq : aqs)
+			{
+				aq.refineQuery(cap);
+			}
+		}
+		
+		return cap;
+	}
 }	//	MWFActivity
