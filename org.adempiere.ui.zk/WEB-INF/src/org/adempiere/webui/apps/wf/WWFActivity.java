@@ -55,6 +55,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.ValueNamePair;
+import org.compiere.wf.IWorkflowAware;
 import org.compiere.wf.MWFActivity;
 import org.compiere.wf.MWFNode;
 import org.zkoss.zk.ui.Component;
@@ -73,7 +74,8 @@ import org.zkoss.zul.Html;
 /**
  * Direct port from WFActivity
  * @author hengsin
- *
+ * @author Silvano Trinchero, www.freepath.it
+ *  	   <li>IDEMPIERE-3209 support for IWorkflowAware on forms
  */
 public class WWFActivity extends ADForm implements EventListener<Event>
 {
@@ -604,8 +606,29 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 			int AD_Form_ID = node.getAD_Form_ID();
 
 			ADForm form = ADForm.openForm(AD_Form_ID);
+			
+			// IDEMPIERE-3209 support for IWorkflowAware on forms
+			
+			if(form instanceof IWorkflowAware)
+			{
+				((IWorkflowAware)form).setWFActivity(m_activity);
+			}			
+			
 			form.setAttribute(Window.MODE_KEY, form.getWindowMode());
 			AEnv.showWindow(form);
+			
+			// IDEMPIERE-3209 support for IWorkflowAware on forms
+			
+			if(form instanceof IWorkflowAware)
+			{
+				boolean bRefresh = ((IWorkflowAware) form).isShouldRefreshActivityList();
+				
+				if(bRefresh)
+				{
+					loadActivities();
+					display(-1);
+				}				
+			}			
 		}
 		else
 			log.log(Level.SEVERE, "No User Action:" + node.getAction());
