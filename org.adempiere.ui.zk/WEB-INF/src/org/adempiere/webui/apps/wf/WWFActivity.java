@@ -78,8 +78,7 @@ import org.zkoss.zul.Html;
  * @author hengsin
  * @author Silvano Trinchero, www.freepath.it
  *  	   <li>IDEMPIERE-3209 support for IWorkflowAware on forms
- *         <li>IDEMPIERE-3216 usage of factory for activities query, deprecated getActivitiesCount and removed getActivitiesWhere 
- *
+ *         <li>IDEMPIERE-3216 usage of factory for activities query, deprecated getActivitiesCount and removed getActivitiesWhere
  */
 public class WWFActivity extends ADForm implements EventListener<Event>
 {
@@ -335,6 +334,8 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 
 		model = new ListModelTable();
 		
+		// IDEMPIERE-3216 introduced usage of configurable where clause
+		
 		WhereClauseAndParams cap = MWFActivity.getActivitiesWhere(Env.getCtx());
 
 		ArrayList<MWFActivity> list = new ArrayList<MWFActivity>();
@@ -563,7 +564,7 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 			if(form instanceof IWorkflowAware)
 			{
 				((IWorkflowAware)form).setWFActivity(m_activity);
-			}
+			}			
 			
 			form.setAttribute(Window.MODE_KEY, form.getWindowMode());
 			AEnv.showWindow(form);
