@@ -11,6 +11,7 @@
    <extension-point id="org.adempiere.model.IShipmentProcessor" name="Shipment Processor" schema="schema/org.adempiere.model.IShipmentProcessor.exsd"/>
    <extension-point id="org.adempiere.model.IAddressValidation" name="Address Validation" schema="schema/org.adempiere.model.IAddressValidation.exsd"/>
    <extension-point id="org.adempiere.model.ITaxProvider" name="Tax Provider" schema="schema/org.adempiere.model.ITaxProvider.exsd"/>
+   <extension-point id="org.compiere.wf.IActivitiesQuery" name="Activities Query" schema="schema/org.compiere.wf.IActivitiesQuery.exsd"/>
    <extension
          id="org.adempiere.impexp.GridTabXlsExporter"
          name="Grid data excel exporter"

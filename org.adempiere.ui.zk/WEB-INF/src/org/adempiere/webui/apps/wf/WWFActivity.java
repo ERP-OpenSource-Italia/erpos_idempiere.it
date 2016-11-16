@@ -78,7 +78,7 @@ import org.zkoss.zul.Html;
  * @author hengsin
  * @author Silvano Trinchero, www.freepath.it
  *  	   <li>IDEMPIERE-3209 support for IWorkflowAware on forms
- *         <li>IDEMPIERE-3216 usage of factory for activities query, deprecated getActivitiesCount and removed getActivitiesWhere
+ *         <li>IDEMPIERE-3216 usage of extension for activities query, deprecated getActivitiesCount and removed getActivitiesWhere
  */
 public class WWFActivity extends ADForm implements EventListener<Event>
 {
