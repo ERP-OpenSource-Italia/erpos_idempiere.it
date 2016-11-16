@@ -89,7 +89,7 @@ import org.compiere.wf.MWFNode;
  *  @author     Compiere - CarlosRuiz integrate code for table selection on workflow present at GPL version of Compiere 3.2.0
  *  @author 	Silvano Trinchero, www.freepath.it
  *  	   		<li>IDEMPIERE-3209 support for IWorkflowAware on forms
- *              <li>IDEMPIERE-3216 usage of factory for activities query,removed getWhereActivities
+ *              <li>IDEMPIERE-3216 usage of extension for activities query,removed getWhereActivities
  */
 public class WFActivity extends CPanel 
 	implements FormPanel, ActionListener, ListSelectionListener
