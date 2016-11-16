@@ -5,7 +5,7 @@ import org.compiere.wf.MWFActivity;
 /** Interface for elements aware of the the related workflow
  * 
  * @author Silvano Trinchero, www.freepath.it
- * 			<li>IDEMPIERE-3209 changed functions to public to improve integration support
+ * 			<li>IDEMPIERE-3209 new interface for workflow-aware objects
  *
  */
 public interface IWorkflowAware
