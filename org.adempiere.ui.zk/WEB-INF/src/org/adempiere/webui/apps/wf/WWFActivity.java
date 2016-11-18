@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 
+import org.adempiere.base.Core;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Button;
@@ -336,7 +337,7 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 		
 		// IDEMPIERE-3216 introduced usage of configurable where clause
 		
-		WhereClauseAndParams cap = MWFActivity.getActivitiesWhere(Env.getCtx());
+		WhereClauseAndParams cap = Core.getWFActivitiesWhere(Env.getCtx());
 
 		ArrayList<MWFActivity> list = new ArrayList<MWFActivity>();
 		String sql = "SELECT * FROM AD_WF_Activity a "
