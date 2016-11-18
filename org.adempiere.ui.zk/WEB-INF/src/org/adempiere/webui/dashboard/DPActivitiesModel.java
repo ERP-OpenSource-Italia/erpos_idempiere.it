@@ -17,12 +17,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.logging.Level;
 
+import org.adempiere.base.Core;
 import org.compiere.model.MRole;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.WhereClauseAndParams;
-import org.compiere.wf.MWFActivity;
 
 /**
  * Dashboard item: Workflow activities, notices and requests
@@ -81,7 +81,7 @@ public class DPActivitiesModel {
 	{
 		int count = 0;
 		
-		WhereClauseAndParams cap = MWFActivity.getActivitiesWhere(Env.getCtx());
+		WhereClauseAndParams cap = Core.getWFActivitiesWhere(Env.getCtx());
 
 		String sql = "SELECT count(*) FROM AD_WF_Activity a "
 			+ "WHERE "

@@ -40,6 +40,7 @@ import javax.swing.event.TableColumnModelEvent;
 import javax.swing.event.TableColumnModelListener;
 import javax.swing.table.DefaultTableModel;
 
+import org.adempiere.base.Core;
 import org.compiere.apps.ADialog;
 import org.compiere.apps.AEnv;
 import org.compiere.apps.AMenu;
@@ -389,7 +390,7 @@ public class WFActivity extends CPanel
 		
 		// IDEMPIERE-3216 introduced usage of configurable where clause
 		
-		WhereClauseAndParams cap = MWFActivity.getActivitiesWhere(Env.getCtx());
+		WhereClauseAndParams cap = Core.getWFActivitiesWhere(Env.getCtx());
 		
 		String sql = "SELECT COUNT(*) FROM AD_WF_Activity a "
 			+ "WHERE " + cap.getWhere();
@@ -430,7 +431,7 @@ public class WFActivity extends CPanel
 	{
 		// IDEMPIERE-3216 introduced usage of configurable where clause
 		
-		WhereClauseAndParams cap = MWFActivity.getActivitiesWhere(Env.getCtx());
+		WhereClauseAndParams cap = Core.getWFActivitiesWhere(Env.getCtx());
 		
 		while (selTableModel.getRowCount() > 0)
 			selTableModel.removeRow(0);	
