@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 
 import org.adempiere.util.Callback;
-import org.adempiere.util.IProcessUI;
+import org.adempiere.util.IProcessUI2;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.apps.ProcessModalDialog;
 import org.adempiere.webui.component.Button;
@@ -56,7 +56,9 @@ import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
 import org.compiere.apps.form.PaySelect;
 import org.compiere.model.MPaySelection;
+import org.compiere.model.MQuery;
 import org.compiere.model.MSysConfig;
+import org.compiere.model.PO;
 import org.compiere.model.X_C_PaySelection;
 import org.compiere.process.ProcessInfo;
 import org.compiere.util.Env;
@@ -86,7 +88,7 @@ import org.zkoss.zul.Space;
  *  @version $Id: VPaySelect.java,v 1.3 2006/07/30 00:51:28 jjanke Exp $
  */
 public class WPaySelect extends PaySelect
-	implements IFormController, EventListener<Event>, WTableModelListener, IProcessUI, ValueChangeListener
+	implements IFormController, EventListener<Event>, WTableModelListener, IProcessUI2, ValueChangeListener
 {
 	/** @todo withholding */
 	
@@ -519,4 +521,24 @@ public class WPaySelect extends PaySelect
 			}
 		}, new Event("onAskForInput"));
 	}
+	
+	@Override
+	public void zoom(PO po, int AD_Window_ID) {
+		String[] keyCol = po.get_KeyColumns();
+		MQuery query = new MQuery(po.get_TableName());
+		query.addRestriction(keyCol[0], MQuery.EQUAL, po.get_ID());
+		query.setRecordCount(1);
+
+		AEnv.zoom(AD_Window_ID, query);	
+	}
+
+	@Override
+	public void zoom(int AD_Table_ID, int Record_ID) {
+		AEnv.zoom(AD_Table_ID, Record_ID);
+	}
+
+	@Override
+	public void zoom(MQuery query) {
+		AEnv.zoom(query);		
+	}	
 }   //  VPaySelect

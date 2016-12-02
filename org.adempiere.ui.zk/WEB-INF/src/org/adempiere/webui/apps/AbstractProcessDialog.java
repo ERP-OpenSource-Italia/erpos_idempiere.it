@@ -28,6 +28,7 @@ import java.util.logging.Level;
 import org.adempiere.util.Callback;
 import org.adempiere.util.ContextRunnable;
 import org.adempiere.util.IProcessUI;
+import org.adempiere.util.IProcessUI2;
 import org.adempiere.util.ServerContext;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.Checkbox;
@@ -63,10 +64,12 @@ import org.compiere.model.MNote;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MPInstancePara;
 import org.compiere.model.MProcess;
+import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
 import org.compiere.model.MUser;
+import org.compiere.model.PO;
 import org.compiere.model.Query;
 import org.compiere.model.X_AD_ReportView;
 import org.compiere.print.MPrintFormat;
@@ -97,7 +100,7 @@ import org.zkoss.zul.Html;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Vlayout;
 
-public abstract class AbstractProcessDialog extends Window implements IProcessUI, EventListener<Event>
+public abstract class AbstractProcessDialog extends Window implements IProcessUI2, EventListener<Event>
 {
 
 	/**
@@ -1179,4 +1182,23 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 		}, new Event("onAskForInput"));
 	}
 
+	@Override
+	public void zoom(PO po, int AD_Window_ID) {
+		String[] keyCol = po.get_KeyColumns();
+		MQuery query = new MQuery(po.get_TableName());
+		query.addRestriction(keyCol[0], MQuery.EQUAL, po.get_ID());
+		query.setRecordCount(1);
+
+		AEnv.zoom(AD_Window_ID, query);	
+	}
+
+	@Override
+	public void zoom(int AD_Table_ID, int Record_ID) {
+		AEnv.zoom(AD_Table_ID, Record_ID);
+	}
+
+	@Override
+	public void zoom(MQuery query) {
+		AEnv.zoom(query);		
+	}
 }
