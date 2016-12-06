@@ -30,6 +30,8 @@ import org.compiere.util.Msg;
  *	
  *  @author Jorg Janke
  *  @version $Id: MWFResponsible.java,v 1.3 2006/07/30 00:51:05 jjanke Exp $
+ *  @author Silvano Trinchero, www.freepath.it
+ * 			<li>IDEMPIERE-3209 isInvoker does not consider custom types
  */
 public class MWFResponsible extends X_AD_WF_Responsible
 {
@@ -89,6 +91,17 @@ public class MWFResponsible extends X_AD_WF_Responsible
 	 */
 	public boolean isInvoker()
 	{
+		// IDEMPIERE-3209 isInvoker does not consider custom types
+		
+		String sType = getResponsibleType();
+		
+		if(! (RESPONSIBLETYPE_Human.equals(sType) ||
+					RESPONSIBLETYPE_Organization.equals(sType) ||
+					RESPONSIBLETYPE_Role.equals(sType)))
+		{
+			return false;
+		}
+		
 		return getAD_User_ID() == 0 && getAD_Role_ID() == 0;
 	}	//	isInvoker
 	
