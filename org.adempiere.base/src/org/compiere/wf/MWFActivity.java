@@ -16,6 +16,8 @@
  *****************************************************************************/
 package org.compiere.wf;
 
+import static org.compiere.model.SystemIDs.MESSAGE_WORKFLOWRESULT;
+
 import java.io.File;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
@@ -51,7 +53,6 @@ import org.compiere.model.MUser;
 import org.compiere.model.MUserRoles;
 import org.compiere.model.PO;
 import org.compiere.model.Query;
-import static org.compiere.model.SystemIDs.*;
 import org.compiere.model.X_AD_WF_Activity;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.DocAction;
@@ -1923,5 +1924,5 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		}
 		return sb.toString();
 	}	//	getSummary
-
+		
 }	//	MWFActivity
