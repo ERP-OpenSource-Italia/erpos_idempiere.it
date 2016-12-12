@@ -55,6 +55,8 @@ import org.compiere.util.Msg;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 
+import it.idempiere.base.util.BaseEnvHelper;
+
 /**
  *	Tab Model.
  *  - a combination of AD_Tab (the display attributes) and AD_Table information.
@@ -105,6 +107,8 @@ import org.compiere.util.ValueNamePair;
  *  @see  https://sourceforge.net/tracker/?func=detail&atid=879335&aid=2870645&group_id=176962
  *  @author Paul Bowden, phib BF 2900767 Zoom to child tab - inefficient queries
  *  @see https://sourceforge.net/tracker/?func=detail&aid=2900767&group_id=176962&atid=879332
+ *  
+ *  @author Silvano Trinchero, www.freepath.it: SQL Callouts
  */
 public class GridTab implements DataStatusListener, Evaluatee, Serializable
 {
@@ -114,6 +118,9 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	private static final long serialVersionUID = 5446672147679386907L;
 
 	public static final String DEFAULT_STATUS_MESSAGE = "NavigateOrUpdate";
+	
+	// F3P: added to support sql callouts
+	public static final String SQL_PREFIX = "@sql:";
 
 	/**
 	 *	Create Tab (Model) from Value Object.
@@ -2896,7 +2903,50 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 					{
 						activeCallouts.remove(cmd);
 					}
-	
+
+					// F3P: added SQL Callout Management (Rif 0031) 			
+					// if is copied from ui do nothing
+				} else if(cmd.toLowerCase().startsWith(SQL_PREFIX)) {
+					MRule rule = MRule.get(m_vo.ctx, cmd.substring(SQL_PREFIX.length()));
+					
+					if (rule == null) 
+					{
+						retValue = "Callout " + cmd + " not found"; 
+						log.log(Level.SEVERE, retValue);
+						return retValue;
+					}
+					if ( !(rule.getEventType().equals(MRule.EVENTTYPE_Callout) 
+						  && rule.getRuleType().equals(MRule.RULETYPE_SQL))) {
+						retValue = "Callout " + cmd
+							+ " must be of type SQL and event Callout"; 
+						log.log(Level.SEVERE, retValue);
+						return retValue;
+					}
+					
+					String sSQL = rule.getScript();
+					
+					try
+					{
+						activeCallouts.add(cmd);
+						
+						if(log.isLoggable(Level.INFO))
+						{
+							log.log(Level.INFO, "SQL Callout: " + cmd);
+						}
+						
+						BaseEnvHelper.executeAndFill(sSQL, this, m_vo.ctx);
+					}
+					catch(Exception e)
+					{
+						log.log(Level.SEVERE, "", e);
+						retValue = 	"Callout Invalid: " + e.toString();
+						return retValue;
+					}
+					finally
+					{
+						activeCallouts.remove(cmd);
+					}
+				// F3P end sql callout			
 				} else {
 	
 					Callout call = null;
