@@ -58,6 +58,7 @@ import org.compiere.print.ReportEngine;
 import org.compiere.process.DocAction;
 import org.compiere.process.ProcessInfo;
 import org.compiere.process.StateEngine;
+import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
@@ -65,6 +66,10 @@ import org.compiere.util.Msg;
 import org.compiere.util.Trace;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
+import org.compiere.util.ValueNamePair;
+
+import it.idempiere.base.model.WorkReqMWFResponsible;
+import it.idempiere.base.util.StateTerminatedException;
 
 /**
  *	Workflow Activity Model.
@@ -625,7 +630,14 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		//	Invoker - get Sales Rep or last updater of document
 		if (AD_User_ID == 0 && resp.isInvoker())
 			AD_User_ID = process.getAD_User_ID();
+		//		
+		if(WorkReqMWFResponsible.isRule(resp))
+		{
+			int nRuleId = WorkReqMWFResponsible.getAD_Rule_ID(resp);
+			AD_User_ID = WorkReqMWFResponsible.evaluateRuleResp(process, this, process.getWorkflow(), m_node, getCtx(), nRuleId);
+		}
 		//
+		
 		setAD_User_ID(AD_User_ID);
 	}	//	setResponsible
 
@@ -909,6 +921,13 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		}
 		catch (Exception e)
 		{
+			// F3P: ReqWorkflow integration, propagate error if it was a StateTerminatedException
+			
+			if(StateTerminatedException.wasStateTerminatedException(e))
+			{
+				throw new StateTerminatedException(StateTerminatedException.getOriginalMessage(e));
+			}
+			
 			log.log(Level.WARNING, "" + getNode(), e);
 			/****	Trx Rollback	****/
 			if (localTrx)
@@ -1049,8 +1068,23 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 			if (!m_po.save())
 			{
 				success = false;
-				m_docStatus = null;
+				
+				// F3P: improved error message
+				//processMsg = "SaveError";
+				ValueNamePair err = CLogger.retrieveError();
+				if (err != null)
+					processMsg = err.getName();
+				if (processMsg == null || processMsg.length() == 0)
 				processMsg = "SaveError";
+				if (m_process != null)
+				{
+					String sMsg = m_process.getProcessMsg();
+					if(sMsg != null && sMsg.length() > 0)
+					{
+						processMsg = sMsg + ", " + processMsg;
+					}
+					m_process.setProcessMsg(processMsg);
+				}
 			}
 			if (!success)
 			{
@@ -1117,7 +1151,17 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 			pi.setAD_User_ID(getAD_User_ID());
 			pi.setAD_Client_ID(getAD_Client_ID());
 			pi.setAD_PInstance_ID(pInstance.getAD_PInstance_ID());
-			return process.processItWithoutTrxClose(pi, trx);
+			
+			// F3P: improve management of error
+			// return process.processItWithoutTrxClose(pi, trx);
+			boolean bSuccess = process.processItWithoutTrxClose(pi, trx);
+			if(bSuccess == false)
+			{
+				if (m_process != null)
+					m_process.setProcessMsg(pi.getSummary());
+				throw new Exception(pi.getSummary());
+			}
+			return bSuccess;
 		}
 
 		/******	Start Task (Probably redundant;
@@ -1147,7 +1191,7 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 			{
 				MClient client = MClient.get(getCtx(), getAD_Client_ID());
 				MMailText mailtext = new MMailText(getCtx(),getNode().getR_MailText_ID(),null);
-				mailtext.setPO(m_po);
+				mailtext.setPO(m_po,true); // F3P: added to enable PO fields resolution
 
 				String subject = getNode().getDescription()
 				+ ": " + mailtext.getMailHeader();
@@ -1155,6 +1199,18 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 				String message = mailtext.getMailText(true)
 				+ "\n-----\n" + getNodeHelp();
 				String to = getNode().getEMail();
+				// F3P: if no email 
+				
+				if(to == null)
+				{
+					String recipient = getNode().getEMailRecipient();
+					if(recipient.equals(MWFNode.EMAILRECIPIENT_WFResponsible))
+					{
+						to = getAD_User().getEMail();
+					}
+				}
+				
+				// F3P end
 
 				client.sendEMail(to, subject, message, null);
 			}
@@ -1236,6 +1292,11 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 					{
 						throw new AdempiereException("Support not implemented for "+resp);
 					}
+					// F3P: added rule check
+					else if(WorkReqMWFResponsible.isRule(resp))
+					{
+						// do nothing
+					}					
 					else
 					{
 						throw new AdempiereException("@NotSupported@ "+resp);
@@ -1314,8 +1375,18 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 	 *	@return true if set
 	 *	@throws Exception if error
 	 */
-	public boolean setUserChoice (int AD_User_ID, String value, int displayType,
-		String textMsg) throws Exception
+	// F3P: compatibility function
+	
+	public boolean setUserChoice (int AD_User_ID, String value, int displayType, 
+			String textMsg) throws Exception
+	{
+		return setUserChoice (AD_User_ID, value, displayType, textMsg, true);
+	}
+	
+	//F3P: enable userChoice for non-userapproval nodes (used for example by form step)
+	
+	public boolean setUserChoice (int AD_User_ID, String value, int displayType, 
+		String textMsg,boolean bUserChoiceOnly) throws Exception
 	{
 		//	Check if user approves own document when a role is reponsible
 		/*
@@ -1363,7 +1434,7 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 
 		String newState = StateEngine.STATE_Completed;
 		//	Approval
-		if (getNode().isUserApproval() && getPO(trx) instanceof DocAction)
+		if ((getNode().isUserApproval() || bUserChoiceOnly == false) && getPO(trx) instanceof DocAction)
 		{
 			DocAction doc = (DocAction)m_po;
 			try
@@ -1429,12 +1500,19 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 
 				// send email
 				if (to.isNotificationEMail()) {
-					MClient client = MClient.get(getCtx(), doc.getAD_Client_ID());
-					client.sendEMail(doc.getDoc_User_ID(), Msg.getMsg(getCtx(), "NotApproved")
-							+ ": " + doc.getDocumentNo(),
-							(doc.getSummary() != null ? doc.getSummary() + "\n" : "" )
-							+ (doc.getProcessMsg() != null ? doc.getProcessMsg() + "\n" : "")
-							+ (getTextMsg() != null ? getTextMsg() : ""), null);
+					if(getNode().getR_MailText_ID() > 0) // F3P: if we have a mail text configured, use it
+					{
+						sendEMail();
+					}
+					else
+					{
+						MClient client = MClient.get(getCtx(), doc.getAD_Client_ID());
+						client.sendEMail(doc.getDoc_User_ID(), Msg.getMsg(getCtx(), "NotApproved")
+								+ ": " + doc.getDocumentNo(), 
+								(doc.getSummary() != null ? doc.getSummary() + "\n" : "" )
+								+ (doc.getProcessMsg() != null ? doc.getProcessMsg() + "\n" : "") 
+								+ (getTextMsg() != null ? getTextMsg() : ""), null);
+					}
 				}
 
 				// Send Note
@@ -1650,9 +1728,25 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		//
 		String subject = doc.getDocumentInfo()
 			+ ": " + text.getMailHeader();
-		String message = text.getMailText(true)
+		//F3P add textMsg of node
+		/*String message = text.getMailText(true)
 			+ "\n-----\n" + doc.getDocumentInfo()
-			+ "\n" + doc.getSummary();
+			+ "\n" + doc.getSummary();*/
+		
+		StringBuilder sbMessage = new StringBuilder(text.getMailText(true));
+		
+		String sText = super.getTextMsg();
+		
+		if(Util.isEmpty(sText,true) == false)
+		{
+			sbMessage.append("\n\n").append(sText);
+		}
+		
+		sbMessage.append("\n-----\n").append(doc.getDocumentInfo())
+		.append("\n").append(doc.getSummary());
+		
+		String message = sbMessage.toString();
+		//F3P end
 		File pdf = doc.createPDF();
 		//
 		MClient client = MClient.get(doc.getCtx(), doc.getAD_Client_ID());
@@ -1712,6 +1806,19 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 					sendEMail(client, org.getSupervisor_ID(), null, subject, message, pdf, text.isHtml());
 				}
 			}
+			// F3P: rule
+			else if(WorkReqMWFResponsible.isRule(resp))
+			{
+				int nRuleId = WorkReqMWFResponsible.getAD_Rule_ID(resp);
+				int AD_User_ID = WorkReqMWFResponsible.evaluateRuleResp(m_process, this, m_process.getWorkflow(), m_node, m_po.getCtx(), nRuleId);				
+				sendEMail(client, AD_User_ID, null, subject, message, pdf, text.isHtml());
+			}
+			// F3P: if not, send to pre-determined activity responsible
+			else
+			{
+				sendEMail(client, getAD_User_ID(), null, subject, message, pdf, text.isHtml());
+			}
+			// F3P: end
 		}
 	}	//	sendEMail
 
