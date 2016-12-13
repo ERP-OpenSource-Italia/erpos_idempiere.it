@@ -1319,7 +1319,7 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
         		boolean refresh=true;      		
         		Treeitem item = treePanel.getTree().getSelectedItem();
         		SimpleTreeModel model = (SimpleTreeModel)(TreeModel<?>) treePanel.getTree().getModel();
-        		if (item != null && item.getValue() != null ) // F3P: added non-null check, not sure is the right and complete solution
+        		if (item != null && item.getValue() != null)
         		{
         			@SuppressWarnings("unchecked")
 					MTreeNode treeNode = ((DefaultTreeNode<MTreeNode>) item.getValue()).getData();        		
