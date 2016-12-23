@@ -29,6 +29,7 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Evaluatee;
+import org.compiere.util.Util;
 
 /**
  *  Model Tab Value Object
@@ -109,12 +110,8 @@ public class GridTabVO implements Evaluatee, Serializable
 			Env.setContext(vo.ctx, vo.WindowNo, vo.TabNo, GridTab.CTX_AD_Tab_ID, String.valueOf(vo.AD_Tab_ID));
 			vo.AD_Tab_UU = rs.getString("AD_Tab_UU");
 			Env.setContext(vo.ctx, vo.WindowNo, vo.TabNo, GridTab.CTX_AD_Tab_UU, vo.AD_Tab_UU);
-			// FR IDEMPIERE-177
-			MUserDefTab userDef = MUserDefTab.get(vo.ctx, vo.AD_Tab_ID, vo.AD_Window_ID);
+
 			vo.Name = rs.getString("Name");
-			if (userDef != null && userDef.getName() != null)
-				vo.Name = userDef.getName();
-			Env.setContext(vo.ctx, vo.WindowNo, vo.TabNo, GridTab.CTX_Name, vo.Name);
 
 			//	Translation Tab	**
 			if (rs.getString("IsTranslationTab").equals("Y"))
@@ -150,7 +147,7 @@ public class GridTabVO implements Evaluatee, Serializable
 			
 			//	DisplayLogic
 			vo.DisplayLogic = rs.getString("DisplayLogic");
-			
+
 			//	Access Level
 			vo.AccessLevel = rs.getString("AccessLevel");
 			if (!role.canView (vo.ctx, vo.AccessLevel))	//	No Access
@@ -174,32 +171,22 @@ public class GridTabVO implements Evaluatee, Serializable
 			
 			if (rs.getString("IsReadOnly").equals("Y"))
 				vo.IsReadOnly = true;
-			if (userDef != null && userDef.get_ValueAsString("ReadOnlyLogic") != null)
-				vo.IsReadOnly = userDef.isReadOnly();
+
 			vo.ReadOnlyLogic = rs.getString("ReadOnlyLogic");
-			if (userDef != null)
-				vo.ReadOnlyLogic = userDef.get_ValueAsString("ReadOnlyLogic");
 			
 			if (rs.getString("IsInsertRecord").equals("N"))
 				vo.IsInsertRecord = false;
-			
-			//
+
 			vo.Description = rs.getString("Description");
 			if (vo.Description == null)
 				vo.Description = "";
-			if (userDef != null && userDef.getDescription() != null)
-				vo.Description = userDef.getDescription();
 
 			vo.Help = rs.getString("Help");
 			if (vo.Help == null)
 				vo.Help = "";
-			if (userDef != null && userDef.getHelp() != null)
-				vo.Help = userDef.getHelp();
 
 			if (rs.getString("IsSingleRow").equals("Y"))
 				vo.IsSingleRow = true;
-			if (userDef != null)
-				vo.IsSingleRow = userDef.isSingleRow();
 
 			if (rs.getString("HasTree").equals("Y"))
 				vo.HasTree = true;
@@ -223,24 +210,21 @@ public class GridTabVO implements Evaluatee, Serializable
 			vo.CommitWarning = rs.getString("CommitWarning");
 			if (vo.CommitWarning == null)
 				vo.CommitWarning = "";
-			vo.WhereClause = rs.getString("WhereClause");
+			
+			vo.WhereClause = rs.getString("WhereClause");		
+			
 			if (vo.WhereClause == null)
 				vo.WhereClause = "";
-			//jz col=null not good for Derby
-			if (vo.WhereClause.indexOf("=null")>0)				
-				vo.WhereClause = vo.WhereClause.replaceAll("=null", " IS NULL ");
-			// Where Clauses should be surrounded by parenthesis - teo_sarca, BF [ 1982327 ] 
-			if (vo.WhereClause.trim().length() > 0) {
-				vo.WhereClause = "("+vo.WhereClause+")";
-			}
 
 			vo.OrderByClause = rs.getString("OrderByClause");
+			
 			if (vo.OrderByClause == null)
 				vo.OrderByClause = "";
 
 			vo.AD_Process_ID = rs.getInt("AD_Process_ID");
 			if (rs.wasNull())
 				vo.AD_Process_ID = 0;
+			
 			vo.AD_Image_ID = rs.getInt("AD_Image_ID");
 			if (rs.wasNull())
 				vo.AD_Image_ID = 0;
@@ -259,6 +243,64 @@ public class GridTabVO implements Evaluatee, Serializable
 				vo.AD_ColumnSortOrder_ID = rs.getInt("AD_ColumnSortOrder_ID");
 				vo.AD_ColumnSortYesNo_ID = rs.getInt("AD_ColumnSortYesNo_ID");
 			}
+			
+			// F3P: moved customization in a single place
+			
+			// FR IDEMPIERE-177
+			MUserDefTab userDef = MUserDefTab.get(vo.ctx, vo.AD_Tab_ID, vo.AD_Window_ID);
+			
+			if(userDef != null)
+			{
+				if (userDef.getName() != null)
+					vo.Name = userDef.getName();
+				
+				if (userDef.getDescription() != null)
+					vo.Description = userDef.getDescription();
+				
+				if (userDef.getHelp() != null)
+					vo.Help = userDef.getHelp();
+				
+				if(userDef.getDisplayLogic() != null)
+					vo.DisplayLogic = userDef.getDisplayLogic();
+				
+				if (userDef.getIsReadOnly() != null && userDef.getReadOnlyLogic() != null) // F3P: check for not null to allow aggregated readonly
+					vo.IsReadOnly = userDef.isReadOnly();	
+				
+				if (userDef.getReadOnlyLogic() != null) // F3P: added new field
+					vo.ReadOnlyLogic = userDef.getReadOnlyLogic(); // F3P changed to use field
+				
+				if (userDef.getIsInsertRecord() != null) // F3P: added new field
+					vo.IsInsertRecord = Util.asBoolean(userDef.getIsInsertRecord());
+				
+				// F3P: check for not null to allow aggregated readonly
+				if (userDef.getIsSingleRow() != null)
+					vo.IsSingleRow = userDef.isSingleRow();
+				
+				if(userDef.getCommitWarning() != null)  // F3P: added new field
+					vo.CommitWarning = userDef.getCommitWarning();
+				
+				if(userDef.getWhereClause() != null)  // F3P: added new field
+					vo.WhereClause = userDef.getWhereClause();
+				
+				if(userDef.getOrderByClause() != null)  // F3P: added new field
+					vo.OrderByClause = userDef.getOrderByClause();
+				
+				if(userDef.getAD_Process_ID() > 0)  // F3P: added new field
+					vo.AD_Process_ID = userDef.getAD_Process_ID();
+			}
+			
+			// F3P: moved post process after customization is applied
+			
+			Env.setContext(vo.ctx, vo.WindowNo, vo.TabNo, GridTab.CTX_Name, vo.Name);
+			
+			//jz col=null not good for Derby
+			if (vo.WhereClause.indexOf("=null")>0)				
+				vo.WhereClause = vo.WhereClause.replaceAll("=null", " IS NULL ");
+			// Where Clauses should be surrounded by parenthesis - teo_sarca, BF [ 1982327 ] 
+			if (vo.WhereClause.trim().length() > 0) {
+				vo.WhereClause = "("+vo.WhereClause+")";
+			}
+			
 			//
 			//	Replication Type - set R/O if Reference
 			try

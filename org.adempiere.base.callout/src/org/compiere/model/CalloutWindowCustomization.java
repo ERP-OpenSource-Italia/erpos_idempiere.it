@@ -18,6 +18,7 @@ import java.util.Properties;
 
 import org.adempiere.model.GridTabWrapper;
 import org.compiere.util.Env;
+import org.compiere.util.Util;
 
 
 /**
@@ -52,7 +53,7 @@ public class CalloutWindowCustomization extends CalloutEngine
 		ud_win.setHelp(window.get_Translation("Help", lang));
 		
 		//  what for?
-		ud_win.setIsDefault(window.isDefault()); 
+		ud_win.setIsDefault(Util.asString(window.isDefault())); // F3P: type is changed 
 		
 		// default from menu, actual from role
 		//  Read Only
@@ -85,8 +86,10 @@ public class CalloutWindowCustomization extends CalloutEngine
 		ud_tab.setDescription(tab.get_Translation("Description", lang));
 		ud_tab.setHelp(tab.get_Translation("Help", lang));
 		
-		ud_tab.setIsSingleRow(tab.isSingleRow()); 
-		ud_tab.setIsReadOnly(tab.isReadOnly()); 
+		// F3P: type is changed
+		
+		ud_tab.setIsSingleRow(Util.asString(tab.isSingleRow())); 
+		ud_tab.setIsReadOnly(Util.asString(tab.isReadOnly())); 
 
 		return NO_ERROR;
 	}	//	tab

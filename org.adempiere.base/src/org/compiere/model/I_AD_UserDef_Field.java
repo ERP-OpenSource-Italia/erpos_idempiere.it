@@ -49,6 +49,21 @@ public interface I_AD_UserDef_Field
 	  */
 	public int getAD_Client_ID();
 
+    /** Column name AD_FieldGroup_ID */
+    public static final String COLUMNNAME_AD_FieldGroup_ID = "AD_FieldGroup_ID";
+
+	/** Set Field Group.
+	  * Logical grouping of fields
+	  */
+	public void setAD_FieldGroup_ID (int AD_FieldGroup_ID);
+
+	/** Get Field Group.
+	  * Logical grouping of fields
+	  */
+	public int getAD_FieldGroup_ID();
+
+	public org.compiere.model.I_AD_FieldGroup getAD_FieldGroup() throws RuntimeException;
+
     /** Column name AD_Field_ID */
     public static final String COLUMNNAME_AD_Field_ID = "AD_Field_ID";
 
@@ -181,6 +196,19 @@ public interface I_AD_UserDef_Field
 
 	public org.compiere.model.I_AD_Val_Rule getAD_Val_Rule() throws RuntimeException;
 
+    /** Column name Callout */
+    public static final String COLUMNNAME_Callout = "Callout";
+
+	/** Set Callout.
+	  * Fully qualified class names and method - separated by semicolons
+	  */
+	public void setCallout (String Callout);
+
+	/** Get Callout.
+	  * Fully qualified class names and method - separated by semicolons
+	  */
+	public String getCallout();
+
     /** Column name ColumnSpan */
     public static final String COLUMNNAME_ColumnSpan = "ColumnSpan";
 
@@ -290,6 +318,19 @@ public interface I_AD_UserDef_Field
 	  */
 	public boolean isActive();
 
+    /** Column name IsAllowCopy */
+    public static final String COLUMNNAME_IsAllowCopy = "IsAllowCopy";
+
+	/** Set Allow Copy.
+	  * Determine if a column must be copied when pushing the button to copy record
+	  */
+	public void setIsAllowCopy (String IsAllowCopy);
+
+	/** Get Allow Copy.
+	  * Determine if a column must be copied when pushing the button to copy record
+	  */
+	public String getIsAllowCopy();
+
     /** Column name IsAlwaysUpdateable */
     public static final String COLUMNNAME_IsAlwaysUpdateable = "IsAlwaysUpdateable";
 
@@ -303,6 +344,28 @@ public interface I_AD_UserDef_Field
 	  */
 	public String getIsAlwaysUpdateable();
 
+    /** Column name IsAutocomplete */
+    public static final String COLUMNNAME_IsAutocomplete = "IsAutocomplete";
+
+	/** Set Autocomplete.
+	  * Automatic completion for textfields
+	  */
+	public void setIsAutocomplete (String IsAutocomplete);
+
+	/** Get Autocomplete.
+	  * Automatic completion for textfields
+	  */
+	public String getIsAutocomplete();
+
+    /** Column name IsDefaultFocus */
+    public static final String COLUMNNAME_IsDefaultFocus = "IsDefaultFocus";
+
+	/** Set Default Focus	  */
+	public void setIsDefaultFocus (String IsDefaultFocus);
+
+	/** Get Default Focus	  */
+	public String getIsDefaultFocus();
+
     /** Column name IsDisplayed */
     public static final String COLUMNNAME_IsDisplayed = "IsDisplayed";
 
@@ -315,6 +378,28 @@ public interface I_AD_UserDef_Field
 	  * Determines, if this field is displayed
 	  */
 	public String getIsDisplayed();
+
+    /** Column name IsDisplayedGrid */
+    public static final String COLUMNNAME_IsDisplayedGrid = "IsDisplayedGrid";
+
+	/** Set Show in Grid	  */
+	public void setIsDisplayedGrid (String IsDisplayedGrid);
+
+	/** Get Show in Grid	  */
+	public String getIsDisplayedGrid();
+
+    /** Column name IsElaborationEnable */
+    public static final String COLUMNNAME_IsElaborationEnable = "IsElaborationEnable";
+
+	/** Set Manage Elaboration Fields.
+	  * If selected fields used for elaboration are overwritten
+	  */
+	public void setIsElaborationEnable (boolean IsElaborationEnable);
+
+	/** Get Manage Elaboration Fields.
+	  * If selected fields used for elaboration are overwritten
+	  */
+	public boolean isElaborationEnable();
 
     /** Column name IsMandatory */
     public static final String COLUMNNAME_IsMandatory = "IsMandatory";
@@ -355,6 +440,19 @@ public interface I_AD_UserDef_Field
 	  */
 	public String getIsSameLine();
 
+    /** Column name IsSelectionColumn */
+    public static final String COLUMNNAME_IsSelectionColumn = "IsSelectionColumn";
+
+	/** Set Selection Column.
+	  * Is this column used for finding rows in windows
+	  */
+	public void setIsSelectionColumn (String IsSelectionColumn);
+
+	/** Get Selection Column.
+	  * Is this column used for finding rows in windows
+	  */
+	public String getIsSelectionColumn();
+
     /** Column name IsToolbarButton */
     public static final String COLUMNNAME_IsToolbarButton = "IsToolbarButton";
 
@@ -368,6 +466,19 @@ public interface I_AD_UserDef_Field
 	  */
 	public String getIsToolbarButton();
 
+    /** Column name IsTranslationEnable */
+    public static final String COLUMNNAME_IsTranslationEnable = "IsTranslationEnable";
+
+	/** Set Manage Descriptive Fields.
+	  * If selected fiels name, description and help can be overwritten
+	  */
+	public void setIsTranslationEnable (boolean IsTranslationEnable);
+
+	/** Get Manage Descriptive Fields.
+	  * If selected fiels name, description and help can be overwritten
+	  */
+	public boolean isTranslationEnable();
+
     /** Column name IsUpdateable */
     public static final String COLUMNNAME_IsUpdateable = "IsUpdateable";
 
@@ -380,6 +491,19 @@ public interface I_AD_UserDef_Field
 	  * Determines, if the field can be updated
 	  */
 	public String getIsUpdateable();
+
+    /** Column name IsViewEnable */
+    public static final String COLUMNNAME_IsViewEnable = "IsViewEnable";
+
+	/** Set Manage Visualization Fields.
+	  * If selected fields used for visualization e window design are overwritten
+	  */
+	public void setIsViewEnable (boolean IsViewEnable);
+
+	/** Get Manage Visualization Fields.
+	  * If selected fields used for visualization e window design are overwritten
+	  */
+	public boolean isViewEnable();
 
     /** Column name MandatoryLogic */
     public static final String COLUMNNAME_MandatoryLogic = "MandatoryLogic";
@@ -443,6 +567,28 @@ public interface I_AD_UserDef_Field
  lowest number comes first
 	  */
 	public int getSeqNo();
+
+    /** Column name SeqNoGrid */
+    public static final String COLUMNNAME_SeqNoGrid = "SeqNoGrid";
+
+	/** Set Grid Sequence No	  */
+	public void setSeqNoGrid (int SeqNoGrid);
+
+	/** Get Grid Sequence No	  */
+	public int getSeqNoGrid();
+
+    /** Column name SeqNoSelection */
+    public static final String COLUMNNAME_SeqNoSelection = "SeqNoSelection";
+
+	/** Set Selection Column Sequence.
+	  * Selection Column Sequence
+	  */
+	public void setSeqNoSelection (int SeqNoSelection);
+
+	/** Get Selection Column Sequence.
+	  * Selection Column Sequence
+	  */
+	public int getSeqNoSelection();
 
     /** Column name SortNo */
     public static final String COLUMNNAME_SortNo = "SortNo";

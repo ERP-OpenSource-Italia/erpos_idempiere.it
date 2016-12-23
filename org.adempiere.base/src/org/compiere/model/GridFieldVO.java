@@ -30,6 +30,7 @@ import java.util.logging.Level;
 import org.compiere.util.CLogger;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
+import org.compiere.util.Util;
 
 
 /**
@@ -316,6 +317,46 @@ public class GridFieldVO implements Serializable
 				
 				if (userDef.getAD_FieldStyle_ID() > 0)
 					vo.AD_FieldStyle_ID = userDef.getAD_FieldStyle_ID();
+				
+				// F3P: new fields
+				
+				if(userDef.getAD_FieldGroup_ID() > 0)
+				{
+					I_AD_FieldGroup fieldGroup = userDef.getAD_FieldGroup();
+					String name = null;
+					
+					if(Env.isBaseLanguage(ctx, MTab.Table_Name))
+						name = fieldGroup.getName();
+					else
+						name = ((PO)fieldGroup).get_Translation(X_AD_FieldGroup.COLUMNNAME_Name, Env.getAD_Language(ctx)); 
+					
+					vo.FieldGroup = name;
+					vo.FieldGroupType = fieldGroup.getFieldGroupType();
+				}
+				
+				if(userDef.getSeqNoGrid() > 0)
+					vo.SeqNoGrid = userDef.getSeqNoGrid();
+				
+				if(userDef.getSeqNoSelection() > 0)
+					vo.SeqNoSelection = userDef.getSeqNoSelection();
+					
+				if(userDef.getIsDisplayedGrid() != null)
+					vo.IsDisplayedGrid = Util.asBoolean(userDef.getIsDisplayedGrid());
+				
+				if(userDef.getIsDefaultFocus() != null)
+					vo.IsDefaultFocus = Util.asBoolean(userDef.getIsDefaultFocus());
+				
+				if(userDef.getIsAllowCopy() != null)
+					vo.IsAllowCopy = Util.asBoolean(userDef.getIsAllowCopy());
+				
+				if(userDef.getIsAutocomplete() != null)
+					vo.IsAutocomplete = Util.asBoolean(userDef.getIsAutocomplete());
+				
+				if(userDef.getIsSelectionColumn() != null)
+					vo.IsSelectionColumn = Util.asBoolean(userDef.getIsSelectionColumn());
+				
+				if(userDef.getCallout() != null)
+					vo.Callout = userDef.getCallout();
 			}
 		}
 		//

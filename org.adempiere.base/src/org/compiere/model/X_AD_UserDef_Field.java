@@ -30,7 +30,7 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20161221L;
 
     /** Standard Constructor */
     public X_AD_UserDef_Field (Properties ctx, int AD_UserDef_Field_ID, String trxName)
@@ -41,8 +41,11 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 			setAD_Field_ID (0);
 			setAD_UserDef_Field_ID (0);
 			setAD_UserDef_Tab_ID (0);
-			setSeqNo (0);
-// 0
+			setIsElaborationEnable (false);
+// N
+			setIsTranslationEnable (false);
+// N
+			setIsViewEnable (false);
         } */
     }
 
@@ -73,6 +76,34 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
         .append(get_ID()).append("]");
       return sb.toString();
     }
+
+	public org.compiere.model.I_AD_FieldGroup getAD_FieldGroup() throws RuntimeException
+    {
+		return (org.compiere.model.I_AD_FieldGroup)MTable.get(getCtx(), org.compiere.model.I_AD_FieldGroup.Table_Name)
+			.getPO(getAD_FieldGroup_ID(), get_TrxName());	}
+
+	/** Set Field Group.
+		@param AD_FieldGroup_ID 
+		Logical grouping of fields
+	  */
+	public void setAD_FieldGroup_ID (int AD_FieldGroup_ID)
+	{
+		if (AD_FieldGroup_ID < 1) 
+			set_Value (COLUMNNAME_AD_FieldGroup_ID, null);
+		else 
+			set_Value (COLUMNNAME_AD_FieldGroup_ID, Integer.valueOf(AD_FieldGroup_ID));
+	}
+
+	/** Get Field Group.
+		@return Logical grouping of fields
+	  */
+	public int getAD_FieldGroup_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_AD_FieldGroup_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
 
 	public org.compiere.model.I_AD_Field getAD_Field() throws RuntimeException
     {
@@ -309,6 +340,23 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 		return ii.intValue();
 	}
 
+	/** Set Callout.
+		@param Callout 
+		Fully qualified class names and method - separated by semicolons
+	  */
+	public void setCallout (String Callout)
+	{
+		set_Value (COLUMNNAME_Callout, Callout);
+	}
+
+	/** Get Callout.
+		@return Fully qualified class names and method - separated by semicolons
+	  */
+	public String getCallout () 
+	{
+		return (String)get_Value(COLUMNNAME_Callout);
+	}
+
 	/** Set Column Span.
 		@param ColumnSpan 
 		Number of column for a box of field
@@ -417,6 +465,30 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 		return (String)get_Value(COLUMNNAME_Help);
 	}
 
+	/** IsAllowCopy AD_Reference_ID=319 */
+	public static final int ISALLOWCOPY_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISALLOWCOPY_Yes = "Y";
+	/** No = N */
+	public static final String ISALLOWCOPY_No = "N";
+	/** Set Allow Copy.
+		@param IsAllowCopy 
+		Determine if a column must be copied when pushing the button to copy record
+	  */
+	public void setIsAllowCopy (String IsAllowCopy)
+	{
+
+		set_Value (COLUMNNAME_IsAllowCopy, IsAllowCopy);
+	}
+
+	/** Get Allow Copy.
+		@return Determine if a column must be copied when pushing the button to copy record
+	  */
+	public String getIsAllowCopy () 
+	{
+		return (String)get_Value(COLUMNNAME_IsAllowCopy);
+	}
+
 	/** IsAlwaysUpdateable AD_Reference_ID=319 */
 	public static final int ISALWAYSUPDATEABLE_AD_Reference_ID=319;
 	/** Yes = Y */
@@ -441,6 +513,51 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 		return (String)get_Value(COLUMNNAME_IsAlwaysUpdateable);
 	}
 
+	/** IsAutocomplete AD_Reference_ID=319 */
+	public static final int ISAUTOCOMPLETE_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISAUTOCOMPLETE_Yes = "Y";
+	/** No = N */
+	public static final String ISAUTOCOMPLETE_No = "N";
+	/** Set Autocomplete.
+		@param IsAutocomplete 
+		Automatic completion for textfields
+	  */
+	public void setIsAutocomplete (String IsAutocomplete)
+	{
+
+		set_Value (COLUMNNAME_IsAutocomplete, IsAutocomplete);
+	}
+
+	/** Get Autocomplete.
+		@return Automatic completion for textfields
+	  */
+	public String getIsAutocomplete () 
+	{
+		return (String)get_Value(COLUMNNAME_IsAutocomplete);
+	}
+
+	/** IsDefaultFocus AD_Reference_ID=319 */
+	public static final int ISDEFAULTFOCUS_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISDEFAULTFOCUS_Yes = "Y";
+	/** No = N */
+	public static final String ISDEFAULTFOCUS_No = "N";
+	/** Set Default Focus.
+		@param IsDefaultFocus Default Focus	  */
+	public void setIsDefaultFocus (String IsDefaultFocus)
+	{
+
+		set_Value (COLUMNNAME_IsDefaultFocus, IsDefaultFocus);
+	}
+
+	/** Get Default Focus.
+		@return Default Focus	  */
+	public String getIsDefaultFocus () 
+	{
+		return (String)get_Value(COLUMNNAME_IsDefaultFocus);
+	}
+
 	/** IsDisplayed AD_Reference_ID=319 */
 	public static final int ISDISPLAYED_AD_Reference_ID=319;
 	/** Yes = Y */
@@ -463,6 +580,51 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 	public String getIsDisplayed () 
 	{
 		return (String)get_Value(COLUMNNAME_IsDisplayed);
+	}
+
+	/** IsDisplayedGrid AD_Reference_ID=319 */
+	public static final int ISDISPLAYEDGRID_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISDISPLAYEDGRID_Yes = "Y";
+	/** No = N */
+	public static final String ISDISPLAYEDGRID_No = "N";
+	/** Set Show in Grid.
+		@param IsDisplayedGrid Show in Grid	  */
+	public void setIsDisplayedGrid (String IsDisplayedGrid)
+	{
+
+		set_Value (COLUMNNAME_IsDisplayedGrid, IsDisplayedGrid);
+	}
+
+	/** Get Show in Grid.
+		@return Show in Grid	  */
+	public String getIsDisplayedGrid () 
+	{
+		return (String)get_Value(COLUMNNAME_IsDisplayedGrid);
+	}
+
+	/** Set Manage Elaboration Fields.
+		@param IsElaborationEnable 
+		If selected fields used for elaboration are overwritten
+	  */
+	public void setIsElaborationEnable (boolean IsElaborationEnable)
+	{
+		set_Value (COLUMNNAME_IsElaborationEnable, Boolean.valueOf(IsElaborationEnable));
+	}
+
+	/** Get Manage Elaboration Fields.
+		@return If selected fields used for elaboration are overwritten
+	  */
+	public boolean isElaborationEnable () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsElaborationEnable);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
 	}
 
 	/** IsMandatory AD_Reference_ID=319 */
@@ -537,6 +699,30 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 		return (String)get_Value(COLUMNNAME_IsSameLine);
 	}
 
+	/** IsSelectionColumn AD_Reference_ID=319 */
+	public static final int ISSELECTIONCOLUMN_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISSELECTIONCOLUMN_Yes = "Y";
+	/** No = N */
+	public static final String ISSELECTIONCOLUMN_No = "N";
+	/** Set Selection Column.
+		@param IsSelectionColumn 
+		Is this column used for finding rows in windows
+	  */
+	public void setIsSelectionColumn (String IsSelectionColumn)
+	{
+
+		set_Value (COLUMNNAME_IsSelectionColumn, IsSelectionColumn);
+	}
+
+	/** Get Selection Column.
+		@return Is this column used for finding rows in windows
+	  */
+	public String getIsSelectionColumn () 
+	{
+		return (String)get_Value(COLUMNNAME_IsSelectionColumn);
+	}
+
 	/** IsToolbarButton AD_Reference_ID=200099 */
 	public static final int ISTOOLBARBUTTON_AD_Reference_ID=200099;
 	/** Toolbar = Y */
@@ -563,6 +749,30 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 		return (String)get_Value(COLUMNNAME_IsToolbarButton);
 	}
 
+	/** Set Manage Descriptive Fields.
+		@param IsTranslationEnable 
+		If selected fiels name, description and help can be overwritten
+	  */
+	public void setIsTranslationEnable (boolean IsTranslationEnable)
+	{
+		set_Value (COLUMNNAME_IsTranslationEnable, Boolean.valueOf(IsTranslationEnable));
+	}
+
+	/** Get Manage Descriptive Fields.
+		@return If selected fiels name, description and help can be overwritten
+	  */
+	public boolean isTranslationEnable () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsTranslationEnable);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
 	/** IsUpdateable AD_Reference_ID=319 */
 	public static final int ISUPDATEABLE_AD_Reference_ID=319;
 	/** Yes = Y */
@@ -585,6 +795,30 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 	public String getIsUpdateable () 
 	{
 		return (String)get_Value(COLUMNNAME_IsUpdateable);
+	}
+
+	/** Set Manage Visualization Fields.
+		@param IsViewEnable 
+		If selected fields used for visualization e window design are overwritten
+	  */
+	public void setIsViewEnable (boolean IsViewEnable)
+	{
+		set_Value (COLUMNNAME_IsViewEnable, Boolean.valueOf(IsViewEnable));
+	}
+
+	/** Get Manage Visualization Fields.
+		@return If selected fields used for visualization e window design are overwritten
+	  */
+	public boolean isViewEnable () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsViewEnable);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
 	}
 
 	/** Set Mandatory Logic.
@@ -670,6 +904,43 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 	public int getSeqNo () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_SeqNo);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	/** Set Grid Sequence No.
+		@param SeqNoGrid Grid Sequence No	  */
+	public void setSeqNoGrid (int SeqNoGrid)
+	{
+		set_Value (COLUMNNAME_SeqNoGrid, Integer.valueOf(SeqNoGrid));
+	}
+
+	/** Get Grid Sequence No.
+		@return Grid Sequence No	  */
+	public int getSeqNoGrid () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_SeqNoGrid);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	/** Set Selection Column Sequence.
+		@param SeqNoSelection 
+		Selection Column Sequence
+	  */
+	public void setSeqNoSelection (int SeqNoSelection)
+	{
+		set_Value (COLUMNNAME_SeqNoSelection, Integer.valueOf(SeqNoSelection));
+	}
+
+	/** Get Selection Column Sequence.
+		@return Selection Column Sequence
+	  */
+	public int getSeqNoSelection () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_SeqNoSelection);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
