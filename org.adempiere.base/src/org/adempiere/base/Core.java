@@ -49,6 +49,7 @@ import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.ReplenishInterface;
 import org.compiere.util.WhereClauseAndParams;
+import org.osgi.framework.FrameworkUtil;
 
 /**
  * This is a facade class for the Service Locator.
@@ -61,8 +62,6 @@ import org.compiere.util.WhereClauseAndParams;
  *  		<li>IDEMPIERE-3243 added getScriptEngine to manage both registered engines and engines provided by osgi bundles 
  */
 
-
- */
 public class Core {
 
 	private final static CLogger s_log = CLogger.getCLogger(Core.class);
