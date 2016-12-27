@@ -39,6 +39,11 @@ public class CalloutWindowCustomization extends CalloutEngine
 	 */
 	public String window (Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value)
 	{
+		// F3P: if aggregation is enabled, do nothing
+		
+		if(MUserDefWin.isAggregationEnabled())
+			return NO_ERROR;
+		
 		Integer AD_Window_ID = (Integer)value;
 		if (AD_Window_ID == null || AD_Window_ID.intValue() == 0)
 			return "";
@@ -73,6 +78,11 @@ public class CalloutWindowCustomization extends CalloutEngine
 	 */
 	public String tab (Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value)
 	{
+		// F3P: if aggregation is enabled, do nothing
+		
+		if(MUserDefWin.isAggregationEnabled())
+			return NO_ERROR;
+		
 		Integer p_AD_Tab_ID = (Integer)value;
 		if (p_AD_Tab_ID == null || p_AD_Tab_ID.intValue() == 0)
 			return "";
@@ -105,6 +115,11 @@ public class CalloutWindowCustomization extends CalloutEngine
 	 */
 	public String field (Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value)
 	{
+		// F3P: if aggregation is enabled, do nothing
+		
+		if(MUserDefWin.isAggregationEnabled())
+			return NO_ERROR;
+		
 		Integer p_AD_Field_ID = (Integer)value;
 		if (p_AD_Field_ID == null || p_AD_Field_ID.intValue() == 0)
 			return "";
