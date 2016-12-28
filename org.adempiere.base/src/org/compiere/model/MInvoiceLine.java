@@ -301,7 +301,8 @@ public class MInvoiceLine extends X_C_InvoiceLine
         else if (sLine.getM_RMALine_ID() != 0)
         {
         	// Set Pricing details from the RMA Line on which it is based
-            MRMALine rmaLine = new MRMALine(getCtx(), sLine.getM_RMALine_ID(), get_TrxName());
+        	PO.get(getCtx(), MRMALine.Table_Name, sLine.getM_RMALine_ID(), get_TrxName());
+        	MRMALine rmaLine = PO.get(getCtx(), MRMALine.Table_Name, sLine.getM_RMALine_ID(), get_TrxName());
 
             setPrice();
             setPrice(rmaLine.getAmt());

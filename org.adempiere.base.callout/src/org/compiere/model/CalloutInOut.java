@@ -469,8 +469,8 @@ public class CalloutInOut extends CalloutEngine
 		if (M_RMALine_id == null || M_RMALine_id.intValue() == 0)
 			return "";
 
-		//	Get Details
-		MRMALine rl = new MRMALine (ctx, M_RMALine_id.intValue(), null);
+		//	Get Details		
+		MRMALine rl = PO.get(ctx, MRMALine.Table_Name, M_RMALine_id.intValue(), null);
 		if (rl.get_ID() != 0)
 		{
 			if (rl.getC_Charge_ID() > 0 && rl.getM_Product_ID() <= 0) {

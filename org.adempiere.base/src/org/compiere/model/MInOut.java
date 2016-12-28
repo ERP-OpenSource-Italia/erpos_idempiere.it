@@ -752,8 +752,8 @@ public class MInOut extends X_M_InOut implements DocAction
 				}
 				//RMALine link
 				if (fromLine.getM_RMALine_ID() != 0)
-				{
-					MRMALine peer = new MRMALine (getCtx(), fromLine.getM_RMALine_ID(), get_TrxName());
+				{					
+					MRMALine peer = PO.get(getCtx(), MRMALine.Table_Name, fromLine.getM_RMALine_ID(), get_TrxName());
 					if (peer.getRef_RMALine_ID() > 0)
 						line.setM_RMALine_ID(peer.getRef_RMALine_ID());
 				}
@@ -1313,8 +1313,8 @@ public class MInOut extends X_M_InOut implements DocAction
             MRMALine rmaLine = null;
 
             if (sLine.getM_RMALine_ID() != 0)
-            {
-                rmaLine = new MRMALine(getCtx(), sLine.getM_RMALine_ID(), get_TrxName());
+            {            	
+                rmaLine = PO.get(getCtx(), MRMALine.Table_Name, sLine.getM_RMALine_ID(), get_TrxName());
             }
 
 			if (log.isLoggable(Level.INFO)) log.info("Line=" + sLine.getLine() + " - Qty=" + sLine.getMovementQty());
@@ -1844,8 +1844,8 @@ public class MInOut extends X_M_InOut implements DocAction
 				BigDecimal qtyToReturn = autoBalanceNegative(line, product,qty);
 				
 				if (line.getM_RMALine_ID()!=0 && qtyToReturn.compareTo(Env.ZERO)>0){
-					//Linking to shipment line
-					MRMALine rmaLine = new MRMALine(getCtx(), line.getM_RMALine_ID(), get_TrxName());
+					//Linking to shipment line					
+					MRMALine rmaLine = PO.get(getCtx(), MRMALine.Table_Name, line.getM_RMALine_ID(), get_TrxName());
 					if(rmaLine.getM_InOutLine_ID()>0){
 						//retrieving ASI which is not already returned
 						MInOutLineMA shipmentMAS[] = MInOutLineMA.getNonReturned(getCtx(), rmaLine.getM_InOutLine_ID(), get_TrxName());

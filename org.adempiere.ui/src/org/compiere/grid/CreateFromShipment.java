@@ -36,6 +36,7 @@ import org.compiere.model.MProduct;
 import org.compiere.model.MRMA;
 import org.compiere.model.MRMALine;
 import org.compiere.model.MWarehouse;
+import org.compiere.model.PO;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
@@ -655,7 +656,7 @@ public abstract class CreateFromShipment extends CreateFrom
 				}
 				else if (M_RMALine_ID != 0)
 				{
-					rmal = new MRMALine(Env.getCtx(), M_RMALine_ID, trxName);
+					rmal = PO.get(Env.getCtx(), MRMALine.Table_Name, M_RMALine_ID, trxName);
 					iol.setM_RMALine_ID(M_RMALine_ID);
 					iol.setQtyEntered(QtyEntered);
 					iol.setDescription(rmal.getDescription());

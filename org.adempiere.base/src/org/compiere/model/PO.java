@@ -115,6 +115,79 @@ public abstract class PO
 
 	/** default timeout, 300 seconds **/
 	private static final int QUERY_TIME_OUT = 300;
+	
+	/**	Cache						*/
+	private static CCache<String,PO>	s_cache	= new CCache<String,PO>("POCache", 200, 5, true);	//	5 minutes
+	
+	/** Creates a new model (equivalent to new MInvoice(ctx,0,trxName); )
+	 * 
+	 * @param ctx	context
+	 * @param tableName	tablename of the model to be created
+	 * @param trxName transaction
+	 * @return the new model, or null if the table does not exists
+	 */
+	public static <T extends PO> T create(Properties ctx,String tableName, String trxName)
+	{
+		return get(ctx,tableName, 0, trxName);
+	}
+	
+	/** Get a model from database, by primary key
+	 * 
+	 * @param ctx	context of the new object
+	 * @param tableName tablename of the model to be created
+	 * @param ID primary key value
+	 * @param trxName transaction
+	 * @return  the new model, or null if the table does not exists
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T extends PO> T get(Properties ctx,String tableName,int ID,String trxName)
+	{
+		if(ID > 0)
+		{
+			String key = getCacheKey(tableName, ID);
+			
+			if(s_cache.containsKey(key))
+				return (T)s_cache.get(key);
+		}
+				
+		T po = null;
+		MTable table = MTable.get(ctx, tableName);
+		
+		if(table != null)
+		{
+			po = (T) table.getPO(ID,trxName);
+			
+			if(po != null && po.get_ID() > 0)
+				cachePO(po);
+		}
+		
+		return po;
+	}
+	
+	/** Get a model from database using the current row of the result set
+	 * 
+	 * @param ctx	context of the new object
+	 * @param tableName tablename of the model to be created
+	 * @param rs result set from where data will be read
+	 * @param trxName transaction
+	 * @return  the new model, or null if the table does not exists
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T extends PO> T get(Properties ctx,String tableName,ResultSet rs,String trxName)
+	{
+		T po = null;
+		MTable table = MTable.get(ctx, tableName);
+		
+		if(table != null)
+		{
+			po = (T) table.getPO(rs,trxName);
+			
+			if(po != null)
+				cachePO(po);
+		}
+		
+		return po;
+	}	
 
 	/**
 	 * 	Set Document Value Workflow Manager
@@ -2312,10 +2385,8 @@ public abstract class PO
 			m_newValues = new Object[size];
 			m_createNew = false;
 		}
-		if (!newRecord)
-			CacheMgt.get().reset(p_info.getTableName());
-		else if (get_ID() > 0 && success)
-			CacheMgt.get().newRecord(p_info.getTableName(), get_ID());
+		
+		updateCache(newRecord, success, false);
 		
 		return success;
 	}	//	saveFinish
@@ -3418,8 +3489,9 @@ public abstract class PO
 				int size = p_info.getColumnCount();
 				m_oldValues = new Object[size];
 				m_newValues = new Object[size];
-				CacheMgt.get().reset(p_info.getTableName());
 			}
+			
+			updateCache(false,success,true);
 		}
 		finally
 		{
@@ -4733,5 +4805,41 @@ public abstract class PO
 		if (getCtx().isEmpty() && getCtx().getProperty("#AD_Client_ID") == null)
 			throw new AdempiereException("Context lost");
 	}
-
+	
+	private static String getCacheKey(String tableName,int id)
+	{
+		StringBuilder sbKey = new StringBuilder(tableName);
+		sbKey.append('|').append(id);
+		
+		return sbKey.toString();
+	}
+	
+	private void updateCache(boolean newRecord,boolean success,boolean delete)
+	{
+		int id = get_ID();
+		
+		if (!newRecord)
+			CacheMgt.get().reset(p_info.getTableName());
+		else if (id > 0 && success)
+			CacheMgt.get().newRecord(p_info.getTableName(), id);
+		
+		if(id > 0)
+		{
+			String key = getCacheKey(p_info.getTableName(), id);
+			
+			s_cache.remove(key);
+			
+			if(success && delete == false)
+			{
+				s_cache.put(key, this);
+			}			
+		}
+	}
+	
+	private static void cachePO(PO po)
+	{
+		String key = getCacheKey(po.get_TableName(), po.get_ID());		
+		s_cache.put(key,po);
+	}
+	
 }   //  PO

@@ -47,7 +47,9 @@ public class MRMALine extends X_M_RMALine
 	 *	@param ctx context
 	 *	@param M_RMALine_ID id
 	 *	@param trxName transaction
+	 *  @deprecated Use  PO.get(Env.getCtx(), MRMALine.Table_Name, M_RMALine_ID, trxName) or PO.create(rma.getCtx(), MRMALine.Table_Name, rma.get_TrxName());
 	 */
+	@Deprecated
 	public MRMALine (Properties ctx, int M_RMALine_ID, String trxName)
 	{
 		super (ctx, M_RMALine_ID, trxName);

@@ -1869,8 +1869,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 			//Update QtyInvoiced RMA Line
 			if (line.getM_RMALine_ID() != 0)
-			{
-				MRMALine rmaLine = new MRMALine (getCtx(),line.getM_RMALine_ID(), get_TrxName());
+			{				
+				MRMALine rmaLine = PO.get(getCtx(), MRMALine.Table_Name, line.getM_RMALine_ID(), get_TrxName());
 				if (rmaLine.getQtyInvoiced() != null)
 					rmaLine.setQtyInvoiced(rmaLine.getQtyInvoiced().add(line.getQtyInvoiced()));
 				else
