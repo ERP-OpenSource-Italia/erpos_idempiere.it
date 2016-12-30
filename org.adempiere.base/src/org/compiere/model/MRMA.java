@@ -173,7 +173,9 @@ public class MRMA extends X_M_RMA implements DocAction
        }
        else
        {
-           String sqlStmt = "SELECT C_Invoice_ID FROM C_Invoice WHERE C_Order_ID=?";
+           //String sqlStmt = "SELECT C_Invoice_ID FROM C_Invoice WHERE C_Order_ID=?"; //F3P: look in lines
+    	   String sqlStmt = "SELECT C_Invoice_ID FROM C_InvoiceLine WHERE "
+    	   		+ "EXISTS (SELECT 'ok' FROM C_OrderLine WHERE C_OrderLine.C_OrderLine_ID = C_InvoiceLine.C_OrderLine_ID AND C_OrderLine.C_Order_ID=?)";
            invId = DB.getSQLValueEx(null, sqlStmt, shipment.getC_Order_ID());
        }
 

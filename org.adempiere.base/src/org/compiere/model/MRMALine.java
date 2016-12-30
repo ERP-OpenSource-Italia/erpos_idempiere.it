@@ -75,25 +75,25 @@ public class MRMALine extends X_M_RMALine
 	}	//	MRMALine
 	
 	/**	Shipment Line			*/
-	private MInOutLine	m_ioLine = null;
+	protected MInOutLine	m_ioLine = null; // F3P: changed to protected to allow using from overridden classes
 	/**	Product					*/
-	private MProduct	m_product = null;
+	protected MProduct	m_product = null; // F3P: changed to protected to allow using from overridden classes
 	/**	Charge					*/
-	private MCharge		m_charge = null;
+	protected MCharge		m_charge = null; // F3P: changed to protected to allow using from overridden classes
 	/** Tax							*/
-	private MTax 		m_tax = null;
+	protected MTax 		m_tax = null; // F3P: changed to protected to allow using from overridden classes
 	/** Parent                  */
 	private MRMA		m_parent = null;
     
     private int precision = 0;
     private BigDecimal unitAmount = Env.ZERO;
-    private BigDecimal originalQty = Env.ZERO;
-    private int taxId = 0;
+    protected BigDecimal originalQty = Env.ZERO;	// F3P: changed to protected to allow using from overridden classes
+    protected int taxId = 0;	// F3P: changed to protected to allow using from overridden classes
     
     /**
      * Initialise parameters that are required
      */
-    private void init()
+    protected void init() // F3P: changed to protected to allow using from overridden classes
     {
         getShipLine();
         
