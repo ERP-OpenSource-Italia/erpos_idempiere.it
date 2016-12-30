@@ -23,13 +23,19 @@ package org.adempiere.webui;
 import java.util.List;
 
 import org.adempiere.base.Service;
+import org.adempiere.webui.editor.IEditorPopupMenuItem;
+import org.adempiere.webui.editor.WEditor;
+import org.adempiere.webui.factory.IEditorPopupMenuItemFactory;
 import org.adempiere.webui.factory.IFormFactory;
 import org.adempiere.webui.panel.ADForm;
+import org.adempiere.webui.util.WEditorPopupMenuItems;
 
 /**
  *
  * @author viola
  * @author hengsin
+ * @author Silvano Trinchero, www.freepath.it
+ * 			<li> IDEMPIERE-3276 New extension to add or replace context menu items on editor
  *
  */
 public class Extensions {
@@ -49,5 +55,28 @@ public class Extensions {
 			}
 		}
 		return null;
+	}
+	
+	/** Get the additional menu items for the editor
+	 * 
+	 * @param editor
+	 * @return the list of items
+	 */
+	public static WEditorPopupMenuItems getEditorPopupMenuItems(WEditor editor,boolean zoom, boolean requery, boolean preferences, boolean newRecord, boolean updateRecord, boolean showLocation)
+	{
+		List<IEditorPopupMenuItemFactory> factories = Service.locator().list(IEditorPopupMenuItemFactory.class).getServices();
+		WEditorPopupMenuItems items = new WEditorPopupMenuItems();
+		
+		if(factories != null)
+		{
+			for(IEditorPopupMenuItemFactory factory:factories)
+			{
+				List<IEditorPopupMenuItem> factoryItems = factory.getItems(editor, zoom, requery, preferences, newRecord, updateRecord, showLocation);
+				if(factoryItems != null)
+					items.addAll(factoryItems);
+			}
+		}
+
+		return items;
 	}
 }

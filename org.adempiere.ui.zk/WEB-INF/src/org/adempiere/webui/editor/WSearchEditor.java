@@ -70,6 +70,8 @@ import org.zkoss.zk.ui.util.Clients;
  * Web UI port of search type VLookup
  *
  * @author Ashley G Ramdass
+ * @author Silvano Trinchero, www.freepath.it
+ * 			<li> IDEMPIERE-3276 New extension to add or replace context menu items on editor
  *
  */
 public class WSearchEditor extends WEditor implements ContextMenuListener, ValueChangeListener, IZoomableEditor
@@ -171,17 +173,17 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 		columnName = this.getColumnName();
 		if (columnName.equals("C_BPartner_ID"))
 		{
-			popupMenu = new WEditorPopupMenu(true, true, isShowPreference(), true, true, false, lookup);
+			popupMenu = new WEditorPopupMenu(true, true, isShowPreference(), true, true, false, lookup, this);
 			imageUrl = ThemeManager.getThemeResource("images/BPartner16.png");
 		}
 		else if (columnName.equals("M_Product_ID"))
 		{
-			popupMenu = new WEditorPopupMenu(true, true, isShowPreference(), false, false, false, lookup);
+			popupMenu = new WEditorPopupMenu(true, true, isShowPreference(), false, false, false, lookup, this);
 			imageUrl = ThemeManager.getThemeResource("images/Product16.png");
 		}
 		else
 		{
-			popupMenu = new WEditorPopupMenu(true, true, isShowPreference(), false, false, false, lookup);
+			popupMenu = new WEditorPopupMenu(true, true, isShowPreference(), false, false, false, lookup, this);
 			imageUrl = ThemeManager.getThemeResource("images/PickOpen16.png");
 		}
 		getComponent().getButton().setImage(imageUrl);

@@ -18,11 +18,14 @@
 package org.adempiere.webui.editor;
 
 import java.util.ArrayList;
+import java.util.List;
 
+import org.adempiere.webui.Extensions;
 import org.adempiere.webui.component.Menupopup;
 import org.adempiere.webui.event.ContextMenuEvent;
 import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.WEditorPopupMenuItems;
 import org.compiere.model.Lookup;
 import org.compiere.model.MRole;
 import org.compiere.util.DB;
@@ -37,6 +40,8 @@ import org.zkoss.zul.Menuitem;
 /**
  *
  * @author  <a href="mailto:agramdass@gmail.com">Ashley G Ramdass</a>
+ * @author  Silvano Trinchero, www.freepath.it
+ * 			<li> IDEMPIERE-3276 New extension to add or replace context menu items on editor
  * @date    Mar 25, 2007
  * @version $Revision: 0.10 $
  */
@@ -70,30 +75,44 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
     private Menuitem newItem;
     private Menuitem updateItem; // Elaine 2009/02/16 - update record   
 	private Menuitem showLocationItem;
+	
+	private WEditor				  editor = null;
+	private WEditorPopupMenuItems extensionsItems = null;
     
     private ArrayList<ContextMenuListener> menuListeners = new ArrayList<ContextMenuListener>();
-    
+
     public WEditorPopupMenu(boolean zoom, boolean requery, boolean preferences)
     {
-        this(zoom, requery, preferences, false, false, false, null); // no check zoom
+        this(zoom, requery, preferences, false, false, false, null, null); // no check zoom
     }
+    
+    public WEditorPopupMenu(boolean zoom, boolean requery, boolean preferences, WEditor editor)
+    {
+        this(zoom, requery, preferences, false, false, false, null, editor); // no check zoom
+    }
+
     
     @Deprecated
     public WEditorPopupMenu(boolean zoom, boolean requery, boolean preferences, boolean newRecord)
     {
-    	this(zoom, requery, preferences, newRecord, false, false, null);
+    	this(zoom, requery, preferences, newRecord, false, false, null, null);
     }
     
     @Deprecated
     public WEditorPopupMenu(boolean zoom, boolean requery, boolean preferences, boolean newRecord, boolean updateRecord)
     {
-    	this(zoom, requery, preferences, newRecord, updateRecord, false, null);
+    	this(zoom, requery, preferences, newRecord, updateRecord, false, null, null);
     }
 
     @Deprecated
     public WEditorPopupMenu(boolean zoom, boolean requery, boolean preferences, boolean newRecord, boolean updateRecord, boolean showLocation)
     {
-    	this(zoom, requery, preferences, newRecord, updateRecord, false, null);
+    	this(zoom, requery, preferences, newRecord, updateRecord, false, null, null);
+    }
+    
+    public WEditorPopupMenu(boolean zoom, boolean requery, boolean preferences, boolean newRecord, boolean updateRecord, boolean showLocation, Lookup lookup)
+    {
+    	this(zoom,requery, preferences, newRecord, updateRecord, showLocation, lookup, null);
     }
 
     /**
@@ -105,7 +124,7 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
      * @param showLocation - enable show location in menu
      * @param lookup - when this parameter is received then new and update are calculated based on the zoom and quickentry
      */
-    public WEditorPopupMenu(boolean zoom, boolean requery, boolean preferences, boolean newRecord, boolean updateRecord, boolean showLocation, Lookup lookup)
+    public WEditorPopupMenu(boolean zoom, boolean requery, boolean preferences, boolean newRecord, boolean updateRecord, boolean showLocation, Lookup lookup, WEditor editor)
     {
     	super();
     	this.zoomEnabled = zoom;
@@ -161,22 +180,45 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
     			}
     		}
     	}
-    	init();
+    	init(editor);
     }
 
 	public boolean isZoomEnabled() {
     	return zoomEnabled;
     }
     
-    private void init()
+    private void init(WEditor edt)
     {
+    	editor = edt;
+    	
+    	if(editor != null)
+    	{
+    		extensionsItems = Extensions.getEditorPopupMenuItems(editor, zoomEnabled, requeryEnabled, preferencesEnabled, newEnabled, updateEnabled, showLocation);
+    	}
+    	else
+    	{
+    		extensionsItems = new WEditorPopupMenuItems();
+    	}
+    	
         if (zoomEnabled)
         {
             zoomItem = new Menuitem();
             zoomItem.setAttribute(EVENT_ATTRIBUTE, ZOOM_EVENT);
-            zoomItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Zoom")).intern());
-            zoomItem.setImage(ThemeManager.getThemeResource("images/Zoom16.png"));
             zoomItem.addEventListener(Events.ON_CLICK, this);
+            
+            if(extensionsItems.hasEvent(ZOOM_EVENT)) // Use provided item instead of default one
+            {
+            	IEditorPopupMenuItem item = extensionsItems.getByEvent(ZOOM_EVENT);
+            	
+                zoomItem.setLabel(item.getLabel());
+                zoomItem.setImage(item.getImageURL());
+            }
+            else
+            {
+	            zoomItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Zoom")).intern());
+	            zoomItem.setImage(ThemeManager.getThemeResource("images/Zoom16.png"));	            
+            }
+            
             
             this.appendChild(zoomItem);
         }
@@ -185,9 +227,21 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
         {
             requeryItem = new Menuitem();
             requeryItem.setAttribute(EVENT_ATTRIBUTE, REQUERY_EVENT);
-            requeryItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Refresh")).intern());
-            requeryItem.setImage(ThemeManager.getThemeResource("images/Refresh16.png"));
             requeryItem.addEventListener(Events.ON_CLICK, this);
+            
+            if(extensionsItems.hasEvent(REQUERY_EVENT)) // Use provided item instead of default one
+            {
+            	IEditorPopupMenuItem item = extensionsItems.getByEvent(REQUERY_EVENT);
+            	
+            	requeryItem.setLabel(item.getLabel());
+            	requeryItem.setImage(item.getImageURL());
+            }
+            else
+            {
+            	requeryItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Refresh")).intern());
+            	requeryItem.setImage(ThemeManager.getThemeResource("images/Refresh16.png"));
+            }
+                        
             this.appendChild(requeryItem);
         }
         
@@ -195,9 +249,21 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
         {
             prefItem = new Menuitem();
             prefItem.setAttribute(EVENT_ATTRIBUTE, PREFERENCE_EVENT);
-            prefItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "ValuePreference")).intern());
-            prefItem.setImage(ThemeManager.getThemeResource("images/VPreference16.png"));
             prefItem.addEventListener(Events.ON_CLICK, this);
+            
+            if(extensionsItems.hasEvent(PREFERENCE_EVENT)) // Use provided item instead of default one
+            {
+            	IEditorPopupMenuItem item = extensionsItems.getByEvent(PREFERENCE_EVENT);
+            	
+            	prefItem.setLabel(item.getLabel());
+            	prefItem.setImage(item.getImageURL());
+            }
+            else
+            {            
+            	prefItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "ValuePreference")).intern());
+            	prefItem.setImage(ThemeManager.getThemeResource("images/VPreference16.png"));
+            }
+            
             this.appendChild(prefItem);
         }
         
@@ -205,9 +271,21 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
         {
         	newItem = new Menuitem();
         	newItem.setAttribute(EVENT_ATTRIBUTE, NEW_EVENT);
-        	newItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "New")).intern());
-        	newItem.setImage(ThemeManager.getThemeResource("images/New16.png"));
         	newItem.addEventListener(Events.ON_CLICK, this);
+        	
+            if(extensionsItems.hasEvent(NEW_EVENT)) // Use provided item instead of default one
+            {
+            	IEditorPopupMenuItem item = extensionsItems.getByEvent(NEW_EVENT);
+            	
+            	newItem.setLabel(item.getLabel());
+            	newItem.setImage(item.getImageURL());
+            }
+            else
+            {      
+            	newItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "New")).intern());
+            	newItem.setImage(ThemeManager.getThemeResource("images/New16.png"));
+            }
+        	
         	this.appendChild(newItem);
         }
         
@@ -216,9 +294,21 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
         {
         	updateItem = new Menuitem();
         	updateItem.setAttribute(EVENT_ATTRIBUTE, UPDATE_EVENT);
-        	updateItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Update")).intern());
-        	updateItem.setImage(ThemeManager.getThemeResource("images/InfoBPartner16.png"));
         	updateItem.addEventListener(Events.ON_CLICK, this);
+        	
+            if(extensionsItems.hasEvent(UPDATE_EVENT)) // Use provided item instead of default one
+            {
+            	IEditorPopupMenuItem item = extensionsItems.getByEvent(UPDATE_EVENT);
+            	
+            	updateItem.setLabel(item.getLabel());
+            	updateItem.setImage(item.getImageURL());
+            }
+            else
+            {
+            	updateItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Update")).intern());
+            	updateItem.setImage(ThemeManager.getThemeResource("images/InfoBPartner16.png"));
+            }
+        	
         	this.appendChild(updateItem);
         }
         //
@@ -226,12 +316,38 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
         {
         	showLocationItem = new Menuitem();
         	showLocationItem.setAttribute(EVENT_ATTRIBUTE, SHOWLOCATION_EVENT);
-        	showLocationItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "ShowLocation")).intern());
-        	showLocationItem.setImage(ThemeManager.getThemeResource("images/InfoBPartner16.png"));
         	showLocationItem.addEventListener(Events.ON_CLICK, this);
+        	
+            if(extensionsItems.hasEvent(SHOWLOCATION_EVENT)) // Use provided item instead of default one
+            {
+            	IEditorPopupMenuItem item = extensionsItems.getByEvent(SHOWLOCATION_EVENT);
+            	
+            	showLocationItem.setLabel(item.getLabel());
+            	showLocationItem.setImage(item.getImageURL());
+            }
+            else
+            {
+            	showLocationItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "ShowLocation")).intern());
+        		showLocationItem.setImage(ThemeManager.getThemeResource("images/InfoBPartner16.png"));
+            }
+        	
         	this.appendChild(showLocationItem);
         }
         
+        List<IEditorPopupMenuItem> extItems = extensionsItems.getNonStandardItems();
+        
+        for(IEditorPopupMenuItem item:extItems)
+        {
+        	Menuitem menuItem = new Menuitem();
+        	
+        	menuItem.setAttribute(EVENT_ATTRIBUTE, item.getEvent());
+        	menuItem.addEventListener(Events.ON_CLICK, this);
+        	
+        	menuItem.setLabel(item.getLabel());
+        	menuItem.setImage(item.getImageURL());
+        	
+        	this.appendChild(menuItem);
+        }
     }
     
     public void addMenuListener(ContextMenuListener listener)
@@ -246,6 +362,12 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
         
         if (evt != null)
         {
+        	if(extensionsItems.hasEvent(evt))
+        	{
+        		IEditorPopupMenuItem item = extensionsItems.getByEvent(evt);
+        		item.onEvent(editor);
+        	}
+        	
             ContextMenuEvent menuEvent = new ContextMenuEvent(evt);
             
             ContextMenuListener[] listeners = new ContextMenuListener[0];
