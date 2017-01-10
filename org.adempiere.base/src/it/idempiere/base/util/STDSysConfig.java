@@ -35,6 +35,9 @@ public class STDSysConfig
 	public static final String F3P_SKIP_SUBJECT_IN_HTMLMAILBODY = "F3P_SKIP_SUBJECT_IN_HTML_MAIL_BODY";
 	
 	public static final String SYSCFG_OVERRIDE_INOUT_LINE_NO = "F3P_OVERRIDE_GENERATED_INOUT_LINE_NO";
+	public static final String F3P_EXPLODE_BOM_SERVICE = "F3P_EXPLODE_BOM_SERVICE";
+	//LS variabile per gestire i termini pag fatture prima del completa
+	public static final String LIT_PAYSCHEDULEINV_BEFORE_COMPLETE = "LIT_PAYSCHEDULEINV_BEFORE_COMPLETE";
 	
 	/**
 	 * Parametro che indica se bisogna ripetere il soggetto come sottotitolo nell'email
@@ -194,5 +197,22 @@ public class STDSysConfig
 	public static boolean isOverrideGeneratedInOutLineNo(int AD_Client_ID)
 	{
 		return MSysConfig.getBooleanValue(SYSCFG_OVERRIDE_INOUT_LINE_NO, false, AD_Client_ID);
+	}
+	
+	/** Regola il comportamento dell'esplosione della bom, per i prodotti servizio
+	 * 
+	 * @param AD_Client_ID
+	 * @param AD_Org_ID
+	 * @return Y: esplode service, N: non esplode, X: non esplode nessuna riga di bom (indifferentemente dal tipo prodotto)
+	 */
+	public static String getIsExplodeBOMService(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getValue(F3P_EXPLODE_BOM_SERVICE, "Y", AD_Client_ID, AD_Org_ID);
+	}
+
+	// LS
+	public static final boolean isPayScheduleInvBeforeComplete(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_PAYSCHEDULEINV_BEFORE_COMPLETE, false, AD_Client_ID, AD_Org_ID);
 	}
 }
