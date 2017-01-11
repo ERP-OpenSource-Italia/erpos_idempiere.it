@@ -45,6 +45,10 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
+
+import it.idempiere.base.util.STDSysConfig;
+import it.idempiere.base.util.STDUtils;
 
 
 /**
@@ -780,7 +784,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			}
 			//
 			line.setProcessed(false);
-			if (line.save(get_TrxName()))
+			//if (line.save(get_TrxName())) //F3P use saveEx
+			line.saveEx(get_TrxName());
 				count++;
 			//	Cross Link
 			if (counter)
@@ -1529,9 +1534,29 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	 */
 	private void explodeBOM ()
 	{
-		String where = "AND IsActive='Y' AND EXISTS "
-			+ "(SELECT * FROM M_Product p WHERE C_InvoiceLine.M_Product_ID=p.M_Product_ID"
-			+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')";
+		// F3P
+		String sExplodeBOM = STDSysConfig.getIsExplodeBOMService(getAD_Client_ID(), getAD_Org_ID());
+
+		if (sExplodeBOM.equals("X")) {
+			return;
+		}
+
+		boolean bExplodeBOM = STDUtils.asBoolean(sExplodeBOM);
+
+		String where = null;
+
+		if (bExplodeBOM) {
+			where = "AND IsActive='Y' AND EXISTS "
+					+ "(SELECT * FROM M_Product p WHERE C_InvoiceLine.M_Product_ID=p.M_Product_ID"
+					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')";
+		} else {
+			where = "AND IsActive='Y' AND EXISTS "
+					+ "(SELECT * FROM M_Product p WHERE C_InvoiceLine.M_Product_ID=p.M_Product_ID"
+					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N' and p.ProductType='I')"; // F3P: aggiunta verifica che sia di tipo 'item'
+		}
+
+		// F3P end
+
 		//
 		String sql = "SELECT COUNT(*) FROM C_InvoiceLine "
 			+ "WHERE C_Invoice_ID=? " + where;
@@ -1642,7 +1667,9 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	{
 		if (getC_PaymentTerm_ID() == 0)
 			return false;
-		MPaymentTerm pt = new MPaymentTerm(getCtx(), getC_PaymentTerm_ID(), null);
+		// F3P: changed to use model factory to enable customization
+		// MPaymentTerm pt = new MPaymentTerm(getCtx(), getC_PaymentTerm_ID(), null);
+		MPaymentTerm pt = PO.get(getCtx(), MPaymentTerm.Table_Name, getC_PaymentTerm_ID(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine(pt.toString());
 		
 		int numSchema = pt.getSchedule(false).length;
@@ -2132,11 +2159,25 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			return;
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		if (dt.isOverwriteDateOnComplete()) {
-			setDateInvoiced(new Timestamp (System.currentTimeMillis()));
+			// F3P: date invoiced should not have the time component
+			// setDateInvoiced(new Timestamp (System.currentTimeMillis()));
+			Timestamp tsNow = TimeUtil.getDay(System.currentTimeMillis());
+			setDateInvoiced(tsNow);
 			if (getDateAcct().before(getDateInvoiced())) {
 				setDateAcct(getDateInvoiced());
 				MPeriod.testPeriodOpen(getCtx(), getDateAcct(), getC_DocType_ID(), getAD_Org_ID());
 			}
+			
+			// F3P: if pay schedule is not customized, regenerate based on new record
+			
+			if(isInvPaySchedCustomized() == false)
+			{
+				createPaySchedule();
+			}
+			
+			// F3P: need to change vatLedgerDate and dateAcct			
+			setVATLedgerDate(getDateInvoiced());
+
 		}
 		if (dt.isOverwriteSeqOnComplete()) {
 			String value = DB.getDocumentNo(getC_DocType_ID(), get_TrxName(), true, this);
@@ -2746,5 +2787,14 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	{
 		return getC_DocType_ID() > 0 ? getC_DocType_ID() : getC_DocTypeTarget_ID();
 	}
+	
+	public boolean isInvPaySchedCustomized() 
+	{
+		return !isReversal()
+				&& STDSysConfig.isPayScheduleInvBeforeComplete(
+						Env.getAD_Client_ID(getCtx()),
+						Env.getAD_Org_ID(getCtx()));
+	}
+	
 
 }	//	MInvoice
