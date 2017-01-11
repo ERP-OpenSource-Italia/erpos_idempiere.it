@@ -29,7 +29,7 @@ public class X_C_BP_Employee_Acct extends PO implements I_C_BP_Employee_Acct, I_
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20170111L;
 
     /** Standard Constructor */
     public X_C_BP_Employee_Acct (Properties ctx, int C_BP_Employee_Acct_ID, String trxName)
@@ -39,6 +39,8 @@ public class X_C_BP_Employee_Acct extends PO implements I_C_BP_Employee_Acct, I_
         {
 			setC_AcctSchema_ID (0);
 			setC_BPartner_ID (0);
+			setE_Expense_Acct (0);
+			setE_Prepayment_Acct (0);
         } */
     }
 
@@ -138,5 +140,55 @@ public class X_C_BP_Employee_Acct extends PO implements I_C_BP_Employee_Acct, I_
 	public String getC_BP_Employee_Acct_UU () 
 	{
 		return (String)get_Value(COLUMNNAME_C_BP_Employee_Acct_UU);
+	}
+
+	public I_C_ValidCombination getE_Expense_A() throws RuntimeException
+    {
+		return (I_C_ValidCombination)MTable.get(getCtx(), I_C_ValidCombination.Table_Name)
+			.getPO(getE_Expense_Acct(), get_TrxName());	}
+
+	/** Set Employee Expense.
+		@param E_Expense_Acct 
+		Account for Employee Expenses
+	  */
+	public void setE_Expense_Acct (int E_Expense_Acct)
+	{
+		set_Value (COLUMNNAME_E_Expense_Acct, Integer.valueOf(E_Expense_Acct));
+	}
+
+	/** Get Employee Expense.
+		@return Account for Employee Expenses
+	  */
+	public int getE_Expense_Acct () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_E_Expense_Acct);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public I_C_ValidCombination getE_Prepayment_A() throws RuntimeException
+    {
+		return (I_C_ValidCombination)MTable.get(getCtx(), I_C_ValidCombination.Table_Name)
+			.getPO(getE_Prepayment_Acct(), get_TrxName());	}
+
+	/** Set Employee Prepayment.
+		@param E_Prepayment_Acct 
+		Account for Employee Expense Prepayments
+	  */
+	public void setE_Prepayment_Acct (int E_Prepayment_Acct)
+	{
+		set_Value (COLUMNNAME_E_Prepayment_Acct, Integer.valueOf(E_Prepayment_Acct));
+	}
+
+	/** Get Employee Prepayment.
+		@return Account for Employee Expense Prepayments
+	  */
+	public int getE_Prepayment_Acct () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_E_Prepayment_Acct);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
 	}
 }
