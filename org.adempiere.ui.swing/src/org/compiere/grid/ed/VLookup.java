@@ -1758,4 +1758,11 @@ public class VLookup extends JComponent
 	}	//	isComboShortList
 	// IDEMPIERE 90
 
+	// F3P: added to get access to lookup
+	public Lookup getLookup()
+	{
+		return m_lookup;
+	}
+	 	
+	// F3P: end
 }	//	VLookup
