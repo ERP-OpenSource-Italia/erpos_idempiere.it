@@ -64,6 +64,8 @@ import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 
+import it.idempiere.base.util.SavedFromUI;
+
 /**
  *	Grid Table Model for JDBC access including buffering.
  *  <pre>
@@ -2237,34 +2239,53 @@ public class GridTable extends AbstractTableModel
 
 		}	//	for every column
 
-		if (!po.save())
+		/* F3P: po is added to list of object saved from ui, 
+		 * so we can have a way to check if an object is being 
+		 * saved from ui or from a process.
+		 * After po.save() the object will be removed from the list.
+		 * 
+		 * This code is also being surrounded with a try/catch block to 
+		 * avoid that an object is not removed from the list in case of exception
+		 */
+		try
 		{
-			String msg = "SaveError";
-			String info = "";
-			ValueNamePair ppE = CLogger.retrieveError();
-			if (ppE != null)
+			SavedFromUI.add(po); // F3P: add po
+			
+			if (!po.save())
 			{
-				msg = ppE.getValue();
-				info = ppE.getName();
-				if ("DBExecuteError".equals(msg))
-					info = "DBExecuteError:" + info;
+				SavedFromUI.remove(po); // F3P: remove po
+							
+				String msg = "SaveError";
+				String info = "";
+				ValueNamePair ppE = CLogger.retrieveError();
+				if (ppE != null)
+				{
+					msg = ppE.getValue();
+					info = ppE.getName();
+					if ("DBExecuteError".equals(msg))
+						info = "DBExecuteError:" + info;
+				}
+				fireDataStatusEEvent(msg, info, true);
+				return SAVE_ERROR;
 			}
-			fireDataStatusEEvent(msg, info, true);
-			return SAVE_ERROR;
+			else if (m_virtual && po.get_ID() > 0)
+			{
+				//update ID
+				MSort sort = m_sort.get(m_rowChanged);
+				int oldid = sort.index;
+				if (oldid != po.get_ID())
+				{
+					sort.index = po.get_ID();
+					Object[] data = m_virtualBuffer.remove(oldid);
+					data[m_indexKeyColumn] = sort.index;
+					m_virtualBuffer.put(sort.index, data);
+				}
+			}
 		}
-		else if (m_virtual && po.get_ID() > 0)
+		finally
 		{
-			//update ID
-			MSort sort = m_sort.get(m_rowChanged);
-			int oldid = sort.index;
-			if (oldid != po.get_ID())
-			{
-				sort.index = po.get_ID();
-				Object[] data = m_virtualBuffer.remove(oldid);
-				data[m_indexKeyColumn] = sort.index;
-				m_virtualBuffer.put(sort.index, data);
-			}
-		}
+			SavedFromUI.remove(po);	// F3P: removed even if exception occur
+		}		
 		
 		//	Refresh - update buffer
 		String whereClause = po.get_WhereClause(true);
@@ -3767,6 +3788,17 @@ public class GridTable extends AbstractTableModel
 			
 			boolean hasUpdated = (colUpdated > 0);
 			boolean hasProcessed = (colProcessed > 0);
+			
+			// F3P: if colProcessed is a virtual column, dont consider it
+			
+			if(hasProcessed)
+			{
+				GridField	gf = (GridField)m_fields.get(colProcessed);
+				if(gf.isVirtualColumn())
+					hasProcessed = false;
+			}
+				
+			// end			
 			
 			String columns = null;
 			if (hasUpdated && hasProcessed) {
