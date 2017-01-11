@@ -30,7 +30,7 @@ public class X_AD_UserDef_Win extends PO implements I_AD_UserDef_Win, I_Persiste
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20161221L;
 
     /** Standard Constructor */
     public X_AD_UserDef_Win (Properties ctx, int AD_UserDef_Win_ID, String trxName)
@@ -40,9 +40,8 @@ public class X_AD_UserDef_Win extends PO implements I_AD_UserDef_Win, I_Persiste
         {
 			setAD_UserDef_Win_ID (0);
 			setAD_Window_ID (0);
-			setIsDefault (false);
-			setIsReadOnly (false);
-			setIsUserUpdateable (false);
+			setIsTranslationEnable (false);
+// N
         } */
     }
 
@@ -254,45 +253,69 @@ public class X_AD_UserDef_Win extends PO implements I_AD_UserDef_Win, I_Persiste
 		return (String)get_Value(COLUMNNAME_Help);
 	}
 
+	/** IsDefault AD_Reference_ID=319 */
+	public static final int ISDEFAULT_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISDEFAULT_Yes = "Y";
+	/** No = N */
+	public static final String ISDEFAULT_No = "N";
 	/** Set Default.
 		@param IsDefault 
 		Default value
 	  */
-	public void setIsDefault (boolean IsDefault)
+	public void setIsDefault (String IsDefault)
 	{
-		set_Value (COLUMNNAME_IsDefault, Boolean.valueOf(IsDefault));
+
+		set_Value (COLUMNNAME_IsDefault, IsDefault);
 	}
 
 	/** Get Default.
 		@return Default value
 	  */
-	public boolean isDefault () 
+	public String getIsDefault () 
 	{
-		Object oo = get_Value(COLUMNNAME_IsDefault);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
+		return (String)get_Value(COLUMNNAME_IsDefault);
 	}
 
+	/** IsReadOnly AD_Reference_ID=319 */
+	public static final int ISREADONLY_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISREADONLY_Yes = "Y";
+	/** No = N */
+	public static final String ISREADONLY_No = "N";
 	/** Set Read Only.
 		@param IsReadOnly 
 		Field is read only
 	  */
-	public void setIsReadOnly (boolean IsReadOnly)
+	public void setIsReadOnly (String IsReadOnly)
 	{
-		set_Value (COLUMNNAME_IsReadOnly, Boolean.valueOf(IsReadOnly));
+
+		set_Value (COLUMNNAME_IsReadOnly, IsReadOnly);
 	}
 
 	/** Get Read Only.
 		@return Field is read only
 	  */
-	public boolean isReadOnly () 
+	public String getIsReadOnly () 
 	{
-		Object oo = get_Value(COLUMNNAME_IsReadOnly);
+		return (String)get_Value(COLUMNNAME_IsReadOnly);
+	}
+
+	/** Set Manage Descriptive Fields.
+		@param IsTranslationEnable 
+		If selected fiels name, description and help can be overwritten
+	  */
+	public void setIsTranslationEnable (boolean IsTranslationEnable)
+	{
+		set_Value (COLUMNNAME_IsTranslationEnable, Boolean.valueOf(IsTranslationEnable));
+	}
+
+	/** Get Manage Descriptive Fields.
+		@return If selected fiels name, description and help can be overwritten
+	  */
+	public boolean isTranslationEnable () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsTranslationEnable);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 
@@ -302,28 +325,28 @@ public class X_AD_UserDef_Win extends PO implements I_AD_UserDef_Win, I_Persiste
 		return false;
 	}
 
+	/** IsUserUpdateable AD_Reference_ID=319 */
+	public static final int ISUSERUPDATEABLE_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISUSERUPDATEABLE_Yes = "Y";
+	/** No = N */
+	public static final String ISUSERUPDATEABLE_No = "N";
 	/** Set User updatable.
 		@param IsUserUpdateable 
 		The field can be updated by the user
 	  */
-	public void setIsUserUpdateable (boolean IsUserUpdateable)
+	public void setIsUserUpdateable (String IsUserUpdateable)
 	{
-		set_Value (COLUMNNAME_IsUserUpdateable, Boolean.valueOf(IsUserUpdateable));
+
+		set_Value (COLUMNNAME_IsUserUpdateable, IsUserUpdateable);
 	}
 
 	/** Get User updatable.
 		@return The field can be updated by the user
 	  */
-	public boolean isUserUpdateable () 
+	public String getIsUserUpdateable () 
 	{
-		Object oo = get_Value(COLUMNNAME_IsUserUpdateable);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
+		return (String)get_Value(COLUMNNAME_IsUserUpdateable);
 	}
 
 	/** Set Name.
@@ -341,5 +364,22 @@ public class X_AD_UserDef_Win extends PO implements I_AD_UserDef_Win, I_Persiste
 	public String getName () 
 	{
 		return (String)get_Value(COLUMNNAME_Name);
+	}
+
+	/** Set Title Logic.
+		@param TitleLogic 
+		The result determines the title to be displayed for this window
+	  */
+	public void setTitleLogic (String TitleLogic)
+	{
+		set_Value (COLUMNNAME_TitleLogic, TitleLogic);
+	}
+
+	/** Get Title Logic.
+		@return The result determines the title to be displayed for this window
+	  */
+	public String getTitleLogic () 
+	{
+		return (String)get_Value(COLUMNNAME_TitleLogic);
 	}
 }

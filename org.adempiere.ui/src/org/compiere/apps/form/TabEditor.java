@@ -20,12 +20,19 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import org.compiere.model.GridField;
+import org.compiere.model.I_AD_FieldGroup;
 import org.compiere.model.MField;
 import org.compiere.model.MTab;
+import org.compiere.model.MUserDefField;
+import org.compiere.model.MUserDefTab;
+import org.compiere.model.PO;
+import org.compiere.model.X_AD_FieldGroup;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
+import org.compiere.util.Util;
 
 /**
  *
@@ -50,6 +57,10 @@ public class TabEditor
 	private Map<Integer, MField> mapField = new HashMap<Integer, MField>();
 	
 	private Map<Integer, GridField> mapGridField = new HashMap<Integer, GridField>();
+	
+	// F3P: is it on window customization ?
+	private MUserDefTab userDefTab= null;
+	private int			windowNo;
 
 	public List<GridField> getGridFields() {
 		return gridFields;
@@ -63,13 +74,41 @@ public class TabEditor
 		return fields;
 	}
 
-	protected void initMFields(int windowNo, int tabid) {
+	protected void initMFields(int windowNo, int tabid, int Table_ID) {
+
+		// F3P: is on UserDefTab ?	
+		Properties ctx = Env.getCtx();
+		if(Table_ID == MUserDefTab.Table_ID)
+		{
+			userDefTab = new MUserDefTab(Env.getCtx(), tabid, null);
+			tabid = userDefTab.getAD_Tab_ID();
+			this.windowNo = windowNo;
+		}
+		
 		m_tab = new MTab(Env.getCtx(), tabid, null);
+				
 		GridField[] l_gridFields = GridField.createFields(Env.getCtx(), windowNo, 0, tabid);
 		for (GridField gridField : l_gridFields) {
 			gridFields.add(gridField);
 			mapGridField.put(gridField.getAD_Field_ID(), gridField);
 			MField field = new MField(Env.getCtx(), gridField.getAD_Field_ID(), null);
+			
+			// F3P: replace values in field from gridfield, to honor applied customizations
+			
+			if(userDefTab != null)
+			{
+				field.setSeqNo(gridField.getSeqNo());
+				field.setIsDisplayed(gridField.isDisplayed());
+				field.setXPosition(gridField.getXPosition());
+				field.setNumLines(gridField.getNumLines());
+				field.setColumnSpan(gridField.getColumnSpan());
+				
+				MUserDefField userDef = MUserDefField.get(ctx, field.getAD_Field_ID(), tabid, m_tab.getAD_Window_ID());
+				
+				if(userDef != null && userDef.getAD_FieldGroup_ID() > 0)
+					field.setAD_FieldGroup_ID(userDef.getAD_FieldGroup_ID());				
+			}
+			
 			fields.add(field);
 			mapField.put(field.getAD_Field_ID(), field);
 			gridField.getVO().IsReadOnly = true;
@@ -81,10 +120,100 @@ public class TabEditor
 	}
 
 	public boolean cmd_save() {
-		for (MField field : fields) {
-			if (field.isActive())
-				field.saveEx();
+		
+		if(userDefTab != null) // Save for AD_UserDefTab
+		{
+			Properties ctx = Env.getCtx();
+			// Re-read fields to be able to save only changes
+			GridField[] gridFields = GridField.createFields(Env.getCtx(), windowNo, 0, userDefTab.getAD_Tab_ID());
+
+			HashMap<Integer, GridField> mapIdToField = new HashMap<>();
+			for(GridField gf:gridFields)
+			{
+				mapIdToField.put(gf.getAD_Field_ID(), gf);
+			}
+			
+			for(MField field: fields)
+			{
+				boolean		changed = false;
+				MUserDefField userDef = userDefTab.getUserDefField(field.getAD_Field_ID());
+				GridField	gf = mapIdToField.get(field.getAD_Field_ID());
+				
+				if(userDef == null)
+				{
+					userDef = new MUserDefField(ctx, 0, null);
+					userDef.setAD_UserDef_Tab_ID(userDefTab.getAD_UserDef_Tab_ID());
+					userDef.setAD_Field_ID(field.getAD_Field_ID());
+				}
+				
+				// Check field (new value) versus computed value (gridField)
+				
+				/*
+				if(gf.getSeqNo() != field.getSeqNo())
+				{
+					userDef.setSeqNo(field.getSeqNo());
+					changed = true;
+				}
+				*/
+				
+				if(gf.isDisplayed() != field.isDisplayed())
+				{
+					userDef.setIsDisplayed(Util.asString(field.isDisplayed()));
+					changed = true;
+				}
+				
+				if(gf.getXPosition() != field.getXPosition())
+				{
+					userDef.setXPosition(field.getXPosition());
+					changed = true;
+				}
+				
+				if(gf.getNumLines() != field.getNumLines())
+				{
+					userDef.setNumLines(field.getNumLines());
+					changed = true;
+				}
+				
+				if(gf.getColumnSpan() != field.getColumnSpan())
+				{
+					userDef.setColumnSpan(field.getColumnSpan());
+					changed = true;
+				}
+				
+				String fieldGroupName = "";
+				
+				if(field.getAD_FieldGroup_ID() > 0)
+				{
+					I_AD_FieldGroup fieldGroup = field.getAD_FieldGroup();
+					
+					if(Env.isBaseLanguage(ctx, MTab.Table_Name))
+						fieldGroupName = fieldGroup.getName();
+					else
+						fieldGroupName = ((PO)fieldGroup).get_Translation(X_AD_FieldGroup.COLUMNNAME_Name, Env.getAD_Language(ctx)); 
+				}
+				
+				if(gf.getFieldGroup().equals(fieldGroupName) == false)
+				{
+					userDef.setAD_FieldGroup_ID(field.getAD_FieldGroup_ID());
+					changed = true;
+				}
+				
+				if(changed)
+				{
+					userDef.setIsViewEnable(true);
+					userDef.saveEx();
+				}
+			}
+			
 		}
+		else // Standard save
+		{
+			for (MField field : fields) {
+				if (field.isActive())
+					field.saveEx();
+			}			
+		}
+		
 		return true;
 	}
 

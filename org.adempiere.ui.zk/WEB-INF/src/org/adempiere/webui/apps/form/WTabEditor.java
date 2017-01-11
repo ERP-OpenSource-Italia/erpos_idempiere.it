@@ -135,7 +135,7 @@ public class WTabEditor extends TabEditor implements IFormController, EventListe
 	public void initForm() {
 		try
 		{
-			initMFields(tabform.getWindowNo(), tabform.getProcessInfo().getRecord_ID());
+			initMFields(tabform.getWindowNo(), tabform.getProcessInfo().getRecord_ID(), tabform.getProcessInfo().getTable_ID());
 			dynList();
 			jbInit();
 			LayoutUtils.sendDeferLayoutEvent(mainLayout, 100);

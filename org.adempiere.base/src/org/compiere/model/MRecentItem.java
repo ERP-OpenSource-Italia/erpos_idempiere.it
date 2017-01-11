@@ -279,7 +279,8 @@ public class MRecentItem extends X_AD_RecentItem
 	public String getLabel() {
 		String windowName;
 		MWindow win = MWindow.get(getCtx(), getAD_Window_ID());
-		MUserDefWin userDef = MUserDefWin.getBestMatch(getCtx(), getAD_Window_ID());
+		
+		MUserDefWin userDef = MUserDefWin.getBestMatch(getCtx(), getAD_Window_ID());		
 		if (userDef != null && !Util.isEmpty(userDef.getName())) {
 			windowName = userDef.getName();
 		} else {

@@ -2446,6 +2446,13 @@ public class GridField
 		return m_vo.NumLines;
 	}
 	
+	/* F3P: added to get seqNo */
+	
+	public int getSeqNo()
+	{
+		return m_vo.SeqNo;
+	}
+	 
 	public boolean isToolbarButton()
 	{
 		return m_vo.displayType == DisplayType.Button &&

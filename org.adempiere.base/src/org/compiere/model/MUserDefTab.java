@@ -18,8 +18,12 @@ import java.sql.*;
 import java.util.*;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
+import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.Env;
+import org.compiere.util.Util;
 
 
 /**
@@ -34,6 +38,22 @@ public class MUserDefTab extends X_AD_UserDef_Tab
 	 * 
 	 */
 	private static final long serialVersionUID = 20120403111900L;
+	
+	private static final String COLUMN_NAME_T = "name_t",
+								COLUMN_DESCRIPTION_T = "description_t",
+								COLUMN_HELP_T = "help_t";
+
+	private static final String Q_USERDEFTAB = 
+			" select u.*, COALESCE(t.name,u.name) name_t, COALESCE(t.description,u.description) description_t, COALESCE(t.help,u.help) help_t" +
+			" from AD_UserDef_Win w inner join AD_UserDef_Tab u on (w.AD_UserDef_Win_ID = u.AD_UserDef_Win_ID)" +
+			"	left outer join AD_UserDef_Tab_Trl t on (u.AD_UserDef_Tab_ID = t.AD_UserDef_Tab_ID)" +
+			" where u.AD_Tab_ID = ? and u.isActive = 'Y'" + // AD_Tab_ID			
+			"  and (t.AD_Language = ? or t.AD_Language IS NULL)" + // Language
+			"  and (w.ad_client_id = 0 or w.ad_client_id = ?) " + // AD_Client_ID
+			"  and (w.ad_org_id = 0 or w.ad_org_id = ?) " + // AD_Org_ID
+			"  and (w.ad_role_id is null or w.ad_role_id = ?) " + // AD_Role_ID
+			"  and (w.ad_user_id is null or w.ad_user_id = ?) " + // AD_User_ID
+			" order by w.ad_user_id nulls first, w.ad_role_id nulls first, w.ad_org_id, w.ad_client_id";
 
 	/**
 	 * 	Standard constructor.
@@ -108,6 +128,145 @@ public class MUserDefTab extends X_AD_UserDef_Tab
 
 		return retValue;
 	}
+	
+	/**
+	 * F3P: Get a fake MUserDefTab (NOT SUITABLE TO BE SAVED) for input tab and window, as an aggregate of all applicable records
+	 * the best match is cached
+	 * @param ctx
+	 * @param window_ID
+	 * @return best matching MUserDefWin
+	 */
+	public static MUserDefTab getAggregatedMatch(Properties ctx,int AD_Tab_ID)
+	{
+		// parameters
+		final int AD_Client_ID = Env.getAD_Client_ID(ctx);
+		final int AD_Org_ID = Env.getAD_Org_ID(ctx);
+		//final int anyOrg = 0;
+		final int AD_Role_ID = Env.getAD_Role_ID(ctx);
+		//final String anyRole = "NULL";
+		final int AD_User_ID = Env.getAD_User_ID(ctx);
+		//final String anyUser = "NULL";
+		
+		//  Check Cache
+		String key = new StringBuilder()
+				.append(AD_Tab_ID).append("_")
+				.append(Env.getAD_Client_ID(ctx)).append("_")
+				.append(Env.getAD_Language(ctx)).append("_")
+				.append(AD_Org_ID).append("_")
+				.append(AD_Role_ID).append("_")
+				.append(AD_User_ID)
+				.toString();
+		
+		if (s_cacheAggregated.containsKey(key))	{
+			return s_cacheAggregated.get(key);
+		}
+		
+		PreparedStatement pstmt = DB.prepareStatement(Q_USERDEFTAB, null);
+		ResultSet		  rs = null;
+		MUserDefTab 	  fakeTab = null;
+		
+		try
+		{
+			pstmt.setInt(1, AD_Tab_ID);
+			pstmt.setString(2, Env.getAD_Language(ctx));
+			pstmt.setInt(3, AD_Client_ID);
+			pstmt.setInt(4, AD_Org_ID);
+			pstmt.setInt(5, AD_Role_ID);
+			pstmt.setInt(6, AD_User_ID);
+			rs = pstmt.executeQuery();
+			
+			while(rs.next())
+			{
+				if(fakeTab == null)
+					fakeTab = new MUserDefTab(ctx, -1, null);
+				
+				String isTranslatable = rs.getString(COLUMNNAME_IsTranslationEnable),
+					   isViewEnable = rs.getString(COLUMNNAME_IsViewEnable),
+					   isElaborationEnable = rs.getString(COLUMNNAME_IsElaborationEnable);
+				
+				if(Util.asBoolean(isTranslatable) == true)
+				{
+					String	name = rs.getString(COLUMN_NAME_T),
+							description = rs.getString(COLUMN_DESCRIPTION_T),
+							help = rs.getString(COLUMN_HELP_T);
+					
+					if(name != null)
+						fakeTab.setName(name);
+					
+					if(description != null)
+						fakeTab.setDescription(description);
+					
+					if(help != null)
+						fakeTab.setHelp(help);
+				}
+				
+				if(Util.asBoolean(isViewEnable))
+				{
+					int AD_CtxHelp_ID = rs.getInt(COLUMNNAME_AD_CtxHelp_ID);
+					
+					String isSingleRow = rs.getString(COLUMNNAME_IsSingleRow),
+						   isMultiRowOnly = rs.getString(COLUMNNAME_IsMultiRowOnly),
+						   displayLogic = rs.getString(COLUMNNAME_DisplayLogic),
+						   whereClause = rs.getString(COLUMNNAME_WhereClause),
+						   orderByClause = rs.getString(COLUMNNAME_OrderByClause),
+						   readOnlyLogic = rs.getString(COLUMNNAME_ReadOnlyLogic),
+						   isReadOnly = rs.getString(COLUMNNAME_IsReadOnly),
+						   commitWarning = rs.getString(COLUMNNAME_CommitWarning);
+					
+					if(AD_CtxHelp_ID > 0)
+						fakeTab.setAD_CtxHelp_ID(AD_CtxHelp_ID);
+					
+					if(isSingleRow != null)
+						fakeTab.setIsSingleRow(isSingleRow);
+					
+					if(isMultiRowOnly != null)
+						fakeTab.setIsMultiRowOnly(isMultiRowOnly);
+					
+					if(readOnlyLogic != null)
+						fakeTab.setReadOnlyLogic(readOnlyLogic);
+					
+					if(isReadOnly != null)
+						fakeTab.setIsReadOnly(isReadOnly);
+					
+					if(displayLogic != null)
+						fakeTab.setDisplayLogic(displayLogic);
+					
+					if(whereClause != null)
+						fakeTab.setDisplayLogic(whereClause);
+					
+					if(orderByClause != null)
+						fakeTab.setDisplayLogic(orderByClause);
+					
+					if(commitWarning != null)
+						fakeTab.setCommitWarning(commitWarning);
+				}
+				
+				if(Util.asBoolean(isElaborationEnable))
+				{
+					String isInsertRecord = rs.getString(COLUMNNAME_IsInsertRecord);						   
+					int AD_Process_ID = rs.getInt(COLUMNNAME_AD_Process_ID);
+					
+					if(isInsertRecord != null)
+						fakeTab.setIsInsertRecord(isInsertRecord);
+					
+					if(AD_Process_ID > 0)
+						fakeTab.setAD_Process_ID(AD_Process_ID);					
+				}
+			}
+			
+			s_cacheAggregated.put(key, fakeTab);
+		}
+		catch(Exception e)
+		{
+			throw new AdempiereException(e); // Should never happen
+		}
+		finally
+		{
+			DB.close(rs,pstmt);
+		}
+		
+		return fakeTab;			
+	}
 
 	/**
 	 * Get matching MUserDefTab related to current tab and window 
@@ -118,12 +277,67 @@ public class MUserDefTab extends X_AD_UserDef_Tab
 	 */
 	public static MUserDefTab get (Properties ctx, int AD_Tab_ID, int AD_Window_ID) {
 		
-		MUserDefWin userdefWin = MUserDefWin.getBestMatch(ctx, AD_Window_ID);
-		if (userdefWin == null)
-			return null;
+		// F3P: managed aggregation
 		
-		return getMatch(ctx, AD_Tab_ID, userdefWin.getAD_UserDef_Win_ID());
-		
+		if(MUserDefWin.isAggregationEnabled())
+		{
+			return getAggregatedMatch(ctx, AD_Tab_ID);
+		}
+		else
+		{
+			MUserDefWin userdefWin = MUserDefWin.getBestMatch(ctx, AD_Window_ID);
+			if (userdefWin == null)
+				return null;
+			
+			return getMatch(ctx, AD_Tab_ID, userdefWin.getAD_UserDef_Win_ID());
+		}				
 	}
+	
+	/**	F3P: Cache of aggregated selected MUserDefTab entries 					**/
+	private static CCache<String,MUserDefTab> s_cacheAggregated = new CCache<String,MUserDefTab>(Table_Name + "_Aggregated", 3);	//  3 weights
+	
+	// F3P: backward compatibility functions
+	
+	/** Returns boolean equivalent of getIsSingleRow
+	 * 
+	 * @return true if getIsSingleRow is Y
+	 */
+	public boolean isSingleRow()
+	{
+		return Util.asBoolean(getIsSingleRow());
+	}
+	
+	/** Returns boolean equivalent of getIsReadOnly
+	 * 
+	 * @return true if getIsReadOnly is Y
+	 */
+	public boolean isReadOnly()
+	{
+		return Util.asBoolean(getIsReadOnly());
+	}
+	
+	public MUserDefField	getUserDefField(int AD_Field_ID)
+	{
+		Query qField = new Query(getCtx(),MUserDefField.Table_Name,"AD_UserDef_Tab_ID = ? AND AD_Field_ID = ?",get_TrxName());
+		qField.setOnlyActiveRecords(true).setParameters(getAD_UserDef_Tab_ID(),AD_Field_ID);
 		
+		MUserDefField userDef = qField.first();
+		
+		return userDef;
+	}
+	
+	// F3P: Cleared cache at save
+
+	@Override
+	protected boolean beforeSave(boolean newRecord) {
+		s_cacheAggregated.clear();		
+		return true;
+	}
+
+	@Override
+	protected boolean beforeDelete() {
+		s_cacheAggregated.clear();		
+		return true;
+	}
+			
 }	//	MUserDefTab

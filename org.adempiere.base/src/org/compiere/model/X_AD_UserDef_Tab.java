@@ -30,7 +30,7 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20161221L;
 
     /** Standard Constructor */
     public X_AD_UserDef_Tab (Properties ctx, int AD_UserDef_Tab_ID, String trxName)
@@ -41,9 +41,12 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 			setAD_Tab_ID (0);
 			setAD_UserDef_Tab_ID (0);
 			setAD_UserDef_Win_ID (0);
-			setIsMultiRowOnly (false);
-			setIsReadOnly (false);
-			setIsSingleRow (false);
+			setIsElaborationEnable (false);
+// N
+			setIsTranslationEnable (false);
+// N
+			setIsViewEnable (false);
+// N
         } */
     }
 
@@ -74,6 +77,59 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
         .append(get_ID()).append("]");
       return sb.toString();
     }
+
+	public org.compiere.model.I_AD_CtxHelp getAD_CtxHelp() throws RuntimeException
+    {
+		return (org.compiere.model.I_AD_CtxHelp)MTable.get(getCtx(), org.compiere.model.I_AD_CtxHelp.Table_Name)
+			.getPO(getAD_CtxHelp_ID(), get_TrxName());	}
+
+	/** Set Context Help.
+		@param AD_CtxHelp_ID Context Help	  */
+	public void setAD_CtxHelp_ID (int AD_CtxHelp_ID)
+	{
+		if (AD_CtxHelp_ID < 1) 
+			set_Value (COLUMNNAME_AD_CtxHelp_ID, null);
+		else 
+			set_Value (COLUMNNAME_AD_CtxHelp_ID, Integer.valueOf(AD_CtxHelp_ID));
+	}
+
+	/** Get Context Help.
+		@return Context Help	  */
+	public int getAD_CtxHelp_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_AD_CtxHelp_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_AD_Process getAD_Process() throws RuntimeException
+    {
+		return (org.compiere.model.I_AD_Process)MTable.get(getCtx(), org.compiere.model.I_AD_Process.Table_Name)
+			.getPO(getAD_Process_ID(), get_TrxName());	}
+
+	/** Set Process.
+		@param AD_Process_ID 
+		Process or Report
+	  */
+	public void setAD_Process_ID (int AD_Process_ID)
+	{
+		if (AD_Process_ID < 1) 
+			set_Value (COLUMNNAME_AD_Process_ID, null);
+		else 
+			set_Value (COLUMNNAME_AD_Process_ID, Integer.valueOf(AD_Process_ID));
+	}
+
+	/** Get Process.
+		@return Process or Report
+	  */
+	public int getAD_Process_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_AD_Process_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
 
 	public org.compiere.model.I_AD_Tab getAD_Tab() throws RuntimeException
     {
@@ -170,6 +226,23 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 		return ii.intValue();
 	}
 
+	/** Set Commit Warning.
+		@param CommitWarning 
+		Warning displayed when saving
+	  */
+	public void setCommitWarning (String CommitWarning)
+	{
+		set_Value (COLUMNNAME_CommitWarning, CommitWarning);
+	}
+
+	/** Get Commit Warning.
+		@return Warning displayed when saving
+	  */
+	public String getCommitWarning () 
+	{
+		return (String)get_Value(COLUMNNAME_CommitWarning);
+	}
+
 	/** Set Description.
 		@param Description 
 		Optional short description of the record
@@ -185,6 +258,23 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 	public String getDescription () 
 	{
 		return (String)get_Value(COLUMNNAME_Description);
+	}
+
+	/** Set Display Logic.
+		@param DisplayLogic 
+		If the Field is displayed, the result determines if the field is actually displayed
+	  */
+	public void setDisplayLogic (String DisplayLogic)
+	{
+		set_Value (COLUMNNAME_DisplayLogic, DisplayLogic);
+	}
+
+	/** Get Display Logic.
+		@return If the Field is displayed, the result determines if the field is actually displayed
+	  */
+	public String getDisplayLogic () 
+	{
+		return (String)get_Value(COLUMNNAME_DisplayLogic);
 	}
 
 	/** Set Comment/Help.
@@ -204,45 +294,141 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 		return (String)get_Value(COLUMNNAME_Help);
 	}
 
+	/** Set Manage Elaboration Fields.
+		@param IsElaborationEnable 
+		If selected fields used for elaboration are overwritten
+	  */
+	public void setIsElaborationEnable (boolean IsElaborationEnable)
+	{
+		set_Value (COLUMNNAME_IsElaborationEnable, Boolean.valueOf(IsElaborationEnable));
+	}
+
+	/** Get Manage Elaboration Fields.
+		@return If selected fields used for elaboration are overwritten
+	  */
+	public boolean isElaborationEnable () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsElaborationEnable);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** IsInsertRecord AD_Reference_ID=319 */
+	public static final int ISINSERTRECORD_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISINSERTRECORD_Yes = "Y";
+	/** No = N */
+	public static final String ISINSERTRECORD_No = "N";
+	/** Set Insert Record.
+		@param IsInsertRecord 
+		The user can insert a new Record
+	  */
+	public void setIsInsertRecord (String IsInsertRecord)
+	{
+
+		set_Value (COLUMNNAME_IsInsertRecord, IsInsertRecord);
+	}
+
+	/** Get Insert Record.
+		@return The user can insert a new Record
+	  */
+	public String getIsInsertRecord () 
+	{
+		return (String)get_Value(COLUMNNAME_IsInsertRecord);
+	}
+
+	/** IsMultiRowOnly AD_Reference_ID=319 */
+	public static final int ISMULTIROWONLY_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISMULTIROWONLY_Yes = "Y";
+	/** No = N */
+	public static final String ISMULTIROWONLY_No = "N";
 	/** Set Multi Row Only.
 		@param IsMultiRowOnly 
 		This applies to Multi-Row view only
 	  */
-	public void setIsMultiRowOnly (boolean IsMultiRowOnly)
+	public void setIsMultiRowOnly (String IsMultiRowOnly)
 	{
-		set_Value (COLUMNNAME_IsMultiRowOnly, Boolean.valueOf(IsMultiRowOnly));
+
+		set_Value (COLUMNNAME_IsMultiRowOnly, IsMultiRowOnly);
 	}
 
 	/** Get Multi Row Only.
 		@return This applies to Multi-Row view only
 	  */
-	public boolean isMultiRowOnly () 
+	public String getIsMultiRowOnly () 
 	{
-		Object oo = get_Value(COLUMNNAME_IsMultiRowOnly);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
+		return (String)get_Value(COLUMNNAME_IsMultiRowOnly);
 	}
 
+	/** IsReadOnly AD_Reference_ID=319 */
+	public static final int ISREADONLY_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISREADONLY_Yes = "Y";
+	/** No = N */
+	public static final String ISREADONLY_No = "N";
 	/** Set Read Only.
 		@param IsReadOnly 
 		Field is read only
 	  */
-	public void setIsReadOnly (boolean IsReadOnly)
+	public void setIsReadOnly (String IsReadOnly)
 	{
-		set_Value (COLUMNNAME_IsReadOnly, Boolean.valueOf(IsReadOnly));
+
+		set_Value (COLUMNNAME_IsReadOnly, IsReadOnly);
 	}
 
 	/** Get Read Only.
 		@return Field is read only
 	  */
-	public boolean isReadOnly () 
+	public String getIsReadOnly () 
 	{
-		Object oo = get_Value(COLUMNNAME_IsReadOnly);
+		return (String)get_Value(COLUMNNAME_IsReadOnly);
+	}
+
+	/** IsSingleRow AD_Reference_ID=319 */
+	public static final int ISSINGLEROW_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISSINGLEROW_Yes = "Y";
+	/** No = N */
+	public static final String ISSINGLEROW_No = "N";
+	/** Set Single Row Layout.
+		@param IsSingleRow 
+		Default for toggle between Single- and Multi-Row (Grid) Layout
+	  */
+	public void setIsSingleRow (String IsSingleRow)
+	{
+
+		set_Value (COLUMNNAME_IsSingleRow, IsSingleRow);
+	}
+
+	/** Get Single Row Layout.
+		@return Default for toggle between Single- and Multi-Row (Grid) Layout
+	  */
+	public String getIsSingleRow () 
+	{
+		return (String)get_Value(COLUMNNAME_IsSingleRow);
+	}
+
+	/** Set Manage Descriptive Fields.
+		@param IsTranslationEnable 
+		If selected fiels name, description and help can be overwritten
+	  */
+	public void setIsTranslationEnable (boolean IsTranslationEnable)
+	{
+		set_Value (COLUMNNAME_IsTranslationEnable, Boolean.valueOf(IsTranslationEnable));
+	}
+
+	/** Get Manage Descriptive Fields.
+		@return If selected fiels name, description and help can be overwritten
+	  */
+	public boolean isTranslationEnable () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsTranslationEnable);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 
@@ -252,21 +438,21 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 		return false;
 	}
 
-	/** Set Single Row Layout.
-		@param IsSingleRow 
-		Default for toggle between Single- and Multi-Row (Grid) Layout
+	/** Set Manage Visualization Fields.
+		@param IsViewEnable 
+		If selected fields used for visualization e window design are overwritten
 	  */
-	public void setIsSingleRow (boolean IsSingleRow)
+	public void setIsViewEnable (boolean IsViewEnable)
 	{
-		set_Value (COLUMNNAME_IsSingleRow, Boolean.valueOf(IsSingleRow));
+		set_Value (COLUMNNAME_IsViewEnable, Boolean.valueOf(IsViewEnable));
 	}
 
-	/** Get Single Row Layout.
-		@return Default for toggle between Single- and Multi-Row (Grid) Layout
+	/** Get Manage Visualization Fields.
+		@return If selected fields used for visualization e window design are overwritten
 	  */
-	public boolean isSingleRow () 
+	public boolean isViewEnable () 
 	{
-		Object oo = get_Value(COLUMNNAME_IsSingleRow);
+		Object oo = get_Value(COLUMNNAME_IsViewEnable);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 
@@ -293,6 +479,23 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 		return (String)get_Value(COLUMNNAME_Name);
 	}
 
+	/** Set Sql ORDER BY.
+		@param OrderByClause 
+		Fully qualified ORDER BY clause
+	  */
+	public void setOrderByClause (String OrderByClause)
+	{
+		set_Value (COLUMNNAME_OrderByClause, OrderByClause);
+	}
+
+	/** Get Sql ORDER BY.
+		@return Fully qualified ORDER BY clause
+	  */
+	public String getOrderByClause () 
+	{
+		return (String)get_Value(COLUMNNAME_OrderByClause);
+	}
+
 	/** Set Read Only Logic.
 		@param ReadOnlyLogic 
 		Logic to determine if field is read only (applies only when field is read-write)
@@ -308,5 +511,22 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 	public String getReadOnlyLogic () 
 	{
 		return (String)get_Value(COLUMNNAME_ReadOnlyLogic);
+	}
+
+	/** Set Sql WHERE.
+		@param WhereClause 
+		Fully qualified SQL WHERE clause
+	  */
+	public void setWhereClause (String WhereClause)
+	{
+		set_Value (COLUMNNAME_WhereClause, WhereClause);
+	}
+
+	/** Get Sql WHERE.
+		@return Fully qualified SQL WHERE clause
+	  */
+	public String getWhereClause () 
+	{
+		return (String)get_Value(COLUMNNAME_WhereClause);
 	}
 }

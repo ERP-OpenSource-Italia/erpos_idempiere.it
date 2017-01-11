@@ -199,12 +199,12 @@ public interface I_AD_UserDef_Win
 	/** Set Default.
 	  * Default value
 	  */
-	public void setIsDefault (boolean IsDefault);
+	public void setIsDefault (String IsDefault);
 
 	/** Get Default.
 	  * Default value
 	  */
-	public boolean isDefault();
+	public String getIsDefault();
 
     /** Column name IsReadOnly */
     public static final String COLUMNNAME_IsReadOnly = "IsReadOnly";
@@ -212,12 +212,25 @@ public interface I_AD_UserDef_Win
 	/** Set Read Only.
 	  * Field is read only
 	  */
-	public void setIsReadOnly (boolean IsReadOnly);
+	public void setIsReadOnly (String IsReadOnly);
 
 	/** Get Read Only.
 	  * Field is read only
 	  */
-	public boolean isReadOnly();
+	public String getIsReadOnly();
+
+    /** Column name IsTranslationEnable */
+    public static final String COLUMNNAME_IsTranslationEnable = "IsTranslationEnable";
+
+	/** Set Manage Descriptive Fields.
+	  * If selected fiels name, description and help can be overwritten
+	  */
+	public void setIsTranslationEnable (boolean IsTranslationEnable);
+
+	/** Get Manage Descriptive Fields.
+	  * If selected fiels name, description and help can be overwritten
+	  */
+	public boolean isTranslationEnable();
 
     /** Column name IsUserUpdateable */
     public static final String COLUMNNAME_IsUserUpdateable = "IsUserUpdateable";
@@ -225,12 +238,12 @@ public interface I_AD_UserDef_Win
 	/** Set User updatable.
 	  * The field can be updated by the user
 	  */
-	public void setIsUserUpdateable (boolean IsUserUpdateable);
+	public void setIsUserUpdateable (String IsUserUpdateable);
 
 	/** Get User updatable.
 	  * The field can be updated by the user
 	  */
-	public boolean isUserUpdateable();
+	public String getIsUserUpdateable();
 
     /** Column name Name */
     public static final String COLUMNNAME_Name = "Name";
@@ -244,6 +257,19 @@ public interface I_AD_UserDef_Win
 	  * Alphanumeric identifier of the entity
 	  */
 	public String getName();
+
+    /** Column name TitleLogic */
+    public static final String COLUMNNAME_TitleLogic = "TitleLogic";
+
+	/** Set Title Logic.
+	  * The result determines the title to be displayed for this window
+	  */
+	public void setTitleLogic (String TitleLogic);
+
+	/** Get Title Logic.
+	  * The result determines the title to be displayed for this window
+	  */
+	public String getTitleLogic();
 
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";

@@ -585,7 +585,9 @@ public class MTree extends MTree_Base
 						// FR XXX
 						// Get Window Customization
 						MUserDefWin userDef = null; 
+												
 						userDef = MUserDefWin.getBestMatch(getCtx(), AD_Window_ID);
+						
 						if (userDef != null)
 						{
 							if (userDef.getName() != null)

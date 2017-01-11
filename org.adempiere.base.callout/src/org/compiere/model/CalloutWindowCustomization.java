@@ -18,6 +18,7 @@ import java.util.Properties;
 
 import org.adempiere.model.GridTabWrapper;
 import org.compiere.util.Env;
+import org.compiere.util.Util;
 
 
 /**
@@ -38,6 +39,11 @@ public class CalloutWindowCustomization extends CalloutEngine
 	 */
 	public String window (Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value)
 	{
+		// F3P: if aggregation is enabled, do nothing
+		
+		if(MUserDefWin.isAggregationEnabled())
+			return NO_ERROR;
+		
 		Integer AD_Window_ID = (Integer)value;
 		if (AD_Window_ID == null || AD_Window_ID.intValue() == 0)
 			return "";
@@ -52,7 +58,7 @@ public class CalloutWindowCustomization extends CalloutEngine
 		ud_win.setHelp(window.get_Translation("Help", lang));
 		
 		//  what for?
-		ud_win.setIsDefault(window.isDefault()); 
+		ud_win.setIsDefault(Util.asString(window.isDefault())); // F3P: type is changed 
 		
 		// default from menu, actual from role
 		//  Read Only
@@ -72,6 +78,11 @@ public class CalloutWindowCustomization extends CalloutEngine
 	 */
 	public String tab (Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value)
 	{
+		// F3P: if aggregation is enabled, do nothing
+		
+		if(MUserDefWin.isAggregationEnabled())
+			return NO_ERROR;
+		
 		Integer p_AD_Tab_ID = (Integer)value;
 		if (p_AD_Tab_ID == null || p_AD_Tab_ID.intValue() == 0)
 			return "";
@@ -85,8 +96,10 @@ public class CalloutWindowCustomization extends CalloutEngine
 		ud_tab.setDescription(tab.get_Translation("Description", lang));
 		ud_tab.setHelp(tab.get_Translation("Help", lang));
 		
-		ud_tab.setIsSingleRow(tab.isSingleRow()); 
-		ud_tab.setIsReadOnly(tab.isReadOnly()); 
+		// F3P: type is changed
+		
+		ud_tab.setIsSingleRow(Util.asString(tab.isSingleRow())); 
+		ud_tab.setIsReadOnly(Util.asString(tab.isReadOnly())); 
 
 		return NO_ERROR;
 	}	//	tab
@@ -102,6 +115,11 @@ public class CalloutWindowCustomization extends CalloutEngine
 	 */
 	public String field (Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value)
 	{
+		// F3P: if aggregation is enabled, do nothing
+		
+		if(MUserDefWin.isAggregationEnabled())
+			return NO_ERROR;
+		
 		Integer p_AD_Field_ID = (Integer)value;
 		if (p_AD_Field_ID == null || p_AD_Field_ID.intValue() == 0)
 			return "";
