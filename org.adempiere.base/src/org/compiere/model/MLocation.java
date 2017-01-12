@@ -58,6 +58,9 @@ public class MLocation extends X_C_Location implements Comparator<Object>
 	public static String LOCATION_MAPS_SOURCE_ADDRESS      = MSysConfig.getValue(MSysConfig.LOCATION_MAPS_SOURCE_ADDRESS);
 	public static String LOCATION_MAPS_DESTINATION_ADDRESS = MSysConfig.getValue(MSysConfig.LOCATION_MAPS_DESTINATION_ADDRESS);
 	
+	//F3P
+	protected static final String COUNTRY_TRL_SQL = "SELECT Name FROM C_Country_TRL WHERE C_Country_ID = ? AND AD_Language = ?";
+	//F3P end
 	/**
 	 * 	Get Location from Cache
 	 *	@param ctx context
@@ -549,6 +552,8 @@ public class MLocation extends X_C_Location implements Comparator<Object>
 		}
 		else
 		{
+			// F3P: getCountry one time
+			MCountry mCountry = getCountry();
 			if (getAddress1() != null)
 				retStr.append(getAddress1());
 			if (getAddress2() != null && getAddress2().length() > 0)
@@ -558,8 +563,19 @@ public class MLocation extends X_C_Location implements Comparator<Object>
 			if (getAddress4() != null && getAddress4().length() > 0)
 				retStr.append(", ").append(getAddress4());
 			//	City, Region, Postal
-			retStr.append(", ").append(parseCRP (getCountry()));
+			retStr.append(", ").append(parseCRP (mCountry));
 			//	Add Country would come here
+			if(mCountry != null)
+			{
+				String sCountryName = DB.getSQLValueStringEx(get_TrxName(), COUNTRY_TRL_SQL, mCountry.getC_Country_ID(),Env.getAD_Language(getCtx()));
+				
+				if(sCountryName == null)
+				{
+					sCountryName = mCountry.getName();
+				}
+				
+				retStr.append(" - ").append(sCountryName);
+			}
 		}
 		return retStr.toString();
 	}	//	toString
