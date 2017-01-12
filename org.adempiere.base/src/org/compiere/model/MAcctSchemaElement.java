@@ -25,6 +25,7 @@ import java.util.logging.Level;
 import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
 /**
@@ -40,8 +41,14 @@ import org.compiere.util.Msg;
  */
 public class MAcctSchemaElement extends X_C_AcctSchema_Element
 {
-
-
+	//F3P: get trl
+	protected static final String	ELEMENT_VALUE_QUERY =  "SELECT C_ElementValue.Value, coalesce(C_ElementValue_Trl.Name, C_ElementValue.Name) "
+																											+ "FROM C_ElementValue left join C_ElementValue_Trl on C_ElementValue.C_ElementValue_ID = C_ElementValue_Trl.C_ElementValue_ID "
+																											+ "AND C_ElementValue_Trl.AD_Language = '?' WHERE C_ElementValue.C_ElementValue_ID= ",
+																											
+																PRODUCT_QUERY = "SELECT M_Product.Value, coalesce(M_Product_Trl.Name, M_Product.Name)"
+																								+ "FROM M_Product left join M_Product_Trl on M_Product.M_Product_ID = M_Product_Trl.M_Product_ID "
+																								+ "AND M_Product_Trl.AD_Language = '?' WHERE M_Product.M_Product_ID= ";
     /**
      * 
      */
@@ -131,16 +138,21 @@ public class MAcctSchemaElement extends X_C_AcctSchema_Element
 	 */
 	public static String getValueQuery (String elementType)
 	{
+		//F3P: get trl
+		String AD_Language = Env.getAD_Language(Env.getCtx());
+		
 		if (elementType.equals(ELEMENTTYPE_Organization))
 			return "SELECT Value,Name FROM AD_Org WHERE AD_Org_ID=";
 		else if (elementType.equals(ELEMENTTYPE_Account))
-			return "SELECT Value,Name FROM C_ElementValue WHERE C_ElementValue_ID=";
+			//return "SELECT Value,Name FROM C_ElementValue WHERE C_ElementValue_ID=";  // F3P: enable translation
+			return ELEMENT_VALUE_QUERY.replace("?", AD_Language);
 		else if (elementType.equals(ELEMENTTYPE_SubAccount))
 			return "SELECT Value,Name FROM C_SubAccount WHERE C_SubAccount_ID=";
 		else if (elementType.equals(ELEMENTTYPE_BPartner))
 			return "SELECT Value,Name FROM C_BPartner WHERE C_BPartner_ID=";
 		else if (elementType.equals(ELEMENTTYPE_Product))
-			return "SELECT Value,Name FROM M_Product WHERE M_Product_ID=";
+			//return "SELECT Value,Name FROM M_Product WHERE M_Product_ID=";   // F3P: enable translation
+			return PRODUCT_QUERY.replace("?", AD_Language);
 		else if (elementType.equals(ELEMENTTYPE_Activity))
 			return "SELECT Value,Name FROM C_Activity WHERE C_Activity_ID=";
 		else if (elementType.equals(ELEMENTTYPE_LocationFrom))
@@ -156,9 +168,11 @@ public class MAcctSchemaElement extends X_C_AcctSchema_Element
 		else if (elementType.equals(ELEMENTTYPE_SalesRegion))
 			return "SELECT Value,Name FROM C_SalesRegion WHERE C_SalesRegion_ID="; // ADEMPIERE-119 / Freepath
 		else if (elementType.equals(ELEMENTTYPE_UserElementList1))
-			return "SELECT Value,Name FROM C_ElementValue WHERE C_ElementValue_ID=";
+		//return "SELECT Value,Name FROM C_ElementValue WHERE C_ElementValue_ID="; // F3P: enable translation
+			return ELEMENT_VALUE_QUERY.replace("?", AD_Language);
 		else if (elementType.equals(ELEMENTTYPE_UserElementList2))
-			return "SELECT Value,Name FROM C_ElementValue WHERE C_ElementValue_ID=";
+		//return "SELECT Value,Name FROM C_ElementValue WHERE C_ElementValue_ID=";  // F3P: enable translation
+			return ELEMENT_VALUE_QUERY.replace("?", AD_Language);
 		//
 		else if (elementType.equals(ELEMENTTYPE_UserColumn1))
 			return null;
