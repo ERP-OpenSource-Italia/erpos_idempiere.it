@@ -148,13 +148,11 @@ public class TabEditor
 				
 				// Check field (new value) versus computed value (gridField)
 				
-				/*
 				if(gf.getSeqNo() != field.getSeqNo())
 				{
 					userDef.setSeqNo(field.getSeqNo());
 					changed = true;
 				}
-				*/
 				
 				if(gf.isDisplayed() != field.isDisplayed())
 				{
