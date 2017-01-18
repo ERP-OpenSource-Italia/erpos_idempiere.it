@@ -27,7 +27,6 @@ import java.util.logging.Level;
 
 import org.adempiere.util.Callback;
 import org.adempiere.util.ContextRunnable;
-import org.adempiere.util.IProcessUI;
 import org.adempiere.util.IProcessUI2;
 import org.adempiere.util.ServerContext;
 import org.adempiere.webui.component.Button;
@@ -1182,6 +1181,7 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 		}, new Event("onAskForInput"));
 	}
 
+	//F3P
 	@Override
 	public void zoom(PO po, int AD_Window_ID) {
 		String[] keyCol = po.get_KeyColumns();
@@ -1189,16 +1189,31 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 		query.addRestriction(keyCol[0], MQuery.EQUAL, po.get_ID());
 		query.setRecordCount(1);
 
-		AEnv.zoom(AD_Window_ID, query);	
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				AEnv.zoom(AD_Window_ID, query);
+			}
+		});
 	}
 
 	@Override
 	public void zoom(int AD_Table_ID, int Record_ID) {
-		AEnv.zoom(AD_Table_ID, Record_ID);
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				AEnv.zoom(AD_Table_ID, Record_ID);
+			}
+		});
 	}
 
 	@Override
 	public void zoom(MQuery query) {
-		AEnv.zoom(query);		
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				AEnv.zoom(query);
+			}
+		});
 	}
 }
