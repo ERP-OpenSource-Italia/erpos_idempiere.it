@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.I_C_AllocationHdr;
 import org.compiere.model.I_C_BankStatement;
 import org.compiere.model.I_C_Cash;
@@ -356,7 +357,8 @@ public abstract class Doc
 	private ArrayList<Fact>    	m_fact = null;
 
 	/** No Currency in Document Indicator (-1)	*/
-	protected static final int  NO_CURRENCY = -2;
+	//protected static final int  NO_CURRENCY = -2;
+	public static final int  NO_CURRENCY = -2;
 
 	/**	Actual Document Status  */
 	protected String			p_Status = null;
@@ -579,6 +581,17 @@ public abstract class Doc
 			if (p_Error != null)
 				Text.append(" (").append(p_Error).append(")");
 			String cn = getClass().getName();
+			// F3P: getDocumentNo can throw exception
+			String sDocNo = null;
+			try
+			{
+				sDocNo = getDocumentNo();
+			}
+			catch(UnsupportedOperationException e)
+			{
+				sDocNo = "-";
+			}
+			// F3P: end
 			Text.append(" - ").append(cn.substring(cn.lastIndexOf('.')))
 				.append(" (").append(getDocumentType())
 				.append(" - DocumentNo=").append(getDocumentNo())
@@ -611,18 +624,56 @@ public abstract class Doc
 	 * 	Delete Accounting
 	 *	@return number of records
 	 */
-	protected int deleteAcct()
+	private int deleteAcct()
 	{
-		StringBuilder sql = new StringBuilder ("DELETE Fact_Acct WHERE AD_Table_ID=")
+		int no = 0;
+		
+		//F3P check if delete
+		if(isToDeleteAcct())
+		{
+			StringBuffer sql = new StringBuffer ("DELETE Fact_Acct WHERE AD_Table_ID=")
 			.append(get_Table_ID())
-			.append(" AND Record_ID=").append(p_po.get_ID())
-			.append(" AND C_AcctSchema_ID=").append(m_as.getC_AcctSchema_ID());
-		int no = DB.executeUpdate(sql.toString(), getTrxName());
-		if (no != 0)
-			if (log.isLoggable(Level.INFO)) log.info("deleted=" + no);
+			.append(" AND Record_ID=").append(p_po.get_ID());
+		
+			no = DB.executeUpdate(sql.toString(), getTrxName());
+			if (no != 0)
+				log.info("deleted=" + no);
+		}
 		return no;
 	}	//	deleteAcct
 
+	//F3P
+	private boolean isToDeleteAcct()
+	{
+		StringBuffer sql = new StringBuffer ("SELECT count(1) FROM Fact_Acct WHERE AD_Table_ID=")
+		.append(get_Table_ID())
+		.append(" AND Record_ID=").append(p_po.get_ID());
+		
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		int no = -1;
+		
+		try
+		{
+			pstmt = DB.prepareStatement(sql.toString(), getTrxName());
+			rs = pstmt.executeQuery();
+			if (rs.next())
+				no = rs.getInt(1);
+		}
+		catch (Exception e)
+		{
+			log.log(Level.SEVERE, sql.toString(), e);
+			throw new AdempiereException(e);
+		}
+		finally {
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
+		}
+		
+		log.info("Fact to delete: " + no + " ( " + sql.toString() + " - " + getTrxName() + " )" );
+		
+		return no > 0;
+	}//F3P end
 	/**
 	 *  Posting logic for Accounting Schema index
 	 *  @return posting status/error code
@@ -1203,7 +1254,13 @@ public abstract class Doc
 	public static final int     ACCTTYPE_CommitmentOffset = 111;
 	/** GL Accounts - Commitment Offset	Sales */
 	public static final int     ACCTTYPE_CommitmentOffsetSales = 112;
+	
+	// F3P: introdotta da genied ???
 
+	/**	Account Type - Order - SO Not Invoiced Receivable  */
+	public static final int     ACCTTYPE_NotInvoicedReceivable = 71;
+	/**	Account Type - Order - SO Not Invoiced Revenue  */
+	public static final int     ACCTTYPE_NotInvoicedRevenue = 72;
 
 	/**
 	 *	Get the Valid Combination id for Accounting Schema
@@ -1381,6 +1438,19 @@ public abstract class Doc
 			sql = "SELECT CommitmentOffsetSales_Acct FROM C_AcctSchema_GL WHERE C_AcctSchema_ID=?";
 			para_1 = -1;
 		}
+		// F3P: introdotta da Genied ???
+		else if (AcctType == ACCTTYPE_NotInvoicedReceivable)
+		{
+			sql = "SELECT NotInvoicedReceivables_Acct FROM C_BP_Group_Acct a, C_BPartner bp "
+				+ "WHERE a.C_BP_Group_ID=bp.C_BP_Group_ID AND bp.C_BPartner_ID=? AND a.C_AcctSchema_ID=?";
+			para_1 = getC_BPartner_ID();
+		}
+		else if (AcctType == ACCTTYPE_NotInvoicedRevenue)
+		{
+			sql = "SELECT NotInvoicedRevenue_Acct FROM C_BP_Group_Acct a, C_BPartner bp "
+				+ "WHERE a.C_BP_Group_ID=bp.C_BP_Group_ID AND bp.C_BPartner_ID=? AND a.C_AcctSchema_ID=?";
+			para_1 = getC_BPartner_ID();
+		}
 
 		else
 		{
@@ -1400,7 +1470,7 @@ public abstract class Doc
 		ResultSet rs = null;
 		try
 		{
-			pstmt = DB.prepareStatement(sql, null);
+			pstmt = DB.prepareStatement(sql, m_trxName); // F3P: add transaction
 			if (para_1 == -1)   //  GL Accounts
 				pstmt.setInt (1, as.getC_AcctSchema_ID());
 			else
