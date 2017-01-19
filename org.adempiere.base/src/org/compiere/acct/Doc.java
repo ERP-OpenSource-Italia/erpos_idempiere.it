@@ -52,6 +52,8 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 
+import it.idempiere.base.acct.AccountingPreCheck;
+
 /**
  *  Posting Document Root.
  *
@@ -638,6 +640,17 @@ public abstract class Doc
 		//  rejectPeriodClosed
 		if (!isPeriodOpen())
 			return STATUS_PeriodClosed;
+		
+		// F3P: if the document is not accountable, due to italian-specific logic, consider it as posted, but without generating facts and triggering model validators
+		
+		boolean isLitPostable = AccountingPreCheck.isPostable(p_po, this, m_as);
+		
+		if(isLitPostable == false)
+		{
+			return STATUS_Posted;
+		}
+		
+		// F3P end		
 
 		//  createFacts
 		ArrayList<Fact> facts = createFacts (m_as);
