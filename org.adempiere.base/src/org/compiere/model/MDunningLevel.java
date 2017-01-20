@@ -86,14 +86,19 @@ public class MDunningLevel extends X_C_DunningLevel
 		if (!getParent().isCreateLevelsSequentially ())
 			return null;
 		ArrayList<MDunningLevel> list = new ArrayList<MDunningLevel>();
-		String sql = "SELECT * FROM C_DunningLevel WHERE C_Dunning_ID=? AND DaysAfterDue+DaysBetweenDunning<?";
+		
+		// F3P: rimosso days between dunning perche' gestito esternamente con flag di abilitazione
+		// String sql = "SELECT * FROM C_DunningLevel WHERE C_Dunning_ID=? AND DaysAfterDue+DaysBetweenDunning<?";
+		String sql = "SELECT * FROM C_DunningLevel WHERE C_Dunning_ID=? AND DaysAfterDue < ?"; 
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
 		{
 			pstmt = DB.prepareStatement(sql, get_TrxName());
 			pstmt.setInt(1, getParent().get_ID ());
-			int totalDays = getDaysAfterDue ().intValue ()+getDaysBetweenDunning ();
+			// F3P: rimosso getDaysBetweenDunning(), gestito esternamente con flag di abilitazione
+			// 	int totalDays = getDaysAfterDue ().intValue ()+getDaysBetweenDunning ();
+			int totalDays = getDaysAfterDue ().intValue ();
 			pstmt.setInt(2, totalDays);
 			rs = pstmt.executeQuery();
 			while (rs.next())
