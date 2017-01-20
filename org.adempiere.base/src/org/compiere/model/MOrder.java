@@ -44,6 +44,9 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
 
+import it.idempiere.base.util.STDSysConfig;
+import it.idempiere.base.util.STDUtils;
+
 
 /**
  *  Order Model.
@@ -211,6 +214,9 @@ public class MOrder extends X_C_Order implements DocAction
 		setAD_Org_ID(project.getAD_Org_ID());
 		setC_Campaign_ID(project.getC_Campaign_ID());
 		setSalesRep_ID(project.getSalesRep_ID());
+		//F3P set also POReference
+		
+		setPOReference(project.getPOReference());
 		//
 		setC_Project_ID(project.getC_Project_ID());
 		setDescription(project.getName());
@@ -464,7 +470,15 @@ public class MOrder extends X_C_Order implements DocAction
 		ss = bp.getInvoiceRule();
 		if (ss != null)
 			setInvoiceRule(ss);
-		ss = bp.getPaymentRule();
+		// F3P: read correct PaymentRule
+		// ss = bp.getPaymentRule();
+		
+		if (isSOTrx())
+			ss = bp.getPaymentRule();
+		else
+			ss = bp.getPaymentRulePO();
+		
+		// F3P end
 		if (ss != null)
 			setPaymentRule(ss);
 		//	Sales Rep
@@ -502,8 +516,66 @@ public class MOrder extends X_C_Order implements DocAction
 
 		//	Set Contact
 		MUser[] contacts = bp.getContacts(false);
+		// F3P: replaced with selection of right contact
+		/*
 		if (contacts != null && contacts.length == 1)
 			setAD_User_ID(contacts[0].getAD_User_ID());
+		*/
+		
+		int AD_User_ID = -1,
+				Bill_User_ID = -1;
+		
+		for(int i=0; i < contacts.length; i++)
+		{
+			MUser contact = contacts[i];
+			
+			if(contact.getC_BPartner_Location_ID() == getC_BPartner_Location_ID())
+			{
+				AD_User_ID = contact.getAD_User_ID();
+				break;
+			}
+		}
+		
+		// No specific contact found ? choose first
+		
+		if(AD_User_ID <= 0 && contacts.length > 0)
+			AD_User_ID = contacts[0].getAD_User_ID();
+		
+		if(getBill_Location_ID() > 0)
+		{
+			MBPartner	mBillBP = null; 
+				
+			if(getBill_BPartner_ID() > 0)
+				mBillBP = MBPartner.get(getCtx(), getBill_BPartner_ID());
+			else
+				mBillBP = bp;
+				
+			MUser			billContacts[] = mBillBP.getContacts(false);
+			
+			for(int i=0; i < billContacts.length; i++)
+			{
+				MUser contact = billContacts[i];
+				
+				if(contact.getC_BPartner_Location_ID() == getBill_Location_ID())
+				{
+					Bill_User_ID = contact.getAD_User_ID();
+					break;
+				}
+			}
+			
+			// No specific contact found ? choose first
+			
+			if(AD_User_ID <= 0 && billContacts.length > 0)
+				AD_User_ID = billContacts[0].getAD_User_ID();			
+		}
+		
+		if(AD_User_ID > 0)
+			setAD_User_ID(AD_User_ID);
+		
+		if(Bill_User_ID > 0)
+			setBill_User_ID(Bill_User_ID);
+		
+		// F3P end
 	}	//	setBPartner
 
 
@@ -534,6 +606,8 @@ public class MOrder extends X_C_Order implements DocAction
 			//
 			line.setOrder(this);
 			line.set_ValueNoCheck ("C_OrderLine_ID", I_ZERO);	//	new
+			// F3P: ri-calcoliamo qty ordered, altrimenti la copia da ordine chiuso e' errata
+			line.setQty(line.getQtyEntered());
 			//	References
 			if (!copyASI)
 			{
@@ -1576,10 +1650,38 @@ public class MOrder extends X_C_Order implements DocAction
 	 */
 	protected boolean explodeBOM()
 	{
+		// F3P: dobbiamo esplodere i servizi ?
+		String sExplodeBOM = STDSysConfig.getIsExplodeBOMService(getAD_Client_ID(), getAD_Org_ID());
+		
+		if(sExplodeBOM.equals("X"))
+		{
+			return false;
+		}
+				
 		boolean retValue = false;
-		String where = "AND IsActive='Y' AND EXISTS "
-			+ "(SELECT * FROM M_Product p WHERE C_OrderLine.M_Product_ID=p.M_Product_ID"
-			+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')";
+		
+		// F3P: esplosione bom
+		// String where = "AND IsActive='Y' AND EXISTS "
+		//		+ "(SELECT * FROM M_Product p WHERE C_OrderLine.M_Product_ID=p.M_Product_ID"
+		//		+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')";
+				
+		boolean bExplodeBOM = (sExplodeBOM == null || sExplodeBOM.equals("Y"));
+		String where = null;
+		
+		if(bExplodeBOM)
+		{
+			where = "AND IsActive='Y' AND EXISTS "
+					+ "(SELECT * FROM M_Product p WHERE C_OrderLine.M_Product_ID=p.M_Product_ID"
+					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')";
+		}
+		else
+		{
+			where = "AND IsActive='Y' AND EXISTS "
+					+ "(SELECT * FROM M_Product p WHERE C_OrderLine.M_Product_ID=p.M_Product_ID"
+					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N' and p.ProductType='I')";	// F3P: aggiunta verifica che sia di tipo 'item'
+		}
+		
+		//F3P end		
 		//
 		String sql = "SELECT COUNT(*) FROM C_OrderLine "
 			+ "WHERE C_Order_ID=? " + where; 
@@ -1903,6 +2005,9 @@ public class MOrder extends X_C_Order implements DocAction
 		
 		boolean realTimePOS = MSysConfig.getBooleanValue(MSysConfig.REAL_TIME_POS, false , getAD_Client_ID());
 		
+		//F3P: Check this variable before create the reverse for onCreditOrder,warehouseOrder or POSOrder
+		boolean bCreateReversal = STDSysConfig.isOrderCreateReverse(getAD_Client_ID(), getAD_Org_ID());
+		
 		//	Create SO Shipment - Force Shipment
 		MInOut shipment = null;
 		if (MDocType.DOCSUBTYPESO_OnCreditOrder.equals(DocSubTypeSO)		//	(W)illCall(I)nvoice
@@ -1910,20 +2015,24 @@ public class MOrder extends X_C_Order implements DocAction
 			|| MDocType.DOCSUBTYPESO_POSOrder.equals(DocSubTypeSO)			//	(W)alkIn(R)eceipt
 			|| MDocType.DOCSUBTYPESO_PrepayOrder.equals(DocSubTypeSO)) 
 		{
-			if (!DELIVERYRULE_Force.equals(getDeliveryRule()))
-			{
-				MWarehouse wh = new MWarehouse (getCtx(), getM_Warehouse_ID(), get_TrxName());
-				if (!wh.isDisallowNegativeInv())
-					setDeliveryRule(DELIVERYRULE_Force);
+			//F3P: Manage createReversal flag, but create the shipment the first time
+			if(bCreateReversal || !STDUtils.hasCompletedShipment(this))
+			{			
+				if (!DELIVERYRULE_Force.equals(getDeliveryRule()))
+				{
+					MWarehouse wh = new MWarehouse (getCtx(), getM_Warehouse_ID(), get_TrxName());
+					if (!wh.isDisallowNegativeInv())
+						setDeliveryRule(DELIVERYRULE_Force);
+				}
+				//
+				shipment = createShipment (dt, realTimePOS ? null : getDateOrdered());
+				if (shipment == null)
+					return DocAction.STATUS_Invalid;
+				info.append("@M_InOut_ID@: ").append(shipment.getDocumentNo());
+				String msg = shipment.getProcessMsg();
+				if (msg != null && msg.length() > 0)
+					info.append(" (").append(msg).append(")");
 			}
-			//
-			shipment = createShipment (dt, realTimePOS ? null : getDateOrdered());
-			if (shipment == null)
-				return DocAction.STATUS_Invalid;
-			info.append("@M_InOut_ID@: ").append(shipment.getDocumentNo());
-			String msg = shipment.getProcessMsg();
-			if (msg != null && msg.length() > 0)
-				info.append(" (").append(msg).append(")");
 		}	//	Shipment
 		
 
@@ -1932,13 +2041,17 @@ public class MOrder extends X_C_Order implements DocAction
 			|| MDocType.DOCSUBTYPESO_OnCreditOrder.equals(DocSubTypeSO) 	
 			|| MDocType.DOCSUBTYPESO_PrepayOrder.equals(DocSubTypeSO)) 
 		{
-			MInvoice invoice = createInvoice (dt, shipment, realTimePOS ? null : getDateOrdered());
-			if (invoice == null)
-				return DocAction.STATUS_Invalid;
-			info.append(" - @C_Invoice_ID@: ").append(invoice.getDocumentNo());
-			String msg = invoice.getProcessMsg();
-			if (msg != null && msg.length() > 0)
-				info.append(" (").append(msg).append(")");
+			//F3P: Manage createReversal flag, but create the shipment the first time
+			if(bCreateReversal || !STDUtils.hasCompletedInvoice(this))
+			{	
+				MInvoice invoice = createInvoice (dt, shipment, realTimePOS ? null : getDateOrdered());
+				if (invoice == null)
+					return DocAction.STATUS_Invalid;
+				info.append(" - @C_Invoice_ID@: ").append(invoice.getDocumentNo());
+				String msg = invoice.getProcessMsg();
+				if (msg != null && msg.length() > 0)
+					info.append(" (").append(msg).append(")");
+			}
 		}	//	Invoice
 		
 		String msg = createPOSPayments();
@@ -2710,11 +2823,14 @@ public class MOrder extends X_C_Order implements DocAction
 				setC_DocType_ID (newDT.getC_DocType_ID());
 		}
 
+		//F3P: Check this variable before create the reverse for onCreditOrder,warehouseOrder or POSOrder
+		boolean bCreateReversal = STDSysConfig.isOrderCreateReverse(getAD_Client_ID(), getAD_Org_ID());
+		
 		//	PO - just re-open
 		if (!isSOTrx()) {
 			if (log.isLoggable(Level.INFO)) log.info("Existing documents not modified - " + dt);
 		//	Reverse Direct Documents
-		} else if (MDocType.DOCSUBTYPESO_OnCreditOrder.equals(DocSubTypeSO)	//	(W)illCall(I)nvoice
+		} else if (bCreateReversal && MDocType.DOCSUBTYPESO_OnCreditOrder.equals(DocSubTypeSO)	//	(W)illCall(I)nvoice
 			|| MDocType.DOCSUBTYPESO_WarehouseOrder.equals(DocSubTypeSO)	//	(W)illCall(P)ickup	
 			|| MDocType.DOCSUBTYPESO_POSOrder.equals(DocSubTypeSO))			//	(W)alkIn(R)eceipt
 		{
