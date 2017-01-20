@@ -27,6 +27,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -56,6 +57,7 @@ import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 
 import it.idempiere.base.util.BaseEnvHelper;
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *	Tab Model.
@@ -1555,6 +1557,11 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		if (m_vo.ReadOnlyLogic == null || m_vo.ReadOnlyLogic.equals(""))
 			return m_vo.IsReadOnly;
 
+		// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+		if (m_vo.ReadOnlyLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+		{
+			return evaluateScript(m_vo.ReadOnlyLogic);
+		}
 		//  ** dynamic content **  uses get_ValueAsString
 		boolean retValue = Evaluator.evaluateLogic(this, m_vo.ReadOnlyLogic);
 		if (log.isLoggable(Level.FINEST)) log.finest(m_vo.Name
@@ -1604,6 +1611,11 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		String parsed = Env.parseContext (m_vo.ctx, 0, dl, false, false).trim();
 		if (parsed.length() == 0)
 			return true;
+		// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+		if (dl.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+		{
+			return evaluateScript(dl);
+		}
 		boolean retValue = Evaluator.evaluateLogic(this, dl);
 		if (log.isLoggable(Level.CONFIG)) log.config(m_vo.Name + " (" + dl + ") => " + retValue);
 		return retValue;
@@ -1870,25 +1882,80 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			int Record_ID;
 			boolean isOrder = m_vo.TableName.startsWith("C_Order");
 			//
-			StringBuffer sql = new StringBuffer("SELECT COUNT(*) AS Lines,c.ISO_Code,o.TotalLines,o.GrandTotal,"
-				+ "currencyBase(o.GrandTotal,o.C_Currency_ID,o.DateAcct, o.AD_Client_ID,o.AD_Org_ID) AS ConvAmt ");
+			StringBuffer sql = new StringBuffer("SELECT COUNT(*) AS Lines,c.ISO_Code,o.TotalLines,o.GrandTotal,");
+				//+ "currencyBase(o.GrandTotal,o.C_Currency_ID,o.DateAcct, o.AD_Client_ID,o.AD_Org_ID) AS ConvAmt "); //F3P: invoice conversion is based on dateInvoiced
 			if (isOrder)
 			{
 				Record_ID = Env.getContextAsInt(m_vo.ctx, m_vo.WindowNo, "C_Order_ID");
+				//F3P:
+				sql.append("currencyBase(o.GrandTotal,o.C_Currency_ID,o.DateAcct, o.AD_Client_ID,o.AD_Org_ID) AS ConvAmt ");
+				//F3P:end
 				sql.append("FROM C_Order o"
 					+ " INNER JOIN C_Currency c ON (o.C_Currency_ID=c.C_Currency_ID)"
 					+ " INNER JOIN C_OrderLine l ON (o.C_Order_ID=l.C_Order_ID) "
 					+ "WHERE o.C_Order_ID=? ");
+				//F3P:
+				sql.append("GROUP BY o.C_Currency_ID, c.ISO_Code, o.TotalLines, o.GrandTotal, o.DateAcct, o.AD_Client_ID, o.AD_Org_ID");
+				//F3P end
 			}
 			else
 			{
 				Record_ID = Env.getContextAsInt(m_vo.ctx, m_vo.WindowNo, "C_Invoice_ID");
+				//F3P: invoice conversion is based on dateInvoiced
+				boolean bUseDateInvoiced = true; 
+				
+				if(Record_ID > 0)
+				{
+					try
+					{
+						MInvoice inv = PO.get(m_vo.ctx, MInvoice.Table_Name, Record_ID, null);
+						
+						if(inv != null)
+						{
+							Timestamp dateAcct = inv.getDateAcct(),
+												convDateTerm = STDSysConfig.getInvConvDateTerm(inv.getAD_Client_ID(), inv.getAD_Org_ID());
+				
+							if(convDateTerm != null)
+							{
+								if(dateAcct.compareTo(convDateTerm) <= 0)
+								{
+									bUseDateInvoiced = false;
+								}
+							}
+						}
+					}
+					catch(ParseException e)
+					{
+						log.severe(e.getMessage());
+					}
+				}
+				
+				if(bUseDateInvoiced)
+				{
+					sql.append("currencyBase(o.GrandTotal,o.C_Currency_ID,o.DateInvoiced, o.AD_Client_ID,o.AD_Org_ID) AS ConvAmt ");					
+				}
+				else
+				{
+					sql.append("currencyBase(o.GrandTotal,o.C_Currency_ID,o.DateAcct, o.AD_Client_ID,o.AD_Org_ID) AS ConvAmt ");
+				}
+
 				sql.append("FROM C_Invoice o"
 					+ " INNER JOIN C_Currency c ON (o.C_Currency_ID=c.C_Currency_ID)"
 					+ " INNER JOIN C_InvoiceLine l ON (o.C_Invoice_ID=l.C_Invoice_ID) "
 					+ "WHERE o.C_Invoice_ID=? ");
+				
+				if(bUseDateInvoiced)
+				{
+					sql.append("GROUP BY o.C_Currency_ID, c.ISO_Code, o.TotalLines, o.GrandTotal, o.DateInvoiced, o.AD_Client_ID, o.AD_Org_ID");
+				}
+				else
+				{
+					sql.append("GROUP BY o.C_Currency_ID, c.ISO_Code, o.TotalLines, o.GrandTotal, o.DateAcct, o.AD_Client_ID, o.AD_Org_ID");
+				}
+				//F3P end
 			}
-			sql.append("GROUP BY o.C_Currency_ID, c.ISO_Code, o.TotalLines, o.GrandTotal, o.DateAcct, o.AD_Client_ID, o.AD_Org_ID");
+			//F3P:
+			//sql.append("GROUP BY o.C_Currency_ID, c.ISO_Code, o.TotalLines, o.GrandTotal, o.DateAcct, o.AD_Client_ID, o.AD_Org_ID");
 
 			if (log.isLoggable(Level.FINE)) log.fine(m_vo.TableName + " - " + Record_ID);
 			MessageFormat mf = null;
@@ -3387,5 +3454,73 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	{
 		selection.clear();
 	}
+	
+	/**
+	 * Evaluate Display, ReadOnly and Mandatory logic using a script
+	 * @author Angelo Dabala' (genied)
+	 * @param ruleName name of the script to invoke
+	 * @return true or false
+	 */
+	private boolean evaluateScript(String ruleName)
+	{
+		String retValue;
+		MRule rule = MRule.get(m_vo.ctx, ruleName.substring(MRule.SCRIPT_PREFIX.length()));
+		if (rule == null) {
+			retValue = "Script Rule " + ruleName + " not found"; 
+			log.log(Level.SEVERE, retValue);
+			return true;
+		}
+		// TODO add new EVENTTYPE
+		if ( !  (rule.getRuleType().equals(MRule.RULETYPE_JSR223ScriptingAPIs))) {
+			retValue = "Script Rule " + ruleName
+				+ " must be of type JSR 223"; 
+			log.log(Level.SEVERE, retValue);
+			return true;
+		}
 
+		ScriptEngine engine = rule.getScriptEngine();
+
+		// Window context are    W_
+		// Login context  are    G_
+		MRule.setContext(engine, m_vo.ctx, m_vo.WindowNo);
+		// now add the callout parameters windowNo, tab, field, value, oldValue to the engine 
+		// Method arguments context are A_
+		engine.put(MRule.ARGUMENTS_PREFIX + "WindowNo", m_vo.WindowNo);
+		engine.put(MRule.ARGUMENTS_PREFIX + "Tab", this);
+		engine.put(MRule.ARGUMENTS_PREFIX + "Field", null);
+		engine.put(MRule.ARGUMENTS_PREFIX + "Value", null);
+		engine.put(MRule.ARGUMENTS_PREFIX + "OldValue", null);
+		engine.put(MRule.ARGUMENTS_PREFIX + "Ctx", m_vo.ctx);
+
+		Object result = null;
+		try 
+		{
+			result = engine.eval(rule.getScript()).toString();
+		}
+		catch (Exception e)
+		{
+			log.log(Level.SEVERE, "", e);
+			retValue = 	"Script Rule Invalid: " + e.toString();
+			return true;
+		}
+		if (result != null) 
+		{
+			 if (result instanceof Boolean) 
+				 return ((Boolean)result).booleanValue();
+			 if (result instanceof String)
+			 {
+				 if("Y".equals(result) || "true".equalsIgnoreCase((String)result))
+					 return true;
+			 }
+		}
+		return false;
+	}
+	
+	//LS added to be able to refresh properly included and parent tabs from ADTabPanel,
+	//need to retreive current params 'onlyCurrentRows' and 'onlyCurrentDays' without override them
+	//to not change current selections
+	public GridTabVO getGridTabVO(){
+		return m_vo;
+	}
+	
 }	//	GridTab
