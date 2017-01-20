@@ -36,6 +36,7 @@ public class STDSysConfig
 	
 	public static final String SYSCFG_OVERRIDE_INOUT_LINE_NO = "F3P_OVERRIDE_GENERATED_INOUT_LINE_NO";
 	public static final String F3P_EXPLODE_BOM_SERVICE = "F3P_EXPLODE_BOM_SERVICE";
+	public static final String F3P_CREATE_REVERSE_ORDER = "F3P_CREATE_REVERSE_ORDER";
 	//LS variabile per gestire i termini pag fatture prima del completa
 	public static final String LIT_PAYSCHEDULEINV_BEFORE_COMPLETE = "LIT_PAYSCHEDULEINV_BEFORE_COMPLETE";
 	
@@ -214,5 +215,16 @@ public class STDSysConfig
 	public static final boolean isPayScheduleInvBeforeComplete(int AD_Client_ID,int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(LIT_PAYSCHEDULEINV_BEFORE_COMPLETE, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	/** Check this variable before create the reverse for onCreditOrder,warehouseOrder or POSOrder
+	 * 
+	 * @param AD_Client_ID
+	 * @param AD_Org_ID
+	 * @return create or not
+	 */
+	public static final boolean isOrderCreateReverse(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(F3P_CREATE_REVERSE_ORDER, true, AD_Client_ID, AD_Org_ID);
 	}
 }

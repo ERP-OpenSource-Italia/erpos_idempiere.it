@@ -17,7 +17,9 @@ import org.compiere.model.MClientInfo;
 import org.compiere.model.MColumn;
 import org.compiere.model.MConversionRate;
 import org.compiere.model.MConversionType;
+import org.compiere.model.MInOut;
 import org.compiere.model.MInvoice;
+import org.compiere.model.MOrder;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.PO;
 import org.compiere.util.CLogger;
@@ -424,4 +426,39 @@ public class STDUtils {
           
           return (T)model.get_Value (index);
   }
+	
+	/**
+	 * Returns true if this order has at least one shipment with status equals to CO or CL,
+	 * false otherwise.
+	 * @return boolean
+	 */
+	public static boolean hasCompletedShipment(MOrder order)
+	{
+		MInOut inOutArray[] = order.getShipments();
+		for(MInOut inOut: inOutArray)
+		{
+			if(inOut.getDocStatus().equals(MInOut.DOCSTATUS_Completed)
+					|| inOut.getDocStatus().equals(MInOut.DOCSTATUS_Closed))
+				return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Returns true if this order has at least one invoice with status equals to CO or CL,
+	 * false otherwise.
+	 * @return boolean
+	 */
+	public static boolean hasCompletedInvoice(MOrder order)
+	{
+		MInvoice invoiceArray[] = order.getInvoices();
+		for(MInvoice invoice: invoiceArray)
+		{
+			if(invoice.getDocStatus().equals(MInvoice.DOCSTATUS_Completed)
+					|| invoice.getDocStatus().equals(MInvoice.DOCSTATUS_Closed))
+				return true;
+		}
+		return false;
+	}	
+	
 }
