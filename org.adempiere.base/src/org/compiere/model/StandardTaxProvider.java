@@ -44,6 +44,11 @@ public class StandardTaxProvider implements ITaxProvider {
 		for (int i = 0; i < lines.length; i++)
 		{
 			MOrderLine line = lines[i];
+			
+			// F3P: skip description lines			
+			if(line.isDescription())
+				continue;
+			
 			totalLines = totalLines.add(line.getLineNetAmt());
 			Integer taxID = new Integer(line.getC_Tax_ID());
 			if (!taxList.contains(taxID))
@@ -174,6 +179,11 @@ public class StandardTaxProvider implements ITaxProvider {
 		for (int i = 0; i < lines.length; i++)
 		{
 			MInvoiceLine line = lines[i];
+			
+			// F3P: skip description lines			
+			if(line.isDescription())
+				continue;
+			
 			totalLines = totalLines.add(line.getLineNetAmt());
 			if (!taxList.contains(line.getC_Tax_ID()))
 			{
