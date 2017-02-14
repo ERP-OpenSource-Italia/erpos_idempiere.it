@@ -39,7 +39,12 @@ public class STDSysConfig
 	public static final String F3P_CREATE_REVERSE_ORDER = "F3P_CREATE_REVERSE_ORDER";
 	//LS variabile per gestire i termini pag fatture prima del completa
 	public static final String LIT_PAYSCHEDULEINV_BEFORE_COMPLETE = "LIT_PAYSCHEDULEINV_BEFORE_COMPLETE";
-	
+	// Angelo Dabala' (genied) add support for Desktop Mail Client
+	private static final String LIT_USE_DESKTOP_EMAIL = "LIT_USE_DESKTOP_EMAIL"; 
+	//F3P: default doc action
+	protected static final String  F3P_DEFAULT_DOC_ACTION = "F3P_Default_DocAction_On_Create";
+	/** F3P: show only order with service line */
+	public static final String F3P_CREATEFROMORDER_ONLYSERVICE = "F3P_CREATEFROMORDER_ONLYSERVICE";	
 	/**
 	 * Parametro che indica se bisogna ripetere il soggetto come sottotitolo nell'email
 	 * @param AD_Client_ID
@@ -226,5 +231,24 @@ public class STDSysConfig
 	public static final boolean isOrderCreateReverse(int AD_Client_ID,int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(F3P_CREATE_REVERSE_ORDER, true, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static boolean isUseDesktopEMail(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_USE_DESKTOP_EMAIL, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static String getDefaultDocAction(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getValue(F3P_DEFAULT_DOC_ACTION, null, AD_Client_ID, AD_Org_ID);
+	}
+	
+	/**
+	 * F3P: show only order with at least one service line or charge
+	 * @return
+	 */
+	public static boolean isShowOnlyServiceOrder()
+	{
+		return MSysConfig.getBooleanValue(F3P_CREATEFROMORDER_ONLYSERVICE, false);
 	}
 }

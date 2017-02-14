@@ -19,6 +19,7 @@ package org.compiere.apps;
 
 import java.awt.BorderLayout;
 import java.awt.Cursor;
+import java.awt.Desktop;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.Frame;
@@ -31,6 +32,9 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyVetoException;
 import java.beans.VetoableChangeListener;
 import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URLEncoder;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 
@@ -50,6 +54,9 @@ import org.compiere.util.DisplayType;
 import org.compiere.util.EMail;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *	EMail Dialog
@@ -72,7 +79,7 @@ public class EMailDialog extends CDialog
 	 * 
 	 */
 	private static final long serialVersionUID = -6850428309037475213L;
-
+	
 	/**
 	 * 	EMail Dialog
 	 *	@param owner calling window
@@ -87,7 +94,12 @@ public class EMailDialog extends CDialog
 		String subject, String message, File attachment)
 	{
 		super (owner, title, true);
-		commonInit(from, to, subject, message, attachment);
+		if(sendWithDesktopEMail(from, to, subject, message, attachment))  // Angelo Dabala' (genied) 
+		{
+			dispose();
+		}
+		else 
+			commonInit(from, to, subject, message, attachment);
 	}	//	EmailDialog
 
 	/**
@@ -104,7 +116,12 @@ public class EMailDialog extends CDialog
 		String subject, String message, File attachment)
 	{
 		super (owner, title, true);
-		commonInit(from, to, subject, message, attachment);
+		if(sendWithDesktopEMail(from, to, subject, message, attachment))  // Angelo Dabala' (genied) 
+		{
+			dispose();
+		}
+		else
+			commonInit(from, to, subject, message, attachment);
 	}	//	EmailDialog
 
 	/**
@@ -471,4 +488,67 @@ public class EMailDialog extends CDialog
 		}
 	}	//	vetoableChange
 
+	/**
+	 * Check and use desktop email client
+	 * @param from user
+	 * @param to 
+	 * @param subject 
+	 * @param message 
+	 * @param attachment 
+	 * @return true if sent with desktop email client
+	 * @author Angelo Dabala' (genied)
+	 */
+	private boolean sendWithDesktopEMail(MUser from, String to, String subject, String message, File attachment) 
+	{
+		boolean desktopEMail = STDSysConfig.isUseDesktopEMail(from.getAD_Client_ID(), from.getAD_Org_ID());
+		if(desktopEMail && Desktop.isDesktopSupported() && attachment == null) // attachment currently not supported
+		{
+			Desktop desktop = Desktop.getDesktop();
+			if(desktop.isSupported(Desktop.Action.MAIL))
+			{
+				try
+				{
+					StringBuilder sUri = new StringBuilder();
+					sUri.append("mailto:").append(to);
+					String step = "?";
+					if(!Util.isEmpty(subject, true))
+					{
+						sUri.append(step).append("SUBJECT=").append(urlEncode(subject));
+						step = "&";
+					}
+					if(!Util.isEmpty(message, true))
+					{
+						sUri.append(step).append("BODY=").append(urlEncode(message));
+						step = "&";
+					}
+//					if(attachment != null && attachment.exists())
+//					{
+//						sUri.append(step).append("ATTACHMENTS=").append(urlEncode(attachment.getCanonicalPath()));
+//					}
+					URI mailtoURI = new URI(sUri.toString());
+					desktop.mail(mailtoURI);
+					return true;
+				}
+				catch (Exception ex)
+				{
+					log.log(Level.WARNING, "EMailDialog", ex);
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @author Dr. Axel Rauschmayer
+	 * code taken from http://www.2ality.com/2010/12/simple-way-of-sending-emails-in-java.html
+	 * @param str
+	 * @return
+	 */
+	private static final String urlEncode(String str) {
+	    try {
+	        return URLEncoder.encode(str, "UTF-8").replace("+", "%20");
+	    } catch (UnsupportedEncodingException e) {
+	        throw new RuntimeException(e);
+	    }
+	}
 }	//	VEMailDialog
