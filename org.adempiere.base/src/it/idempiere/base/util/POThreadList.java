@@ -10,7 +10,7 @@ import org.compiere.model.PO;
  *
  */
 
-public class SavedFrom
+public class POThreadList
 {	
 	private final POListThreadLocal poList = new POListThreadLocal();
 		
@@ -20,7 +20,7 @@ public class SavedFrom
 	 * @param po
 	 */
 	
-	public void addSavedFrom(PO po)
+	public void addPO(PO po)
 	{
 			poList.get().add(po);
 	}
@@ -31,7 +31,7 @@ public class SavedFrom
 	 * @return true if saved by this source, false otherwise
 	 */
 	
-	public boolean  isSavedFrom(PO po)
+	public boolean  hasPO(PO po)
 	{		
 		for(PO o :  poList.get())
 		{
@@ -47,7 +47,7 @@ public class SavedFrom
 	 * @param po
 	 */
 	
-	public void removeSavedFrom(PO po)
+	public void removePO(PO po)
 	{
 			ListIterator<PO> it = poList.get().listIterator();
 			

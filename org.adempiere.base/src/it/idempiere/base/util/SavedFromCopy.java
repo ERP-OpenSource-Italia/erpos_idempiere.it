@@ -10,7 +10,7 @@ import org.compiere.model.PO;
  */
 public class SavedFromCopy
 {
-	private static final SavedFrom savedFromCopy = new SavedFrom();
+	private static final POThreadList savedFromCopy = new POThreadList();
 	
 	/**
 	 * Add po to list of object saved from copy
@@ -19,7 +19,7 @@ public class SavedFromCopy
 	 */
 	public static void add(PO po)
 	{
-			savedFromCopy.addSavedFrom(po);
+			savedFromCopy.addPO(po);
 	}
 	
 	/**
@@ -28,7 +28,7 @@ public class SavedFromCopy
 	 */
 	public static void remove(PO po)
 	{
-			savedFromCopy.removeSavedFrom(po);
+			savedFromCopy.removePO(po);
 	}
 	
 	/**
@@ -38,7 +38,7 @@ public class SavedFromCopy
 	 */
 	public static boolean  isSavedFromCopy(PO po)
 	{
-		return savedFromCopy.isSavedFrom(po);
+		return savedFromCopy.hasPO(po);
 	}
 
 }
