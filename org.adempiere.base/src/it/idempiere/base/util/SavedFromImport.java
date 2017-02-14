@@ -4,7 +4,7 @@ import org.compiere.model.PO;
 
 public class SavedFromImport
 {
-	private static SavedFrom savedFromImport = new SavedFrom();
+	private static POThreadList savedFromImport = new POThreadList();
 	
 	/** Saves a model flagging it as importing and de-flagging after
 	 *  
@@ -88,7 +88,7 @@ public class SavedFromImport
 	 */
 	public static void addIsStartedFromImport(PO model)
 	{
-		savedFromImport.addSavedFrom(model);
+		savedFromImport.addPO(model);
 	}
 
 	/** Check if an object is saved from import
@@ -99,7 +99,7 @@ public class SavedFromImport
 	 */
 	public static boolean isStartedFromImport(PO po)
 	{
-		return savedFromImport.isSavedFrom(po);		
+		return savedFromImport.hasPO(po);		
 	}
 	
 	/** De-flag from saved from import
@@ -111,6 +111,6 @@ public class SavedFromImport
 	 */
 	public static void removeIsStartedFromImport(PO po)
 	{
-		savedFromImport.removeSavedFrom(po);
+		savedFromImport.removePO(po);
 	}
 }

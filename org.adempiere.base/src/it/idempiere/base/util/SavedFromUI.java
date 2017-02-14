@@ -10,7 +10,7 @@ import org.compiere.model.PO;
  */
 public class SavedFromUI
 {
-	private static final SavedFrom savedFromUI = new SavedFrom();
+	private static final POThreadList savedFromUI = new POThreadList();
 	
 	/**
 	 * Add po to list of object saved from UI
@@ -19,7 +19,7 @@ public class SavedFromUI
 	 */
 	public static void add(PO po)
 	{
-			savedFromUI.addSavedFrom(po);
+			savedFromUI.addPO(po);
 	}
 	
 	/**
@@ -28,7 +28,7 @@ public class SavedFromUI
 	 */
 	public static void remove(PO po)
 	{
-			savedFromUI.removeSavedFrom(po);
+			savedFromUI.removePO(po);
 	}
 	
 	/**
@@ -38,7 +38,7 @@ public class SavedFromUI
 	 */
 	public static boolean  isSavedFromUI(PO po)
 	{
-		return savedFromUI.isSavedFrom(po);
+		return savedFromUI.hasPO(po);
 	}
 
 }
