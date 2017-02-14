@@ -16,13 +16,20 @@
  *****************************************************************************/
 package org.compiere.util;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.BitSet;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Properties;
+import java.util.logging.Level;
 
 import org.compiere.model.MCountry;
+import org.compiere.model.MResource;
+import org.compiere.model.MResourceType;
+import org.compiere.model.MUOM;
+import org.compiere.model.MUOMConversion;
 
 
 /**
@@ -637,6 +644,24 @@ public class TimeUtil
 	/** Truncate Year - Y			*/
 	public static final String	TRUNC_YEAR = "Y";
 	
+	//Nectosoft
+	/**
+	 * keep current day
+	 */
+	public static final int	DAY_Current = 0;
+	/**
+	 * set to first day of month
+	 */
+	public static final int	DAY_First = 1;
+	/**
+	 * set to last day of month
+	 */
+	public static final int	DAY_Last = 2;
+	
+	/**	Logging								*/
+	private static CLogger	s_log = CLogger.getCLogger(TimeUtil.class);
+	//Nectosoft end
+	
 	/**
 	 * 	Get truncated day/time
 	 *  @param dayTime day
@@ -878,5 +903,164 @@ public class TimeUtil
 			retValue = retValue * -1;
 		return retValue;
 	}
+	
+	//Nectosoft
+	/**
+	 * 	Return Passed date + months (truncates) keep day if within range otherwise last day
+	 * 	@param date Date
+	 * 	@param months offset
+	 * 	@param fixDay one of DAY_Keey, DAY_First, DAY_Last
+	 * 	@return date + months at 00:00
+	 */
+	static public Timestamp addMonths(Timestamp date, int months, int fixDay)
+	{
+		if (months == 0)
+		{
+			return date;
+		}
+		if (date == null)
+		{
+			date = new Timestamp(System.currentTimeMillis());
+		}
+		//
+		GregorianCalendar cal = new GregorianCalendar();
+		cal.setTime(date);
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		int day = cal.get(Calendar.DAY_OF_MONTH); 	// save current day
+		cal.set(Calendar.DAY_OF_MONTH, 1); 			// set to first day of month
+		cal.add(Calendar.MONTH, months);			// add specified months
+		int lastDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+		if(fixDay != DAY_First)
+		{
+			if(day > lastDay || fixDay == DAY_Last) day = lastDay;
+			cal.set(Calendar.DAY_OF_MONTH, day); 			// set to original day or last day of month
+		}
+		
+		return new Timestamp (cal.getTimeInMillis());
+
+	}
+
+	static public Timestamp calcWorkingDateTo(int R_Resource_ID, Timestamp dateFrom, BigDecimal qty)
+	{
+		MResource res = new MResource(Env.getCtx(), R_Resource_ID, null);
+		MResourceType rty = res.getResourceType();
+		int timeWorked = res.getDailyCapacity().intValue();
+		if(timeWorked == 0)
+		{
+			s_log.log(Level.WARNING, "Daily capacity not set");
+		}
+		int tothours = convertToHours(Env.getCtx(), res.getC_UOM_ID(), qty);
+		int totdays = (timeWorked != 0) ? tothours/timeWorked : 0;
+
+		GregorianCalendar gc = new GregorianCalendar();
+		gc.setTime(dateFrom);
+		
+		int ndays=0;
+		while (ndays < totdays)
+		{
+			Timestamp testDay = new Timestamp(gc.getTimeInMillis()); 
+			if (isHoliday(testDay) == false && rty.isDayAvailable(testDay) == true)
+			{
+				ndays++;
+			}
+			gc.add(Calendar.DAY_OF_YEAR, 1);
+		}
+		return new Timestamp(gc.getTimeInMillis());
+	}
+
+	static public long calcWorkingDays(int R_Resource_ID, Timestamp dateFrom, Timestamp dateTo)
+	{
+		MResource res = new MResource(Env.getCtx(), R_Resource_ID, null);
+		MResourceType rty = res.getResourceType();
+
+		GregorianCalendar gcFrom = new GregorianCalendar();
+		gcFrom.setTime(dateFrom);
+
+		GregorianCalendar gcTo = new GregorianCalendar();
+		gcTo.setTime(dateTo);
+
+		long ndays = 0;
+		
+		while(gcFrom.before(gcTo))
+		{
+			Timestamp testDay = new Timestamp(gcFrom.getTimeInMillis()); 
+			if (isHoliday(testDay) == false && rty.isDayAvailable(testDay) == true)
+			{
+				ndays++;
+			}
+			gcFrom.add(Calendar.DAY_OF_YEAR, 1);
+		}
+		return ndays;
+	}
+	
+	/**
+	 * Calculate working days between two dates and convert them based on UOM on resource
+	 * @param R_Resource_ID
+	 * @param dateFrom
+	 * @param dateTo
+	 * @return working days converted to resource's UOM
+	 */
+	static public BigDecimal calcWorkingTime(int R_Resource_ID, Timestamp dateFrom, Timestamp dateTo)
+	{
+		MResource res = new MResource(Env.getCtx(), R_Resource_ID, null);
+		
+		long timeWorked = calcWorkingDays(R_Resource_ID, dateFrom, dateTo);
+		timeWorked = timeWorked * res.getDailyCapacity().longValue();
+
+		BigDecimal workedtime = MUOMConversion.convert(Env.getCtx(), getHour_UOM_ID(Env.getCtx()), res.getC_UOM_ID(), new BigDecimal(timeWorked));
+		return workedtime;
+	}
+
+	static public boolean isHoliday(Timestamp day)
+	{
+		try
+		{
+			String sql = "SELECT 1 " +  
+					"FROM C_NONBUSINESSDAY BD " + 
+					"INNER JOIN C_CALENDAR CL ON CL.C_CALENDAR_ID = BD.C_CALENDAR_ID " +  
+					"INNER JOIN AD_CLIENTINFO CI ON CI.C_CALENDAR_ID = CL.C_CALENDAR_ID " +  
+					"WHERE CI.AD_CLIENT_ID = ? AND BD.DATE1 = ?";
+			
+			int ris = DB.getSQLValueEx(null, sql, Env.getAD_Client_ID(Env.getCtx()), day);
+			return ris == -1 ? false: true;
+		}
+		catch (Exception e)
+		{
+			s_log.log(Level.SEVERE, "", e);
+			return false;
+		}
+	}
+
+	/**
+	 *	Convert qty to target UOM and round.
+	 *  @param ctx context
+	 *  @param C_UOM_ID from UOM
+	 *  @param qty qty
+	 *  @return hours - 0 if not found
+	 */
+	static public int convertToHours(Properties ctx,
+		int C_UOM_ID, BigDecimal qty)
+	{
+		if (qty == null)
+			return 0;
+		int C_UOM_To_ID = getHour_UOM_ID(ctx);
+		if (C_UOM_ID == C_UOM_To_ID)
+			return qty.intValue();
+		//
+		BigDecimal result = MUOMConversion.convert (ctx, C_UOM_ID, C_UOM_To_ID, qty);
+		if (result == null)
+			return 0;
+		return result.intValue();
+	}	//	convert
+
+	public static int getHour_UOM_ID (Properties ctx)
+	{
+		String sql = "SELECT C_UOM_ID FROM C_UOM WHERE IsActive='Y' AND X12DE355=?";
+		return DB.getSQLValue(null, sql, MUOM.X12_HOUR);
+	}	//	getMinute_UOM_ID
+	//Nectosoft end
 
 }	//	TimeUtil
