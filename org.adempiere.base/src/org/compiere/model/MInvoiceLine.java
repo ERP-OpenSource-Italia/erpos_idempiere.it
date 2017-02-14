@@ -33,6 +33,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.util.STDSysConfig;
+
 
 /**
  *	Invoice Line Model
@@ -301,10 +303,28 @@ public class MInvoiceLine extends X_C_InvoiceLine
         else if (sLine.getM_RMALine_ID() != 0)
         {
         	// Set Pricing details from the RMA Line on which it is based
-        	PO.get(getCtx(), MRMALine.Table_Name, sLine.getM_RMALine_ID(), get_TrxName());
         	MRMALine rmaLine = PO.get(getCtx(), MRMALine.Table_Name, sLine.getM_RMALine_ID(), get_TrxName());
 
+        	// Angelo Dabala' (genied) get price from original Order
+            try
+            {
+            	MInOutLine xLine = (MInOutLine) rmaLine.getM_InOutLine();	// Original Shipment
+            	MOrderLine oLine = (MOrderLine) xLine.getC_OrderLine();		// Original Order
+    			if (xLine.sameOrderLineUOM())
+    				setPriceEntered(oLine.getPriceEntered());
+    			else
+    				setPriceEntered(oLine.getPriceActual());
+        		setPriceActual (oLine.getPriceActual());
+        		setPriceList (oLine.getPriceList());
+        		setPriceLimit (oLine.getPriceLimit());
+            }
+            catch (Exception e) 
+            {
+				// Fallback
+
             setPrice();
+			}
+            // Angelo Dabala' (genied) end
             setPrice(rmaLine.getAmt());
             setC_Tax_ID(rmaLine.getC_Tax_ID());
             setLineNetAmt(rmaLine.getLineNetAmt());
@@ -904,7 +924,12 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		setLineNetAmt();
 		// TaxAmt recalculations should be done if the TaxAmt is zero
 		// or this is an Invoice(Customer) - teo_sarca, globalqss [ 1686773 ]
-		if (m_IsSOTrx || getTaxAmt().compareTo(Env.ZERO) == 0)
+		//if (m_IsSOTrx || getTaxAmt().compareTo(Env.ZERO) == 0)
+		//
+		//Cristiano Lazzaro (genied) - add system variable to avoid TaxAmt recalculations on invoice customers
+		// this is important when the user want to input an tax amount by yourself, obviously the tax code should not have the check on DocumentLevel
+		boolean unforcedVat = STDSysConfig.isIsSoVatInvoiceUnforced(this.getAD_Client_ID(), this.getAD_Org_ID());
+		if (getTaxAmt().compareTo(Env.ZERO) == 0 || (m_IsSOTrx && unforcedVat == false))
 			setTaxAmt();
 		//
 		
@@ -935,7 +960,8 @@ public class MInvoiceLine extends X_C_InvoiceLine
 				return false;
 		
 			// red1 - solving BUGS #[ 1701331 ] , #[ 1786103 ]
-			if (tax.getTaxAmt().signum() != 0) {
+			// Angelo Dabala' (genied) modified to test TaxBaseAmt
+			if (tax.getTaxBaseAmt().signum() != 0) {
 				if (!tax.save(get_TrxName()))
 					return false;
 			}

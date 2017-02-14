@@ -22,6 +22,7 @@ import java.util.ListResourceBundle;
  *  Base Resource Bundle
  *
  * 	@author 	Gabriele Vivinetto - gabriele.mailing@rvmgroup.it
+ *  @author Angelo Dabala' (genied) - nectosoft - Italian localization - www.nectosoft.it
  * 	@version 	$Id: ALoginRes_it.java,v 1.2 2006/07/30 00:51:27 jjanke Exp $
  */
 public final class ALoginRes_it extends ListResourceBundle
@@ -38,13 +39,13 @@ public final class ALoginRes_it extends ListResourceBundle
 	  { "Database",         "Database" },
 	  { "User",             "Identificativo Utente" },
 	  { "EMail",            "Posta" },
-	  { "EnterUser",        "Identificativo Utente Applicazione" },
+	  { "EnterUser",        "Immettere Utente Applicazione" }, //Angelo Dabala'
 	  { "Password",         "Password" },
-	  { "EnterPassword",    "Inserimento password Applicazione" },
-	  { "Language",         "Linguaggio" },
-	  { "SelectLanguage",   "Selezionate il vostro linguaggio" },
+	  { "EnterPassword",    "Immettere Password Applicazione" }, //Angelo Dabala'
+	  { "Language",         "Lingua" }, //Angelo Dabala'
+	  { "SelectLanguage",   "Selezione lingua" }, //Angelo Dabala'
 	  { "Role",             "Ruolo" },
-	  { "Client",           "Mandante" },
+	  { "Client",           "Client" }, //Angelo Dabala'
 	  { "Organization",     "Organizzazione" },
 	  { "Date",             "Data" },
 	  { "Warehouse",        "Magazzino" },
@@ -52,11 +53,11 @@ public final class ALoginRes_it extends ListResourceBundle
 	  { "Connected",        "Connesso" },
 	  { "NotConnected",     "Non Connesso" },
 	  { "DatabaseNotFound", "Database non trovato" },
-	  { "UserPwdError",     "L'Utente non corrisponde alla password" },
+	  { "UserPwdError",     "Utente e password non corrispondono" }, //Angelo Dabala'
 	  { "RoleNotFound",     "Ruolo non trovato" },
-	  { "Authorized",       "Authorizzato" },
+	  { "Authorized",       "Autorizzato" }, //Angelo Dabala'
 	  { "Ok",               "Ok" },
-	  { "Cancel",           "Cancella" },
+	  { "Cancel",           "Annulla" }, //Angelo Dabala'
 	  { "VersionConflict",  "Conflitto di Versione:" },
 	  { "VersionInfo",      "Server <> Client" },
 	  { "PleaseUpgrade",    "Prego lanciare il programma di update" }

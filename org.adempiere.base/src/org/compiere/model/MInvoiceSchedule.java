@@ -97,7 +97,12 @@ public class MInvoiceSchedule extends X_C_InvoiceSchedule
 	public boolean canInvoice (Timestamp xDate, BigDecimal orderAmt)
 	{
 		//	Amount
-		if (isAmount() && getAmt() != null && orderAmt != null 
+		if (isAmount())	// f3p changed to immediately return false if amount below limit
+		{
+			return false;
+		}
+		
+		if (getAmt() != null && orderAmt != null 
 			&& orderAmt.compareTo(getAmt()) >= 0)
 			return true;
 
@@ -111,6 +116,11 @@ public class MInvoiceSchedule extends X_C_InvoiceSchedule
 	 */
 	public boolean canInvoice (Timestamp xDate)
 	{
+		if (isAmount())	// f3p return false if amount below limit
+		{
+			return false;
+		}
+		
 		//	Daily
 		if (INVOICEFREQUENCY_Daily.equals(getInvoiceFrequency()))
 			return true;

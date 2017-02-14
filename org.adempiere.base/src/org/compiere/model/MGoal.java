@@ -49,6 +49,9 @@ public class MGoal extends X_PA_Goal
 	 */
 	private static final long serialVersionUID = -4612113288233473730L;
 
+	/**	Child Goals			*/ //F3P: porting adempiere
+	private MGoal[]			m_childGoals = null;
+	
 	/**
 	 * 	Get User Goals
 	 *	@param ctx context
@@ -62,6 +65,7 @@ public class MGoal extends X_PA_Goal
 		ArrayList<MGoal> list = new ArrayList<MGoal>();
 		String sql = "SELECT * FROM PA_Goal g "
 			+ "WHERE IsActive='Y'"
+			+ " AND PA_GoalParent_ID IS NULL" //Nectosoft: exclude child goals
 			+ " AND AD_Client_ID=?"		//	#1
 			+ " AND ((AD_User_ID IS NULL AND AD_Role_ID IS NULL)"
 				+ " OR AD_User_ID=?"	//	#2
@@ -174,6 +178,33 @@ public class MGoal extends X_PA_Goal
 		list.toArray (retValue);
 		return retValue;
 	}	//	getMeasureGoals
+	
+	//F3P: porting adempiere
+	/**
+	 * 	Get Goals with Measure
+	 *	@param ctx context
+	 *	@param PA_Measure_ID measure
+	 *	@return goals
+	 */
+	public MGoal[] getChildGoals (boolean requery)
+	{
+		if (!isSummary())
+			return null;
+		if (m_childGoals != null && !requery)
+			return m_childGoals;
+
+		final String whereClause = COLUMNNAME_PA_GoalParent_ID+"=?";
+		List<MTax> list = new Query(getCtx(), I_PA_Goal.Table_Name, whereClause,  get_TrxName())
+			.setParameters(getPA_Goal_ID())
+			.setOnlyActiveRecords(true)
+			.setOrderBy(COLUMNNAME_SeqNo)
+			.list();
+
+		m_childGoals = new MGoal[list.size ()];
+		list.toArray (m_childGoals);
+		return m_childGoals;
+	}	//	getMeasureGoals
+	//F3P: end
 	
 	/**
 	 * 	Get Multiplier from Scope to Display

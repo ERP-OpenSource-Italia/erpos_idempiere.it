@@ -17,6 +17,7 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Properties;
@@ -30,6 +31,8 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *  Order Line Model.
@@ -210,6 +213,8 @@ public class MOrderLine extends X_C_OrderLine
 	/** Parent					*/
 	protected MOrder			m_parent = null;
 	
+	//F3P Flag for initialize m_M_PriceList_ID
+	private boolean 	isHeaderInfoSetted=false;
 	/**
 	 * 	Set Defaults from Order.
 	 * 	Does not set Parent !!
@@ -308,12 +313,14 @@ public class MOrderLine extends X_C_OrderLine
 			setPriceEntered(getPriceActual());
 		else
 			setPriceEntered(getPriceActual().multiply(getQtyOrdered()
-				.divide(getQtyEntered(), 12, BigDecimal.ROUND_HALF_UP)));	//	recision
+				.divide(getQtyEntered(), 12, BigDecimal.ROUND_HALF_UP)));	//	precision
 		
 		//	Calculate Discount
 		setDiscount(m_productPrice.getDiscount());
 		//	Set UOM
-		setC_UOM_ID(m_productPrice.getC_UOM_ID());
+		// F3P not reset C_UOM_ID
+		if(getC_UOM_ID() == 0)
+			setC_UOM_ID(m_productPrice.getC_UOM_ID()); 
 	}	//	setPrice
 
 	/**
@@ -552,7 +559,17 @@ public class MOrderLine extends X_C_OrderLine
 	 * 	Can Change Warehouse
 	 *	@return true if warehouse can be changed
 	 */
-	public boolean canChangeWarehouse()
+	public boolean canChangeWarehouse() 
+	{
+		return canChangeWarehouse(false); // F3P: added flag to try undo reservation before failing
+	}
+	
+	/**
+	 * 	Can Change Warehouse
+	 *	@param tryUndoRes
+	 *	@return true if warehouse can be changed
+	 */
+	public boolean canChangeWarehouse(boolean tryUndoRes) // F3P: added flag to try undo reservation before failing
 	{
 		if (getQtyDelivered().signum() != 0)
 		{
@@ -565,9 +582,44 @@ public class MOrderLine extends X_C_OrderLine
 			return false;
 		}
 		if (getQtyReserved().signum() != 0)
-		{
-			log.saveError("Error", Msg.translate(getCtx(), "QtyReserved") + "=" + getQtyReserved());
-			return false;
+		{// F3P: added undo reservation
+			
+			boolean bStillReserved = true;
+			
+			if(tryUndoRes && getParent().getDocStatus().equals(MOrder.DOCSTATUS_InProgress)) 
+			{
+				if(is_ValueChanged(COLUMNNAME_M_Product_ID))
+				{
+					int M_Product_ID = getM_Product_ID(),
+							oldM_Product_ID = get_ValueOldAsInt(COLUMNNAME_M_Product_ID);
+					
+					if(oldM_Product_ID > 0)
+					{
+						setM_Product_ID(oldM_Product_ID);
+						
+						try
+						{
+							tryUndoReservation();
+						}
+						finally
+						{
+							setM_Product_ID(M_Product_ID);
+						}						
+					}
+				}
+				else
+				{
+					tryUndoReservation();
+				}
+				
+				bStillReserved = getQtyReserved().signum() != 0;
+			}
+			
+			if(bStillReserved)
+			{
+				log.saveError("Error", Msg.translate(getCtx(), "QtyReserved") + "=" + getQtyReserved());
+				return false;				
+			}
 		}
 		//	We can change
 		return true;
@@ -725,6 +777,30 @@ public class MOrderLine extends X_C_OrderLine
 		BigDecimal discount = list.subtract(getPriceActual())
 			.multiply(Env.ONEHUNDRED)
 			.divide(list, getPrecision(), BigDecimal.ROUND_HALF_UP);
+		
+		// F3P: due to rounding, calculated discount may be different from the current one
+		//	but producing the same result:
+		// Example: 0,0242 40% discount, will be calculated as 40,08% discount, but the resulting actual price is the same.
+		// This need to be avoided
+		
+		BigDecimal bdCurrentDiscount = getDiscount();
+		
+		if(bdCurrentDiscount.signum() > 0)
+		{
+			BigDecimal	bdPriceActual =  getPriceActual();
+			int				 	iPriceScale = getParent().getM_PriceList().getPricePrecision(); // bdPriceActual.scale();
+						
+			BigDecimal	bdRecalcPrice = Env.ONEHUNDRED.subtract(bdCurrentDiscount).divide(Env.ONEHUNDRED,10,RoundingMode.HALF_UP).
+																	multiply(list).setScale(iPriceScale,RoundingMode.HALF_UP);
+			
+			if(bdRecalcPrice.compareTo(bdPriceActual) == 0)
+			{
+				discount = bdCurrentDiscount;
+			}
+		}
+		
+		// F3P end
+		
 		setDiscount(discount);
 	}	//	setDiscount
 
@@ -841,15 +917,21 @@ public class MOrderLine extends X_C_OrderLine
 			|| getM_Warehouse_ID() == 0 
 			|| getC_Currency_ID() == 0)
 			setOrder (getParent());
-		if (m_M_PriceList_ID == 0)
-			setHeaderInfo(getParent());
+		
+		//if (m_M_PriceList_ID == 0)
+		//F3P added flag for resolve problem in setHeaderInfo caused by isTaxIncluded
+		if (isHeaderInfoSetted==false)
+		{
+			isHeaderInfoSetted=true;
 
+			setHeaderInfo(getParent());
+		}
 		
 		//	R/O Check - Product/Warehouse Change
 		if (!newRecord 
 			&& (is_ValueChanged("M_Product_ID") || is_ValueChanged("M_Warehouse_ID"))) 
 		{
-			if (!canChangeWarehouse())
+			if (!canChangeWarehouse(true)) // F3P: added try undo reservation
 				return false;
 		}	//	Product Changed
 		
@@ -935,7 +1017,8 @@ public class MOrderLine extends X_C_OrderLine
 							qty = qty.add(storages[i].getQtyOnHand());
 					}
 					
-					if (getQtyOrdered().compareTo(qty) > 0)
+					if (getQtyOrdered().compareTo(qty) > 0&& 
+							STDSysConfig.isAllowAsiInsufficentQtyOnOrder(getAD_Client_ID(), getAD_Org_ID()) == false)	// F3P: aggiunta eccezione alla qty insufficente, se consentito l'uso di un ASI nuovo
 					{
 						log.warning("Qty - Stock=" + qty + ", Ordered=" + getQtyOrdered());
 						log.saveError("QtyInsufficient", "=" + qty); 
@@ -964,6 +1047,11 @@ public class MOrderLine extends X_C_OrderLine
 		//	Calculations & Rounding
 		setLineNetAmt();	//	extended Amount with or without tax
 		setDiscount();
+		
+		//F3P: Check that M_AttributeSetInstance is not null. This cause report malfunctions
+		if(getM_AttributeSetInstance_ID() <= 0)
+			setM_AttributeSetInstance_ID(0);
+		//F3P: End
 
 		/* Carlos Ruiz - globalqss
 		 * IDEMPIERE-178 Orders and Invoices must disallow amount lines without product/charge
@@ -996,11 +1084,19 @@ public class MOrderLine extends X_C_OrderLine
 			log.saveError("DeleteError", Msg.translate(getCtx(), "QtyInvoiced") + "=" + getQtyInvoiced());
 			return false;
 		}
-		if (Env.ZERO.compareTo(getQtyReserved()) != 0)
+		// Angelo Dabala' (genied) avoid giving error if the product is not item and/or not stocked
+		if (getProduct() != null && // F3P: in rare cases, it may be non null 
+				Env.ZERO.compareTo(getQtyReserved()) != 0 && getProduct().isStocked())
 		{
-			//	For PO should be On Order
-			log.saveError("DeleteError", Msg.translate(getCtx(), "QtyReserved") + "=" + getQtyReserved());
-			return false;
+			// F3P: try undo reservation and re-check 
+			
+			tryUndoReservation();
+			if (Env.ZERO.compareTo(getQtyReserved()) != 0)
+			{
+				//	For PO should be On Order
+				log.saveError("DeleteError", Msg.translate(getCtx(), "QtyReserved") + "=" + getQtyReserved());
+				return false;
+			}
 		}
 		
 		// UnLink All Requisitions
@@ -1008,6 +1104,34 @@ public class MOrderLine extends X_C_OrderLine
 		
 		return true;
 	}	//	beforeDelete
+	
+	//F3P: added undo reservation
+	protected void tryUndoReservation()
+	{
+		MOrder			mOrder = getParent();
+		
+		if(mOrder.getDocStatus().equals(MOrder.DOCSTATUS_InProgress))
+		{
+			BigDecimal	bdEntered = getQtyEntered(),
+									bdOrdered = getQtyOrdered();
+			
+			setQtyEntered(Env.ZERO);
+			setQtyOrdered(Env.ZERO);
+			
+			try
+			{
+				MDocType 		dt = MDocType.get(getCtx(), mOrder.getC_DocTypeTarget_ID());
+				MOrderLine	mLines[] = {this};
+				mOrder.reserveStock(dt, mLines);
+			}
+			finally
+			{
+				setQtyEntered(bdEntered);
+				setQtyOrdered(bdOrdered);
+			}
+		}
+	}
+	//F3P end
 	
 	/**
 	 * 	After Save
@@ -1064,7 +1188,8 @@ public class MOrderLine extends X_C_OrderLine
 		if (tax != null) {
 			if (!tax.calculateTaxFromLines())
 				return false;
-			if (tax.getTaxAmt().signum() != 0) {
+			// Angelo Dabala' (genied) modified to test TaxBaseAmt
+			if (tax.getTaxBaseAmt().signum() != 0) {
 				if (!tax.save(get_TrxName()))
 					return false;
 			}

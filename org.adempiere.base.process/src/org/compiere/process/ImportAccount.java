@@ -605,8 +605,14 @@ public class ImportAccount extends SvrProcess
 				{
 					if (m_createNewCombination)
 					{
-						MAccount acct = MAccount.get(getCtx(), C_ValidCombination_ID);
-						acct.setAccount_ID(C_ElementValue_ID);
+						
+						// F3P: dont use direct id, but obtain 'by parameters'
+						// MAccount acct = MAccount.get(getCtx(), C_ValidCombination_ID);
+						// acct.setAccount_ID(C_ElementValue_ID);
+						
+						MAccount acct = MAccount.get(getCtx(), m_AD_Client_ID, 0, C_AcctSchema_ID, C_ElementValue_ID, 
+								0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, get_TrxName());
+						
 						if (acct.save())
 						{
 							retValue = UPDATE_YES;

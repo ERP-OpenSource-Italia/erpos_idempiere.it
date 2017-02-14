@@ -41,6 +41,8 @@ import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.compiere.wf.MWFProcess;
 
+import it.idempiere.base.util.StartedFromUI;
+
 /**
  *	Process Interface Controller.
  *
@@ -84,6 +86,22 @@ public abstract class AbstractProcessCtl implements Runnable
 	/**	Static Logger	*/
 	private static CLogger	log	= CLogger.getCLogger (AbstractProcessCtl.class);
 	
+	// LS
+	// added to make possible to avoid commit on startJavaProcess(), if not desired
+	private boolean commitTrxOnClose = true;
+
+	public boolean isCommitTrxOnClose() 
+	{
+		return commitTrxOnClose;
+	}
+
+	public void setCommitTrxOnClose(boolean commitTrxOnClose)
+	{
+		this.commitTrxOnClose = commitTrxOnClose;
+	}
+
+	// LS end
+	
 	/**
 	 * Run this process in a new thread
 	 */
@@ -110,6 +128,10 @@ public abstract class AbstractProcessCtl implements Runnable
 	{
 		if (log.isLoggable(Level.FINE)) log.fine("AD_PInstance_ID=" + m_pi.getAD_PInstance_ID()
 			+ ", Record_ID=" + m_pi.getRecord_ID());
+
+		// F3P set windowNo for dialog
+		m_pi.setWindowNo(windowno);
+		// F3P end
 
 		//  Lock
 		lock();
@@ -389,6 +411,10 @@ public abstract class AbstractProcessCtl implements Runnable
 			if (m_trx != null)
 				m_pi.setTransactionName(m_trx.getTrxName());
 			MWFProcess wfProcess = ProcessUtil.startWorkFlow(Env.getCtx(), m_pi, AD_Workflow_ID);
+			
+			// F3P: remove UI action flag
+			StartedFromUI.remove(Env.getCtx(), m_pi.getTable_ID(), m_pi.getRecord_ID(), m_pi.getTransactionName());
+			//F3P end
 			started = wfProcess != null;
 		}
 		return started;
@@ -463,7 +489,14 @@ public abstract class AbstractProcessCtl implements Runnable
 			if (m_pi.getClassName().toLowerCase().startsWith(MRule.SCRIPT_PREFIX)) {
 				return ProcessUtil.startScriptProcess(Env.getCtx(), m_pi, m_trx);
 			} else {
-				return ProcessUtil.startJavaProcess(Env.getCtx(), m_pi, m_trx, true, m_processUI);
+				// LS CommitTrxOnClose
+				if (isCommitTrxOnClose()) {
+					return ProcessUtil.startJavaProcess(Env.getCtx(), m_pi, m_trx);
+	
+				} else {
+					return ProcessUtil.startJavaProcessWithoutTrxClose(Env.getCtx(), m_pi, m_trx);
+				}
+				// LS end
 			}
 		}
 		return !m_pi.isError();

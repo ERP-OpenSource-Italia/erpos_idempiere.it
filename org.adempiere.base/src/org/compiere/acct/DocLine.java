@@ -442,7 +442,7 @@ public class DocLine
 	 * 	Get Charge
 	 * 	@return C_Charge_ID
 	 */
-	protected int getC_Charge_ID()
+	public int getC_Charge_ID()	// Angelo Dabala' (genied) changed to public
 	{
 		int index = p_po.get_ColumnIndex("C_Charge_ID");
 		if (index != -1)
@@ -465,14 +465,14 @@ public class DocLine
 		int C_Charge_ID = getC_Charge_ID();
 		if (C_Charge_ID == 0)
 			return null;
-		return MCharge.getAccount(C_Charge_ID, as);
+		return MCharge.getAccount(C_Charge_ID, as, p_po.get_TrxName()); //F3P add trx
 	}   //  getChargeAccount
 
 	/**
 	 * 	Get Period
 	 * 	@return C_Period_ID
 	 */
-	protected int getC_Period_ID()
+	public int getC_Period_ID()	// Angelo Dabala' (genied) changed to public
 	{
 		if (m_C_Period_ID == -1)
 		{

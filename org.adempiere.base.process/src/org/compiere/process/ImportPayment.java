@@ -52,6 +52,12 @@ public class ImportPayment extends SvrProcess
 	/** Properties						*/
 	private Properties 		m_ctx;
 
+	// Angelo Dabala' (genied) - nectosoft - added IsValidateOnly and IsImportOnlyNoErrors parameters
+	/**	Don't import					*/
+	private boolean			m_IsValidateOnly = false;
+	/** Import if no Errors				*/
+	private boolean			m_IsImportOnlyNoErrors = true;
+	
 	/**
 	 *  Prepare - e.g., get Parameters.
 	 */
@@ -69,6 +75,12 @@ public class ImportPayment extends SvrProcess
 				p_deleteOldImported = "Y".equals(para[i].getParameter());
 			else if (name.equals("DocAction"))
 				m_docAction = (String)para[i].getParameter();
+			// Angelo Dabala' (genied) - nectosoft
+			else if (name.equals("IsValidateOnly"))
+				m_IsValidateOnly = "Y".equals(para[i].getParameter()); 
+			else if (name.equals("IsImportOnlyNoErrors"))
+				m_IsImportOnlyNoErrors = "Y".equals(para[i].getParameter());
+			// Angelo Dabala' (genied) - nectosoft end
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -82,7 +94,9 @@ public class ImportPayment extends SvrProcess
 	 */
 	protected String doIt() throws Exception
 	{
-		if (log.isLoggable(Level.INFO)) log.info("C_BankAccount_ID" + p_C_BankAccount_ID);
+		if (log.isLoggable(Level.INFO))  // Angelo Dabala' (genied) - nectosoft - added IsValidateOnly and IsImportOnlyNoErrors parameters
+			log.info("C_BankAccount_ID=" + p_C_BankAccount_ID + " IsValidateOnly=" + m_IsValidateOnly + ", IsImportOnlyNoErrors=" + m_IsImportOnlyNoErrors);
+
 		MBankAccount ba = MBankAccount.get(getCtx(), p_C_BankAccount_ID);
 		if (p_C_BankAccount_ID == 0 || ba.get_ID() != p_C_BankAccount_ID)
 			throw new AdempiereUserError("@NotFound@ @C_BankAccount_ID@ - " + p_C_BankAccount_ID);
@@ -264,16 +278,8 @@ public class ImportPayment extends SvrProcess
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Acct Date=" + no);
 		
-		//	Invoice
-		sql = new StringBuilder ("UPDATE I_Payment i ")
-			  .append("SET C_Invoice_ID=(SELECT MAX(C_Invoice_ID) FROM C_Invoice ii")
-			  .append(" WHERE i.InvoiceDocumentNo=ii.DocumentNo AND i.AD_Client_ID=ii.AD_Client_ID) ")
-			  .append("WHERE C_Invoice_ID IS NULL AND InvoiceDocumentNo IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
-		no = DB.executeUpdate(sql.toString(), get_TrxName());
-		if (no != 0)
-			if (log.isLoggable(Level.FINE)) log.fine("Set Invoice from DocumentNo=" + no);
-		
+		// Angelo Dabala' (genied) - nectosoft - Assign BPartner before Invoice
+		//	BPartner
 		//	BPartner
 		sql = new StringBuilder ("UPDATE I_Payment i ")
 			  .append("SET C_BPartner_ID=(SELECT MAX(C_BPartner_ID) FROM C_BPartner bp")
@@ -283,6 +289,23 @@ public class ImportPayment extends SvrProcess
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.FINE)) log.fine("Set BP from Value=" + no);
+		
+		//	Invoice
+
+		// Angelo Dabala' (genied) - nectosoft - Add BPartner match to Invoice
+		// F3P: added check for ispaid and ad_org_id
+		sql = new StringBuilder ("UPDATE I_Payment i ")
+			  .append("SET C_Invoice_ID=(SELECT MAX(C_Invoice_ID) FROM C_Invoice ii")
+			  .append(" WHERE i.InvoiceDocumentNo=ii.DocumentNo AND i.AD_Client_ID=ii.AD_Client_ID ")
+			  .append(" AND i.C_BPartner_ID = ii.C_BPartner_ID AND ii.ispaid = 'N' AND ii.AD_Org_ID = ")
+			  .append(p_AD_Org_ID).append(") ")
+			  .append("WHERE C_Invoice_ID IS NULL AND InvoiceDocumentNo IS NOT NULL")
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (no != 0)
+			if (log.isLoggable(Level.FINE)) log.fine("Set Invoice from DocumentNo=" + no);
+		
+
 		
 		sql = new StringBuilder ("UPDATE I_Payment i ")
 			  .append("SET C_BPartner_ID=(SELECT MAX(C_BPartner_ID) FROM C_Invoice ii")
@@ -406,6 +429,19 @@ public class ImportPayment extends SvrProcess
 
 		commitEx();
 		
+		// Angelo Dabala' (genied) - nectosoft - Check for errors and/or return if validate only
+		int errors = DB.getSQLValue(get_TrxName(), 
+			"SELECT COUNT(*) FROM I_Payment WHERE I_IsImported NOT IN ('Y','N')" + clientCheck);
+		if (errors != 0)
+		{
+			if (m_IsValidateOnly || m_IsImportOnlyNoErrors)
+				throw new Exception ("@Errors@=" + errors);
+		}
+		else if (m_IsValidateOnly)
+			return "@Errors@=" + errors;
+
+		log.info("Validation Errors=" + errors);
+		
 		//Import Bank Statement
 		sql = new StringBuilder("SELECT * FROM I_Payment")
 			.append(" WHERE I_IsImported='N'")
@@ -458,6 +494,9 @@ public class ImportPayment extends SvrProcess
 				payment.setDateAcct(imp.getDateTrx());
 				payment.setDateTrx(imp.getDateTrx());
 			//	payment.setDescription(imp.getDescription());
+				//Cristiano Lazzaro (genied) - Save in the description the invoice number not found
+				if (imp.getC_Invoice_ID() == 0)
+					payment.setDescription(imp.getInvoiceDocumentNo());
 				//
 				payment.setC_BPartner_ID(imp.getC_BPartner_ID());
 				payment.setC_Invoice_ID(imp.getC_Invoice_ID());
@@ -472,6 +511,9 @@ public class ImportPayment extends SvrProcess
 				payment.setWriteOffAmt(imp.getWriteOffAmt());
 				payment.setDiscountAmt(imp.getDiscountAmt());
 				payment.setWriteOffAmt(imp.getWriteOffAmt());
+				// Angelo Dabala' (genied) - nectosoft - Assign missing fields
+				payment.setOverUnderAmt(imp.getOverUnderAmt());
+				payment.setIsOverUnderPayment(imp.isOverUnderPayment());
 				
 				//	Copy statement line reference data
 				payment.setA_City(imp.getA_City());

@@ -269,12 +269,26 @@ public class MAccount extends X_C_ValidCombination
 		return retValue;
 	}	//	get
 	
+	// Angelo Dabala' (genied) add trx
 	/**
 	 * 	Get from existing Accounting fact
 	 *	@param fa accounting fact
+	 *  @deprecated use trx variant
 	 *	@return account
 	 */
+	@Deprecated
 	public static MAccount get (X_Fact_Acct fa)
+	{
+		return get(fa, fa.get_TrxName());
+	}
+	
+	/**
+	 * 	Get from existing Accounting fact
+	 *	@param fa accounting fact
+	 * 	@param trxName transaction
+	 *	@return account
+	 */
+	public static MAccount get (X_Fact_Acct fa, String trxName)
 	{
 		MAccount acct = get (fa.getCtx(),
 			fa.getAD_Client_ID(), fa.getAD_Org_ID(), fa.getC_AcctSchema_ID(), 
@@ -282,9 +296,11 @@ public class MAccount extends X_C_ValidCombination
 			fa.getM_Product_ID(), fa.getC_BPartner_ID(), fa.getAD_OrgTrx_ID(), 
 			fa.getC_LocFrom_ID(), fa.getC_LocTo_ID(), fa.getC_SalesRegion_ID(), 
 			fa.getC_Project_ID(), fa.getC_Campaign_ID(), fa.getC_Activity_ID(),
-			fa.getUser1_ID(), fa.getUser2_ID(), fa.getUserElement1_ID(), fa.getUserElement2_ID());
+			fa.getUser1_ID(), fa.getUser2_ID(), fa.getUserElement1_ID(), 
+			fa.getUserElement2_ID(), trxName);
 		return acct;
 	}	//	get
+	//Angelo Dabala' (genied) end
 	
 	/**************************************************************************
 	 *  Factory: default combination
@@ -359,18 +375,35 @@ public class MAccount extends X_C_ValidCombination
 	}   //  getDefault
 
 	
+	//Angelo Dabala' (genied) explicitly passed transaction
 	/**
 	 *  Get Account
 	 *  @param ctx context
 	 *  @param C_ValidCombination_ID combination
+	 *  @deprecated does not use transaction, replaced by {@link #get(Properties, String, int)}
 	 *  @return Account
 	 */
+	@Deprecated
 	public static MAccount get (Properties ctx, int C_ValidCombination_ID)
 	{
 		//	Maybe later cache
 		return new MAccount(ctx, C_ValidCombination_ID, null);
 	}   //  getAccount
-
+	
+	/**
+	 *  Get Account
+	 *  @param ctx context
+	 *  @param trxName transaction
+	 *  @param C_ValidCombination_ID combination
+	 *  @return Account
+	 */
+	public static MAccount get (Properties ctx, String trxName, int C_ValidCombination_ID)
+	{
+		//	Maybe later cache
+		return new MAccount(ctx, C_ValidCombination_ID, trxName);
+	}   //  getAccount
+	//Angelo Dabala' (genied) end
+	
 	/**
 	 * 	Update Value/Description after change of 
 	 * 	account element value/description.

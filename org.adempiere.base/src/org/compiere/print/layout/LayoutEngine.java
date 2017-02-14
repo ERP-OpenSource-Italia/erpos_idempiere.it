@@ -1305,6 +1305,19 @@ public class LayoutEngine implements Pageable, Printable, Doc
 		{
 			if (log.isLoggable(Level.FINEST)) log.finest("Not enough Y space "
 					+ m_lastHeight[m_area] + " - remaining " + getYspace() + " - Area=" + m_area);
+			
+			// F3P: if one page, add on current page, and set the height of the 'last' page to the remaining y space (nothing will be drawn)
+			// we behave like a multipage scenario, with the element, on the added page, using the remaining y space 
+			if(element.getPageCount() == 1)
+			{
+				Point2D.Double loc = m_position[m_area];
+				element.setLocation(loc);				
+				m_currPage.addElement(element);
+				((TableElement)element).setForcedHeight(m_lastHeight[m_area] - getYspace());
+				
+				m_lastHeight[m_area] = element.getHeight();
+			}
+			// F3P End
 			newPage (true, false);
 		}
 		//
@@ -1379,6 +1392,10 @@ public class LayoutEngine implements Pageable, Printable, Doc
 		String stringContent = data.getValueDisplay (m_format.getLanguage());
 		if ((stringContent == null || stringContent.length() == 0) && item.isSuppressNull())
 			return null;
+		
+		//F3P: replace all '\t' with ' \t' tab at first pos cause problem in StringElement.calculateSize 
+		stringContent = stringContent.replaceAll("\t", " \t");
+		//F3P end
 		//	non-string
 		Object content = stringContent;
 		if (data.getValue() instanceof Boolean)

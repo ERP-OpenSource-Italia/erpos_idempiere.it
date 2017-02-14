@@ -1193,5 +1193,18 @@ public final class FactLine extends X_Fact_Acct
 		}
 		return success;
 	}   //  updateReverseLine
+	
+	// F3P: expose access to doc
+	
+	/**
+	 * Return the parent doc
+	 * 
+	 * @return
+	 */
+	public Doc getParent()
+	{
+		return m_doc;
+	}
+	//F3P: end
 
 }	//	FactLine

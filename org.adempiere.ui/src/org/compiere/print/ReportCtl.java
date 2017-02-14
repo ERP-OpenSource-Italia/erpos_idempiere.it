@@ -395,7 +395,8 @@ public class ReportCtl
 			// ==============================
 			if(format.getJasperProcess_ID() > 0)
 			{
-				ServerReportCtl.runJasperProcess(Record_ID, re, IsDirectPrint, printerName);
+				// Angelo Dabala' (genied) Record_ID can change into ReportEngine.get e.g. Order->Invoice or Shipment
+				ServerReportCtl.runJasperProcess(re.getPrintInfo().getRecord_ID(), re, IsDirectPrint, printerName);
 				if (IsDirectPrint) {
 					ReportEngine.printConfirm(type, Record_ID);
 				}

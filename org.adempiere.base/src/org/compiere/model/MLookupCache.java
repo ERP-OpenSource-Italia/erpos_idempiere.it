@@ -53,25 +53,30 @@ public class MLookupCache
 	 *
 	 *  @param info
 	 *  @param lookup
+	 *  @param TabNo
 	 */
-	protected static void loadEnd (MLookupInfo info, HashMap<Object,Object> lookup)
+	// F3P: added TabNo
+	protected static void loadEnd (MLookupInfo info, HashMap<Object,Object> lookup, int TabNo)
 	{
 		if (info.IsValidated && lookup.size() > 0)
-			s_loadedLookups.put(getKey(info), lookup);
+			s_loadedLookups.put(getKey(info,TabNo), lookup);	// F3P: updated call to getKey
 	}   //  loadEnd
 
 	/**
 	 * 	Get Storage Key
 	 *	@param info lookup info
+	 *	@param TabNo
 	 *	@return key
 	 */
-	private static String getKey (MLookupInfo info)
+	// F3P: added TabNo
+	private static String getKey (MLookupInfo info, int TabNo)
 	{
 		if (info == null)
 			return String.valueOf(System.currentTimeMillis());
 		//
 		StringBuilder sb = new StringBuilder();
-		sb.append(info.WindowNo).append(":")
+		// F3P: added TabNo to WindoNo
+		sb.append(info.WindowNo).append('-').append(TabNo).append(":")
 		//	.append(info.Column_ID)
 			.append(info.KeyColumn)
 			.append(info.AD_Reference_Value_ID)
@@ -88,11 +93,13 @@ public class MLookupCache
 	 *
 	 * @param info  MLookupInfo to search
 	 * @param lookupTarget Target HashMap
+	 * @param TabNo
 	 * @return true, if lookup found
 	 */
-	protected static boolean loadFromCache (MLookupInfo info, HashMap<Object,Object> lookupTarget)
+	// F3P: added TabNo
+	protected static boolean loadFromCache (MLookupInfo info, HashMap<Object,Object> lookupTarget, int TabNo)
 	{
-		String key = getKey(info);
+		String key = getKey(info, TabNo);
 		HashMap<Object,Object> cache = (HashMap<Object,Object>)s_loadedLookups.get(key);
 		if (cache == null)
 			return false;

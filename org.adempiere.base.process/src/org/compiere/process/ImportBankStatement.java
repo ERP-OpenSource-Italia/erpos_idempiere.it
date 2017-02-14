@@ -142,6 +142,24 @@ public class ImportBankStatement extends SvrProcess
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Bank Account (With Routing No)=" + no);
+		
+		// F3P: aggiunto import charge, preso da ImportInvoice
+		//	Charge
+		sql = new StringBuilder("UPDATE I_BankStatement i "
+			  + "SET C_Charge_ID=(SELECT C_Charge_ID FROM C_Charge p"
+			  + " WHERE i.ChargeName=p.Name AND i.AD_Client_ID=p.AD_Client_ID) "
+			  + "WHERE C_Charge_ID IS NULL AND ChargeName IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set Charge=" + no);
+		sql = new StringBuilder ("UPDATE I_BankStatement "
+				  + "SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Charge, ' "
+				  + "WHERE C_Charge_ID IS NULL AND (ChargeName IS NOT NULL)"
+				  + " AND I_IsImported<>'Y'").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (no != 0){
+			log.warning ("Invalid Charge=" + no);
+		}
+		//
 		//
 		sql = new StringBuilder("UPDATE I_BankStatement i ") 
 		 	.append("SET C_BankAccount_ID=")

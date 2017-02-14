@@ -22,6 +22,7 @@ import java.util.ListResourceBundle;
  *  Translation Texts for Look & Feel
  *
  *  @author     Gabriele Vivinetto - gabriele.mailing@rvmgroup.it
+ *  @author     Angelo Dabala' (genied) nectosoft - translation fixes 
  *  @version    $Id: PlafRes_it.java,v 1.2 2006/07/30 00:52:24 jjanke Exp $
  */
 public class PlafRes_it extends ListResourceBundle
@@ -32,7 +33,7 @@ public class PlafRes_it extends ListResourceBundle
 	//{ "BackColType",            "Background Color Type" },
 	  { "BackColType",            "Tipo Colore di Sfondo" },
 	//{ "BackColType_Flat",       "Flat" },
-	  { "BackColType_Flat",       "Piatto" },
+	  { "BackColType_Flat",       "Pieno" },
 	//{ "BackColType_Gradient",   "Gradient" },
 	  { "BackColType_Gradient",   "Gradiente" },
 	//{ "BackColType_Lines",      "Lines" },
@@ -41,15 +42,15 @@ public class PlafRes_it extends ListResourceBundle
 	  { "BackColType_Texture",    "Texture" },
 	//
 	//{ "LookAndFeelEditor",      "Look & Feel Editor" }, //Need to be checked
-	  { "LookAndFeelEditor",      "Editor aspetto" },
+	  { "LookAndFeelEditor",      "Editor di Aspetto" },
 	//{ "LookAndFeel",            "Look & Feel" },
 	  { "LookAndFeel",            "Aspetto" },
 	//{ "Theme",                  "Theme" },
 	  { "Theme",                  "Tema" },
 	//{ "EditAdempiereTheme",      "Edit Adempiere Theme" }, //Need to be checked
-	  { "EditAdempiereTheme",      "Modifica Tema di Adempiere" },
+	  { "EditAdempiereTheme",      "Modifica Tema di ADempiere" },
 	//{ "SetDefault",             "Default Background" },
-	  { "SetDefault",             "Sfondo di Default" },
+	  { "SetDefault",             "Sfondo Predefinito" },
 	//{ "SetDefaultColor",        "Background Color" },
 	  { "SetDefaultColor",        "Colore di Sfondo" },
 	//{ "ColorBlind",             "Color Deficiency" }, //Need to be checked
@@ -57,38 +58,38 @@ public class PlafRes_it extends ListResourceBundle
 	//{ "Example",                "Example" },
 	  { "Example",                "Esempio" },
 	//{ "Reset",                  "Reset" }, //Need to be checked
-	  { "Reset",                  "Resetta" },
+	  { "Reset",                  "Ripristina" },
 	//{ "OK",                     "OK" },
 	  { "OK",                     "OK" },
 	//{ "Cancel",                 "Cancel" },
-	  { "Cancel",                 "Cancella" },
+	  { "Cancel",                 "Annulla" },
 	//
 	//{ "AdempiereThemeEditor",    "Adempiere Theme Editor" }, //Need to be checked
-	  { "AdempiereThemeEditor",    "Editor di Tema Adempiere" },
+	  { "AdempiereThemeEditor",    "Editor dei Temi di ADdempiere" },
 	//{ "MetalColors",            "Metal Colors" },
 	  { "MetalColors",            "Colori Metallici" },
 	//{ "AdempiereColors",         "Adempiere Colors" },
-	  { "AdempiereColors",         "Colori di Adempiere" },
+	  { "AdempiereColors",         "Colori di ADempiere" },
 	//{ "AdempiereFonts",          "Adempiere Fonts" }, //Need to be checked. Mantain the word "Font" ?
-	  { "AdempiereFonts",          "Caratteri di Adempiere" },
+	  { "AdempiereFonts",          "Caratteri di ADempiere" },
 	//{ "Primary1Info",           "Shadow, Separator" }, //Need to be checked
 	  { "Primary1Info",           "Ombra, Separatore" },
 	//{ "Primary1",               "Primary 1" },
 	  { "Primary1",               "Primario 1" },
 	//{ "Primary2Info",           "Focus Line, Selected Menu" }, //Need to be checked
-	  { "Primary2Info",           "Linea di Selezione, Menu Selezionato" },
+	  { "Primary2Info",           "Linea Selezionata, Menu Selezionato" },
 	//{ "Primary2",               "Primary 2" },
 	  { "Primary2",               "Primario 2" },
 	//{ "Primary3Info",           "Table Selected Row, Selected Text, ToolTip Background" }, //Need to be checked
-	  { "Primary3Info",           "Riga di Tabella Selezionata, Testo Selezionato, Sfondo ToolTip " },
+	  { "Primary3Info",           "Riga di Tabella Selezionata, Testo Selezionato, Sfondo dei Suggerimenti " },
 	//{ "Primary3",               "Primary 3" },
 	  { "Primary3",               "Primario 3" },
 	//{ "Secondary1Info",         "Border Lines" },
-	  { "Secondary1Info",         "Linee di Bordo" },
+	  { "Secondary1Info",         "Linee dei Bordi" },
 	//{ "Secondary1",             "Secondary 1" },
 	  { "Secondary1",             "Secondario 1" },
 	//{ "Secondary2Info",         "Inactive Tabs, Pressed Fields, Inactive Border + Text" }, //Need to be checked
-	  { "Secondary2Info",         "Tab inattive, Campi selezionati, Bordo + Testo inattivo" },
+	  { "Secondary2Info",         "Tab Inattivi, Campi Selezionati, Bordo + Testo inattivi" },
 	//{ "Secondary2",             "Secondary 2" },
 	  { "Secondary2",             "Secondario 2" },
 	//{ "Secondary3Info",         "Background" },
@@ -97,35 +98,35 @@ public class PlafRes_it extends ListResourceBundle
 	  { "Secondary3",             "Secondario 3" },
 	//
 	//{ "ControlFontInfo",        "Control Font" }, //Need to be checked
-	  { "ControlFontInfo",        "Font di Controllo" },
+	  { "ControlFontInfo",        "Caratteri dei Controlli" },
 	//{ "ControlFont",            "Label Font" }, //Need to be checked
 	  { "ControlFont",            "Font di Etichetta" },
 	//{ "SystemFontInfo",         "Tool Tip, Tree nodes" }, //Need to be checked
-	  { "SystemFontInfo",         "Tool Tip, Nodi ad Albero" },
+	  { "SystemFontInfo",         "Suggerimenti, Nodi degli Alberi" },
 	//{ "SystemFont",             "System Font" }, //Need to be checked
-	  { "SystemFont",             "Carattere di Sistema" },
+	  { "SystemFont",             "Caratteri di Sistema" },
 	//{ "UserFontInfo",           "User Entered Data" },
-	  { "UserFontInfo",           "Dati immessi dall'utente" },
+	  { "UserFontInfo",           "Dati Immessi dall'Utente" },
 	//{ "UserFont",               "Field Font" }, //Need to be checked
-	  { "UserFont",               "Carattere del Campo" },
+	  { "UserFont",               "Caratteri dei Campi" },
 //	{ "SmallFontInfo",          "Reports" },
 	//{ "SmallFont",              "Small Font" }, //Need to be checked
-	  { "SmallFont",              "Carattere piccolo" },
+	  { "SmallFont",              "Caratteri Piccoli" },
 	//{ "WindowTitleFont",         "Title Font" }, //Need to be checked
-	  { "WindowTitleFont",         "Carattere Titolo" },
+	  { "WindowTitleFont",         "Caratteri dei Titoli" },
 	//{ "MenuFont",               "Menu Font" }, //Need to be checked
-	  { "MenuFont",               "Carattere Menu" },
+	  { "MenuFont",               "Caratteri dei Menu" },
 	//
 	//{ "MandatoryInfo",          "Mandatory Field Background" },
-	  { "MandatoryInfo",          "Sfondo Campo Obbligatorio" },
+	  { "MandatoryInfo",          "Sfondo Campi Obbligatori" },
 	//{ "Mandatory",              "Mandatory" },
 	  { "Mandatory",              "Obbligatorio" },
 	//{ "ErrorInfo",              "Error Field Background" },
-	  { "ErrorInfo",              "Sfondo Campo di Errore" },
+	  { "ErrorInfo",              "Sfondo Campi di Errore" },
 	//{ "Error",                  "Error" },
 	  { "Error",                  "Errore" },
 	//{ "InfoInfo",               "Info Field Background" }, //Need to be checked. Is it better "Informativo" ? What with the following ?
-	  { "InfoInfo",               "Sfondo Campo Informazione" },
+	  { "InfoInfo",               "Sfondo Campi Informazione" },
 	//{ "Info",                   "Info" },
 	  { "Info",                   "Informazione" },
 	//{ "WhiteInfo",              "Lines" },
@@ -137,7 +138,7 @@ public class PlafRes_it extends ListResourceBundle
 	//{ "Black",                  "Black" },
 	  { "Black",                  "Nero" },
 	//{ "InactiveInfo",           "Inactive Field Background" },
-	  { "InactiveInfo",           "Sfondo Campo Inattivo" },
+	  { "InactiveInfo",           "Sfondo Campi Inattivo" },
 	//{ "Inactive",               "Inactive" },
 	  { "Inactive",               "Inattivo" },
 	//{ "TextOKInfo",             "OK Text Foreground" }, //Need to be checked. How to translate Foreground ?
@@ -147,7 +148,7 @@ public class PlafRes_it extends ListResourceBundle
 	//{ "TextIssueInfo",          "Error Text Foreground" }, //Need to be checked
 	  { "TextIssueInfo",          "Colore Testo di Errore" },
 	//{ "TextIssue",              "Text - Error" },
-	  { "TextIssue",              "Testo - Error" },
+	  { "TextIssue",              "Testo - Errore" },
 	//
 	//{ "FontChooser",            "Font Chooser" }, //Need to be checked
 	  { "FontChooser",            "Selezionatore Carattere" },
@@ -168,14 +169,14 @@ public class PlafRes_it extends ListResourceBundle
 	//{ "Style",                  "Style" },
 	  { "Style",                  "Stile" },
 	//{ "TestString",             "This is just a Test! The quick brown Fox is doing something. 12,3456.78 LetterLOne = l1 LetterOZero = O0" },
-	  { "TestString",             "Questo � solo un Test! La veloce volpe marrone st� facendo qualcosa. 12,3456.78 LetteraLUno = l1 LetteraOZero = O0" },
+	  { "TestString",             "Questo \u00e8 solo un Test! La veloce volpe marrone st\u00e0 facendo qualcosa. 12,3456.78 LetteraLUno = l1 LetteraOZero = O0" },
 	//{ "FontString",             "Font" },
 	  { "FontString",             "Carattere" }, //Need to be checked
 	//
 	//{ "AdempiereColorEditor",    "Adempiere Color Editor" }, //Need to be checked
-	  { "AdempiereColorEditor",    "Editor di Colori Adempiere" },
+	  { "AdempiereColorEditor",    "Editor di Colori ADempiere" },
 	//{ "AdempiereType",           "Color Type" },
-	  { "AdempiereType",           "Tipo Colore" },
+	  { "AdempiereType",           "Tipo di Colore" },
 	//{ "GradientUpperColor",     "Gradient Upper Color" },
 	  { "GradientUpperColor",     "Colore Gradiente Superiore" },
 	//{ "GradientLowerColor",     "Gradient Lower Color" },
@@ -199,7 +200,7 @@ public class PlafRes_it extends ListResourceBundle
 	//{ "LineDistance",           "Line Distance" },
 	  { "LineDistance",           "Distanza Linea" },
 	//{ "FlatColor",              "Flat Color" }
-	  { "FlatColor",              "Colore Piatto" }
+	  { "FlatColor",              "Colore Pieno" }
 	};
 
 	/**

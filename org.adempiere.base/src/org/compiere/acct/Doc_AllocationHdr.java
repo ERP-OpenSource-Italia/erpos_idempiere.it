@@ -22,6 +22,7 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.DBException;
 import org.compiere.model.MAccount;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MAcctSchemaElement;
@@ -34,6 +35,7 @@ import org.compiere.model.MInvoice;
 import org.compiere.model.MInvoiceLine;
 import org.compiere.model.MOrder;
 import org.compiere.model.MPayment;
+import org.compiere.model.Query;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -297,6 +299,25 @@ public class Doc_AllocationHdr extends Doc
 				if (as.isAccrual())
 				{
 					bpAcct = getAccount(Doc.ACCTTYPE_C_Receivable, as);
+					// Angelo Dabala' (genied) look for service account 
+					MAccount bpAcctService = getAccount(Doc.ACCTTYPE_C_Receivable_Services, as);
+					String where = "AD_Table_ID=318 AND Record_ID=?"	//	Invoice
+							+ " AND C_AcctSchema_ID=?"
+							+ " AND PostingType='A' AND Account_ID = ?";
+					try
+					{
+						int iService = new Query(getCtx(), MFactAcct.Table_Name, where, getTrxName())
+						.setClient_ID()
+						.setParameters(invoice.getC_Invoice_ID(), as.getC_AcctSchema_ID(), bpAcctService.getAccount_ID())
+						.firstId();
+						if(iService != -1)
+							bpAcct = bpAcctService;
+					}
+					catch (DBException e)
+					{
+						log.warning(e.getLocalizedMessage());
+					}
+					// Angelo END
 					fl = fact.createLine (line, bpAcct,
 						getC_Currency_ID(), null, allocationSource);		//	payment currency
 					if (fl != null)
@@ -350,6 +371,25 @@ public class Doc_AllocationHdr extends Doc
 				if (as.isAccrual())
 				{
 					bpAcct = getAccount(Doc.ACCTTYPE_V_Liability, as);
+					// Angelo Dabala' (genied) look for service account 
+					MAccount bpAcctService = getAccount(Doc.ACCTTYPE_C_Receivable_Services, as);
+					String where = "AD_Table_ID=318 AND Record_ID=?"	//	Invoice
+							+ " AND C_AcctSchema_ID=?"
+							+ " AND PostingType='A' AND Account_ID = ?";
+					try
+					{
+						int iService = new Query(getCtx(), MFactAcct.Table_Name, where, getTrxName())
+						.setClient_ID()
+						.setParameters(invoice.getC_Invoice_ID(), as.getC_AcctSchema_ID(), bpAcctService.getAccount_ID())
+						.firstId();
+						if(iService != -1)
+							bpAcct = bpAcctService;
+					}
+					catch (DBException e)
+					{
+						log.warning(e.getLocalizedMessage());
+					}
+					// Angelo END
 					fl = fact.createLine (line, bpAcct,
 						getC_Currency_ID(), allocationSource, null);		//	payment currency
 					if (fl != null)
@@ -428,7 +468,7 @@ public class Doc_AllocationHdr extends Doc
 			//	Realized Gain & Loss
 			if (invoice != null
 				&& (getC_Currency_ID() != as.getC_Currency_ID()			//	payment allocation in foreign currency
-					|| getC_Currency_ID() != line.getInvoiceC_Currency_ID()))	//	allocation <> invoice currency
+					|| getC_Currency_ID() != line.getInvoiceC_Currency_ID(getTrxName())))	//	allocation <> invoice currency	//Cristiano Lazzaro (genied) add Trx
 			{
 				p_Error = createRealizedGainLoss (line, as, fact, bpAcct, invoice,
 					allocationSource, allocationAccounted);
@@ -675,7 +715,7 @@ public class Doc_AllocationHdr extends Doc
 		String sql = "SELECT c.C_CashBook_ID "
 				+ "FROM C_Cash c, C_CashLine cl "
 				+ "WHERE c.C_Cash_ID=cl.C_Cash_ID AND cl.C_CashLine_ID=?";
-		setC_CashBook_ID(DB.getSQLValue(null, sql, C_CashLine_ID));
+		setC_CashBook_ID(DB.getSQLValue(getTrxName(), sql, C_CashLine_ID)); // F3P: operation outside trx gives problem when used by post direct
 
 		if (getC_CashBook_ID() <= 0)
 		{
@@ -703,15 +743,20 @@ public class Doc_AllocationHdr extends Doc
 	{
 		BigDecimal invoiceSource = null;
 		BigDecimal invoiceAccounted = null;
-		//
+		// Angelo Dabala' (genied) for credit note grandtotal has opposite sign 
+		boolean getDr = invoice.isSOTrx();
+		if(invoice.isCreditMemo() || allocationSource.signum() == -1 ) getDr = !getDr;
+		
 		StringBuilder sql = new StringBuilder("SELECT ")
-			.append(invoice.isSOTrx()
+			//.append(invoice.isSOTrx()
+			.append(getDr
 				? "SUM(AmtSourceDr), SUM(AmtAcctDr)"	//	so
 				: "SUM(AmtSourceCr), SUM(AmtAcctCr)")	//	po
 			.append(" FROM Fact_Acct ")
 			.append("WHERE AD_Table_ID=318 AND Record_ID=?")	//	Invoice
 			.append(" AND C_AcctSchema_ID=?")
-			.append(" AND PostingType='A'");
+			.append(" AND PostingType='A'")
+			.append(" AND COALESCE(C_TAX_ID,0) = 0");	// Angelo Dabala' (genied) exclude intra vat
 			//AND C_Currency_ID=102
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;

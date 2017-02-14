@@ -17,13 +17,21 @@
 package org.compiere.apps;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.GraphicsConfiguration;
 import java.awt.Image;
+import java.awt.KeyboardFocusManager;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.WindowEvent;
 import java.util.logging.Level;
 
+import javax.swing.JTextArea;
+import javax.swing.JViewport;
+
 import org.compiere.model.MQuery;
 import org.compiere.swing.CFrame;
+import org.compiere.swing.CTextField;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 
@@ -162,7 +170,64 @@ public class AWindow extends CFrame
 	 */
 	protected void processWindowEvent(WindowEvent e)
 	{
-		super.processWindowEvent(e);
+		//F3P: close event
+		int id = e.getID();
+		
+		if(id == WindowEvent.WINDOW_CLOSING)
+		{
+			// F3P: due to an event progation bad ordering, focus change is propagated too late
+			
+			Component cmpFocus = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+			
+			if(cmpFocus != null)
+			{		
+				if(cmpFocus instanceof JTextArea) // VText is a scroll with a jtext area
+				{
+					Component	cmpParent = cmpFocus.getParent(); // viewport
+
+					if(cmpParent != null && cmpParent instanceof JViewport)
+					{
+						cmpParent = cmpParent.getParent();
+
+						//if(cmpParent != null && cmpParent instanceof VText)
+						if(cmpParent != null)
+						{
+							cmpFocus = cmpParent;
+						}
+					}
+				}
+				else if (cmpFocus instanceof CTextField)
+				{
+					if(cmpFocus instanceof FocusListener == false)
+					{
+						Component	cmpParent = cmpFocus.getParent();
+						
+						if( cmpParent != null)
+						{
+							cmpFocus = cmpParent; 
+						}				
+					}
+				}
+				
+				if(cmpFocus instanceof FocusListener)
+				{
+					FocusListener	fl = (FocusListener)cmpFocus;
+					FocusEvent	fe = new FocusEvent(cmpFocus, FocusEvent.FOCUS_LOST);
+					fl.focusLost(fe);
+				}
+			}
+			
+			if (!m_APanel.cmd_save(false))
+				return;
+			
+			m_APanel.getCurrentTab().dataRefreshAll();
+			
+			super.processWindowEvent(e);
+		}		//F3P: end
+		else
+		{
+			super.processWindowEvent(e);
+		}
 //		System.out.println(">> Apps WE_" + e.getID()    // + " Frames=" + getFrames().length
 //			+ " " + e);
 	}   //  processWindowEvent

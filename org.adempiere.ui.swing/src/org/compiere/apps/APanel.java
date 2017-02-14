@@ -1400,8 +1400,8 @@ public final class APanel extends CPanel
 				{   //  do we have real change
 					if (m_curTab.needSave(true, true))
 					{
-						//	Automatic Save
-						if (Env.isAutoCommit(m_ctx, m_curWindowNo))
+						//	Automatic Save						
+						if (!m_curTab.isReadOnly() && Env.isAutoCommit(m_ctx, m_curWindowNo))//F3P: Check also if we can save it
 						{
 							if (!m_curTab.dataSave(true))
 							{	//  there is a problem, so we go back
@@ -1412,7 +1412,7 @@ public final class APanel extends CPanel
 							}
 						}
 						//  explicitly ask when changing tabs
-						else if (ADialog.ask(m_curWindowNo, this, "SaveChanges?", m_curTab.getCommitWarning()))
+						else if (!m_curTab.isReadOnly() && ADialog.ask(m_curWindowNo, this, "SaveChanges?", m_curTab.getCommitWarning()))//F3P: Check also if we can save it
 						{   //  yes we want to save
 							if (!m_curTab.dataSave(true))
 							{   //  there is a problem, so we go back
@@ -2599,7 +2599,11 @@ public final class APanel extends CPanel
 			return;
 		if (exit && ADialog.ask(m_curWindowNo, this, "ExitApplication?"))
 			exitSystem = true;
-
+		else  // F3P: refresh data
+		{
+			m_curTab.dataRefreshAll();
+		}
+		
 		AEnv.getFrame(this).dispose();		//	calls this dispose
 
 		if (exitSystem)

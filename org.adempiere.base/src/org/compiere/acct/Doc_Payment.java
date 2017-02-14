@@ -57,7 +57,7 @@ public class Doc_Payment extends Doc
 	private boolean		m_Prepayment = false;
 	/** Bank Account			*/
 	private int			m_C_BankAccount_ID = 0;
-
+	
 	/**
 	 *  Load Specific Document Details
 	 *  @return error message or null
@@ -109,7 +109,8 @@ public class Doc_Payment extends Doc
 		//  create Fact Header
 		Fact fact = new Fact(this, as, Fact.POST_Actual);
 		//	Cash Transfer
-		if ("X".equals(m_TenderType) && !MSysConfig.getBooleanValue(MSysConfig.CASH_AS_PAYMENT, true , getAD_Client_ID()))
+		//F3P replace with constant value
+		if (MPayment.TENDERTYPE_Cash.equals(m_TenderType) && !MSysConfig.getBooleanValue(MSysConfig.CASH_AS_PAYMENT, true , getAD_Client_ID()))
 		{
 			ArrayList<Fact> facts = new ArrayList<Fact>();
 			facts.add(fact);
@@ -127,7 +128,7 @@ public class Doc_Payment extends Doc
 			//
 			MAccount acct = null;
 			if (getC_Charge_ID() != 0)
-				acct = MCharge.getAccount(getC_Charge_ID(), as);
+				acct = MCharge.getAccount(getC_Charge_ID(), as, getTrxName()); // F3P: added Trx
 			else if (m_Prepayment)
 				acct = getAccount(Doc.ACCTTYPE_C_Prepayment, as);
 			else
@@ -143,7 +144,7 @@ public class Doc_Payment extends Doc
 		{
 			MAccount acct = null;
 			if (getC_Charge_ID() != 0)
-				acct = MCharge.getAccount(getC_Charge_ID(), as);
+				acct = MCharge.getAccount(getC_Charge_ID(), as,getTrxName()); // F3P: added Trx
 			else if (m_Prepayment)
 				acct = getAccount(Doc.ACCTTYPE_V_Prepayment, as);
 			else

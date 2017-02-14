@@ -62,17 +62,42 @@ public class MUOMConversion extends X_C_UOM_Conversion
 	static public BigDecimal convert (Properties ctx,
 		int C_UOM_ID, int C_UOM_To_ID, BigDecimal qty)
 	{
+		//F3P add rounding flag
+		return convert(ctx, C_UOM_ID, C_UOM_To_ID, qty, true);
+	}
+	
+	//F3P add rounding flag
+	/**
+	 *	Convert qty to target UOM and round.
+	 *  @param ctx context
+	 *  @param C_UOM_ID from UOM
+	 *  @param C_UOM_To_ID to UOM
+	 *  @param qty qty
+	 *  @param round rounding flag
+	 *  @return converted qty (std precision)
+	 */
+	static public BigDecimal convert (Properties ctx,
+		int C_UOM_ID, int C_UOM_To_ID, BigDecimal qty, boolean round)
+	{
 		if (qty == null || qty.compareTo(Env.ZERO)==0 || C_UOM_ID == C_UOM_To_ID)
 			return qty;
 		BigDecimal retValue = getRate (ctx, C_UOM_ID, C_UOM_To_ID);
+		
 		if (retValue != null)
 		{
-			MUOM uom = MUOM.get (ctx, C_UOM_To_ID);
-			if (uom != null)
-				return uom.round(retValue.multiply(qty), true);
-			return retValue.multiply(qty);
+			retValue = retValue.multiply(qty);
+			
+			if(round)
+			{
+				MUOM uom = MUOM.get (ctx, C_UOM_To_ID);
+				if (uom != null)
+				{
+					retValue = uom.round(retValue, true);
+				}
+			}
 		}
-		return null;
+		
+		return retValue;
 	}	//	convert
 
 	/**
@@ -381,7 +406,47 @@ public class MUOMConversion extends X_C_UOM_Conversion
 	 */
 	public static BigDecimal getRate (int C_UOM_ID, int C_UOM_To_ID)
 	{
-		return convert (C_UOM_ID, C_UOM_To_ID, GETRATE, false);
+		//return convert (C_UOM_ID, C_UOM_To_ID, GETRATE, false);
+		//F3P
+		// nothing to do
+		if (C_UOM_ID == C_UOM_To_ID)
+			return Env.ONE;
+		
+		//F3P execute query to get rate
+		BigDecimal retValue = null;
+		
+		String sql = "SELECT c.MultiplyRate "
+			+ "FROM	C_UOM_Conversion c"
+			+ " INNER JOIN C_UOM uomTo ON (c.C_UOM_TO_ID=uomTo.C_UOM_ID) "
+			+ "WHERE c.IsActive='Y' AND c.C_UOM_ID=? AND c.C_UOM_TO_ID=? "		//	#1/2
+			+ " AND c.M_Product_ID IS NULL"
+			+ " ORDER BY c.AD_Client_ID DESC, c.AD_Org_ID DESC";
+		
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		try
+		{
+			pstmt = DB.prepareStatement(sql, null);
+			pstmt.setInt(1, C_UOM_ID);
+			pstmt.setInt(2, C_UOM_To_ID);
+			rs = pstmt.executeQuery();
+			if (rs.next())
+			{
+				retValue = rs.getBigDecimal(1);
+			}
+		}
+		catch (SQLException e)
+		{
+			throw new DBException(e, sql);
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
+		}
+		
+		return retValue;
+		//F3P end
 	}	//	getConversion
 
 	/**
@@ -438,9 +503,11 @@ public class MUOMConversion extends X_C_UOM_Conversion
 			return null;
 		}
 			
+		/* F3P qty may be equals qty
 		//	Just get Rate
 		if (GETRATE.equals(qty))
 			return retValue;
+		F3P end */ 
 		
 		//	Calculate & Scale
 		retValue = retValue.multiply(qty);
@@ -466,23 +533,98 @@ public class MUOMConversion extends X_C_UOM_Conversion
 	static public BigDecimal convertProductTo (Properties ctx,
 		int M_Product_ID, int C_UOM_To_ID, BigDecimal qtyPrice)
 	{
+		return  convertProductTo (ctx, M_Product_ID, C_UOM_To_ID, qtyPrice, true);//F3P: rounding flag
+	}
+	
+	//F3P: rounding flag
+	/**************************************************************************
+	 *	Convert PRICE expressed in entered UoM to equivalent price in product UoM and round. <br/>
+	 *  OR Convert QTY in product UOM to qty in entered UoM and round. <br/>
+	 *  
+	 *   eg: $6/6pk => $1/ea <br/>
+	 *   OR 6 X ea => 1 X 6pk
+	 *   
+	 *  @param ctx context
+	 *  @param M_Product_ID product
+	 *  @param C_UOM_To_ID entered UOM
+	 *  @param qtyPrice quantity or price
+	 *  @param round rounding flag  
+	 *  @return Product: Qty/Price (precision rounded)
+	 */
+	static public BigDecimal convertProductTo (Properties ctx,
+		int M_Product_ID, int C_UOM_To_ID, BigDecimal qtyPrice, boolean round)
+	{
 		if (qtyPrice == null || qtyPrice.signum() == 0 
 			|| M_Product_ID == 0 || C_UOM_To_ID == 0)
 			return qtyPrice;
 		
 		BigDecimal retValue = getProductRateTo (ctx, M_Product_ID, C_UOM_To_ID);
+		
+		//F3P: if there is no specific rate, check for generic
+		if(retValue == null)
+		{
+			MProduct product = MProduct.get(ctx, M_Product_ID);
+			
+			int C_UOM_ID = product.getC_UOM_ID();
+			
+			retValue = getRate(C_UOM_ID, C_UOM_To_ID);
+		}
+		
 		if (retValue != null)
 		{
 			if (Env.ONE.compareTo(retValue) == 0)
-				return qtyPrice;
-			MUOM uom = MUOM.get (ctx, C_UOM_To_ID);
-			if (uom != null)
-				return uom.round(retValue.multiply(qtyPrice), true);
-			return retValue.multiply(qtyPrice);
+			{
+				retValue = qtyPrice;
+			}
+			else
+			{
+				retValue = retValue.multiply(qtyPrice);
+				
+				if(round)
+				{
+					MUOM uom = MUOM.get (ctx, C_UOM_To_ID);
+					if (uom != null)
+					{
+						retValue = uom.round(retValue, true);
+					}
+				}
+			}
 		}
-		return null;
+		return retValue;
 	}	//	convertProductTo
 
+	/**************************************************************************
+	 *	Convert PRICE expressed in entered UoM to equivalent price in product UoM and round. <br/>
+	 *  OR Convert QTY in product UOM to qty in entered UoM and round. <br/>
+	 *  <b>Note rounding is always performed with supplied precision</b> <br/>
+	 *  
+	 *   eg: $6/6pk => $1/ea <br/>
+	 *   OR 6 X ea => 1 X 6pk
+	 *   
+	 *  @author Angelo Dabala' (genied) nectosoft
+	 *  @param ctx context
+	 *  @param M_Product_ID product
+	 *  @param C_UOM_To_ID entered UOM
+	 *  @param qtyPrice quantity or price
+	 *  @param precision round to supplied precision
+	 *  @return Product: Qty/Price (precision rounded)
+	 */
+	static public BigDecimal convertProductTo (Properties ctx,
+		int M_Product_ID, int C_UOM_To_ID, BigDecimal qtyPrice, int precision)
+	{
+		if (qtyPrice == null || qtyPrice.signum() == 0 
+			|| M_Product_ID == 0 || C_UOM_To_ID == 0)
+			return qtyPrice;
+		
+		BigDecimal retValue = convertProductTo(ctx, M_Product_ID, C_UOM_To_ID, qtyPrice, false);
+		
+		if (retValue != null)
+		{
+			retValue = retValue.setScale(precision, BigDecimal.ROUND_HALF_UP);
+		}
+		
+		return retValue;
+	}	//	convertProductTo
 	/**
 	 *	Get multiply rate to convert PRICE from price in entered UOM to price in product UOM <br/>
 	 *  OR multiply rate to convert QTY from product UOM to entered UOM
@@ -529,6 +671,27 @@ public class MUOMConversion extends X_C_UOM_Conversion
 	static public BigDecimal convertProductFrom (Properties ctx,
 		int M_Product_ID, int C_UOM_To_ID, BigDecimal qtyPrice)
 	{
+		return convertProductFrom (ctx, M_Product_ID, C_UOM_To_ID, qtyPrice, true); //F3P: add rounding flag
+	}
+		
+	//F3P: add rounding flag
+	/**************************************************************************
+	 *	Convert PRICE expressed in product UoM to equivalent price in entered UoM and round. <br/>
+	 *  OR Convert QTY in entered UOM to qty in product UoM and round.  <br/>
+	 *  
+	 *   eg: $1/ea => $6/6pk <br/>
+	 *   OR 1 X 6pk => 6 X ea
+	 *   
+	 *  @param ctx context
+	 *  @param M_Product_ID product
+	 *  @param C_UOM_To_ID entered UOM
+	 *  @param qtyPrice quantity or price
+	 *  @param round rounding flag
+	 *  @return Product: Qty/Price (precision rounded)
+	 */
+	static public BigDecimal convertProductFrom (Properties ctx,
+		int M_Product_ID, int C_UOM_To_ID, BigDecimal qtyPrice, boolean round)
+	{
 		//	No conversion
 		if (qtyPrice == null || qtyPrice.compareTo(Env.ZERO)==0 
 			|| C_UOM_To_ID == 0|| M_Product_ID == 0)
@@ -538,19 +701,80 @@ public class MUOMConversion extends X_C_UOM_Conversion
 		}
 		
 		BigDecimal retValue = getProductRateFrom (ctx, M_Product_ID, C_UOM_To_ID);
+		
+		//F3P: if there is no specific rate, check for generic
+		
+		if(retValue == null)
+		{
+			MProduct product = MProduct.get(ctx, M_Product_ID);
+			
+			int C_UOM_ID = product.getC_UOM_ID();
+			
+			retValue = getRate(C_UOM_To_ID, C_UOM_ID);
+		}
+		
 		if (retValue != null)
 		{
 			if (Env.ONE.compareTo(retValue) == 0)
-				return qtyPrice;
-			MUOM uom = MUOM.get (ctx, C_UOM_To_ID);
-			if (uom != null)
-				return uom.round(retValue.multiply(qtyPrice), true);
-			return retValue.multiply(qtyPrice);
+			{
+				retValue = qtyPrice;
+			}
+			else
+			{
+				retValue = retValue.multiply(qtyPrice);
+				
+				if(round)
+				{
+					MUOM uom = MUOM.get (ctx, C_UOM_To_ID);
+					if (uom != null)
+					{
+						uom.round(retValue, true);
+					}
+				}
+			}
 		}
 		if (s_log.isLoggable(Level.FINE)) s_log.fine("No Rate M_Product_ID=" + M_Product_ID);
-		return null;
+		return retValue;
 	}	//	convertProductFrom
 
+	/**************************************************************************
+	 *	Convert PRICE expressed in product UoM to equivalent price in entered UoM and round. <br/>
+	 *  OR Convert QTY in entered UOM to qty in product UoM and round.  <br/>
+	 *  <b>Note rounding is always performed with supplied precision</b> <br/>
+	 *  
+	 *   eg: $1/ea => $6/6pk <br/>
+	 *   OR 1 X 6pk => 6 X ea
+	 *   
+	 *  @author Angelo Dabala' (genied) nectosoft
+	 *  @param ctx context
+	 *  @param M_Product_ID product
+	 *  @param C_UOM_To_ID entered UOM
+	 *  @param qtyPrice quantity or price
+	 *  @param precision round to supplied precision
+	 *  @return Product: Qty/Price (precision rounded)
+	 */
+	static public BigDecimal convertProductFrom (Properties ctx,
+		int M_Product_ID, int C_UOM_To_ID, BigDecimal qtyPrice, int precision)
+	{
+
+		//	No conversion
+		if (qtyPrice == null || qtyPrice.compareTo(Env.ZERO)==0 
+			|| C_UOM_To_ID == 0|| M_Product_ID == 0)
+		{
+			s_log.fine("No Conversion - QtyPrice=" + qtyPrice);
+			return qtyPrice;
+		}
+		
+		BigDecimal retValue = convertProductFrom(ctx, M_Product_ID, C_UOM_To_ID, qtyPrice, false);
+
+		if (retValue != null)
+		{
+			retValue = retValue.setScale(precision, BigDecimal.ROUND_HALF_UP);
+		}
+		
+		return retValue;
+	}	//	convertProductFrom
+	
 	/**
 	 *	Get multiply rate to convert PRICE from price in entered UOM to price in product UOM <br/>
 	 *  OR multiply rate to convert QTY from product UOM to entered UOM
@@ -619,8 +843,11 @@ public class MUOMConversion extends X_C_UOM_Conversion
 
 	/** Static Logger					*/
 	private static final CLogger s_log = CLogger.getCLogger(MUOMConversion.class);
-	/**	Indicator for Rate					*/
-	private static final BigDecimal GETRATE = BigDecimal.valueOf(123.456);
+	// F3P implemented getRate method instead of using GETRATE variable, 
+	// qty may be equals 123.456 
+	
+	///**	Indicator for Rate					*/
+	//private static final BigDecimal GETRATE = new BigDecimal(123.456);
 	/**	Conversion Map: Key=Point(from,to) Value=BigDecimal	*/
 	private static CCache<Point,BigDecimal>	s_conversions = null;
 	/** Product Conversion Map					*/

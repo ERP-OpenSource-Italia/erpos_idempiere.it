@@ -93,6 +93,9 @@ public class DefaultEditorFactory implements IEditorFactory {
 				if (mField.isAutocomplete()) {
 					ADempiereAutoCompleteDecorator.decorate(vs, mField.getEntries(), false);
 				}
+				//F3P: Bug fix formattazione campi nel passaggio visualizzazione griglia
+				vs.getDocument().putProperty("filterNewlines", Boolean.FALSE);
+				
 				editor = vs;
 			}
 		}

@@ -297,6 +297,17 @@ public class CalloutPayment extends CalloutEngine
 	{
 		if (isCalloutActive ()) // assuming it is resetting value
 			return "";
+		
+		//F3P: if current table is C_PaySelectionLine, check if exists OverUnderAmt column
+		boolean bIsPaySelectionLine = mTab.getTableName().equalsIgnoreCase(X_C_PaySelectionLine.Table_Name);
+		
+		if(bIsPaySelectionLine && mTab.getField("OverUnderAmt") == null)
+		{
+			log.severe("Column C_PaySelectionLine.OverUnderAmt not found.");
+			return "";
+		}
+		//F3P end
+		
 		int C_Invoice_ID = Env.getContextAsInt (ctx, WindowNo, "C_Invoice_ID");
 		// New Payment
 		if (Env.getContextAsInt (ctx, WindowNo, "C_Payment_ID") == 0
@@ -368,7 +379,20 @@ public class CalloutPayment extends CalloutEngine
 		BigDecimal DiscountAmt = (BigDecimal)mTab.getValue ("DiscountAmt");
 		if (DiscountAmt == null)
 			DiscountAmt = Env.ZERO;
-		BigDecimal WriteOffAmt = (BigDecimal)mTab.getValue ("WriteOffAmt");
+		
+		//F3P: PaySelectionLine
+		//BigDecimal WriteOffAmt = (BigDecimal)mTab.getValue ("WriteOffAmt");
+		BigDecimal WriteOffAmt = BigDecimal.ZERO;
+		
+		if(bIsPaySelectionLine)
+		{
+			WriteOffAmt = (BigDecimal)mTab.getValue (X_C_PaySelectionLine.COLUMNNAME_DifferenceAmt);
+		}
+		else
+		{
+			WriteOffAmt = (BigDecimal)mTab.getValue ("WriteOffAmt");
+		}
+		//F3P end
 		if (WriteOffAmt == null)
 			WriteOffAmt = Env.ZERO;
 		BigDecimal OverUnderAmt = (BigDecimal)mTab.getValue ("OverUnderAmt");
@@ -377,12 +401,37 @@ public class CalloutPayment extends CalloutEngine
 		if (log.isLoggable(Level.FINE)) log.fine ("Pay=" + PayAmt + ", Discount=" + DiscountAmt + ", WriteOff="
 			+ WriteOffAmt + ", OverUnderAmt=" + OverUnderAmt);
 		// Get Currency Info
-		Integer curr_int = (Integer) mTab.getValue ("C_Currency_ID");
+		
+		//F3P: paySelectionLine
+		// Get Currency Info
+		/*Integer curr_int = (Integer) mTab.getValue ("C_Currency_ID");
 		if (curr_int == null)
 			curr_int = Integer.valueOf(0);
 		int C_Currency_ID = curr_int.intValue ();
-		MCurrency currency = MCurrency.get (ctx, C_Currency_ID);
 		Timestamp ConvDate = (Timestamp)mTab.getValue ("DateTrx");
+		*/
+		int C_Currency_ID = 0; 
+		Timestamp ConvDate = null;
+		
+		if(bIsPaySelectionLine == false)
+		{
+			// F3P: changed to read values from context and not field
+			C_Currency_ID = Env.getContextAsInt(ctx, WindowNo, "C_Currency_ID");			
+			ConvDate = Env.getContextAsDate(ctx, WindowNo, "DateTrx");
+		}
+		else
+		{
+			int C_PaySelection_ID = (Integer)mTab.getValue(I_C_PaySelectionLine.COLUMNNAME_C_PaySelection_ID);
+			
+			MPaySelection paySelection = PO.get(ctx, I_C_PaySelection.Table_Name, C_PaySelection_ID, null);
+			
+			ConvDate = paySelection.getPayDate();
+			C_Currency_ID = paySelection.getC_BankAccount().getC_Currency_ID();
+		}
+		//F3P end
+		
+		MCurrency currency = MCurrency.get (ctx, C_Currency_ID);
+		
 		int C_ConversionType_ID = 0;
 		Integer ii = (Integer)mTab.getValue ("C_ConversionType_ID");
 		if (ii != null)
@@ -427,7 +476,13 @@ public class CalloutPayment extends CalloutEngine
 			mTab.setValue ("DiscountAmt", DiscountAmt);
 			WriteOffAmt = WriteOffAmt.multiply (CurrencyRate).setScale (
 				currency.getStdPrecision (), BigDecimal.ROUND_HALF_UP);
-			mTab.setValue ("WriteOffAmt", WriteOffAmt);
+			//F3P: PaySelectionLine
+			//mTab.setValue ("WriteOffAmt", WriteOffAmt);
+			if(bIsPaySelectionLine)
+				mTab.setValue (X_C_PaySelectionLine.COLUMNNAME_DifferenceAmt, WriteOffAmt);
+			else
+				mTab.setValue ("WriteOffAmt", WriteOffAmt);
+			//F3P end
 			OverUnderAmt = OverUnderAmt.multiply (CurrencyRate).setScale (
 				currency.getStdPrecision (), BigDecimal.ROUND_HALF_UP);
 			mTab.setValue ("OverUnderAmt", OverUnderAmt);
@@ -440,7 +495,15 @@ public class CalloutPayment extends CalloutEngine
 			if (Env.ZERO.compareTo (WriteOffAmt) != 0)
 				mTab.setValue ("WriteOffAmt", Env.ZERO);
 			if (Env.ZERO.compareTo (OverUnderAmt) != 0)
-				mTab.setValue ("OverUnderAmt", Env.ZERO);
+			{
+				//F3P: PaySelectionLine
+				//mTab.setValue ("WriteOffAmt", Env.ZERO);
+				if(bIsPaySelectionLine)
+					mTab.setValue (X_C_PaySelectionLine.COLUMNNAME_DifferenceAmt, Env.ZERO);
+				else
+					mTab.setValue ("WriteOffAmt", Env.ZERO);
+				//F3P end
+			}
 		} else {
 			boolean processed = mTab.getValueAsBoolean(MPayment.COLUMNNAME_Processed);
 			if (colName.equals ("PayAmt")
@@ -456,7 +519,13 @@ public class CalloutPayment extends CalloutEngine
 			{
 				WriteOffAmt = InvoiceOpenAmt.subtract (PayAmt).subtract (
 					DiscountAmt).subtract (OverUnderAmt);
-				mTab.setValue ("WriteOffAmt", WriteOffAmt);
+				//F3P: PaySelectionLine
+				//mTab.setValue ("WriteOffAmt", WriteOffAmt);
+				if(bIsPaySelectionLine)
+					mTab.setValue (X_C_PaySelectionLine.COLUMNNAME_DifferenceAmt, WriteOffAmt);
+				else
+					mTab.setValue ("WriteOffAmt", WriteOffAmt);
+				//F3P end
 			}
 			else if (colName.equals ("IsOverUnderPayment")
 				&& (!processed))
@@ -467,12 +536,24 @@ public class CalloutPayment extends CalloutEngine
 				{
 					OverUnderAmt = InvoiceOpenAmt.subtract (PayAmt).subtract (
 						DiscountAmt);
-					mTab.setValue ("WriteOffAmt", Env.ZERO);
+					//F3P: PaySelectionLine
+					//mTab.setValue ("WriteOffAmt", Env.ZERO);
+					if(bIsPaySelectionLine)
+						mTab.setValue (X_C_PaySelectionLine.COLUMNNAME_DifferenceAmt, Env.ZERO);
+					else
+						mTab.setValue ("WriteOffAmt", Env.ZERO);
+					//F3P end
 					mTab.setValue ("OverUnderAmt", OverUnderAmt);
 				}else{
 					WriteOffAmt = InvoiceOpenAmt.subtract (PayAmt).subtract (
 						DiscountAmt);
-					mTab.setValue ("WriteOffAmt", WriteOffAmt);
+					//F3P: PaySelectionLine
+					//mTab.setValue ("WriteOffAmt", WriteOffAmt);
+					if(bIsPaySelectionLine)
+						mTab.setValue (X_C_PaySelectionLine.COLUMNNAME_DifferenceAmt, WriteOffAmt);
+					else
+						mTab.setValue ("WriteOffAmt", WriteOffAmt);
+					//F3P end
 					mTab.setValue ("OverUnderAmt", Env.ZERO);
 				}
 			}
@@ -489,6 +570,12 @@ public class CalloutPayment extends CalloutEngine
 					WriteOffAmt).subtract (OverUnderAmt);
 				mTab.setValue ("PayAmt", PayAmt);
 			}
+			
+			//F3P: set IsOverUnderPayment check
+			if(OverUnderAmt.compareTo(Env.ZERO) != 0)
+				mTab.setValue("IsOverUnderPayment", Boolean.TRUE);
+			else
+				mTab.setValue("IsOverUnderPayment", Boolean.FALSE);
 		}
 		return "";
 	} // amounts

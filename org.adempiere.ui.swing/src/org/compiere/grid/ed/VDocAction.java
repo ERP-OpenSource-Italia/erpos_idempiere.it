@@ -53,6 +53,8 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.wf.MWFActivity;
 
+import it.idempiere.base.util.StartedFromUI;
+
 /**
  *	Displays valid Document Action Options based on context
  *
@@ -272,6 +274,13 @@ public class VDocAction extends CDialog
 		}
 
 		DocAction = docActionHolder[0];
+		
+		// F3P: index may exceed options len
+		ArrayList<String>	lstAdded = new ArrayList<String>();
+		
+		if(index > options.length)
+			index = options.length;
+		//F3P: end
 
 		/**
 		 *	Fill actionCombo
@@ -281,10 +290,12 @@ public class VDocAction extends CDialog
 			//	Search for option and add it
 			boolean added = false;
 			for (int j = 0; j < s_value.length && !added; j++)
-				if (options[i].equals(s_value[j]))
+				if (options[i] != null && options[i].equals(s_value[j]) // F3P: added check for null
+						&& lstAdded.contains(s_name[j]) == false) // F3P: action already added
 				{
 					actionCombo.addItem(s_name[j]);
 					added = true;
+					lstAdded.add(s_name[j]); // F3P: added and used to filter
 				}
 		}
 
@@ -377,6 +388,9 @@ public class VDocAction extends CDialog
 		m_batch = e.getSource() == batchButton;
 		if (m_batch || e.getActionCommand().equals(ConfirmPanel.A_OK))
 		{
+			//F3P: UI action flag
+			StartedFromUI.add(Env.getCtx(), m_mTab.getAD_Table_ID(), m_mTab.getRecord_ID(), null);
+			//F3P end
 			if (save())
 			{
 				dispose();

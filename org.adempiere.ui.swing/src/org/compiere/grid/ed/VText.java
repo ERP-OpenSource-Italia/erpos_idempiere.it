@@ -18,6 +18,7 @@ package org.compiere.grid.ed;
 
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -30,8 +31,12 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyVetoException;
 
 import javax.swing.JPopupMenu;
+import javax.swing.JTextArea;
 import javax.swing.LookAndFeel;
 import javax.swing.SwingUtilities;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.PlainDocument;
 
 import org.adempiere.plaf.AdempierePLAF;
 import org.compiere.apps.AEnv;
@@ -99,7 +104,8 @@ public class VText extends CTextArea
 	public VText (String columnName, boolean mandatory, boolean isReadOnly, boolean isUpdateable,
 		int displayLength, int fieldLength)
 	{
-		super (fieldLength < 300 ? 2 : 3, 50);
+		// F3P: changed to use limitable sublasses
+		super(new VLimitableTextArea(fieldLength, fieldLength < 300 ? 2 : 3, 50));
 		super.setName(columnName);
 		LookAndFeel.installBorder(this, "TextField.border");
 
@@ -278,4 +284,43 @@ public class VText extends CTextArea
 		return this;
 	}	//	getFocusableComponent
 
+	// F3P: added subclasses to manage limiting test
+	public static class VLimitableTextArea extends JTextArea
+	{
+		private static final long serialVersionUID = 1L;
+		
+		public VLimitableTextArea(int iLimit,int iRows,int iColumns)
+		{
+			super(iRows,iColumns);
+			setDocument(new LimitableDocument(iLimit));	
+		}
+	}
+	
+	protected static class LimitableDocument extends PlainDocument
+	{
+		private static final long serialVersionUID = 1L;
+		private int	m_iLimit;
+		
+		protected LimitableDocument(int iLimit)
+		{
+			m_iLimit = iLimit;
+		}
+		
+		@Override
+	  public void insertString(int offset, String  str, AttributeSet attr)	throws BadLocationException 
+	  {
+	  	if (str == null) 
+	  		return;
+
+	  	if ((getLength() + str.length()) <= m_iLimit) 
+	  	{			     
+		     super.insertString(offset, str, attr);
+	  	}		  	
+	  	else
+	  	{
+	  		Toolkit.getDefaultToolkit().beep();
+	  	}
+	  }
+	}
+	//F3P:end
 }	//	VText

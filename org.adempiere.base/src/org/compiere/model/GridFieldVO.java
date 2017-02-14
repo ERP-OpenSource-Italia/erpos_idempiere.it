@@ -178,6 +178,12 @@ public class GridFieldVO implements Serializable
 				{
 					String s = rs.getString (i);
 					vo.Description = s != null ? s.intern() : s;
+					// Genied Nectosoft: Added column name to tooltip
+					if (vo.Description == null)
+						vo.Description = vo.ColumnName;
+					else
+						vo.Description = vo.ColumnName + ": " + vo.Description;
+					// Genied Nectosoft:end
 				}
 				else if (columnName.equalsIgnoreCase("Help"))
 				{

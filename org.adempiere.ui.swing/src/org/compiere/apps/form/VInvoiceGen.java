@@ -145,6 +145,11 @@ public class VInvoiceGen extends InvoiceGen implements FormPanel, ActionListener
 		//  lDcoACtion.setText((Msg.translate(Env.getCtx(), "DocAction")););
 		docAction.addVetoableChangeListener(this);
 		
+		//F3P: set default doc action
+		String sDocAction = getDefaultDocAction();
+		if(sDocAction != null)
+			docAction.setValue(sDocAction);
+		//F3P end
 		//
 		MLookup bpL = MLookupFactory.get (Env.getCtx(), m_WindowNo, 0, 2762, DisplayType.Search);
 		fBPartner = new VLookup ("C_BPartner_ID", false, false, true, bpL);

@@ -328,8 +328,22 @@ public class VAssignmentDialog extends CDialog
 		Timestamp assignDateTo = TimeUtil.addMinutess(assignDateFrom, minutes);
 		m_mAssignment.setAssignDateTo (assignDateTo);
 		//
-	//	m_mAssignment.dump();
-		return m_mAssignment.save();
+		//	m_mAssignment.dump();
+		//F3P: use saveEx
+		boolean saved = true;
+		
+		try
+		{
+			m_mAssignment.saveEx();
+		}
+		catch(Exception e)
+		{
+			log.severe(e.getMessage());
+			ADialog.error(0, this, e.getMessage());
+			saved = false;
+		}
+		
+		return saved;
 	}	//	cmdSave
 
 	

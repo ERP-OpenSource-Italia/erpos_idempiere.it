@@ -52,6 +52,18 @@ public class CalloutTimeExpense extends CalloutEngine
 		Integer M_Product_ID = (Integer)value;
 		if (M_Product_ID == null || M_Product_ID.intValue() == 0)
 			return "";
+		
+		//F3P: C_UOM_ID
+		MProduct product = MProduct.get(ctx, M_Product_ID);
+		
+		int C_UOM_ID = product.getC_UOM_ID();
+		
+		if(C_UOM_ID > 0)
+		{
+			mTab.setValue("C_UOM_ID", C_UOM_ID);
+		}
+		//F3P: end
+		
 		BigDecimal priceActual = null;
 
 		//	get expense date - or default to today's date
@@ -193,7 +205,8 @@ public class CalloutTimeExpense extends CalloutEngine
 		//	Converted Amount = Unit price
 		BigDecimal ConvertedAmt = ExpenseAmt;
 		//	convert if required
-		if (ConvertedAmt.compareTo(Env.ZERO)!=0 && C_Currency_To_ID != C_Currency_From_ID.intValue())
+		if (ConvertedAmt.compareTo(Env.ZERO)!=0 && 
+				(C_Currency_From_ID != null && C_Currency_To_ID != C_Currency_From_ID.intValue())) //F3P: add C_Currency_From_ID != null
 		{
 			int AD_Client_ID = Env.getContextAsInt (ctx, WindowNo, "AD_Client_ID");
 			int AD_Org_ID = Env.getContextAsInt (ctx, WindowNo, "AD_Org_ID");

@@ -180,7 +180,8 @@ public class AReport implements ActionListener
 	private void launchReport (MPrintFormat pf)
 	{
 		int Record_ID = 0;
-		if (m_query.getRestrictionCount()==1 && m_query.getCode(0) instanceof Integer)
+		// Angelo Dabala' (genied) nectosoft: changed to always set Record_ID if first restriction is int
+		if (m_query.getRestrictionCount()>=1 && m_query.getCode(0) instanceof Integer)
 			Record_ID = ((Integer)m_query.getCode(0)).intValue();
 		PrintInfo info = new PrintInfo(
 			pf.getName(),

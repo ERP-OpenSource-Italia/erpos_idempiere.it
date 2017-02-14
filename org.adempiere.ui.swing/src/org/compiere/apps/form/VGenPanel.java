@@ -55,6 +55,9 @@ import org.compiere.swing.CTextPane;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
+
+import it.idempiere.base.util.STDUtils;
 
 /**
  * Generate custom form panel
@@ -284,44 +287,56 @@ public class VGenPanel extends CPanel implements ActionListener, ChangeListener,
 		if (log.isLoggable(Level.CONFIG)) log.config("PrintItems=" + ids.length);
 
 		confirmPanelGen.getOKButton().setEnabled(false);
-		//	OK to print
-		if (ADialog.ask(m_WindowNo, this, genForm.getAskPrintMsg()))
-		{
-			this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-			int retValue = ADialogDialog.A_CANCEL;	//	see also ProcessDialog.printShipments/Invoices
-			do
-			{
-				//	Loop through all items
-				for (int i = 0; i < ids.length; i++)
-				{
-					int Record_ID = ids[i];
-					
-					if(genForm.getPrintFormat() != null)
-					{
-						MPrintFormat format = genForm.getPrintFormat();
-						MTable table = MTable.get(Env.getCtx(),format.getAD_Table_ID());
-						MQuery query = new MQuery(table.getTableName());
-						query.addRestriction(table.getTableName() + "_ID", MQuery.EQUAL, Record_ID);
-						//	Engine
-						PrintInfo info = new PrintInfo(table.getTableName(),table.get_Table_ID(), Record_ID);               
-						ReportEngine re = new ReportEngine(Env.getCtx(), format, query, info);
-						re.print();
-						new Viewer(m_frame.getGraphicsConfiguration(), re);
-					}
-					else
-					ReportCtl.startDocumentPrint(genForm.getReportEngineType(), Record_ID, this, AEnv.getWindowNo(this), true);
-					
-				}
-				ADialogDialog d = new ADialogDialog (m_frame,
-					Env.getHeader(Env.getCtx(), m_WindowNo),
-					Msg.getMsg(Env.getCtx(), "PrintoutOK?"),
-					JOptionPane.QUESTION_MESSAGE);
-				retValue = d.getReturnCode();
-			}
-			while (retValue == ADialogDialog.A_CANCEL);
-			this.setCursor(Cursor.getDefaultCursor());
-		}	//	OK to print
 
+		// F3P: zoom instead of print
+		if(genForm.getZoomOnTableName() != null) 
+		{
+			String tableName = genForm.getZoomOnTableName(); 
+			
+			MQuery	mQuery = new MQuery(tableName);
+			mQuery.addRestriction(tableName + "_ID IN " + STDUtils.buildSqlINClauseString(ids));
+			AEnv.zoom(mQuery);
+		}
+		else if(Util.isEmpty(genForm.getAskPrintMsg(), true) == false) // F3P: if no message is provided, we dont want to ask anything
+		{ //F3P: end
+//			OK to print
+			if (ADialog.ask(m_WindowNo, this, genForm.getAskPrintMsg()))
+			{
+				this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+				int retValue = ADialogDialog.A_CANCEL;	//	see also ProcessDialog.printShipments/Invoices
+				do
+				{
+					//	Loop through all items
+					for (int i = 0; i < ids.length; i++)
+					{
+						int Record_ID = ids[i];
+						
+						if(genForm.getPrintFormat() != null)
+						{
+							MPrintFormat format = genForm.getPrintFormat();
+							MTable table = MTable.get(Env.getCtx(),format.getAD_Table_ID());
+							MQuery query = new MQuery(table.getTableName());
+							query.addRestriction(table.getTableName() + "_ID", MQuery.EQUAL, Record_ID);
+							//	Engine
+							PrintInfo info = new PrintInfo(table.getTableName(),table.get_Table_ID(), Record_ID);               
+							ReportEngine re = new ReportEngine(Env.getCtx(), format, query, info);
+							re.print();
+							new Viewer(m_frame.getGraphicsConfiguration(), re);
+						}
+						else
+						ReportCtl.startDocumentPrint(genForm.getReportEngineType(), Record_ID, this, AEnv.getWindowNo(this), true);
+						
+					}
+					ADialogDialog d = new ADialogDialog (m_frame,
+						Env.getHeader(Env.getCtx(), m_WindowNo),
+						Msg.getMsg(Env.getCtx(), "PrintoutOK?"),
+						JOptionPane.QUESTION_MESSAGE);
+					retValue = d.getReturnCode();
+				}
+				while (retValue == ADialogDialog.A_CANCEL);
+				this.setCursor(Cursor.getDefaultCursor());
+			}	//	OK to print
+		}
 		//
 		confirmPanelGen.getOKButton().setEnabled(true);
 	} 

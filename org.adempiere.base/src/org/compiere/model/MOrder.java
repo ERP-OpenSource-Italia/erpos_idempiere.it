@@ -523,7 +523,7 @@ public class MOrder extends X_C_Order implements DocAction
 		*/
 		
 		int AD_User_ID = -1,
-				Bill_User_ID = -1;
+			Bill_User_ID = -1;
 		
 		for(int i=0; i < contacts.length; i++)
 		{

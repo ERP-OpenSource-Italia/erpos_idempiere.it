@@ -23,6 +23,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
 
@@ -646,7 +648,8 @@ public class DataEngine
 			.append(sqlFROM);
 
 		//	WHERE clause
-		if (tableName.startsWith("T_Report"))
+		// Angelo Dabala'(genied) nectosoft: added the T_TrialBalance table
+		if (tableName.startsWith("T_Report") || tableName.startsWith("T_TrialBalance"))
 		{
 			finalSQL.append(" WHERE ");
 			for (int i = 0; i < query.getRestrictionCount(); i++)
@@ -807,6 +810,17 @@ public class DataEngine
 		PrintDataColumn pdc = null;
 		boolean hasLevelNo = pd.hasLevelNo();
 		int levelNo = 0;
+		// F3P: generate a map AD_Column_ID <-> sequence no to avoid changing PrintDataGroup
+		// TODO: PrintDataGroup does not have information on group levels. Should be better to fix it there.
+		
+		Map<Integer, Integer> mapSortADColumnSequence = new HashMap<Integer, Integer>();
+		int sortSequence=0;
+		
+		for(int AD_Column_ID:format.getOrderAD_Column_IDs())
+		{
+			mapSortADColumnSequence.put(AD_Column_ID, sortSequence++);
+		}
+		// F3P end
 		//
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -824,6 +838,26 @@ public class DataEngine
 				//	Check Group Change ----------------------------------------
 				if (m_group.getGroupColumnCount() > 1)	//	one is GRANDTOTAL_
 				{
+					// F3P: fix hierarchical groups reset: when a group is changed, every group after it has to considered as changed
+					int iFirstChangedGroup = Integer.MAX_VALUE;
+					
+					for (int i = 0; i < pd.getColumnInfo().length; i++)	//	backwards (leaset group first)
+					{
+						PrintDataColumn group_pdc = pd.getColumnInfo()[i];
+						if (!m_group.isGroupColumn(group_pdc.getColumnName()))
+							continue;
+						
+						//	Group change
+						Object value = m_group.groupChange(group_pdc.getColumnName(), rs.getObject(group_pdc.getAlias()),true);
+						
+						if(value != null) // Group Change
+						{
+							int iSeq = mapSortADColumnSequence.get(group_pdc.getAD_Column_ID());							
+							iFirstChangedGroup = Math.min(iFirstChangedGroup, iSeq);
+							break;
+						}
+					}
+					// F3P end
 					//	Check Columns for Function Columns
 					for (int i = pd.getColumnInfo().length-1; i >= 0; i--)	//	backwards (leaset group first)
 					{
@@ -831,10 +865,16 @@ public class DataEngine
 						if (!m_group.isGroupColumn(group_pdc.getColumnName()))
 							continue;
 						
+						int iSeq = mapSortADColumnSequence.get(group_pdc.getAD_Column_ID());
+						
 						//	Group change
 						Object value = m_group.groupChange(group_pdc.getColumnName(), rs.getObject(group_pdc.getAlias()));
-						if (value != null)	//	Group change
+						if (value != null || iSeq >= iFirstChangedGroup)	//	Group change F3P: if the group is AFTER (subdetail of) a changed group, it has to be considered changed
+
 						{
+							if(value == null) // F3P: if a column is managed as changed due to being changed a 'parent' one, value will be null. Use result set value since its equals to the current one
+								value = rs.getObject(group_pdc.getAlias());
+							
 							char[] functions = m_group.getFunctions(group_pdc.getColumnName());
 							for (int f = 0; f < functions.length; f++)
 							{

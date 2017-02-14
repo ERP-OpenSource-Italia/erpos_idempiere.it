@@ -3789,7 +3789,7 @@ public class GridTable extends AbstractTableModel
 			boolean hasUpdated = (colUpdated > 0);
 			boolean hasProcessed = (colProcessed > 0);
 			
-			// F3P: if colProcessed is a virtual column, dont consider it
+			// F3P: if colProcessed is a virtual column, don't consider it
 			
 			if(hasProcessed)
 			{
@@ -3808,7 +3808,7 @@ public class GridTable extends AbstractTableModel
 			} else if (hasProcessed) {
 				columns = new String("Processed");
 			} else {
-				// no columns updated or processed to commpare
+				// no columns updated or processed to compare
 				return false;
 			}
 			
@@ -3868,7 +3868,7 @@ public class GridTable extends AbstractTableModel
 				}
 	    			
 				Boolean dbProcessed = Boolean.TRUE;
-				if (! dbProcessedS.equals("Y"))
+				if (dbProcessedS == null || !dbProcessedS.equals("Y")) // F3P: null check added, no record result in NPE
 					dbProcessed = Boolean.FALSE;
 				if (memProcessed != null && ! memProcessed.equals(dbProcessed))
 					return true;

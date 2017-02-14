@@ -45,6 +45,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Trx;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *  Post Invoice Documents.
  *  <pre>
@@ -180,8 +182,29 @@ public class Doc_Invoice extends Doc
 				MTax tax = MTax.get(getCtx(), C_Tax_ID);
 				if (!tax.isZeroTax())
 				{
-					BigDecimal LineNetAmtTax = tax.calculateTax(LineNetAmt, true, getStdPrecision());
+					//LS added compatibility with variable used onBeforeSave of MInvLine here in patches
+					//if variable = Y, TaxAmt could be != from tax.calculateTax, so must not be recaltulated
+					BigDecimal LineNetAmtTax = BigDecimal.ZERO;
+					boolean isSOTrx = invoice.isSOTrx();
+					
+					boolean unforcedVat = STDSysConfig
+							.isIsSoVatInvoiceUnforced(this.getAD_Client_ID(),
+									this.getAD_Org_ID());
+					// like onBeforeSave on MInvoiceLine, recalculate TaxAmt
+					// only if == 0 or Customer + variable == false
+					if (line.getTaxAmt().compareTo(Env.ZERO) == 0  || 
+							(isSOTrx && unforcedVat == false))
+					{
+						LineNetAmtTax = tax.calculateTax(LineNetAmt, true, getStdPrecision());
+					} 
+					else 
+					{
+						LineNetAmtTax = line.getTaxAmt();
+					}
+					//LS end
+					
 					if (log.isLoggable(Level.FINE)) log.fine("LineNetAmt=" + LineNetAmt + " - Tax=" + LineNetAmtTax);
+					
 					LineNetAmt = LineNetAmt.subtract(LineNetAmtTax);
 
 					if (tax.isSummary()) {

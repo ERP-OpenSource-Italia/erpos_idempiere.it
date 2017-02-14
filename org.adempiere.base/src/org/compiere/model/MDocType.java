@@ -25,6 +25,8 @@ import org.compiere.util.CCache;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *	Document Type Model
  *	
@@ -280,10 +282,13 @@ public class MDocType extends X_C_DocType
 				.append("INNER JOIN AD_Role rol ON (rol.AD_Client_ID=client.AD_Client_ID) ")
 				.append("WHERE client.AD_Client_ID=").append(getAD_Client_ID()) 
 				.append(" AND doctype.C_DocType_ID=").append(get_ID())
-				.append(" AND rol.IsManual='N'")
+				.append(" AND rol.IsManual='N' OR ? ='Y'") //F3P: Manage AutoUpdateDocActionAccess variable
 				.append(")");
 			
-			int docact = DB.executeUpdate(sqlDocAction.toString(), get_TrxName());
+			//F3P: Manage AutoUpdateDocActionAccess variable
+			Object[] oParams = new Object[1];
+			oParams[0] = STDSysConfig.isRoleAutoUpdateDocActionAccessAsString(getAD_Client_ID(), getAD_Org_ID());
+			int docact = DB.executeUpdate(sqlDocAction.toString(), oParams , false, get_TrxName());
 			if (log.isLoggable(Level.FINE)) log.fine("AD_Document_Action_Access=" + docact);
 		}
 		return success;

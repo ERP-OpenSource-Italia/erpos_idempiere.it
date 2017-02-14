@@ -17,11 +17,16 @@
 package org.compiere.grid;
 
 import java.awt.Component;
+import java.awt.KeyboardFocusManager;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.util.ArrayList;
 import java.util.logging.Level;
 
 import javax.swing.Icon;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import javax.swing.JViewport;
 
 import org.compiere.apps.ADialog;
 import org.compiere.apps.APanel;
@@ -29,6 +34,7 @@ import org.compiere.model.DataStatusEvent;
 import org.compiere.model.GridTab;
 import org.compiere.model.MTable;
 import org.compiere.swing.CTabbedPane;
+import org.compiere.swing.CTextField;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.Evaluator;
@@ -256,6 +262,49 @@ public class VTabbedPane extends CTabbedPane
 	public void setSelectedIndex (int index)
 	{
 		Component newC = getComponentAt(index);
+		
+		// F3P: due to an event progation bad ordering, focus change is propagated too late
+		Component cmpFocus = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+		
+		if(cmpFocus != null)
+		{		
+			if(cmpFocus instanceof JTextArea) // VText is a scroll with a jtext area
+			{
+				Component	cmpParent = cmpFocus.getParent(); // viewport
+
+				if(cmpParent != null && cmpParent instanceof JViewport)
+				{
+					cmpParent = cmpParent.getParent();
+
+					//if(cmpParent != null && cmpParent instanceof VText)
+					if(cmpParent != null)
+					{
+						cmpFocus = cmpParent;
+					}
+				}
+			}
+			else if (cmpFocus instanceof CTextField)
+			{
+				if(cmpFocus instanceof FocusListener == false)
+				{
+					Component	cmpParent = cmpFocus.getParent();
+					
+					if( cmpParent != null)
+					{
+						cmpFocus = cmpParent; 
+					}				
+				}
+			}
+			
+			if(cmpFocus instanceof FocusListener)
+			{
+				FocusListener	fl = (FocusListener)cmpFocus;
+				FocusEvent	fe = new FocusEvent(cmpFocus, FocusEvent.FOCUS_LOST);
+				fl.focusLost(fe);
+			}
+		}
+		// end
+		
 		GridController newGC = null;
 		if (newC instanceof GridController)
 			newGC = (GridController)newC;
@@ -275,6 +324,32 @@ public class VTabbedPane extends CTabbedPane
 			if (oldC != null && oldC instanceof GridController)
 			{
 				GridController oldGC = (GridController)oldC;
+				
+				//F3P: check if need save
+				GridTab currentTab = oldGC.getMTab();
+				
+				boolean bNeedSave = currentTab.needSave(true, true);
+				boolean bAutoSave = Env.isAutoCommit(Env.getCtx());
+				
+				if(bNeedSave)
+				{
+					if(bAutoSave == false)
+					{
+						if (ADialog.ask(currentTab.getWindowNo(), this, "SaveChanges?", currentTab.getCommitWarning()))
+						{
+							currentTab.dataSave(true);
+						}
+						else
+						{
+							return;
+						}
+					}
+					// 	F3P: save old tab if autoCommit is on
+					else if(bAutoSave && !oldGC.getMTab().isReadOnly())
+						currentTab.dataSave(true);		
+					//
+				}
+				
             	int zeroValid = (MTable.isZeroIDTable(oldGC.getMTab().getTableName()) ? 1 : 0);
 				if ((newGC.getTabLevel() > oldGC.getTabLevel()+1)
 					|| (newGC.getTabLevel() > oldGC.getTabLevel() && oldGC.getMTab().getRecord_ID()+zeroValid <=0)) // TabLevel increase and parent ID <=0 IDEMPIERE 382

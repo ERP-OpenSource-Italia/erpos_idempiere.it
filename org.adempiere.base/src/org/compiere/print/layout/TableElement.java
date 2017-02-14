@@ -818,6 +818,11 @@ public class TableElement extends PrintElement
 		if (log.isLoggable(Level.FINE)) log.fine("New Height=" + p_height);
 	}	//	setHeightToLastPage
 
+	// F3P: force height, needed to manage the edge case in wich the table is one page, but sligtly taller then the available space
+	public void setForcedHeight(float fH)
+	{
+		p_height = fH;
+	}
 	
 	/**************************************************************************
 	 * 	Get Font.
@@ -1208,6 +1213,13 @@ public class TableElement extends PrintElement
 		int pageYindex = getPageYIndex(pageIndex);
 		if (DEBUG_PRINT)
 			if (log.isLoggable(Level.CONFIG)) log.config("Page=" + pageNo + " [x=" + pageXindex + ", y=" + pageYindex + "]");
+		// F3P: there are edge case where there are X pages (from the layout point of view), but the table just know X-1 pages (1page table slightly taller then the available space)
+		if(m_firstColumnOnPage.size() <= pageXindex)
+			return;
+		if(m_firstRowOnPage.size() <= pageYindex)
+			return;
+		
+		// F3P end
 		//
 		int firstColumn = ((Integer)m_firstColumnOnPage.get(pageXindex)).intValue();
 		int nextPageColumn = m_columnHeader.length;		// no of cols
@@ -1517,7 +1529,9 @@ public class TableElement extends PrintElement
 								if (isView && printItems[index] instanceof NamePair)	//	ID
 								{
 									aString.addAttribute(TextAttribute.FOREGROUND, LINK_COLOR);
-									aString.addAttribute(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_LOW_ONE_PIXEL, 0, str.length());
+									// F3P: if its a multiline string, str is longer then aString (str has all lines)
+									// aString.addAttribute(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_LOW_ONE_PIXEL, 0, str.length());
+									aString.addAttribute(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_LOW_ONE_PIXEL, 0, lines[lineNo].length());
 								}
 								else
 									aString.addAttribute(TextAttribute.FOREGROUND, getColor(row, col));

@@ -61,26 +61,69 @@ public class CalloutInOut extends CalloutEngine
 		{
 			mTab.setValue("DateOrdered", order.getDateOrdered());
 			mTab.setValue("POReference", order.getPOReference());
-			mTab.setValue("AD_Org_ID", new Integer(order.getAD_Org_ID()));
-			mTab.setValue("AD_OrgTrx_ID", new Integer(order.getAD_OrgTrx_ID()));
-			mTab.setValue("C_Activity_ID", new Integer(order.getC_Activity_ID()));
-			mTab.setValue("C_Campaign_ID", new Integer(order.getC_Campaign_ID()));
-			mTab.setValue("C_Project_ID", new Integer(order.getC_Project_ID()));
-			mTab.setValue("User1_ID", new Integer(order.getUser1_ID()));
-			mTab.setValue("User2_ID", new Integer(order.getUser2_ID()));
-			mTab.setValue("M_Warehouse_ID", new Integer(order.getM_Warehouse_ID()));
+			
+			// F3P: set values to null if zero
+			if(order.getAD_Org_ID() > 0)
+				mTab.setValue("AD_Org_ID", new Integer(order.getAD_Org_ID()));
+			else
+				mTab.setValue("AD_Org_ID", null);
+			
+			if(order.getAD_OrgTrx_ID() > 0)
+				mTab.setValue("AD_OrgTrx_ID", new Integer(order.getAD_OrgTrx_ID()));
+			else
+				mTab.setValue("AD_OrgTrx_ID", null);
+			
+			if(order.getC_Activity_ID() > 0)
+				mTab.setValue("C_Activity_ID", new Integer(order.getC_Activity_ID()));
+			else
+				mTab.setValue("C_Activity_ID", null);
+			
+			if(order.getC_Campaign_ID() > 0)
+				mTab.setValue("C_Campaign_ID", new Integer(order.getC_Campaign_ID()));
+			else
+				mTab.setValue("C_Campaign_ID", null);
+			
+			if(order.getC_Project_ID() > 0)
+				mTab.setValue("C_Project_ID", new Integer(order.getC_Project_ID()));
+			else
+				mTab.setValue("C_Project_ID", null);
+			
+			if(order.getUser1_ID() > 0)
+				mTab.setValue("User1_ID", new Integer(order.getUser1_ID()));
+			else
+				mTab.setValue("User1_ID", null);
+			
+			if(order.getUser2_ID() > 0)
+				mTab.setValue("User2_ID", new Integer(order.getUser2_ID()));
+			else
+				mTab.setValue("User2_ID", null);
+
+			if(order.getM_Warehouse_ID() > 0)
+				mTab.setValue("M_Warehouse_ID", new Integer(order.getM_Warehouse_ID()));
+			else
+				mTab.setValue("M_Warehouse_ID", null);
+			
+			if(order.getM_Shipper_ID() > 0)
+				mTab.setValue("M_Shipper_ID", new Integer(order.getM_Shipper_ID()));
+			else
+				mTab.setValue("M_Shipper_ID", null);
+			
+			if(order.getC_BPartner_ID() > 0)
+				mTab.setValue("C_BPartner_ID", new Integer(order.getC_BPartner_ID()));
+			else
+				mTab.setValue("C_BPartner_ID", null);
+			
+			if(order.getC_BPartner_Location_ID() > 0)
+				mTab.setValue("C_BPartner_Location_ID", new Integer(order.getC_BPartner_Location_ID()));
+			else
+				mTab.setValue("C_BPartner_Location_ID", null);
+			//F3P:end
 			//
 			mTab.setValue("DeliveryRule", order.getDeliveryRule());
 			mTab.setValue("DeliveryViaRule", order.getDeliveryViaRule());
-			mTab.setValue("M_Shipper_ID", new Integer(order.getM_Shipper_ID()));
 			mTab.setValue("FreightCostRule", order.getFreightCostRule());
 			mTab.setValue("FreightAmt", order.getFreightAmt());
 
-			mTab.setValue("C_BPartner_ID", new Integer(order.getC_BPartner_ID()));
-
-			//[ 1867464 ]
-			mTab.setValue("C_BPartner_Location_ID", new Integer(order.getC_BPartner_Location_ID()));
-			
 			if (order.getAD_User_ID() > 0)
 				mTab.setValue("AD_User_ID", new Integer(order.getAD_User_ID()));
 			else
@@ -128,26 +171,70 @@ public class CalloutInOut extends CalloutEngine
 		{
 			mTab.setValue("DateOrdered", originalReceipt.getDateOrdered());
 			mTab.setValue("POReference", originalReceipt.getPOReference());
-			mTab.setValue("AD_Org_ID", new Integer(originalReceipt.getAD_Org_ID()));
-			mTab.setValue("AD_OrgTrx_ID", new Integer(originalReceipt.getAD_OrgTrx_ID()));
-			mTab.setValue("C_Activity_ID", new Integer(originalReceipt.getC_Activity_ID()));
-			mTab.setValue("C_Campaign_ID", new Integer(originalReceipt.getC_Campaign_ID()));
-			mTab.setValue("C_Project_ID", new Integer(originalReceipt.getC_Project_ID()));
-			mTab.setValue("User1_ID", new Integer(originalReceipt.getUser1_ID()));
-			mTab.setValue("User2_ID", new Integer(originalReceipt.getUser2_ID()));
-			mTab.setValue("M_Warehouse_ID", new Integer(originalReceipt.getM_Warehouse_ID()));
+			
+			// F3P: set values to null if zero
+			if(originalReceipt.getAD_Org_ID() > 0)
+				mTab.setValue("AD_Org_ID", new Integer(originalReceipt.getAD_Org_ID()));
+			else
+				mTab.setValue("AD_Org_ID", null);
+			
+			if(originalReceipt.getAD_OrgTrx_ID() > 0)
+				mTab.setValue("AD_OrgTrx_ID", new Integer(originalReceipt.getAD_OrgTrx_ID()));
+			else
+				mTab.setValue("AD_OrgTrx_ID", null);
+			
+			if(originalReceipt.getC_Activity_ID() > 0)
+				mTab.setValue("C_Activity_ID", new Integer(originalReceipt.getC_Activity_ID()));
+			else
+				mTab.setValue("C_Activity_ID", null);
+			
+			if(originalReceipt.getC_Campaign_ID() > 0)
+				mTab.setValue("C_Campaign_ID", new Integer(originalReceipt.getC_Campaign_ID()));
+			else
+				mTab.setValue("C_Campaign_ID", null);
+			
+			if(originalReceipt.getC_Project_ID() > 0)
+				mTab.setValue("C_Project_ID", new Integer(originalReceipt.getC_Project_ID()));
+			else
+				mTab.setValue("C_Project_ID", null);
+			
+			if(originalReceipt.getUser1_ID() > 0)
+				mTab.setValue("User1_ID", new Integer(originalReceipt.getUser1_ID()));
+			else
+				mTab.setValue("User1_ID", null);
+			
+			if(originalReceipt.getUser2_ID() > 0)
+				mTab.setValue("User2_ID", new Integer(originalReceipt.getUser2_ID()));
+			else
+				mTab.setValue("User2_ID", null);
+			
+			if(originalReceipt.getM_Warehouse_ID() > 0)
+				mTab.setValue("M_Warehouse_ID", new Integer(originalReceipt.getM_Warehouse_ID()));
+			else
+				mTab.setValue("M_Warehouse_ID", null);
+			
+			if(originalReceipt.getM_Shipper_ID() > 0)
+				mTab.setValue("M_Shipper_ID", new Integer(originalReceipt.getM_Shipper_ID()));
+			else
+				mTab.setValue("M_Shipper_ID", null);
+			
+			if(originalReceipt.getC_BPartner_ID() > 0)
+				mTab.setValue("C_BPartner_ID", new Integer(originalReceipt.getC_BPartner_ID()));
+			else
+				mTab.setValue("C_BPartner_ID", null);
+			
+			if(originalReceipt.getC_BPartner_Location_ID() > 0)
+				mTab.setValue("C_BPartner_Location_ID", new Integer(originalReceipt.getC_BPartner_Location_ID()));
+			else
+				mTab.setValue("C_BPartner_Location_ID", null);
+			//F3P:end
 			//
 			mTab.setValue("DeliveryRule", originalReceipt.getDeliveryRule());
 			mTab.setValue("DeliveryViaRule", originalReceipt.getDeliveryViaRule());
-			mTab.setValue("M_Shipper_ID", new Integer(originalReceipt.getM_Shipper_ID()));
 			mTab.setValue("FreightCostRule", originalReceipt.getFreightCostRule());
 			mTab.setValue("FreightAmt", originalReceipt.getFreightAmt());
 
-			mTab.setValue("C_BPartner_ID", new Integer(originalReceipt.getC_BPartner_ID()));
-
 			//[ 1867464 ]
-			mTab.setValue("C_BPartner_Location_ID", new Integer(originalReceipt.getC_BPartner_Location_ID()));
-
 			if (originalReceipt.getAD_User_ID() > 0)
 				mTab.setValue("AD_User_ID", new Integer(originalReceipt.getAD_User_ID()));
 			else
@@ -421,8 +508,17 @@ public class CalloutInOut extends CalloutEngine
 				mTab.setValue("M_AttributeSetInstance_ID", null);
 			}
 			else {
-				mTab.setValue("M_Product_ID", new Integer(ol.getM_Product_ID()));
-				mTab.setValue("M_AttributeSetInstance_ID", new Integer(ol.getM_AttributeSetInstance_ID()));
+				// F3P: set null if zero
+				if(ol.getM_Product_ID() > 0)
+					mTab.setValue("M_Product_ID", new Integer(ol.getM_Product_ID()));
+				else
+					mTab.setValue("M_Product_ID", null);
+				
+				if(ol.getM_AttributeSetInstance_ID() > 0)
+					mTab.setValue("M_AttributeSetInstance_ID", new Integer(ol.getM_AttributeSetInstance_ID()));
+				else
+					mTab.setValue("M_AttributeSetInstance_ID", null);
+				//F3P:end
 				mTab.setValue("C_Charge_ID", null);
 			}
 			//
@@ -442,14 +538,47 @@ public class CalloutInOut extends CalloutEngine
 					.divide(ol.getQtyOrdered(), 12, BigDecimal.ROUND_HALF_UP);
 			mTab.setValue("QtyEntered", QtyEntered);
 			//
-			mTab.setValue("C_Activity_ID", new Integer(ol.getC_Activity_ID()));
-			mTab.setValue("C_Campaign_ID", new Integer(ol.getC_Campaign_ID()));
-			mTab.setValue("C_Project_ID", new Integer(ol.getC_Project_ID()));
-			mTab.setValue("C_ProjectPhase_ID", new Integer(ol.getC_ProjectPhase_ID()));
-			mTab.setValue("C_ProjectTask_ID", new Integer(ol.getC_ProjectTask_ID()));
-			mTab.setValue("AD_OrgTrx_ID", new Integer(ol.getAD_OrgTrx_ID()));
-			mTab.setValue("User1_ID", new Integer(ol.getUser1_ID()));
-			mTab.setValue("User2_ID", new Integer(ol.getUser2_ID()));
+			// F3P: set to null if zero
+			if(ol.getC_Activity_ID() > 0)
+				mTab.setValue("C_Activity_ID", new Integer(ol.getC_Activity_ID()));
+			else
+				mTab.setValue("C_Activity_ID", null);
+			
+			if(ol.getC_Campaign_ID() > 0)
+				mTab.setValue("C_Campaign_ID", new Integer(ol.getC_Campaign_ID()));
+			else
+				mTab.setValue("C_Campaign_ID", null);
+			
+			if(ol.getC_Project_ID() > 0)
+				mTab.setValue("C_Project_ID", new Integer(ol.getC_Project_ID()));
+			else
+				mTab.setValue("C_Project_ID", null);
+			
+			if(ol.getC_ProjectPhase_ID() > 0)
+				mTab.setValue("C_ProjectPhase_ID", new Integer(ol.getC_ProjectPhase_ID()));
+			else
+				mTab.setValue("C_ProjectPhase_ID", null);
+			
+			if(ol.getC_ProjectTask_ID() > 0)
+				mTab.setValue("C_ProjectTask_ID", new Integer(ol.getC_ProjectTask_ID()));
+			else
+				mTab.setValue("C_ProjectTask_ID", null);
+			
+			if(ol.getAD_OrgTrx_ID() > 0)
+				mTab.setValue("AD_OrgTrx_ID", new Integer(ol.getAD_OrgTrx_ID()));
+			else
+				mTab.setValue("AD_OrgTrx_ID", null);
+		
+			if(ol.getUser1_ID() > 0)
+				mTab.setValue("User1_ID", new Integer(ol.getUser1_ID()));
+			else
+				mTab.setValue("User1_ID", null);
+			
+			if(ol.getUser2_ID() > 0)
+				mTab.setValue("User2_ID", new Integer(ol.getUser2_ID()));
+			else
+				mTab.setValue("User2_ID", null);
+			//F3P:end
 		}
 		return "";
 	}	//	orderLine
@@ -479,8 +608,17 @@ public class CalloutInOut extends CalloutEngine
 				mTab.setValue("M_AttributeSetInstance_ID", null);
 			}
 			else {
-				mTab.setValue("M_Product_ID", new Integer(rl.getM_Product_ID()));
-				mTab.setValue("M_AttributeSetInstance_ID", new Integer(rl.getM_AttributeSetInstance_ID()));
+				// F3P: set null if zero
+				if(rl.getM_Product_ID() > 0)
+					mTab.setValue("M_Product_ID", new Integer(rl.getM_Product_ID()));
+				else
+					mTab.setValue("M_Product_ID", null);
+				
+				if(rl.getM_AttributeSetInstance_ID() > 0)
+					mTab.setValue("M_AttributeSetInstance_ID", new Integer(rl.getM_AttributeSetInstance_ID()));
+				else
+					mTab.setValue("M_AttributeSetInstance_ID", null);
+				//F3P:end
 				mTab.setValue("C_Charge_ID", null);
 			}
 			//
@@ -490,14 +628,47 @@ public class CalloutInOut extends CalloutEngine
 			BigDecimal QtyEntered = MovementQty;
 			mTab.setValue("QtyEntered", QtyEntered);
 			//
-			mTab.setValue("C_Activity_ID", new Integer(rl.getC_Activity_ID()));
-			mTab.setValue("C_Campaign_ID", new Integer(rl.getC_Campaign_ID()));
-			mTab.setValue("C_Project_ID", new Integer(rl.getC_Project_ID()));
-			mTab.setValue("C_ProjectPhase_ID", new Integer(rl.getC_ProjectPhase_ID()));
-			mTab.setValue("C_ProjectTask_ID", new Integer(rl.getC_ProjectTask_ID()));
-			mTab.setValue("AD_OrgTrx_ID", new Integer(rl.getAD_OrgTrx_ID()));
-			mTab.setValue("User1_ID", new Integer(rl.getUser1_ID()));
-			mTab.setValue("User2_ID", new Integer(rl.getUser2_ID()));
+			// F3P: set to null if zero
+			if(rl.getC_Activity_ID() > 0)
+				mTab.setValue("C_Activity_ID", new Integer(rl.getC_Activity_ID()));
+			else
+				mTab.setValue("C_Activity_ID", null);
+			
+			if(rl.getC_Campaign_ID() > 0)
+				mTab.setValue("C_Campaign_ID", new Integer(rl.getC_Campaign_ID()));
+			else
+				mTab.setValue("C_Campaign_ID", null);
+			
+			if(rl.getC_Project_ID() > 0)
+				mTab.setValue("C_Project_ID", new Integer(rl.getC_Project_ID()));
+			else
+				mTab.setValue("C_Project_ID", null);
+			
+			if(rl.getC_ProjectPhase_ID() > 0)
+				mTab.setValue("C_ProjectPhase_ID", new Integer(rl.getC_ProjectPhase_ID()));
+			else
+				mTab.setValue("C_ProjectPhase_ID", null);
+			
+			if(rl.getC_ProjectTask_ID() > 0)
+				mTab.setValue("C_ProjectTask_ID", new Integer(rl.getC_ProjectTask_ID()));
+			else
+				mTab.setValue("C_ProjectTask_ID", null);
+		
+			if(rl.getAD_OrgTrx_ID() > 0)
+				mTab.setValue("AD_OrgTrx_ID", new Integer(rl.getAD_OrgTrx_ID()));
+			else
+				mTab.setValue("AD_OrgTrx_ID", null);
+		
+			if(rl.getUser1_ID() > 0)
+				mTab.setValue("User1_ID", new Integer(rl.getUser1_ID()));
+			else
+				mTab.setValue("User1_ID", null);
+			
+			if(rl.getUser2_ID() > 0)
+				mTab.setValue("User2_ID", new Integer(rl.getUser2_ID()));
+			else
+				mTab.setValue("User2_ID", null);
+			//F3P:end
 		}
 		return "";
 	}	//	rmaLine
@@ -585,11 +756,18 @@ public class CalloutInOut extends CalloutEngine
 		{
 			QtyEntered = (BigDecimal)mTab.getValue("QtyEntered");
 			mTab.setValue("MovementQty", QtyEntered);
+			//F3P: da adempiere
+			return "";
 		}
+		
+		// Angelo Dabala' get product UOM
+		MProduct prod = new MProduct(ctx, M_Product_ID, null);
+		int Prod_UOM_ID = prod.getC_UOM_ID();
+		int C_UOM_To_ID = Env.getContextAsInt(ctx, WindowNo, "C_UOM_ID");
 		//	UOM Changed - convert from Entered -> Product
-		else if (mField.getColumnName().equals("C_UOM_ID"))
+		if (mField.getColumnName().equals("C_UOM_ID"))
 		{
-			int C_UOM_To_ID = ((Integer)value).intValue();
+			C_UOM_To_ID = ((Integer)value).intValue();
 			QtyEntered = (BigDecimal)mTab.getValue("QtyEntered");
 			BigDecimal QtyEntered1 = QtyEntered.setScale(MUOM.getPrecision(ctx, C_UOM_To_ID), BigDecimal.ROUND_HALF_UP);
 			if (QtyEntered.compareTo(QtyEntered1) != 0)
@@ -612,7 +790,8 @@ public class CalloutInOut extends CalloutEngine
 			mTab.setValue("MovementQty", MovementQty);
 		}
 		//	No UOM defined
-		else if (Env.getContextAsInt(ctx, WindowNo, mTab.getTabNo(), "C_UOM_ID") == 0)
+		//F3P: da adempiere
+		else if (C_UOM_To_ID == 0 || C_UOM_To_ID == Prod_UOM_ID)
 		{
 			QtyEntered = (BigDecimal)mTab.getValue("QtyEntered");
 			mTab.setValue("MovementQty", QtyEntered);
@@ -620,7 +799,6 @@ public class CalloutInOut extends CalloutEngine
 		//	QtyEntered changed - calculate MovementQty
 		else if (mField.getColumnName().equals("QtyEntered"))
 		{
-			int C_UOM_To_ID = Env.getContextAsInt(ctx, WindowNo, mTab.getTabNo(), "C_UOM_ID");
 			QtyEntered = (BigDecimal)value;
 			BigDecimal QtyEntered1 = QtyEntered.setScale(MUOM.getPrecision(ctx, C_UOM_To_ID), BigDecimal.ROUND_HALF_UP);
 			if (QtyEntered.compareTo(QtyEntered1) != 0)
@@ -645,7 +823,6 @@ public class CalloutInOut extends CalloutEngine
 		//	MovementQty changed - calculate QtyEntered (should not happen)
 		else if (mField.getColumnName().equals("MovementQty"))
 		{
-			int C_UOM_To_ID = Env.getContextAsInt(ctx, WindowNo, mTab.getTabNo(), "C_UOM_ID");
 			MovementQty = (BigDecimal)value;
 			int precision = MProduct.get(ctx, M_Product_ID).getUOMPrecision();
 			BigDecimal MovementQty1 = MovementQty.setScale(precision, BigDecimal.ROUND_HALF_UP);

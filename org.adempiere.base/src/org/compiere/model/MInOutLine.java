@@ -21,12 +21,15 @@ import java.sql.ResultSet;
 import java.util.List;
 import java.util.Properties;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.FillMandatoryException;
 import org.adempiere.exceptions.WarehouseLocatorConflictException;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  * 	InOut Line
@@ -549,8 +552,16 @@ public class MInOutLine extends X_M_InOutLine
 		{
 			if (getParent().isSOTrx())
 			{
-				log.saveError("FillMandatory", Msg.translate(getCtx(), "C_Order_ID"));
-				return false;
+				// F3P: if its a C+ return, check if allowed to have no value
+				
+				boolean isAllowedCPlus = getParent().getMovementType().equals(MInOut.MOVEMENTTYPE_CustomerReturns) 
+											&& STDSysConfig.isAllowCPLUSRetursWORma(getAD_Client_ID(),getAD_Org_ID());
+				
+				if(isAllowedCPlus == false)
+				{
+					log.saveError("FillMandatory", Msg.translate(getCtx(), "C_Order_ID"));
+					return false;
+				}
 			}
 		}
 
@@ -621,9 +632,58 @@ public class MInOutLine extends X_M_InOutLine
 			}
 		}
 		
+		// F3P propagate qty on confirm line
+		
+		if(newRecord == false)
+		{
+			if(is_ValueChanged(MInOutLine.COLUMNNAME_MovementQty))
+			{
+				int M_InOutLineConfirm_ID = getInOutLineConfirm_ID();
+				
+				if(M_InOutLineConfirm_ID > 0)
+				{
+					MInOutLineConfirm iocl = PO.get(getCtx(),MInOutLineConfirm.Table_Name, M_InOutLineConfirm_ID, get_TrxName());
+					
+					if(iocl.isProcessed() == true)
+					{
+						StringBuilder sb = new StringBuilder();
+						
+						sb.append( Msg.translate(Env.getLanguage(getCtx()), "completed"))
+						.append(Msg.translate(Env.getLanguage(getCtx()), MInOutConfirm.COLUMNNAME_M_InOutConfirm_ID));
+
+						throw new AdempiereException(sb.toString());
+					}
+					else
+					{
+						iocl.setInOutLine(this);
+						iocl.saveEx(get_TrxName());
+					}
+				}
+			}
+		}
+		
+		//F3P end
+		
 		return true;
 	}	//	beforeSave
 
+	//F3P get InOutLineConfirm_ID
+	
+	protected int getInOutLineConfirm_ID()
+	{
+		int iM_InOutLineConfirm_ID = 0;
+		
+		Query qM = new Query(getCtx(), MInOutLineConfirm.Table_Name, 
+				MInOutLineConfirm.COLUMNNAME_M_InOutLine_ID + " = ?", get_TrxName());
+		qM.setParameters(getM_InOutLine_ID());	
+		
+		iM_InOutLineConfirm_ID = qM.firstId();
+		
+		return iM_InOutLineConfirm_ID;
+	}
+	
+	//f3P end
+	
 	/**
 	 * 	Before Delete
 	 *	@return true if drafted
@@ -632,6 +692,27 @@ public class MInOutLine extends X_M_InOutLine
 	{
 		if (getParent().getDocStatus().equals(MInOut.DOCSTATUS_Drafted))
 			return true;
+		
+		//F3P
+		// Delete package lines
+		
+		Query qPackageLines = new Query(getCtx(),MPackageLine.Table_Name,
+				MPackageLine.COLUMNNAME_M_InOutLine_ID + " = ?", get_TrxName());
+		qPackageLines.setParameters(getM_InOutLine_ID());
+		List<MPackageLine> lstPackageLines = qPackageLines.list();
+		
+		for(MPackageLine mPackageLine:lstPackageLines)
+		{
+			mPackageLine.deleteEx(true);
+		}
+		
+		if (getParent().getDocStatus().equals(MInOut.DOCSTATUS_InProgress) || 
+				getParent().getDocStatus().equals(MInOut.DOCSTATUS_Invalid))
+		{
+			return true;
+		}
+		
+		//F3P:End
 		log.saveError("Error", Msg.getMsg(getCtx(), "CannotDelete"));
 		return false;
 	}	//	beforeDelete

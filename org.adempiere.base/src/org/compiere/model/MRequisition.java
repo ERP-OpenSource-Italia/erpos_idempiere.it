@@ -26,6 +26,7 @@ import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.process.DocAction;
+import org.compiere.process.DocOptions;
 import org.compiere.process.DocumentEngine;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -45,7 +46,8 @@ import org.compiere.util.Msg;
  *  @author Teo Sarca, www.arhipac.ro
  *  		<li>FR [ 2744682 ] Requisition: improve error reporting
  */
-public class MRequisition extends X_M_Requisition implements DocAction
+//F3P add DocOptions
+public class MRequisition extends X_M_Requisition implements DocAction, DocOptions
 {
 	/**
 	 * 
@@ -594,4 +596,18 @@ public class MRequisition extends X_M_Requisition implements DocAction
 			|| DOCSTATUS_Reversed.equals(ds);
 	}	//	isComplete
 	
+	// F3P: needed to manage prepare state
+	@Override
+	public int customizeValidActions(String docStatus, Object processing,
+			String orderType, String isSOTrx, int AD_Table_ID, String[] docAction,
+			String[] options, int index)
+	{
+		if (docStatus.equals(DocumentEngine.STATUS_Drafted))
+		{
+			options[index++] = DocumentEngine.ACTION_Prepare;
+		}
+		
+		return index;
+	}
+	//F3P end
 }	//	MRequisition

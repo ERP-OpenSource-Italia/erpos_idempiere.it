@@ -19,6 +19,8 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyVetoException;
 import java.beans.VetoableChangeListener;
@@ -28,10 +30,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 
 import javax.swing.Box;
+import javax.swing.ImageIcon;
 import javax.swing.JLabel;
+import javax.swing.JToolBar;
 
 import org.adempiere.exceptions.DBException;
 import org.compiere.grid.ed.VEditor;
@@ -42,11 +47,14 @@ import org.compiere.model.MClient;
 import org.compiere.model.MLookup;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MPInstancePara;
+import org.compiere.model.Query;
 import org.compiere.process.ProcessInfo;
+import org.compiere.swing.CButton;
 import org.compiere.swing.CLabel;
 import org.compiere.swing.CPanel;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
@@ -62,7 +70,8 @@ import org.compiere.util.Msg;
  * 			<li>BF [ 2548216 ] Process Param Panel is not showing any parameter if error 
  * @version 	2006-12-01
  */
-public class ProcessParameterPanel extends CPanel implements VetoableChangeListener, IProcessParameter {
+//genied: add action listener
+public class ProcessParameterPanel extends CPanel implements VetoableChangeListener, IProcessParameter, ActionListener {
 		
 	/**
 	 * 
@@ -115,6 +124,16 @@ public class ProcessParameterPanel extends CPanel implements VetoableChangeListe
 		private BorderLayout mainLayout = new BorderLayout();
 		private CPanel centerPanel = new CPanel();
 		private GridBagLayout centerLayout = new GridBagLayout();
+		// genied
+		private BorderLayout northLayout = new BorderLayout();
+		private CPanel northPanel = new CPanel();
+		private ArrayList<Integer> mru = new ArrayList<Integer>();
+		private int m_curr = -1;
+		private CPanel savePanel = new CPanel();
+		private BorderLayout saveLayout = new BorderLayout();
+		private JToolBar toolBar = new JToolBar();
+		private CButton bPreviuos = new CButton();
+		private CButton bNext = new CButton();
 		private Window m_win = null;
 
 		/**
@@ -126,7 +145,69 @@ public class ProcessParameterPanel extends CPanel implements VetoableChangeListe
 			this.setLayout(mainLayout);
 			centerPanel.setLayout(centerLayout);
 			this.add(centerPanel, BorderLayout.CENTER);
+			
+			//genied toolbar for browsing of previous launch
+			northPanel.setLayout(northLayout);
+			this.add(northPanel, BorderLayout.NORTH);
+			bPreviuos.setIcon(new ImageIcon(org.compiere.Adempiere.class.getResource("images/Previous24.gif")));
+			bPreviuos.setMargin(new Insets(2, 2, 2, 2));
+			bPreviuos.setToolTipText(Msg.getMsg(Env.getCtx(),"Previous"));
+			bPreviuos.addActionListener(this);
+			bNext.setIcon(new ImageIcon(org.compiere.Adempiere.class.getResource("images/Next24.gif")));
+			bNext.setMargin(new Insets(2, 2, 2, 2));
+			bNext.setToolTipText(Msg.getMsg(Env.getCtx(),"Next"));
+			bNext.addActionListener(this);
+			toolBar.add(bPreviuos, null);
+			toolBar.add(bNext, null);
+			savePanel.setLayout(saveLayout);
+			savePanel.add(toolBar, BorderLayout.CENTER);
+			northPanel.add(savePanel, BorderLayout.CENTER);
+
+			fillMRU();
+			//Genied end
 		}	//	jbInit
+		
+		//genied
+		// fill the combobox with the last 10 process instance
+		private void fillMRU() 
+		{
+			String sql = "SELECT AD_PINSTANCE_ID FROM AD_PINSTANCE "
+				+" WHERE AD_PROCESS_ID=? AND AD_USER_ID=? AND AD_Client_ID = ? AND AD_Org_ID IN (0,?) " // F3P: filter by client and org
+				+" ORDER BY CREATED DESC";
+			
+			PreparedStatement pstmt=null;
+			ResultSet rs=null;
+			//Vector<KeyNamePair> vector = new Vector<KeyNamePair>();
+			mru.clear();
+			m_curr = -1;
+			try
+			{
+				pstmt = DB.prepareStatement(sql, null);
+				pstmt.setInt(1, m_processInfo.getAD_Process_ID());
+				pstmt.setInt(2, m_processInfo.getAD_User_ID());
+				pstmt.setInt(3, m_processInfo.getAD_Client_ID());
+				pstmt.setInt(4, Env.getAD_Org_ID(Env.getCtx()));
+				rs = pstmt.executeQuery();
+				for (int i=0; i<10; i++)
+				{
+					if(!rs.next()) break;
+					//vector.add(new KeyNamePair(rs.getInt(1),"MRU"+i));
+					mru.add(rs.getInt(1));
+				}
+			}
+			catch(SQLException e)
+			{
+				log.log(Level.SEVERE, sql, e);
+			}
+			finally
+			{
+				DB.close(rs, pstmt);
+			}
+			bPreviuos.setEnabled(false);
+			if(mru.size() == 0)bNext.setEnabled(false);
+			//fSavedName.setModel(new DefaultComboBoxModel(vector));
+		}
+		//genied end
 
 		/**
 		 *  Dispose
@@ -719,5 +800,69 @@ public class ProcessParameterPanel extends CPanel implements VetoableChangeListe
 
 		public void setWindow(Window win) {
 			m_win  = win;
+		}
+		
+		//genied
+		
+		public void actionPerformed(ActionEvent e) {
+			if (e.getSource() == bPreviuos && m_curr > 0) 
+			{
+				m_curr--;
+				fillParameters(mru.get(m_curr));
+			}
+			if (e.getSource() == bNext && m_curr < mru.size()-1) 
+			{
+				m_curr++;
+				fillParameters(mru.get(m_curr));
+			}
+			bPreviuos.setEnabled(m_curr > 0);
+			bNext.setEnabled(m_curr < mru.size()-1);
+		}
+
+		private void fillParameters(int key) 
+		{
+			List<MPInstancePara> params = new Query(Env.getCtx(),MPInstancePara.Table_Name,"AD_PINSTANCE_ID=?",null)
+			.setParameters(new Object[]{key})
+			.setOrderBy("SeqNo")
+			.list();
+			
+			if(params.size() == 0) return;
+
+			for (int i = 0; i < m_mFields.size(); i++)
+			{
+				//	Set Values
+				VEditor editor = (VEditor)m_vEditors.get(i);
+				VEditor editor2 = (VEditor)m_vEditors2.get(i);
+				
+				GridField mField = (GridField)m_mFields.get(i);
+				String name = mField.getColumnName();
+
+				for(MPInstancePara p: params)
+				{
+					if(p.getParameterName().equals(name))
+					{
+						if(DisplayType.isNumeric(mField.getDisplayType()) || DisplayType.isID(mField.getDisplayType()))
+						{
+							editor.setValue(p.getP_Number());
+							if(editor2 != null)
+								editor2.setValue(p.getP_Number_To());
+						}
+						else if(DisplayType.isDate(mField.getDisplayType()))
+						{
+							editor.setValue(p.getP_Date());
+							if(editor2 != null)
+								editor2.setValue(p.getP_Date_To());
+						}
+						else
+						{
+							editor.setValue(p.getP_String());
+							if(p.getP_String_To() != null && editor2 != null)
+								editor2.setValue(p.getP_String_To());
+						}
+						processNewValue(editor.getValue(), name);
+						break;
+					}
+				}
+			}
 		}
 	}	//	ProcessParameterPanel

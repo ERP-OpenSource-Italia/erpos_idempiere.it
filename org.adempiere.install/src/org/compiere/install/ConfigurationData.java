@@ -744,12 +744,14 @@ public class ConfigurationData
 	 *  @param port port
 	 *  @return true if able to create
 	 */
-	protected boolean testServerPort (int port)
+	//F3P: porting da adempiere
+	protected boolean testServerPort (InetAddress host, int port)
 	{
-		System.out.println("testServerPort: " + port);
+		System.out.println("testServerPort[" + host.getHostAddress() + ", " + port + "]");
 		try
 		{
-			ServerSocket ss = new ServerSocket (port);
+			//F3P: porting da adempiere
+			ServerSocket ss = new ServerSocket (port,0,host);
 			if (log.isLoggable(Level.FINE)) log.fine(ss.getInetAddress() + ":" + ss.getLocalPort() + " - created");
 			ss.close();
 		}

@@ -29,6 +29,7 @@ import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.TimeUtil;
+import org.compiere.util.Util;
 
 /**
  *  Product Attribute Set Instance
@@ -257,31 +258,57 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 		return getGuaranteeDate();
 	}	//	getGuaranteeDate
 
+	//F3P: add trx
+	/**
+	 * 	Get Lot No
+	 * 	@param getNew if true create/set new lot
+	 * 	@param M_Product_ID product used if new
+	 *	@deprecated Please use {@link #getLot (boolean, int, String)}
+	 *	@return lot
+	 */
+	@Deprecated
+	public String getLot (boolean getNew, int M_Product_ID)
+	{
+		return getLot(getNew, M_Product_ID, null);
+	}
 	/**
 	 * 	Get Lot No
 	 * 	@param getNew if true create/set new lot
 	 * 	@param M_Product_ID product used if new
 	 *	@return lot
 	 */
-	public String getLot (boolean getNew, int M_Product_ID)
+	public String getLot (boolean getNew, int M_Product_ID, String trxName)
 	{
 		if (getNew)
-			createLot(M_Product_ID);
+			createLot(M_Product_ID, trxName);
 		return getLot();
 	}	//	getLot
 
+	//F3P: add trx
+	/**
+	 * 	Create Lot
+	 * 	@param M_Product_ID product used if new
+	 *	@deprecated Please use {@link #createLot (int, String)}
+	 *	@return lot info
+	 */
+	@Deprecated
+	public KeyNamePair createLot (int M_Product_ID)
+	{
+		return createLot(M_Product_ID, null);
+	}
+	
 	/**
 	 * 	Create Lot
 	 * 	@param M_Product_ID product used if new
 	 *	@return lot info
 	 */
-	public KeyNamePair createLot (int M_Product_ID)
+	public KeyNamePair createLot (int M_Product_ID, String trxName)
 	{
 		KeyNamePair retValue = null;
 		int M_LotCtl_ID = getMAttributeSet().getM_LotCtl_ID();
 		if (M_LotCtl_ID != 0)
 		{
-			MLotCtl ctl = new MLotCtl (getCtx(), M_LotCtl_ID, null);
+			MLotCtl ctl = new MLotCtl (getCtx(), M_LotCtl_ID, trxName);
 			MLot lot = ctl.createLot(M_Product_ID);
 			setM_Lot_ID (lot.getM_Lot_ID());
 			setLot (lot.getName());
@@ -380,6 +407,7 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 		return false;
 	}
 	
+	//F3P: add lot
 	/**
 	 * Create & save a new ASI for given product.
 	 * Automatically creates Lot#, Serial# and Guarantee Date.
@@ -390,13 +418,31 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 	 */
 	public static MAttributeSetInstance create(Properties ctx, MProduct product, String trxName)
 	{
+		return create(ctx, product, trxName, null);	
+	}
+	/**
+	 * Create & save a new ASI for given product.
+	 * Automatically creates Lot#, Serial# and Guarantee Date.
+	 * @param ctx
+	 * @param product
+	 * @param trxName
+	 * @param lot
+	 * @return newly created ASI
+	 */
+	public static MAttributeSetInstance create(Properties ctx, MProduct product, String trxName, String lot)
+	{
 		MAttributeSetInstance asi = new MAttributeSetInstance(ctx, 0, trxName);
 		asi.setClientOrg(product.getAD_Client_ID(), 0);
 		asi.setM_AttributeSet_ID(product.getM_AttributeSet_ID());
 		// Create new Lot, Serial# and Guarantee Date
 		if (asi.getM_AttributeSet_ID() > 0)
 		{
-			asi.getLot(true, product.get_ID());
+			//F3P: add lot
+			if(Util.isEmpty(lot))
+				asi.getLot(true, product.get_ID(), trxName); //F3P: use trx
+			else
+				asi.setLot(lot);
+			//F3P: end
 			asi.getSerNo(true);
 			asi.getGuaranteeDate(true);
 		}

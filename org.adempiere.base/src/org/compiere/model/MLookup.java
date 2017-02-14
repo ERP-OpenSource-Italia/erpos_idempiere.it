@@ -69,10 +69,13 @@ public final class MLookup extends Lookup implements Serializable
 		m_info = info;
 		if (log.isLoggable(Level.FINE)) log.fine(m_info.KeyColumn);
 
+		// F3P: added tabNo
+		m_iTabNo = TabNo;
+		
 		//  load into local lookup, if already cached
 		if (Ini.isClient()) 
 		{
-			if (MLookupCache.loadFromCache (m_info, m_lookup))
+			if (MLookupCache.loadFromCache (m_info, m_lookup, m_iTabNo))	// F3P: updated call to loadFromCache
 				return;
 		}
 
@@ -129,6 +132,10 @@ public final class MLookup extends Lookup implements Serializable
 
 	private boolean 		    m_hasShortListItems = false;	// IDEMPIERE 90
 
+	
+	// F3P: added tabNo
+	private int					m_iTabNo;
+	
 	/**
 	 *  Dispose
 	 */
@@ -720,7 +727,8 @@ public final class MLookup extends Lookup implements Serializable
 	{
 		if (info.IsValidated) return true;
 		if (info.ValidationCode.length() == 0) return true;
-		String validation = Env.parseContext(m_info.ctx, m_info.WindowNo, m_info.ValidationCode, false);
+		// F3P: added TabNo
+		String validation = Env.parseContext(m_info.ctx, m_info.WindowNo, m_iTabNo, m_info.ValidationCode, false);
 		if (validation.equals(info.parsedValidationCode)) return true;
 		return false;
 	}
@@ -906,7 +914,7 @@ public final class MLookup extends Lookup implements Serializable
 					+ " (" + String.valueOf(System.currentTimeMillis()-startTime) + ")");
 		//	if (m_allLoaded)
 			if (Ini.isClient()) 
-				MLookupCache.loadEnd (m_info, m_lookup);
+				MLookupCache.loadEnd (m_info, m_lookup, m_iTabNo); 	// F3P: updated call to loadFromCache
 		}	//	run
 	}	//	Loader
 

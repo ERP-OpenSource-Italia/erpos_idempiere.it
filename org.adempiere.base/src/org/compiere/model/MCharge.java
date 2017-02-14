@@ -54,19 +54,36 @@ public class MCharge extends X_C_Charge
 		return getAccount (C_Charge_ID, as);
 	}   //  getAccount
 
+	//F3P: Added trx
 	/**
 	 *  Get Charge Account
 	 *  @param C_Charge_ID charge
 	 *  @param as account schema
+	 *  @deprecated use trx variant
 	 *  @return Charge Account or null
 	 */
+	@Deprecated
 	public static MAccount getAccount (int C_Charge_ID, MAcctSchema as)
+	{
+		String trxName = null;
+		return getAccount (C_Charge_ID, as, trxName);
+	}
+		
+	/**
+	 *  Get Charge Account
+	 *  @param C_Charge_ID charge
+	 *  @param as account schema
+	 *  @param trxName transaction
+	 *  @return Charge Account or null
+	 */
+	
+	public static MAccount getAccount (int C_Charge_ID, MAcctSchema as, String trxName)
 	{
 		if (C_Charge_ID == 0 || as == null)
 			return null;
 
 		String sql = "SELECT Ch_Expense_Acct FROM C_Charge_Acct WHERE C_Charge_ID=? AND C_AcctSchema_ID=?";
-		int Account_ID = DB.getSQLValueEx(null, sql, C_Charge_ID, as.get_ID());
+		int Account_ID = DB.getSQLValueEx(trxName, sql, C_Charge_ID, as.get_ID());
 		//	No account
 		if (Account_ID <= 0)
 		{
@@ -75,9 +92,10 @@ public class MCharge extends X_C_Charge
 		}
 
 		//	Return Account
-		MAccount acct = MAccount.get (as.getCtx(), Account_ID);
+		MAccount acct = MAccount.get (as.getCtx(), trxName, Account_ID);
 		return acct;
 	}   //  getAccount
+	//F3P: End
 
 	/**
 	 * 	Get MCharge from Cache

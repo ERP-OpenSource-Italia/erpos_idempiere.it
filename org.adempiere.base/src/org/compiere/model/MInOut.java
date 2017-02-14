@@ -177,8 +177,28 @@ public class MInOut extends X_M_InOut implements DocAction
 	 * 	@param setOrder set the order link
 	 *	@return Shipment
 	 */
+	//F3P: aggiunto il parametro bReversal, funzione copiata per mantenere compatibilita'
 	public static MInOut copyFrom (MInOut from, Timestamp dateDoc, Timestamp dateAcct,
 		int C_DocType_ID, boolean isSOTrx, boolean counter, String trxName, boolean setOrder)
+	{
+		return copyFrom (from, dateDoc, dateAcct, C_DocType_ID, isSOTrx, counter, trxName, setOrder,false);
+	}
+
+	/**
+	 * 	Create new Shipment by copying
+	 * 	@param from shipment
+	 * 	@param dateDoc date of the document date
+	 * 	@param C_DocType_ID doc type
+	 * 	@param isSOTrx sales order
+	 * 	@param counter create counter links
+	 * 	@param trxName trx
+	 * 	@param setOrder set the order link
+	 *  @param bReversal if the returned MInOut will be a reversal
+	 *	@return Shipment
+	 */
+	//F3P: aggiunto il parametro bReversal
+	public static MInOut copyFrom (MInOut from, Timestamp dateDoc, Timestamp dateAcct,
+		int C_DocType_ID, boolean isSOTrx, boolean counter, String trxName, boolean setOrder, boolean bReversal)
 	{
 		MInOut to = new MInOut (from.getCtx(), 0, null);
 		to.set_TrxName(trxName);
@@ -234,7 +254,10 @@ public class MInOut extends X_M_InOut implements DocAction
 			//	Try to find Order/Invoice link
 			if (from.getC_Order_ID() != 0)
 			{
-				MOrder peer = new MOrder (from.getCtx(), from.getC_Order_ID(), from.get_TrxName());
+				//F3P: modify to use PO instead of new
+				//MOrder peer = new MOrder (from.getCtx(), from.getC_Order_ID(), from.get_TrxName());
+				MOrder peer = PO.get(from.getCtx(), MOrder.Table_Name, from.getC_Order_ID(), from.get_TrxName());
+				// F3P:end
 				if (peer.getRef_Order_ID() != 0)
 					to.setC_Order_ID(peer.getRef_Order_ID());
 			}
@@ -432,7 +455,10 @@ public class MInOut extends X_M_InOut implements DocAction
 		setMovementType (invoice.isSOTrx() ? MOVEMENTTYPE_CustomerShipment : MOVEMENTTYPE_VendorReceipts);
 		MOrder order = null;
 		if (invoice.getC_Order_ID() != 0)
-			order = new MOrder (invoice.getCtx(), invoice.getC_Order_ID(), invoice.get_TrxName());
+			//F3P: modify to use PO instead of new
+			//order = new MOrder (invoice.getCtx(), invoice.getC_Order_ID(), invoice.get_TrxName());
+			order = PO.get(invoice.getCtx(), MOrder.Table_Name, invoice.getC_Order_ID(), invoice.get_TrxName());
+			//F3P: end
 		if (C_DocTypeShipment_ID == 0 && order != null)
 			C_DocTypeShipment_ID = DB.getSQLValue(null,
 				"SELECT C_DocTypeShipment_ID FROM C_DocType WHERE C_DocType_ID=?",
@@ -746,13 +772,16 @@ public class MInOut extends X_M_InOut implements DocAction
 				line.setRef_InOutLine_ID(fromLine.getM_InOutLine_ID());
 				if (fromLine.getC_OrderLine_ID() != 0)
 				{
-					MOrderLine peer = new MOrderLine (getCtx(), fromLine.getC_OrderLine_ID(), get_TrxName());
+					//F3P: modify to use PO instead of new
+					//MOrderLine peer = new MOrderLine (getCtx(), fromLine.getC_OrderLine_ID(), get_TrxName());
+					MOrderLine peer = PO.get(getCtx(), MOrderLine.Table_Name, fromLine.getC_OrderLine_ID(), get_TrxName());
+					// F3P: end
 					if (peer.getRef_OrderLine_ID() != 0)
 						line.setC_OrderLine_ID(peer.getRef_OrderLine_ID());
 				}
 				//RMALine link
 				if (fromLine.getM_RMALine_ID() != 0)
-				{					
+				{	
 					MRMALine peer = PO.get(getCtx(), MRMALine.Table_Name, fromLine.getM_RMALine_ID(), get_TrxName());
 					if (peer.getRef_RMALine_ID() > 0)
 						line.setM_RMALine_ID(peer.getRef_RMALine_ID());
@@ -1303,17 +1332,19 @@ public class MInOut extends X_M_InOut implements DocAction
 			MOrderLine oLine = null;
 			if (sLine.getC_OrderLine_ID() != 0)
 			{
-				oLine = new MOrderLine (getCtx(), sLine.getC_OrderLine_ID(), get_TrxName());
+				//F3P: modify to use PO instead of new
+				//oLine = new MOrderLine (getCtx(), sLine.getC_OrderLine_ID(), get_TrxName());
+				oLine = PO.get(getCtx(), MOrderLine.Table_Name, sLine.getC_OrderLine_ID(), get_TrxName());
+				// F3P:end
 				if (log.isLoggable(Level.FINE)) log.fine("OrderLine - Reserved=" + oLine.getQtyReserved()
 					+ ", Delivered=" + oLine.getQtyDelivered());
 			}
-
 
             // Load RMA Line
             MRMALine rmaLine = null;
 
             if (sLine.getM_RMALine_ID() != 0)
-            {            	
+            {       
                 rmaLine = PO.get(getCtx(), MRMALine.Table_Name, sLine.getM_RMALine_ID(), get_TrxName());
             }
 
@@ -1546,7 +1577,8 @@ public class MInOut extends X_M_InOut implements DocAction
 				&& product.isCreateAsset()
 				&& !product.getM_Product_Category().getA_Asset_Group().isFixedAsset()
 				&& sLine.getMovementQty().signum() > 0
-				&& !isReversal())
+				&& !isReversal()
+				&& (getMovementType().equals(MOVEMENTTYPE_CustomerReturns) == false))	// F3P: A customer return should not create an asset
 			{
 				log.fine("Asset");
 				info.append("@A_Asset_ID@: ");
@@ -1652,7 +1684,10 @@ public class MInOut extends X_M_InOut implements DocAction
 						}
 						
 						//	Update PO with ASI
-						oLine = new MOrderLine (getCtx(), iLine.getC_OrderLine_ID(), get_TrxName());
+						//F3P: modify to use PO instead of new
+						//oLine = new MOrderLine (getCtx(), po.getC_OrderLine_ID(), get_TrxName());
+						oLine = PO.get(getCtx(), MOrderLine.Table_Name, po.getC_OrderLine_ID(), get_TrxName());
+						// F3P:end
 						if (   oLine != null && oLine.getM_AttributeSetInstance_ID() == 0
 							&& sLine.getMovementQty().compareTo(oLine.getQtyOrdered()) == 0) //  just if full match [ 1876965 ]
 						{
@@ -1710,7 +1745,11 @@ public class MInOut extends X_M_InOut implements DocAction
 		if ( isSOTrx() || !isDropShip() || getC_Order_ID() == 0 )
 			return null;
 
-		int linkedOrderID = new MOrder (getCtx(), getC_Order_ID(), get_TrxName()).getLink_Order_ID();
+		//F3P: modify to use PO instead of new
+		//int linkedOrderID = new MOrder (getCtx(), getC_Order_ID(), get_TrxName()).getLink_Order_ID();
+		int linkedOrderID = ((MOrder)PO.get(getCtx(), MOrder.Table_Name, getC_Order_ID(), get_TrxName())).getLink_Order_ID();
+		//F3P:end
+		
 		if (linkedOrderID <= 0)
 			return null;
 
@@ -1731,7 +1770,10 @@ public class MInOut extends X_M_InOut implements DocAction
 		dropShipment.setC_Order_ID(linkedOrderID);
 
 		// get invoice id from linked order
-		int invID = new MOrder (getCtx(), linkedOrderID, get_TrxName()).getC_Invoice_ID();
+		//F3P: modify to use PO instead of new
+		//int invID = new MOrder (getCtx(), linkedOrderID, get_TrxName()).getC_Invoice_ID();
+		int invID = ((MOrder)PO.get(getCtx(), MOrder.Table_Name, linkedOrderID, get_TrxName())).getC_Invoice_ID();
+		// F3P:end
 		if ( invID != 0 )
 			dropShipment.setC_Invoice_ID(invID);
 
@@ -1753,7 +1795,10 @@ public class MInOut extends X_M_InOut implements DocAction
 		for (int i = 0; i < lines.length; i++)
 		{
 			MInOutLine dropLine = lines[i];
-			MOrderLine ol = new MOrderLine(getCtx(), dropLine.getC_OrderLine_ID(), null);
+			//F3P: modify to use PO instead of new
+			//MOrderLine ol = new MOrderLine(getCtx(), dropLine.getC_OrderLine_ID(), null);
+			MOrderLine ol = PO.get(getCtx(), MOrderLine.Table_Name, dropLine.getC_OrderLine_ID(), get_TrxName());
+			// F3P:end
 			if ( ol.getC_OrderLine_ID() != 0 ) {
 				dropLine.setC_OrderLine_ID(ol.getLink_OrderLine_ID());
 				dropLine.saveEx();
@@ -2190,8 +2235,10 @@ public class MInOut extends X_M_InOut implements DocAction
 		}
 
 		//	Deep Copy
+		//F3P: aggiunta la gestione del flag isReversal prima del primo salvataggio
 		MInOut reversal = copyFrom (this, reversalMovementDate, reversalDate,
-			getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true);
+		 getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true, true);
+		
 		if (reversal == null)
 		{
 			m_processMsg = "Could not create Ship Reversal";

@@ -181,7 +181,7 @@ public class MiniTable extends CTable implements IMiniTable
 			{
 				renderer = getCellRenderer(row, col);
 				comp = renderer.getTableCellRendererComponent
-					(this, getValueAt(row, col), false, false, row, col);
+					(this, super.getValueAt(row, col), false, false, row, col);	// F3P: changed getValueAt to super.getValueAt
 				if (comp != null) {
 					int rowWidth = comp.getPreferredSize().width + SLACK;
 					width = Math.max(width, rowWidth);
@@ -206,8 +206,8 @@ public class MiniTable extends CTable implements IMiniTable
 	{
 		//  if the first column is a boolean and it is false, it is not editable
 		if (column != 0
-				&& getValueAt(row, 0) instanceof Boolean
-				&& !((Boolean)getValueAt(row, 0)).booleanValue())
+				&& super.getValueAt(row, 0) instanceof Boolean // F3P: changed getValueAt to super.getValueAt
+				&& !((Boolean)super.getValueAt(row, 0)).booleanValue())	// F3P: changed getValueAt to super.getValueAt
 			return false;
 
 		//  is the column RW?
@@ -907,4 +907,19 @@ public class MiniTable extends CTable implements IMiniTable
 			
 		}
 	}
+	
+	// F3P: JTable coordinate are in view space, while everywhere are used as model space
+	//	fixed by directly accessing the model. Since the problem is only for columns, row are converted
+
+	@Override
+	public Object getValueAt(int row, int column)
+	{
+		return getModel().getValueAt(convertRowIndexToModel(row), column);
+	}
+
+	@Override
+	public void setValueAt(Object aValue, int row, int column)
+	{
+		getModel().setValueAt(aValue, convertRowIndexToModel(row), column);
+	}	
 }   //  MiniTable

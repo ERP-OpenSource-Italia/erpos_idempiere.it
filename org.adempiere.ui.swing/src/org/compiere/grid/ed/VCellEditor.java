@@ -50,7 +50,8 @@ import org.compiere.util.CLogger;
  *  @author 	Jorg Janke
  *  @version 	$Id: VCellEditor.java,v 1.2 2006/07/30 00:51:28 jjanke Exp $
  */
-public final class VCellEditor extends AbstractCellEditor
+//F3P: Removed 'final' to support extending
+public class VCellEditor extends AbstractCellEditor
 	implements TableCellEditor, VetoableChangeListener, ActionListener
 {
 
@@ -206,7 +207,9 @@ public final class VCellEditor extends AbstractCellEditor
 			return;
 		if (log.isLoggable(Level.FINE)) log.fine(e.getPropertyName() + "=" + e.getNewValue());
 		//
-		((GridTable)m_table.getModel()).setChanged(true);
+		// F3P: Conditional added to support usage of VEditor outside GridTable model
+		if(m_table.getModel() instanceof GridTable)
+			((GridTable)m_table.getModel()).setChanged(true);
 	}   //  vetoableChange
 
 	/**

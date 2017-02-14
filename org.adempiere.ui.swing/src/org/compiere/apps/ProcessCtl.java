@@ -124,6 +124,7 @@ public class ProcessCtl extends AbstractProcessCtl
 		return worker;
 	}	//	execute
 	
+	//LS backward compatibility
 	/**
 	 *	Async Process - Do it all.
 	 *  <code>
@@ -144,6 +145,32 @@ public class ProcessCtl extends AbstractProcessCtl
 	 *  @return worker started ProcessCtl instance or null for workflow
 	 */
 	public static ProcessCtl process(IProcessUI parent, int WindowNo, IProcessParameter parameter, ProcessInfo pi, Trx trx)
+	{
+		return process(parent, WindowNo, parameter, pi, trx, true);
+	}
+	
+	//LS added parameter
+	/**
+	 *	Async Process - Do it all.
+	 *  <code>
+	 *	- Get Instance ID
+	 *	- Get Parameters
+	 *	- execute (lock - start process - unlock)
+	 *  </code>
+	 *  Creates a ProcessCtl instance, which calls
+	 *  lockUI and unlockUI if parent is a ASyncProcess
+	 *  <br>
+	 *	Called from ProcessDialog.actionPerformed
+	 *
+	 *  @param parent ASyncProcess & Container
+	 *  @param WindowNo window no
+	 *  @param paraPanel Process Parameter Panel
+	 *  @param pi ProcessInfo process info
+	 *  @param trx Transaction
+	 *  @param commitTrxOnClose Commit Transaction On Close
+	 *  @return worker started ProcessCtl instance or null for workflow
+	 */
+	public static ProcessCtl process(IProcessUI parent, int WindowNo, IProcessParameter parameter, ProcessInfo pi, Trx trx, boolean commitTrxOnClose)
 	{
 		if (log.isLoggable(Level.FINE)) log.fine("WindowNo=" + WindowNo + " - " + pi);
 
@@ -186,6 +213,9 @@ public class ProcessCtl extends AbstractProcessCtl
 
 		//	execute
 		ProcessCtl worker = new ProcessCtl(parent, WindowNo, pi, trx);
+		//LS
+		worker.setCommitTrxOnClose(commitTrxOnClose);
+		//LS end
 		if (parent != null)
 		{
 			worker.start();

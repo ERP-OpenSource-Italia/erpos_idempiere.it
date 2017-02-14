@@ -98,7 +98,7 @@ public final class AppsAction extends AbstractAction
 		if (pos != -1  && toolTipText.length() > pos)	//	We have a nemonic - creates ALT-_
 		{
 			Character ch = new Character(toolTipText.toUpperCase().charAt(pos+1));
-			if (ch != ' ')
+			if (ch != ' ' && ch != 'E') // F3P: having E as mnemonic effectively disable the euro symbol
 			{
 				toolTipText = toolTipText.substring(0, pos) + toolTipText.substring(pos+1);
 				putValue(Action.MNEMONIC_KEY, new Integer(ch.hashCode()));

@@ -81,7 +81,7 @@ public class ConfigAppServer extends Config
 		//	Web Port
 		int WebPort = p_data.getAppsServerWebPort();
 		pass = !p_data.testPort ("http", appsServer.getHostName(), WebPort, "/")
-			&& p_data.testServerPort(WebPort);
+			&& p_data.testServerPort(appsServer, WebPort); //F3P: porting da adempiere add appsServer
 		error = "Not correct: Web Port = " + WebPort;
 		if (getPanel() != null)
 			signalOK(getPanel().okWebPort, "ErrorWebPort",
@@ -94,7 +94,7 @@ public class ConfigAppServer extends Config
 		//	SSL Port
 		int sslPort = p_data.getAppsServerSSLPort();
 		pass = !p_data.testPort ("https", appsServer.getHostName(), sslPort, "/")
-			&& p_data.testServerPort(sslPort);
+			&& p_data.testServerPort(appsServer, sslPort); //F3P: porting da adempiere add appsServer
 		error = "Not correct: SSL Port = " + sslPort;
 		if (getPanel() != null)
 			signalOK(getPanel().okSSLPort, "ErrorWebPort",

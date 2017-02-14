@@ -334,31 +334,33 @@ public class VBOMDrop extends CPanel
 		MPPProductBOM bom = MPPProductBOM.getDefault(product, null);
 		MPPProductBOMLine[] bomLines = bom.getLines(true);
 		for (int i = 0; i < bomLines.length; i++)
-			addBOMLine (bomLines[i], qty);
+			addBOMLine (bom, bomLines[i], qty);//genied add bom param
 		if (log.isLoggable(Level.FINE)) log.fine("#" + bomLines.length);
 	}
 	
+	//genied add bom param
 	/**
 	 * 	Add BOM Line to this.
 	 * 	Calls addBOMLines if added product is a BOM
+	 * 	@param	bom BOM
 	 * 	@param line BOM Line
 	 * 	@param qty quantity
 	 */
-	private void addBOMLine (MPPProductBOMLine line, BigDecimal qty)
+	private void addBOMLine (MPPProductBOM bom, MPPProductBOMLine line, BigDecimal qty)
 	{
 		if (log.isLoggable(Level.FINE)) log.fine(line.toString());
 		String bomType = line.getComponentType();
 		if (bomType == null)
 			bomType = MPPProductBOMLine.COMPONENTTYPE_Component;
 		//
-		BigDecimal lineQty = line.getQty();
+		BigDecimal lineQty = line.getQty().multiply(qty); //genied multiply by passed qty
 		MProduct product = line.getProduct();
 		if (product == null)
 			return;
 		if (product.isBOM() && product.isVerified())
 			addBOMLines (product, lineQty);		//	recursive
 		else
-			addDisplay (line.getM_Product_ID(),
+			addDisplay (bom.getM_Product_ID(), //genied product from bom
 				product.getM_Product_ID(), bomType, product.getName(), line.getFeature(), lineQty);
 	}	//	addBOMLine
 

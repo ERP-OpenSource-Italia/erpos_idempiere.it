@@ -707,29 +707,31 @@ public final class MRole extends X_AD_Role
 	 */
 	private void loadOrgAccess (boolean reload)
 	{
-		if (!(reload || m_orgAccess == null))
-			return;
-		//
-		ArrayList<OrgAccess> list = new ArrayList<OrgAccess>();
-
-		if (isUseUserOrgAccess())
-			loadOrgAccessUser(list);
-		else
-			loadOrgAccessRole(list);
-		
-		m_orgAccess = new OrgAccess[list.size()];
-		list.toArray(m_orgAccess); 
-		if (log.isLoggable(Level.FINE)) log.fine("#" + m_orgAccess.length + (reload ? " - reload" : "")); 
-		if (Ini.isClient())
-		{
-			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < m_orgAccess.length; i++)
+		synchronized(this) {	// F3P: synchronized load (before null check to try to reduce duplicate loading)
+			if (!(reload || m_orgAccess == null))
+				return;
+			//
+			ArrayList<OrgAccess> list = new ArrayList<OrgAccess>();
+	
+			if (isUseUserOrgAccess())
+				loadOrgAccessUser(list);
+			else
+				loadOrgAccessRole(list);
+			
+			m_orgAccess = new OrgAccess[list.size()];
+			list.toArray(m_orgAccess); 
+			if (log.isLoggable(Level.FINE)) log.fine("#" + m_orgAccess.length + (reload ? " - reload" : "")); 
+			if (Ini.isClient())
 			{
-				if (i > 0)
-					sb.append(",");
-				sb.append(m_orgAccess[i].AD_Org_ID);
+				StringBuilder sb = new StringBuilder();
+				for (int i = 0; i < m_orgAccess.length; i++)
+				{
+					if (i > 0)
+						sb.append(",");
+					sb.append(m_orgAccess[i].AD_Org_ID);
+				}
+				Env.setContext(Env.getCtx(), "#User_Org", sb.toString());
 			}
-			Env.setContext(Env.getCtx(), "#User_Org", sb.toString());
 		}
 	}	//	loadOrgAccess
 
@@ -851,32 +853,34 @@ public final class MRole extends X_AD_Role
 	 */
 	private void loadTableAccess(boolean reload)
 	{
-		if (m_tableAccess != null && !reload)
-			return;
-		ArrayList<MTableAccess> list = new ArrayList<MTableAccess>();
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		String sql = "SELECT * FROM AD_Table_Access "
-			+ "WHERE AD_Role_ID=? AND IsActive='Y'";
-		try
-		{
-			pstmt = DB.prepareStatement(sql, get_TrxName());
-			pstmt.setInt(1, getAD_Role_ID());
-			rs = pstmt.executeQuery();
-			while (rs.next())
-				list.add(new MTableAccess(getCtx(), rs, get_TrxName())); 
+		synchronized(this) {	// F3P: synchronized load (before null check to try to reduce duplicate loading)
+			if (m_tableAccess != null && !reload)
+				return;
+			ArrayList<MTableAccess> list = new ArrayList<MTableAccess>();
+			PreparedStatement pstmt = null;
+			ResultSet rs = null;
+			String sql = "SELECT * FROM AD_Table_Access "
+				+ "WHERE AD_Role_ID=? AND IsActive='Y'";
+			try
+			{
+				pstmt = DB.prepareStatement(sql, get_TrxName());
+				pstmt.setInt(1, getAD_Role_ID());
+				rs = pstmt.executeQuery();
+				while (rs.next())
+					list.add(new MTableAccess(getCtx(), rs, get_TrxName())); 
+			}
+			catch (Exception e)
+			{
+				log.log(Level.SEVERE, sql, e);
+			}
+			finally
+			{
+				DB.close(rs, pstmt);
+			}
+			m_tableAccess = new MTableAccess[list.size()];
+			list.toArray(m_tableAccess); 
+			if (log.isLoggable(Level.FINE)) log.fine("#" + m_tableAccess.length); 
 		}
-		catch (Exception e)
-		{
-			log.log(Level.SEVERE, sql, e);
-		}
-		finally
-		{
-			DB.close(rs, pstmt);
-		}
-		m_tableAccess = new MTableAccess[list.size()];
-		list.toArray(m_tableAccess); 
-		if (log.isLoggable(Level.FINE)) log.fine("#" + m_tableAccess.length); 
 	}	//	loadTableAccess
 
 	/**
@@ -885,48 +889,51 @@ public final class MRole extends X_AD_Role
 	 */
 	private void loadTableInfo (boolean reload)
 	{
-		if (m_tableAccessLevel != null && m_tableName != null && !reload)
-			return;
-		m_tableAccessLevel = new HashMap<Integer,String>(300);
-		m_tableName = new HashMap<String,Integer>(300);
-		m_viewName = new HashSet<String>(300);
-		m_tableIdName = new HashMap<String,String>(300);
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		String sql = "SELECT AD_Table_ID, AccessLevel, TableName, IsView, "
-			+ "(SELECT ColumnName FROM AD_COLUMN WHERE AD_COLUMN.AD_TABLE_ID = AD_TABLE.AD_TABLE_ID AND AD_COLUMN.COLUMNNAME = AD_TABLE.TABLENAME || '_ID') "
-			+ "FROM AD_Table WHERE IsActive='Y'";
-		try
-		{
-			pstmt = DB.prepareStatement(sql, get_TrxName());
-			rs = pstmt.executeQuery();
-			while (rs.next())
+		synchronized(this) {	// F3P: synchronized load (before null check to try to reduce duplicate loading)
+			if (m_tableAccessLevel != null && m_tableName != null && !reload)
+				return;
+			m_tableAccessLevel = new HashMap<Integer,String>(300);
+			m_tableName = new HashMap<String,Integer>(300);
+			m_viewName = new HashSet<String>(300);
+			m_tableIdName = new HashMap<String,String>(300);
+			PreparedStatement pstmt = null;
+			ResultSet rs = null;
+			String sql = "SELECT AD_Table_ID, AccessLevel, TableName, IsView, "
+				+ "(SELECT ColumnName FROM AD_COLUMN WHERE AD_COLUMN.AD_TABLE_ID = AD_TABLE.AD_TABLE_ID AND AD_COLUMN.COLUMNNAME = AD_TABLE.TABLENAME || '_ID') "
+				+ "FROM AD_Table WHERE IsActive='Y'";
+			try
 			{
-				Integer ii = new Integer(rs.getInt(1));
-				m_tableAccessLevel.put(ii, rs.getString(2));
-				String tableName = rs.getString(3); 
-				m_tableName.put(tableName, ii);
-				String isView = rs.getString(4);
-				if ("Y".equals(isView))
+				pstmt = DB.prepareStatement(sql, get_TrxName());
+				rs = pstmt.executeQuery();
+				while (rs.next())
 				{
-					m_viewName.add(tableName.toUpperCase());
-				}
-				String idColumn = rs.getString(5);
-				if (idColumn != null && idColumn.trim().length() > 0)
-				{
-					m_tableIdName.put(tableName.toUpperCase(), idColumn);
-				}
-			} 
+					Integer ii = new Integer(rs.getInt(1));
+					m_tableAccessLevel.put(ii, rs.getString(2));
+					String tableName = rs.getString(3); 
+					// nectosoft (genied) table name should be case insensitive
+					m_tableName.put(tableName.toUpperCase(), ii);
+					String isView = rs.getString(4);
+					if ("Y".equals(isView))
+					{
+						m_viewName.add(tableName.toUpperCase());
+					}
+					String idColumn = rs.getString(5);
+					if (idColumn != null && idColumn.trim().length() > 0)
+					{
+						m_tableIdName.put(tableName.toUpperCase(), idColumn);
+					}
+				} 
+			}
+			catch (Exception e)
+			{
+				log.log(Level.SEVERE, sql, e);
+			}
+			finally
+			{
+				DB.close(rs, pstmt);
+			}
+			if (log.isLoggable(Level.FINE)) log.fine("#" + m_tableAccessLevel.size()); 
 		}
-		catch (Exception e)
-		{
-			log.log(Level.SEVERE, sql, e);
-		}
-		finally
-		{
-			DB.close(rs, pstmt);
-		}
-		if (log.isLoggable(Level.FINE)) log.fine("#" + m_tableAccessLevel.size()); 
 	}	//	loadTableAccessLevel
 
 	/**
@@ -986,40 +993,42 @@ public final class MRole extends X_AD_Role
 	 */
 	private void loadRecordAccess(boolean reload)
 	{
-		if (!(reload || m_recordAccess == null || m_recordDependentAccess == null))
-			return;
-		ArrayList<MRecordAccess> list = new ArrayList<MRecordAccess>();
-		ArrayList<MRecordAccess> dependent = new ArrayList<MRecordAccess>();
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		String sql = "SELECT * FROM AD_Record_Access "
-			+ "WHERE AD_Role_ID=? AND IsActive='Y' ORDER BY AD_Table_ID";
-		try
-		{
-			pstmt = DB.prepareStatement(sql, get_TrxName());
-			pstmt.setInt(1, getAD_Role_ID());
-			rs = pstmt.executeQuery();
-			while (rs.next())
+		synchronized(this) {	// F3P: synchronized load (before null check to try to reduce duplicate loading)
+			if (!(reload || m_recordAccess == null || m_recordDependentAccess == null))
+				return;
+			ArrayList<MRecordAccess> list = new ArrayList<MRecordAccess>();
+			ArrayList<MRecordAccess> dependent = new ArrayList<MRecordAccess>();
+			PreparedStatement pstmt = null;
+			ResultSet rs = null;
+			String sql = "SELECT * FROM AD_Record_Access "
+				+ "WHERE AD_Role_ID=? AND IsActive='Y' ORDER BY AD_Table_ID";
+			try
 			{
-				MRecordAccess ra = new MRecordAccess(getCtx(), rs, get_TrxName());
-				list.add(ra);
-				if (ra.isDependentEntities())
-					dependent.add(ra);
-			} 
+				pstmt = DB.prepareStatement(sql, get_TrxName());
+				pstmt.setInt(1, getAD_Role_ID());
+				rs = pstmt.executeQuery();
+				while (rs.next())
+				{
+					MRecordAccess ra = new MRecordAccess(getCtx(), rs, get_TrxName());
+					list.add(ra);
+					if (ra.isDependentEntities())
+						dependent.add(ra);
+				} 
+			}
+			catch (Exception e)
+			{
+				log.log(Level.SEVERE, sql, e);
+			}
+			finally
+			{
+				DB.close(rs, pstmt);
+			}
+			m_recordAccess = new MRecordAccess[list.size()];
+			list.toArray(m_recordAccess);
+			m_recordDependentAccess = new MRecordAccess[dependent.size()];
+			dependent.toArray(m_recordDependentAccess);
+			if (log.isLoggable(Level.FINE)) log.fine("#" + m_recordAccess.length + " - Dependent #" + m_recordDependentAccess.length);
 		}
-		catch (Exception e)
-		{
-			log.log(Level.SEVERE, sql, e);
-		}
-		finally
-		{
-			DB.close(rs, pstmt);
-		}
-		m_recordAccess = new MRecordAccess[list.size()];
-		list.toArray(m_recordAccess);
-		m_recordDependentAccess = new MRecordAccess[dependent.size()];
-		dependent.toArray(m_recordDependentAccess);
-		if (log.isLoggable(Level.FINE)) log.fine("#" + m_recordAccess.length + " - Dependent #" + m_recordDependentAccess.length); 
 	}	//	loadRecordAccess
 
 
@@ -1930,13 +1939,31 @@ public final class MRole extends X_AD_Role
 
 		//	Use First Table
 		String tableName = "";
-		if (ti.length > 0)
+		// nectosoft (genied): look for match in every TableInfo
+//		if (ti.length > 0)
+//		{
+//			tableName = ti[0].getSynonym();
+//			if (tableName.length() == 0)
+//				tableName = ti[0].getTableName();
+//		}
+
+		if (TableNameIn != null )
 		{
-			tableName = ti[0].getSynonym();
-			if (tableName.length() == 0)
-				tableName = ti[0].getTableName();
+			for (int i=0 ; i<ti.length ; i++)
+			{
+				if(TableNameIn.equalsIgnoreCase(ti[i].getTableName()) || TableNameIn.equalsIgnoreCase(ti[i].getSynonym()))
+				{
+					tableName = ti[i].getSynonym();
+					if (tableName.length() == 0)
+						tableName = ti[i].getTableName();
+					break;
+				}
+			}
+			
 		}
-		if (TableNameIn != null && !tableName.equals(TableNameIn))
+		
+		//if (TableNameIn != null && !tableName.equals(TableNameIn))
+		if (TableNameIn != null && tableName.length() == 0)
 		{
 			String msg = "TableName not correctly parsed - TableNameIn=" 
 				+ TableNameIn + " - " + asp;
@@ -2341,7 +2368,7 @@ public final class MRole extends X_AD_Role
 	private int getAD_Table_ID (String tableName)
 	{
 		loadTableInfo(false);
-		Integer ii = (Integer)m_tableName.get(tableName);
+		Integer ii = (Integer)m_tableName.get(tableName.toUpperCase()); // nectosoft (genied) table name should be case insensitive
 		if (ii != null)
 			return ii.intValue();
 	//	log.log(Level.WARNING,"getAD_Table_ID - not found (" + tableName + ")");

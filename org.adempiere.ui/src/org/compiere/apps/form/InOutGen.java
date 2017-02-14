@@ -27,6 +27,7 @@ import java.util.logging.Level;
 import org.compiere.apps.IStatusBar;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.minigrid.IMiniTable;
+import org.compiere.model.MInOut;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MPInstancePara;
 import org.compiere.model.MRMA;
@@ -366,4 +367,26 @@ public class InOutGen extends GenForm
 			return -1;
 		return ((Integer)m_M_Warehouse_ID);
 	}
+	
+	//F3P
+	
+	@Override
+	public String getDefaultDocAction()
+	{
+		//only 'PR' and 'CO' are valid value
+		String sDocAction = super.getDefaultDocAction();
+		
+		if(sDocAction != null)
+		{
+			if((sDocAction.equalsIgnoreCase(MInOut.ACTION_Complete) || 
+					sDocAction.equalsIgnoreCase(MInOut.ACTION_Prepare)) == false)
+			{
+				sDocAction = null;
+			}
+		}
+		
+		return sDocAction;
+	}
+	
+	//F3P End
 }

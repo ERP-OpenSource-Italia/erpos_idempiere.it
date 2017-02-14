@@ -151,6 +151,9 @@ public class ProcessInfo implements Serializable
 	
 	private int languageID = 0;
 	
+	//F3P: windowno for dialog
+	private int	m_windowNo = 0;
+	
 	public int getLanguageID() {
 		return languageID;
 	}
@@ -848,5 +851,18 @@ public class ProcessInfo implements Serializable
 	public void setPDFFileName(String fileName) {
 		this.m_PDFfileName = fileName;
 	}
+	
+	//F3P: add windowNo for dialog
+	public void setWindowNo(int windowNo)
+	{
+		m_windowNo = windowNo;
+	}
+	
+	public int getWindowNo()
+	{
+		return m_windowNo;
+	}
+	
+	//F3P end
 
 }   //  ProcessInfo

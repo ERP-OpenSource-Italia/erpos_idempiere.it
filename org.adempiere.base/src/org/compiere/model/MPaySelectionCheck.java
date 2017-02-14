@@ -302,12 +302,20 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 				else if (check.getPaymentRule().equals(PAYMENTRULE_DirectDeposit)
 					|| check.getPaymentRule().equals(PAYMENTRULE_DirectDebit))
 					payment.setBankACH(check);
+				else if (check.getPaymentRule().equals(PAYMENTRULE_OnCredit))	// F3P: added on credit management setting tendertype to account
+				{
+					payment.setTenderType(X_C_Payment.TENDERTYPE_Account);
+					payment.setC_BankAccount_ID(check.getParent().getC_BankAccount_ID());
+				}
+				// F3P end
 				else
 				{
 					s_log.log(Level.SEVERE, "Unsupported Payment Rule=" + check.getPaymentRule());
 					return;
 				}
 				payment.setTrxType(X_C_Payment.TRXTYPE_CreditPayment);
+				// F3P: set receipt/payment
+				payment.setIsReceipt(check.isReceipt());
 				payment.setAmount(check.getParent().getC_Currency_ID(), check.getPayAmt());
 				payment.setDiscountAmt(check.getDiscountAmt());
 				payment.setDateTrx(check.getParent().getPayDate());
@@ -336,8 +344,11 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 					payment.setOverUnderAmt(overUnder);
 				}
 				else
+				{
 					payment.setDiscountAmt(Env.ZERO);
-				payment.setWriteOffAmt(Env.ZERO);
+					payment.setWriteOffAmt(Env.ZERO); // F3P: moved into else to avoid overriding previously set value
+				}
+				// payment.setWriteOffAmt(Env.ZERO);
 				payment.saveEx();
 				//
 				int C_Payment_ID = payment.get_ID();

@@ -197,7 +197,13 @@ public final class ProcessUtil {
 		return success;
 	}
 
+	// F3P: added backward compatibily function
 	public static boolean startScriptProcess(Properties ctx, ProcessInfo pi, Trx trx) {
+		return startScriptProcess(ctx, pi, trx, true);
+	}
+	
+	// F3P: added flag to make it behave like startJavaProcess
+	public static boolean startScriptProcess(Properties ctx, ProcessInfo pi, Trx trx, boolean managedTrx ) {
 		String msg = null;
 		boolean success = true;
 		try
@@ -284,7 +290,7 @@ public final class ProcessUtil {
 			success = false;
 		}
 		if (success) {
-			if (trx != null)
+			if (trx != null && managedTrx)
 			{
 				try
 				{
@@ -299,7 +305,7 @@ public final class ProcessUtil {
 				trx.close();
 			}
 		} else {
-			if (trx != null)
+			if (trx != null && managedTrx)
 			{
 				trx.rollback();
 				trx.close();

@@ -32,6 +32,7 @@ import org.adempiere.exceptions.PeriodClosedException;
 import org.adempiere.util.IProcessUI;
 import org.adempiere.util.PaymentUtil;
 import org.compiere.process.DocAction;
+import org.compiere.process.DocOptions;
 import org.compiere.process.DocumentEngine;
 import org.compiere.process.ProcessCall;
 import org.compiere.process.ProcessInfo;
@@ -78,7 +79,7 @@ import org.compiere.util.ValueNamePair;
  *  @version 	$Id: MPayment.java,v 1.4 2006/10/02 05:18:39 jjanke Exp $
  */
 public class MPayment extends X_C_Payment 
-	implements DocAction, ProcessCall, PaymentInterface
+	implements DocAction, ProcessCall, PaymentInterface, DocOptions //F3P:add DocOption
 {
 
 	private static final long serialVersionUID = -7179638016937305380L;
@@ -276,6 +277,9 @@ public class MPayment extends X_C_Payment
 		//	Target Bank
 		int C_BP_BankAccount_ID = preparedPayment.getC_BP_BankAccount_ID();
 		MBPBankAccount ba = new MBPBankAccount (preparedPayment.getCtx(), C_BP_BankAccount_ID, null);
+		//LS
+		setC_BP_BankAccount_ID(C_BP_BankAccount_ID);
+		//LS END
 		setRoutingNo(ba.getRoutingNo());
 		setAccountNo(ba.getAccountNo());
 		setDescription(preparedPayment.getC_PaySelection().getName());
@@ -1435,7 +1439,7 @@ public class MPayment extends X_C_Payment
 	public void setC_DocType_ID (boolean isReceipt)
 	{
 		setIsReceipt(isReceipt);
-		String sql = "SELECT C_DocType_ID FROM C_DocType WHERE IsActive='Y' AND AD_Client_ID=? AND DocBaseType=? ORDER BY IsDefault DESC";
+		String sql = "SELECT C_DocType_ID FROM C_DocType WHERE IsActive='Y' AND AD_Client_ID=? AND DocBaseType=? AND AD_ORG_ID in (0,?) ORDER BY IsDefault DESC, AD_Org_ID DESC"; //F3P added: ad_org_id
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
@@ -1446,6 +1450,8 @@ public class MPayment extends X_C_Payment
 				pstmt.setString(2, X_C_DocType.DOCBASETYPE_ARReceipt);
 			else
 				pstmt.setString(2, X_C_DocType.DOCBASETYPE_APPayment);
+			//F3P
+			pstmt.setInt(3, getAD_Org_ID());
 			rs = pstmt.executeQuery();
 			if (rs.next())
 				setC_DocType_ID(rs.getInt(1));
@@ -2349,7 +2355,7 @@ public class MPayment extends X_C_Payment
 				boolean isSOTrx = "Y".equals(rs.getString(3));
 				BigDecimal PayAmt = rs.getBigDecimal(4);
 				BigDecimal DiscountAmt = rs.getBigDecimal(5);
-				BigDecimal WriteOffAmt = Env.ZERO;
+				BigDecimal WriteOffAmt = rs.getBigDecimal(6); // F3P: writeoff is not red from line // Env.ZERO;
 				BigDecimal OpenAmt = rs.getBigDecimal(7);
 				BigDecimal OverUnderAmt = OpenAmt.subtract(PayAmt)
 					.subtract(DiscountAmt).subtract(WriteOffAmt);
@@ -2754,8 +2760,102 @@ public class MPayment extends X_C_Payment
 		if (m_processMsg != null)
 			return false;	
 		
+		// F3P: non exaclty a reactivation...
+		/*
 		if (! reverseCorrectIt())
 			return false;
+		*/
+		// Counter document ? reactivate it
+		
+		if(getRef_Payment_ID() > 0)
+		{
+			
+			Query qPayment = new Query(getCtx(), Table_Name, "C_Payment_ID = ?", get_TrxName());
+			qPayment.setParameters(getRef_Payment_ID());			
+			MPayment mPayment = qPayment.first();
+			
+			m_processMsg = "Cannot reactivate, delete counter doc " + mPayment.getDocumentNo();
+		}
+		
+		// Cash movement ?
+		
+		if(isCashTrx() && !MSysConfig.getBooleanValue("CASH_AS_PAYMENT", true , getAD_Client_ID())) 
+		{
+			Query qCashLine = new Query(getCtx(), MCashLine.Table_Name, "C_Payment_ID = ?", get_TrxName());
+			qCashLine.setParameters(getC_Payment_ID());
+			MCashLine mCashLine = qCashLine.first();
+			
+			if(mCashLine != null)
+			{
+				MCash mCash = mCashLine.getParent();
+				if(mCash.getDocStatus().equals(MCash.DOCSTATUS_Drafted) 
+						|| mCash.getDocStatus().equals(MCash.DOCSTATUS_InProgress)
+						|| mCash.getDocStatus().equals(MCash.DOCSTATUS_Invalid))
+				{
+					mCashLine.delete(false);
+				}
+				else
+				{
+					m_processMsg = Msg.parseTranslation(getCtx(), "@M_Cash_ID@ " + mCash.getDocumentNo() +
+							" @NotValid@ (@DocStatus@: " + mCash.getDocStatus());
+				}
+			}
+		}
+		
+		// Pre-check failed, exit with error message
+		
+		if(m_processMsg != null)
+			return false;
+		
+		// Remove Allocations and un-link payment
+		
+		MAllocationHdr[] mAllocationHdrs = MAllocationHdr.getOfPayment(getCtx(), getC_Payment_ID(), get_TrxName());
+		
+		for(MAllocationHdr mAllocationHdr:mAllocationHdrs)
+		{
+			mAllocationHdr.deleteEx(true,get_TrxName());
+		}
+				
+		// Update BP Status
+		
+		if (getC_BPartner_ID() != 0 && getC_Invoice_ID() == 0 && getC_Charge_ID() == 0)
+		{
+			MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), get_TrxName());
+			//	Update total balance to include this payment 
+			BigDecimal payAmt = MConversionRate.convertBase(getCtx(), getPayAmt(), 
+				getC_Currency_ID(), getDateAcct(), getC_ConversionType_ID(), getAD_Client_ID(), getAD_Org_ID());
+			if (payAmt == null)
+			{
+				m_processMsg = "Could not convert C_Currency_ID=" + getC_Currency_ID()
+					+ " to base C_Currency_ID=" + MClient.get(Env.getCtx()).getC_Currency_ID();
+				return false;
+			}
+			//	Total Balance
+			BigDecimal newBalance = bp.getTotalOpenBalance();
+			if (newBalance == null)
+				newBalance = Env.ZERO;
+			if (isReceipt())
+				newBalance = newBalance.add(payAmt); // Was substract in completeIt
+			else
+				newBalance = newBalance.subtract(payAmt); // Was add in completeIt
+				
+			bp.setTotalOpenBalance(newBalance);
+			bp.setSOCreditStatus();
+			bp.saveEx();
+		}		
+		
+		// Delete accounting
+		
+		MFactAcct.deleteEx(Table_ID, getC_Payment_ID(), get_TrxName());
+		
+		// Change state
+		
+		setDocStatus(DOCSTATUS_Drafted);
+		setDocAction(DOCACTION_Complete);
+		setIsApproved(false);
+		setProcessed(false);
+		setPosted(false);
+		setIsAllocated(false);
 
 		// After reActivate
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_REACTIVATE);
@@ -3002,6 +3102,21 @@ public class MPayment extends X_C_Payment
 	private MAllocationHdr m_justCreatedAllocInv = null;
 	public MAllocationHdr getJustCreatedAllocInv() {
 		return m_justCreatedAllocInv;
+	}
+	
+	// F3P: needed to manage reactivate state
+
+	@Override
+	public int customizeValidActions(String docStatus, Object processing, 
+			String orderType, String isSOTrx, int AD_Table_ID, String[] docAction, String[] options, int index)
+	{
+		
+		if(docStatus.equals(DOCSTATUS_Completed))
+		{
+			options[index++] = ACTION_ReActivate;
+		}
+		
+		return index;
 	}
 	
 }   //  MPayment

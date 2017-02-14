@@ -146,6 +146,13 @@ public class VInOutGen extends InOutGen implements FormPanel, ActionListener, Ve
 				false, "AD_Ref_List.Value IN ('CO','PR','--')");
 		docAction = new VLookup("DocAction", true, false, true,docActionL);
 		docAction.addVetoableChangeListener(this);
+		
+		//F3P: set default doc action
+		String sDocAction = getDefaultDocAction();
+		if(sDocAction != null)
+			docAction.setValue(sDocAction);
+		//F3P end
+		
 		//		C_Order.C_BPartner_ID
 		MLookup bpL = MLookupFactory.get (Env.getCtx(), m_WindowNo, 0, 2762, DisplayType.Search);
 		fBPartner = new VLookup ("C_BPartner_ID", false, false, true, bpL);

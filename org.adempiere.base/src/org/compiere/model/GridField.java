@@ -35,6 +35,9 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptException;
+
 import org.adempiere.base.ILookupFactory;
 import org.adempiere.base.Service;
 import org.adempiere.exceptions.AdempiereException;
@@ -352,6 +355,12 @@ public class GridField
 //	  Do we have a mandatory rule
 		if (checkContext && m_vo.MandatoryLogic.length() > 0)
 		{
+			// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+			if(m_vo.MandatoryLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+			{
+				return evaluateScript(m_vo.MandatoryLogic);
+			}
+			
 			boolean retValue = Evaluator.evaluateLogic(this, m_vo.MandatoryLogic);
 			if (log.isLoggable(Level.FINEST)) log.finest(m_vo.ColumnName + " Mandatory(" + m_vo.MandatoryLogic + ") => Mandatory-" + retValue);
 			if (retValue)
@@ -386,6 +395,12 @@ public class GridField
 	public boolean isEditablePara(boolean checkContext) {
 		if (checkContext && m_vo.ReadOnlyLogic.length() > 0)
 		{
+			// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+			if(m_vo.ReadOnlyLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+			{
+				return evaluateScript(m_vo.ReadOnlyLogic);
+			}
+			
 			boolean retValue = !Evaluator.evaluateLogic(this, m_vo.ReadOnlyLogic);
 			if (log.isLoggable(Level.FINEST)) log.finest(m_vo.ColumnName + " R/O(" + m_vo.ReadOnlyLogic + ") => R/W-" + retValue);
 			if (!retValue)
@@ -489,6 +504,12 @@ public class GridField
 		//  Do we have a readonly rule
 		if (checkContext && m_vo.ReadOnlyLogic.length() > 0)
 		{
+			// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+			if(m_vo.ReadOnlyLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+			{
+				return evaluateScript(m_vo.ReadOnlyLogic);
+			}
+			
 			boolean retValue = !Evaluator.evaluateLogic(this, m_vo.ReadOnlyLogic);
 			if (log.isLoggable(Level.FINEST)) log.finest(m_vo.ColumnName + " R/O(" + m_vo.ReadOnlyLogic + ") => R/W-" + retValue);
 			if (!retValue)
@@ -1159,6 +1180,12 @@ public class GridField
 		if (m_vo.DisplayLogic.equals(""))
 			return true;
 
+		// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+		if (checkContext && m_vo.DisplayLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+		{
+			return evaluateScript(m_vo.DisplayLogic);
+		}
+		
 		//  ** dynamic content **
 		if (checkContext)
 		{
@@ -1175,6 +1202,77 @@ public class GridField
 		return true;
 	}	//	isDisplayed
 
+	//Angelo Dabala' (genied)
+	/**
+	 * Evaluate Display, ReadOnly and Mandatory logic using a script
+	 * @author Angelo Dabala' (genied)
+	 * @param ruleName name of the script to invoke
+	 * @return true or false
+	 */
+	private boolean evaluateScript(String ruleName)
+	{
+			String retValue;
+		MRule rule = MRule.get(m_vo.ctx, ruleName.substring(MRule.SCRIPT_PREFIX.length()));
+			if (rule == null) {
+			retValue = "Script Rule " + ruleName + " not found"; 
+				log.log(Level.SEVERE, retValue);
+				return true;
+			}
+			// TODO add new EVENTTYPE
+			if ( !  (rule.getRuleType().equals(MRule.RULETYPE_JSR223ScriptingAPIs))) {
+			retValue = "Script Rule " + ruleName
+					+ " must be of type JSR 223"; 
+				log.log(Level.SEVERE, retValue);
+				return true;
+			}
+
+			ScriptEngine engine = rule.getScriptEngine();
+
+			// Window context are    W_
+			// Login context  are    G_
+			MRule.setContext(engine, m_vo.ctx, m_vo.WindowNo);
+			// now add the callout parameters windowNo, tab, field, value, oldValue to the engine 
+			// Method arguments context are A_
+			engine.put(MRule.ARGUMENTS_PREFIX + "WindowNo", m_vo.WindowNo);
+			engine.put(MRule.ARGUMENTS_PREFIX + "Tab", getGridTab());
+			engine.put(MRule.ARGUMENTS_PREFIX + "Field", this);
+			engine.put(MRule.ARGUMENTS_PREFIX + "Value", getValue());
+			engine.put(MRule.ARGUMENTS_PREFIX + "OldValue", getOldValue());
+			engine.put(MRule.ARGUMENTS_PREFIX + "Ctx", m_vo.ctx);
+
+		Object result = null;
+			try 
+			{
+			String script = rule.getScript();
+			if(script != null)
+				result = engine.eval(script);
+			}
+		catch (ScriptException se)
+			{
+			retValue = 	"Script Rule Invalid: " + se.getMessage();
+			log.log(Level.SEVERE, "", retValue);
+				return true;
+			}
+		catch (Exception e)
+		{
+			retValue = 	"Script Rule Invalid: " + e.toString();
+			log.log(Level.SEVERE, "", retValue);
+			return true;
+		}
+		if (result != null) 
+		{
+			 if (result instanceof Boolean) 
+				 return ((Boolean)result).booleanValue();
+			 if (result instanceof String)
+			 {
+				 if("Y".equals(result) || "true".equalsIgnoreCase((String)result))
+		return true;
+			 }
+		}
+		return false;
+	}
+	//Angelo Dabala' (genied) end 
+	
 	/**
 	 * 	Get Variable Value (Evaluatee)
 	 *	@param variableName name
@@ -2331,8 +2429,10 @@ public class GridField
 	 */
 	public List<String> getEntries() {
 		ArrayList<String> list = new ArrayList<String>();
-		PreparedStatement pstmt1;
-		PreparedStatement pstmt2;
+		PreparedStatement pstmt1 = null;
+		PreparedStatement pstmt2 = null;
+		ResultSet rs1 = null;
+		ResultSet rs2 = null;
 		String sql = "";
 		
 		try
@@ -2346,13 +2446,12 @@ public class GridField
 					" WHERE AD_Column_ID=?";
 			pstmt1 = DB.prepareStatement(sql, null);
 			pstmt1.setInt(1, getAD_Column_ID());
-			ResultSet rs1 = pstmt1.executeQuery();
+			rs1 = pstmt1.executeQuery();
 			if (rs1.next())
 			{
 				tableName = rs1.getString(1);
 				columnName = rs1.getString(2);
-							}
-			DB.close(rs1, pstmt1);
+			}
 			
 			if (tableName != null && columnName != null) {
 				sql = "SELECT DISTINCT "  + columnName + " FROM " + tableName + " WHERE AD_Client_ID=? "
@@ -2361,19 +2460,26 @@ public class GridField
 				pstmt2.setInt(1, AD_Client_ID);
 				pstmt2.setInt(2, AD_Org_ID);
 				
-				ResultSet rs2 = pstmt2.executeQuery();
+				rs2 = pstmt2.executeQuery();
 				while (rs2.next())
 				{
 					list.add(rs2.getString(1));
 				}
-				DB.close(rs2, pstmt2);
 			}
 		}
 		catch (Exception e)
 		{
 			log.log(Level.SEVERE, sql, e);
 		}
-		
+		finally //F3P: from adempiere
+		{
+			DB.close(rs1, pstmt1);
+			DB.close(rs2, pstmt2);
+			pstmt1 = null;
+			pstmt2 = null;
+			rs1 = null;
+			rs2 = null;
+		}
 		
 		return list;
 	}
@@ -2402,6 +2508,13 @@ public class GridField
 	{
 		if (m_gridTab == null)
 			return false;
+		//F3P: porting adempiere
+		// this functionality must preserve the value of the parent tab JUST when is an included tab
+		// not included tabs can have Processed fields and is valid to add records in details on these cases
+		// like the Payment Schedule tab on Invoice (Customer) window
+		if (!m_gridTab.isIncluded())
+			return false;
+		//F3P: end
 		GridTab parentTab = m_gridTab.getParentTab();
 		while (parentTab != null)
 		{
@@ -2494,5 +2607,12 @@ public class GridField
 	{
 		return m_lookupEditorSettingValue;
 	}
+	
+	//F3P
+	public boolean getInserting()
+	{
+		return m_inserting;
+	}
+	//F3P end
 
 }   //  GridField

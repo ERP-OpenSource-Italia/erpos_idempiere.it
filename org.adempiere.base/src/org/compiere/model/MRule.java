@@ -56,6 +56,9 @@ public class MRule extends X_AD_Rule
 	public final static String PARAMETERS_PREFIX = "P_";
 	
 	public static final String SCRIPT_PREFIX = "@script:";
+	
+	// F3P: added to support sql callouts
+	public static final String SQL_PREFIX = "@sql:";	
 
 	/**
 	 * 	Get Rule from Cache

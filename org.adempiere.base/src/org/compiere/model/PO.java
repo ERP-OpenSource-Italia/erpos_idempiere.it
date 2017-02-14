@@ -678,7 +678,22 @@ public abstract class PO
 			return false;
 		if (m_newValues[index] == Null.NULL && m_oldValues[index] == null)
 			return false;
-		return !m_newValues[index].equals(m_oldValues[index]);
+		//return !m_newValues[index].equals(m_oldValues[index]);
+		if(!m_newValues[index].equals(m_oldValues[index]))
+		{
+			//Cristiano Lazzaro (genied)
+			if (m_newValues[index].getClass() != null && m_oldValues[index] != null 
+					&& m_newValues[index].getClass().equals(BigDecimal.class) && m_newValues[index].getClass().equals(m_oldValues[index].getClass()))
+			{
+				BigDecimal bd1 = (BigDecimal)m_newValues[index];
+				BigDecimal bd2 = (BigDecimal)m_oldValues[index];
+				if (bd1.compareTo(bd2) == 0) return false;
+				else return true;
+			}
+			else return true;
+		}
+		else
+			return false;
 	}   //  is_ValueChanged
 
 	/**
