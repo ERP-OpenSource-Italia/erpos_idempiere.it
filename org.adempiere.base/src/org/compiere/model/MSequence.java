@@ -31,6 +31,7 @@ import java.util.Date;
 import java.util.Properties;
 import java.util.Vector;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.DBException;
@@ -319,8 +320,14 @@ public class MSequence extends X_AD_Sequence
 		
 		return getDocumentNoFromSeq(seq, trxName, po);
 	}	//	getDocumentNo
-
+	
+	// F3P: added sForcedDateColumn and compatibility function
+	
 	public static String getDocumentNoFromSeq(MSequence seq, String trxName, PO po) {
+		return getDocumentNoFromSeq(seq,trxName, po, null);
+	}
+
+	public static String getDocumentNoFromSeq(MSequence seq, String trxName, PO po, String sForcedDateColumn) {
 		//	Check AdempiereSys
 		boolean adempiereSys = false;
 		if (Ini.isClient()) 
@@ -347,6 +354,18 @@ public class MSequence extends X_AD_Sequence
 		String prefix = seq.getPrefix();
 		String suffix = seq.getSuffix();
 		String decimalPattern = seq.getDecimalPattern();
+		
+		// F3P: Do we have a forced date column ? if so, ignore dateColumn from db
+		
+		String sBackupDateColumn = null;
+		
+		if(sForcedDateColumn != null)
+		{
+			sBackupDateColumn = dateColumn;
+			dateColumn = sForcedDateColumn;			
+		}
+		
+		// F3P: end
 
 		String selectSQL = null;
 		if (isStartNewYear || isUseOrgLevel) {
@@ -534,6 +553,15 @@ public class MSequence extends X_AD_Sequence
 		//	create DocumentNo
 		StringBuilder doc = new StringBuilder();
 		if (prefix != null && prefix.length() > 0) {
+			
+			if(sBackupDateColumn != null && sForcedDateColumn != null) // F3P: Do we have both a dateColumn from db (backup), and a forced one ? if so replace it
+			{
+				if(prefix.indexOf(sBackupDateColumn) >= 0)
+				{
+					prefix = prefix.replaceAll(Pattern.quote(sBackupDateColumn), sForcedDateColumn);
+				}
+			}
+			
 			String prefixValue = Env.parseVariable(prefix, po, trxName, false);
 			if (!Util.isEmpty(prefixValue))
 				doc.append(prefixValue);
@@ -545,6 +573,15 @@ public class MSequence extends X_AD_Sequence
 			doc.append(next);
 
 		if (suffix != null && suffix.length() > 0) {
+			
+			if(sBackupDateColumn != null && sForcedDateColumn != null) // F3P: Do we have both a dateColumn from db (backup), and a forced one ? if so replace it
+			{
+				if(suffix.indexOf(sBackupDateColumn) >= 0)
+				{
+					suffix = suffix.replaceAll(Pattern.quote(sBackupDateColumn), sForcedDateColumn);
+				}
+			}
+			
 			String suffixValue = Env.parseVariable(suffix, po, trxName, false);
 			if (!Util.isEmpty(suffixValue))
 				doc.append(suffixValue);
