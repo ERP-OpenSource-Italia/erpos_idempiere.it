@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import javax.swing.ImageIcon;
 import javax.swing.JDialog;
@@ -101,6 +102,9 @@ public final class Env
 	
 	/**	Logger			*/
 	private static CLogger log = CLogger.getCLogger(Env.class);
+	
+	// F3P: needed for at-sign escaping
+	private static String AT_REGEX = Pattern.quote("@");
 
 	/**
 	 * @param provider
@@ -1511,6 +1515,17 @@ public final class Env
 				defaultV = token.substring(idx+1, token.length());
 				token = token.substring(0, idx);
 			}
+			
+			// F3P: ported format management, supporting only id-resolving as first step, since we have no way of knowing the type
+			//format string
+			String format = "";
+			int f = token.indexOf('<');
+			if (f > 0 && token.endsWith(">")) {
+				format = token.substring(f+1, token.length()-1);
+				token = token.substring(0, f);
+			}
+			
+			// F3P: end
 
 			String ctxInfo = getContext(ctx, WindowNo, tabNo, token, onlyTab);	// get context
 			if (ctxInfo.length() == 0 && (token.startsWith("#") || token.startsWith("$")) )
@@ -1526,7 +1541,27 @@ public final class Env
 					return "";						//	token not found
 			}
 			else
+			{
+				// F3P: ported format management
+				if (format != null && format.length() > 0) 
+				{
+					int tblIndex = format.indexOf(".");
+					if ((token.endsWith("_ID") || tblIndex > 0)) 
+					{
+						String table = tblIndex > 0 ? format.substring(0, tblIndex) : token.substring(0, token.length() - 3);
+						String column = tblIndex > 0 ? format.substring(tblIndex + 1) : format;
+						ctxInfo = (DB.getSQLValueString(null, 
+								"SELECT " + column + " FROM  " + table + " WHERE " + table + "_ID = ?", Integer.parseInt(ctxInfo)));
+					} 
+					else 
+					{
+						MessageFormat mf = new MessageFormat(format);
+						ctxInfo = mf.format(new Object[]{ctxInfo}); // F3P: parameter needs to be an array
+					}
+				}
+
 				outStr.append(ctxInfo);				// replace context with Context
+			}
 
 			inStr = inStr.substring(j+1, inStr.length());	// from second @
 			i = inStr.indexOf('@');
@@ -1572,9 +1607,12 @@ public final class Env
 	 * @param expression
 	 * @param po
 	 * @param trxName
+	 * @param keepUnparseable
+	 * @param escapeAt string to use to escape at-sign (used in multipass resolving of variables)
 	 * @return String
 	 */
-	public static String parseVariable(String expression, PO po, String trxName, boolean keepUnparseable) {
+	//F3P: at-sign escaping
+	public static String parseVariable(String expression, PO po, String trxName, boolean keepUnparseable, String sEscapeAt) {
 		if (expression == null || expression.length() == 0)
 			return "";
 
@@ -1610,17 +1648,92 @@ public final class Env
 				//take from context
 				String v = Env.getContext(ctx, token);
 				if (v != null && v.length() > 0)
+				{					
+					v = escapeAtSign(v, sEscapeAt); // F3P: at-sign escaping
 					outStr.append(v);
+				}
 				else if (keepUnparseable) {
 					outStr.append("@").append(token);
 					if (!Util.isEmpty(format))
 						outStr.append("<").append(format).append(">");
 					outStr.append("@");
 				}
-			} else if (po != null) {
-				//take from po
-				if (po.get_ColumnIndex(token) >= 0) {
-					Object v = po.get_Value(token);
+			} else if (po != null) { //take from po
+				//Cristiano Lazzaro (genied) : add SQL=
+				if (token.startsWith("SQL="))
+				{
+					int k = inStr.indexOf("SQL@");
+					if (k < 0)
+					{
+						if(log.isLoggable(Level.SEVERE))
+							log.log(Level.SEVERE, "No second SQL tag: " + inStr);
+						return "";						//	no second tag
+					}
+					j = k+3;
+					token = inStr.substring(0, k);
+					String sql = token.substring(4);			//	w/o tag
+					sql = Env.parseContext(po.getCtx(), 0, sql, false, false);	//	replace variables
+					if (sql.equals(""))
+					{
+						if(log.isLoggable(Level.WARNING))
+							log.log(Level.WARNING, "Default SQL variable parse failed: " + sql);
+						return "";
+					}
+					else
+					{
+						try
+						{
+							PreparedStatement stmt = DB.prepareStatement(sql, null);
+							ResultSet rs = stmt.executeQuery();
+							if (rs.next())
+								outStr.append(rs.getString(1));
+							else
+								if(log.isLoggable(Level.WARNING))
+									log.log(Level.WARNING, "No Result: " + sql);
+							rs.close();
+							stmt.close();
+						}
+						catch (SQLException e)
+						{
+							log.log(Level.WARNING, sql, e);
+						}
+					}
+				}
+				else
+				{	
+					// F3P: support <table>.<column> format for token (useful to avoid shadowing)
+					
+					String	sFullToken = token;
+					Object 	v = null;
+					String	sTablePart = null;
+					int		iDotPos = token.indexOf('.');
+					boolean	bFromPO = true;
+					
+					if(iDotPos > 0)
+					{
+						sTablePart = token.substring(0,iDotPos);
+						token = token.substring(iDotPos+1);
+						
+						if(sTablePart != null && sTablePart.equals(po.get_TableName()) == false)						
+						{		
+							bFromPO = false;
+						}
+					}
+						
+					if(bFromPO) // Compatible PO, read from it
+					{
+						if( po.get_ColumnIndex(token) >= 0) // If the token does not match a known value, avoid accessing it and get a warning
+						{
+							//take from po
+							v = po.get_Value(token);
+							
+							if(v == null && Util.isEmpty(format))
+							{
+								v = " ";
+							}
+						}					
+					}
+					
 					MColumn colToken = MColumn.get(ctx, po.get_TableName(), token);
 					String foreignTable = colToken.getReferenceTableName();
 					if (v != null) {
@@ -1642,7 +1755,7 @@ public final class Env
 										} else {
 											String value = DB.getSQLValueString(trxName,"SELECT " + columnName + " FROM " + tableName + " WHERE " + tableName + "_ID = ?", (Integer)v);
 											if (value != null)
-												outStr.append(value);
+												outStr.append(escapeAtSign(value, sEscapeAt)); // F3P: at-sign escaping
 										}
 									}
 								}
@@ -1654,18 +1767,24 @@ public final class Env
 								outStr.append(df.format(((Number)v).doubleValue()));
 							} else {
 								MessageFormat mf = new MessageFormat(format);
-								outStr.append(mf.format(v));
+								String sEffectiveV = mf.format(new Object[]{v}); // F3P: array of object, else exception: MessageFormat casts to Object[]
+								
+								// F3P: at-sign escaping
+								sEffectiveV = escapeAtSign(sEffectiveV, sEscapeAt);
+								
+								outStr.append(sEffectiveV); 
 							}
 						} else {
-							outStr.append(v.toString());
+							outStr.append(escapeAtSign(v.toString(), sEscapeAt)); // F3P: at-sign escaping
 						}
 					}
-				} else if (keepUnparseable) {
-					outStr.append("@").append(token);
-					if (!Util.isEmpty(format))
-						outStr.append("<").append(format).append(">");
-					outStr.append("@");
-				}
+					else if (keepUnparseable) {
+						outStr.append("@").append(sFullToken); //F3P fulltoken
+						if (!Util.isEmpty(format))
+							outStr.append("<").append(format).append(">");
+						outStr.append("@");
+					}
+				} 
 			}
 
 			inStr = inStr.substring(j+1, inStr.length());	// from second @
@@ -1674,6 +1793,37 @@ public final class Env
 		outStr.append(inStr);						// add the rest of the string
 
 		return outStr.toString();
+	}
+	
+	/**
+	 * Parse expression, replaces global or PO properties @tag@ with actual value. 
+	 * @param expression
+	 * @param po
+	 * @param trxName
+	 * @param keepUnparseable
+	 * @return String
+	 */
+	public static String parseVariable(String expression, PO po, String trxName, boolean keepUnparseable)
+	{
+		return parseVariable(expression,po,trxName,keepUnparseable, null);
+	}
+	
+	/**
+	 * Escape At-Sign in string (added for at-sign escaping in parseVariable)
+	 * 
+	 * @param sString
+	 * @param sEscapeAt
+	 * @return
+	 */
+	public static final String	escapeAtSign(String sString,String sEscapeAt)
+	{
+		// F3P: at-sign escaping
+		if(sEscapeAt != null && sString != null)
+		{
+			sString = sString.replaceAll(AT_REGEX, sEscapeAt);
+		}
+		
+		return sString;
 	}
 
 	/*************************************************************************/

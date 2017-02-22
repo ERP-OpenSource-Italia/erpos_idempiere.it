@@ -18,15 +18,13 @@ package org.compiere.model;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.text.SimpleDateFormat;
 import java.util.Properties;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import org.compiere.util.CCache;
 import org.compiere.util.DB;
-import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
-import org.compiere.util.Msg;
 import org.compiere.util.Util;
 
 /**
@@ -34,6 +32,11 @@ import org.compiere.util.Util;
  *	Cannot be cached as it holds PO/BPartner/User to parse
  *  @author Jorg Janke
  *  @version $Id: MMailText.java,v 1.3 2006/07/30 00:51:03 jjanke Exp $
+ *  
+ *  @author SVT
+ *  @author Silvano Trinchero, www.freepath.it
+ *		<li>ADEMPIERE-49 Customization of mail sent by request notifications
+ *			https://adempiere.atlassian.net/browse/ADEMPIERE-49
  */
 public class MMailText extends X_R_MailText
 {
@@ -42,6 +45,10 @@ public class MMailText extends X_R_MailText
 	 */
 	private static final long serialVersionUID = -3278575461023934790L;
 
+	//F3P: used by at-sign escaping
+	private static final String ESCAPE_AT = "_!_!_",
+			ESCAPE_AT_REGEX = Pattern.quote(ESCAPE_AT); 
+	
 	/**
 	 * 	Standard Constructor
 	 *	@param ctx context
@@ -112,9 +119,20 @@ public class MMailText extends X_R_MailText
 	 */
 	public String getMailText()
 	{
+		return getMailText("@"); //F3P: at-sign escaping 
+	}	//	getMailText
+	
+	/**
+	 * 	Get parsed/translated Mail Text
+	 * 	@param atReplacement
+	 *	@return parsed/translated text
+	 */
+	//F3P: at-sign escaping 
+	public String getMailText(String atReplacement)
+	{
 		if (m_MailText == null)
 			translate();
-		return parse (m_MailText);
+		return parse (m_MailText, atReplacement);
 	}	//	getMailText
 	
 	/**
@@ -123,22 +141,44 @@ public class MMailText extends X_R_MailText
 	 */
 	public String getMailText2()
 	{
-		if (m_MailText == null)
-			translate();
-		return parse (m_MailText2);
+		return getMailText2("@"); //F3P: at-sign escaping
 	}	//	getMailText2
 
 	/**
 	 * 	Get parsed/translated Mail Text 2
+	 * 	@param atReplacement
+	 *	@return parsed/translated text
+	 */
+	//F3P: at-sign escaping 
+	public String getMailText2(String atReplacement)
+	{
+		if (m_MailText == null)
+			translate();
+		return parse (m_MailText2, atReplacement);
+	}	//	getMailText2
+	
+	/**
+	 * 	Get parsed/translated Mail Text 3
 	 *	@return parsed/translated text
 	 */
 	public String getMailText3()
 	{
-		if (m_MailText == null)
-			translate();
-		return parse (m_MailText3);
+		return getMailText3("@"); //F3P: at-sign escaping
 	}	//	getMailText3
 
+	/**
+	 * 	Get parsed/translated Mail Text 3
+	 * 	@param atReplacement
+	 *	@return parsed/translated text
+	 */
+	//F3P: at-sign escaping 
+	public String getMailText3(String atReplacement)
+	{
+		if (m_MailText == null)
+			translate();
+		return parse (m_MailText3, atReplacement);
+	}	//	getMailText3
+	
 	/**
 	 * 	Get parsed/translated Mail Header
 	 *	@return parsed/translated text
@@ -157,8 +197,25 @@ public class MMailText extends X_R_MailText
 	 */
 	private String parse (String text)
 	{
+		return parse(text, "@");//F3P: at-sign escaping
+	}
+	
+	/**************************************************************************
+	 * 	Parse Text
+	 *	@param text text
+	 * 	@param atReplacement
+	 *	@return parsed text
+	 */
+	private String parse (String text, String atReplacement)
+	{
 		if (Util.isEmpty(text) || text.indexOf('@') == -1)
+		{
+			// F3P: unescape back to ESCAPE_AT -> at-sign
+			if(Util.isEmpty(text) == false)
+				text = text.replaceAll(ESCAPE_AT_REGEX, atReplacement);
+			
 			return text;
+		}
 		//	Parse User
 		text = parse (text, m_user);
 		//	Parse BP
@@ -166,6 +223,8 @@ public class MMailText extends X_R_MailText
 		//	Parse PO
 		text = parse (text, m_po);
 		//
+		// F3P: unescape back to ESCAPE_AT -> at-sign
+		text = text.replaceAll(ESCAPE_AT_REGEX, atReplacement);//we can't use at symbol here or adempiere will try to look for a context variable
 		return text;
 	}	//	parse
 	
@@ -175,73 +234,15 @@ public class MMailText extends X_R_MailText
 	 *	@param po object
 	 *	@return parsed text
 	 */
+	// ADEMPIERE-49: replaced custom evaluation with standard function, with more functionalities. Removed unused function
 	private String parse (String text, PO po)
 	{
 		if (po == null || Util.isEmpty(text) || text.indexOf('@') == -1)
 			return text;
 		
-		String inStr = text;
-		String token;
-		StringBuilder outStr = new StringBuilder();
-
-		int i = inStr.indexOf('@');
-		while (i != -1)
-		{
-			outStr.append(inStr.substring(0, i));			// up to @
-			inStr = inStr.substring(i+1, inStr.length());	// from first @
-
-			int j = inStr.indexOf('@');						// next @
-			if (j < 0)										// no second tag
-			{
-				inStr = "@" + inStr;
-				break;
-			}
-
-			token = inStr.substring(0, j);
-			outStr.append(parseVariable(token, po));		// replace context
-
-			inStr = inStr.substring(j+1, inStr.length());	// from second @
-			i = inStr.indexOf('@');
-		}
-
-		outStr.append(inStr);           					//	add remainder
-		return outStr.toString();
+		return Env.parseVariable(text, po, po.get_TrxName(), true, ESCAPE_AT); 
 	}	//	parse
 
-	/**
-	 * 	Parse Variable
-	 *	@param variable variable
-	 *	@param po po
-	 *	@return translated variable or if not found the original tag
-	 */
-	private String parseVariable (String variable, PO po)
-	{
-		int index = po.get_ColumnIndex(variable);
-		if (index == -1){
-			StringBuilder msgreturn = new StringBuilder("@").append(variable).append("@");
-			return msgreturn.toString();	//	keep for next
-		}	
-		//
-		MColumn col = MColumn.get(Env.getCtx(), po.get_TableName(), variable);
-		Object value = null;
-		if (col != null && col.isSecure()) {
-			value = "********";
-		} else if (col.getAD_Reference_ID() == DisplayType.Date || col.getAD_Reference_ID() == DisplayType.DateTime || col.getAD_Reference_ID() == DisplayType.Time) {
-			SimpleDateFormat sdf = DisplayType.getDateFormat(col.getAD_Reference_ID());
-			value = sdf.format (po.get_Value(index));	
-		} else if (col.getAD_Reference_ID() == DisplayType.YesNo) {
-			if (po.get_ValueAsBoolean(variable))
-				value = Msg.getMsg(Env.getCtx(), "Yes");
-			else
-				value = Msg.getMsg(Env.getCtx(), "No");
-		} else {
-			value = po.get_Value(index);
-		}
-		if (value == null)
-			return "";
-		return value.toString();
-	}	//	translate
-	
 	/**
 	 * 	Set User for parse
 	 *	@param AD_User_ID user
