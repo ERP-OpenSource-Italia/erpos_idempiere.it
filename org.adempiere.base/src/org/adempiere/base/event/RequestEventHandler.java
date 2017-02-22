@@ -27,6 +27,7 @@ import java.util.logging.Level;
 import org.adempiere.exceptions.DBException;
 import org.compiere.model.I_R_Request;
 import org.compiere.model.MClient;
+import org.compiere.model.MMailText;
 import org.compiere.model.MNote;
 import org.compiere.model.MRequest;
 import org.compiere.model.MRequestAction;
@@ -293,9 +294,28 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 				.append(": ").append(r.getDateNextAction());
 		message.append(MRequest.SEPARATOR)
 			.append(r.getSummary());
+		
 		if (r.getResult() != null)
 			message.append("\n----------\n").append(r.getResult());
-		message.append(getMailTrailer(r, null));
+
+		//F3P:
+		String trailer = getMailTrailer(r, null);
+		
+		MMailText				mMailText = r.getNoticesMailText();
+		boolean					bMailIsHtml = false;
+		
+		if(mMailText != null)
+		{
+			subject = r.getNoticesSubject(subject, mMailText);
+			message = new StringBuilder(r.getNoticesBody(message.toString(), trailer, mMailText));
+			bMailIsHtml = mMailText.isHtml();
+		}
+		else
+		{
+			message.append(trailer);
+		}
+		
+		//F3P End
 		File pdf = r.createPDF();
 		if (s_log.isLoggable(Level.FINER)) s_log.finer(message.toString());
 		
@@ -314,6 +334,10 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 			+ "GROUP BY u.AD_User_ID, u.NotificationType, u.EMail, u.Name";
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
+		
+		// ADEMPIERE-49: cache logged user, for later use
+		int iLoggedAD_User_ID = Env.getAD_User_ID(r.getCtx());
+		
 		try
 		{
 			pstmt = DB.prepareStatement (sql, r.get_TrxName());
@@ -323,6 +347,10 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 			while (rs.next ())
 			{
 				int AD_User_ID = rs.getInt(1);
+				
+				// ADEMPIERE-49: if notification is to be sent to the logged user, skip it
+				if(AD_User_ID == iLoggedAD_User_ID)
+					continue;
 				String NotificationType = rs.getString(2);
 				if (NotificationType == null)
 					NotificationType = X_AD_User.NOTIFICATIONTYPE_EMail;
@@ -378,7 +406,8 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 				if (X_AD_User.NOTIFICATIONTYPE_EMail.equals(NotificationType)
 					|| X_AD_User.NOTIFICATIONTYPE_EMailPlusNotice.equals(NotificationType))
 				{
-					RequestSendEMailEventData eventData = new RequestSendEMailEventData(client, from, to, subject, message.toString(), pdf, r.getR_Request_ID());
+					// ADEMPIERE-49: support send of mail with html body 
+					RequestSendEMailEventData eventData = new RequestSendEMailEventData(client, from, to, subject, message.toString(), pdf, r.getR_Request_ID(),bMailIsHtml);
 					Event event = EventManager.newEvent(IEventTopics.REQUEST_SEND_EMAIL, eventData);
 					EventManager.getInstance().postEvent(event);
 				}

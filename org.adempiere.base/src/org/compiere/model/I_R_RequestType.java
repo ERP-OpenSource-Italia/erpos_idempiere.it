@@ -208,6 +208,15 @@ public interface I_R_RequestType
 	  */
 	public boolean isDefault();
 
+    /** Column name IsEmailWhenChanged */
+    public static final String COLUMNNAME_IsEmailWhenChanged = "IsEmailWhenChanged";
+
+	/** Set Is Email When Changed	  */
+	public void setIsEmailWhenChanged (boolean IsEmailWhenChanged);
+
+	/** Get Is Email When Changed	  */
+	public boolean isEmailWhenChanged();
+
     /** Column name IsEMailWhenDue */
     public static final String COLUMNNAME_IsEMailWhenDue = "IsEMailWhenDue";
 
@@ -260,6 +269,10 @@ public interface I_R_RequestType
 	  */
 	public boolean isInvoiced();
 
+	/** Set Maintenance Request.
+	  * Maintenance Request
+	  */
+
     /** Column name IsSelfService */
     public static final String COLUMNNAME_IsSelfService = "IsSelfService";
 
@@ -285,6 +298,32 @@ public interface I_R_RequestType
 	  * Alphanumeric identifier of the entity
 	  */
 	public String getName();
+
+    /** Column name Processor_MailText_ID */
+    public static final String COLUMNNAME_Processor_MailText_ID = "Processor_MailText_ID";
+
+	/** Set Processor Mail Text	  */
+	public void setProcessor_MailText_ID (int Processor_MailText_ID);
+
+	/** Get Processor Mail Text	  */
+	public int getProcessor_MailText_ID();
+
+	public org.compiere.model.I_R_MailText getProcessor_MailText() throws RuntimeException;
+
+    /** Column name R_MailText_ID */
+    public static final String COLUMNNAME_R_MailText_ID = "R_MailText_ID";
+
+	/** Set Mail Template.
+	  * Text templates for mailings
+	  */
+	public void setR_MailText_ID (int R_MailText_ID);
+
+	/** Get Mail Template.
+	  * Text templates for mailings
+	  */
+	public int getR_MailText_ID();
+
+	public org.compiere.model.I_R_MailText getR_MailText() throws RuntimeException;
 
     /** Column name R_RequestType_ID */
     public static final String COLUMNNAME_R_RequestType_ID = "R_RequestType_ID";

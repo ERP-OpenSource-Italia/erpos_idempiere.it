@@ -40,6 +40,10 @@ public class MRequest extends X_R_Request
 	 */
 	private static final long serialVersionUID = -6049674214655497548L;
 	
+	//F3P:
+	public static final String AT_REPLACEMENT = "[[at]]";
+	//F3P end
+	
 	/**
 	 * 	Get Request ID from mail text
 	 *	@param mailText mail text
@@ -1004,5 +1008,145 @@ public class MRequest extends X_R_Request
 	{
 		this.m_changed = changed;
 	}
+	
+	//F3P:
+	
+		/**
+		 * Obtain the subject from MMailText, for usage in mail notifications
+		 * 
+		 * @param sOriginalSubject	original subject, usable as variable with @OriginalDetail@
+		 * @param mMailText					mail text
+		 * @return	the mail subject
+		 */
+		public String	getNoticesSubject(String sOriginalSubject,MMailText mMailText)
+		{
+			Properties ctxLocal = new Properties(mMailText.getCtx());
+			
+			// Put old subject into the local context
+			
+			Env.setContext(ctxLocal, "#OriginalSubject", sOriginalSubject);
+			
+			String sHeader = mMailText.getMailHeader();
+			
+			if(sHeader.indexOf('@') >= 0)
+			{
+				sHeader = Env.parseContext(ctxLocal, 0, sHeader, false, true);
+			}
+			return sHeader;
+		}
+		
+		/**
+		 * Obtain the message body from MMailText, for usage in mail notifications, using MailText field
+		 * 
+		 * @param sOriginalDetail		original detail, usable as variable with @OriginalDetail@
+		 * @param sOriginalTrailer	original trailer, usable as variable with @OriginalTrailer@
+		 * @param mMailText					
+		 * @return
+		 */
+		public String	getNoticesBody(String sOriginalDetail,String sOriginalTrailer,MMailText mMailText)
+		{
+			String sBody = mMailText.getMailText(AT_REPLACEMENT);
+			
+			return parseBodyText(sBody,sOriginalDetail,sOriginalTrailer);
+		}
+		
+		/**
+		 * Obtain mail text to be used to generate notices. The obtained mail text is ready to be used with getNoticesSubject and getNoticesBody, and using a 'local' context
+		 *  
+		 * @return the mail text of request type
+		 */
+		public MMailText	getNoticesMailText()
+		{
+			I_R_RequestType	mRequestType = getR_RequestType();
+			int R_MailText_ID = mRequestType.getR_MailText_ID();
+			//F3P: use searchMailText for search a mail text 
+			return searchMailText(R_MailText_ID);
+		}
+		
+		public MMailText searchMailText(int MailText_ID)
+		{
+			MMailText mMailText = null;
+			
+			if(MailText_ID > 0)
+			{
+				Query	qMailText = new Query(getCtx(), MMailText.Table_Name, MMailText.COLUMNNAME_R_MailText_ID + "= ?", get_TrxName());
+				qMailText.setParameters(MailText_ID);
+				
+				mMailText = qMailText.first();
+				
+				if(mMailText != null)
+				{
+					MBPartner	mBP = MBPartner.get(getCtx(), getC_BPartner_ID());
+					
+					if(mBP != null)
+					{
+						mMailText.setBPartner(mBP);
+					}
+					
+					MUser mUser = MUser.get(getCtx(), getAD_User_ID());
+					
+					if(mUser != null)
+					{
+						mMailText.setUser(mUser);
+					}
+								
+					mMailText.setPO(this);
+				}
+			}
+			
+			return mMailText;
+		}
+		
+		/**
+		 * Parse message context for original detail and trailer
+		 * 
+		 * @param sText							text to parse
+		 * @param sOriginalDetail		original detail
+		 * @param sOriginalTrailer	original trailer
+		 * @return parsed text
+		 */
+		protected String parseBodyText(String sText,String sOriginalDetail,String sOriginalTrailer)
+		{
+			if(sText != null && sText.indexOf('@') >= 0)
+			{
+				Properties ctxLocal = new Properties(getCtx());
+				
+				// Put old detail and trailer into the local context
+				
+				Env.setContext(ctxLocal, "#OriginalTrailer", ((sOriginalTrailer!=null)?sOriginalTrailer:"") );
+				Env.setContext(ctxLocal, "#OriginalDetail", ((sOriginalDetail!=null)?sOriginalDetail:""));
+				
+				//F3P: substitute [at] with the right symbol after parse context ran
+				String sBody = Env.parseContext(ctxLocal, 0, sText, false, true);
+				sBody = sBody.replace(AT_REPLACEMENT, "@");
+				return sBody;
+				//F3P: End
+			}
+			
+			return sText;
+		}
+		
+		public MMailText	getProcessorMailText()
+		{
+			I_R_RequestType	mRequestType = getR_RequestType();
+			int Processor_MailText_ID = mRequestType.getProcessor_MailText_ID();
+			return searchMailText(Processor_MailText_ID);
+		}
+		
+		/**
+		 * Obtain the message body from MMailText, for usage in mail notifications, using MailText2 field
+		 * 
+		 * @param sOriginalDetail		original detail, usable as variable with @OriginalDetail@
+		 * @param sOriginalTrailer	original trailer, usable as variable with @OriginalTrailer@
+		 * @param mMailText					
+		 * @return
+		 */
+		public String	getNoticesBody2(String sOriginalDetail,String sOriginalTrailer,MMailText mMailText)
+		{
+			String sBody = mMailText.getMailText2(AT_REPLACEMENT);
+			
+			return parseBodyText(sBody,sOriginalDetail,sOriginalTrailer);
+		}
+		//F3P end
 	
 }	//	MRequest

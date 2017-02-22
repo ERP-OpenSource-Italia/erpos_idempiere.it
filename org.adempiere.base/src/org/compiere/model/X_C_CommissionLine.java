@@ -32,7 +32,7 @@ public class X_C_CommissionLine extends PO implements I_C_CommissionLine, I_Pers
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20170216L;
 
     /** Standard Constructor */
     public X_C_CommissionLine (Properties ctx, int C_CommissionLine_ID, String trxName)
@@ -48,6 +48,7 @@ public class X_C_CommissionLine extends PO implements I_C_CommissionLine, I_Pers
 			setIsPositiveOnly (false);
 			setLine (0);
 // @SQL=SELECT NVL(MAX(Line),0)+10 AS DefaultValue FROM C_CommissionLine WHERE C_Commission_ID=@C_Commission_ID@
+			setOnlyProduct (false);
 			setQtyMultiplier (Env.ZERO);
 			setQtySubtract (Env.ZERO);
         } */
@@ -419,6 +420,27 @@ public class X_C_CommissionLine extends PO implements I_C_CommissionLine, I_Pers
 		return ii.intValue();
 	}
 
+	/** Set Commision only on Product.
+		@param OnlyProduct Commision only on Product	  */
+	public void setOnlyProduct (boolean OnlyProduct)
+	{
+		set_Value (COLUMNNAME_OnlyProduct, Boolean.valueOf(OnlyProduct));
+	}
+
+	/** Get Commision only on Product.
+		@return Commision only on Product	  */
+	public boolean isOnlyProduct () 
+	{
+		Object oo = get_Value(COLUMNNAME_OnlyProduct);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
 	/** Set Organization.
 		@param Org_ID 
 		Organizational entity within client
@@ -458,6 +480,8 @@ public class X_C_CommissionLine extends PO implements I_C_CommissionLine, I_Pers
 	public static final String PAYMENTRULE_DirectDebit = "D";
 	/** Mixed POS Payment = M */
 	public static final String PAYMENTRULE_MixedPOSPayment = "M";
+	/** Ricevuta Bancaria = R */
+	public static final String PAYMENTRULE_RicevutaBancaria = "R";
 	/** Set Payment Rule.
 		@param PaymentRule 
 		How you pay the invoice

@@ -30,7 +30,7 @@ public class X_R_RequestType extends PO implements I_R_RequestType, I_Persistent
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20170126L;
 
     /** Standard Constructor */
     public X_R_RequestType (Properties ctx, int R_RequestType_ID, String trxName)
@@ -277,6 +277,27 @@ public class X_R_RequestType extends PO implements I_R_RequestType, I_Persistent
 		return false;
 	}
 
+	/** Set Is Email When Changed.
+		@param IsEmailWhenChanged Is Email When Changed	  */
+	public void setIsEmailWhenChanged (boolean IsEmailWhenChanged)
+	{
+		set_Value (COLUMNNAME_IsEmailWhenChanged, Boolean.valueOf(IsEmailWhenChanged));
+	}
+
+	/** Get Is Email When Changed.
+		@return Is Email When Changed	  */
+	public boolean isEmailWhenChanged () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsEmailWhenChanged);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
 	/** Set EMail when Due.
 		@param IsEMailWhenDue 
 		Send EMail when Request becomes due
@@ -421,6 +442,59 @@ public class X_R_RequestType extends PO implements I_R_RequestType, I_Persistent
     {
         return new KeyNamePair(get_ID(), getName());
     }
+
+	public org.compiere.model.I_R_MailText getProcessor_MailText() throws RuntimeException
+    {
+		return (org.compiere.model.I_R_MailText)MTable.get(getCtx(), org.compiere.model.I_R_MailText.Table_Name)
+			.getPO(getProcessor_MailText_ID(), get_TrxName());	}
+
+	/** Set Processor Mail Text.
+		@param Processor_MailText_ID Processor Mail Text	  */
+	public void setProcessor_MailText_ID (int Processor_MailText_ID)
+	{
+		if (Processor_MailText_ID < 1) 
+			set_Value (COLUMNNAME_Processor_MailText_ID, null);
+		else 
+			set_Value (COLUMNNAME_Processor_MailText_ID, Integer.valueOf(Processor_MailText_ID));
+	}
+
+	/** Get Processor Mail Text.
+		@return Processor Mail Text	  */
+	public int getProcessor_MailText_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_Processor_MailText_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_R_MailText getR_MailText() throws RuntimeException
+    {
+		return (org.compiere.model.I_R_MailText)MTable.get(getCtx(), org.compiere.model.I_R_MailText.Table_Name)
+			.getPO(getR_MailText_ID(), get_TrxName());	}
+
+	/** Set Mail Template.
+		@param R_MailText_ID 
+		Text templates for mailings
+	  */
+	public void setR_MailText_ID (int R_MailText_ID)
+	{
+		if (R_MailText_ID < 1) 
+			set_Value (COLUMNNAME_R_MailText_ID, null);
+		else 
+			set_Value (COLUMNNAME_R_MailText_ID, Integer.valueOf(R_MailText_ID));
+	}
+
+	/** Get Mail Template.
+		@return Text templates for mailings
+	  */
+	public int getR_MailText_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_R_MailText_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
 
 	/** Set Request Type.
 		@param R_RequestType_ID 

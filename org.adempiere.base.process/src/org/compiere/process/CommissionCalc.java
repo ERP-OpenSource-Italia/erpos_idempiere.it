@@ -121,7 +121,8 @@ public class CommissionCalc extends SvrProcess
 						.append(" INNER JOIN C_AllocationLine al ON (p.C_Payment_ID=al.C_Payment_ID)")
 						.append(" INNER JOIN C_Invoice h ON (al.C_Invoice_ID = h.C_Invoice_ID)")
 						.append(" INNER JOIN C_InvoiceLine l ON (h.C_Invoice_ID = l.C_Invoice_ID) ")
-						.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
+						.append(isOnlyProductWhere(lines[i].isOnlyProduct())) //F3P		  				
+						//.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
 						.append("WHERE p.DocStatus IN ('CL','CO','RE')")
 						.append(" AND h.IsSOTrx='Y'")
 						.append(" AND p.AD_Client_ID = ?")
@@ -154,7 +155,8 @@ public class CommissionCalc extends SvrProcess
 						.append(" COALESCE(prd.Value,l.Description),h.DateOrdered ")
 						.append("FROM C_Order h")
 						.append(" INNER JOIN C_OrderLine l ON (h.C_Order_ID = l.C_Order_ID)")
-						.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
+						.append(isOnlyProductWhere(lines[i].isOnlyProduct())) //F3P
+						//.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
 						.append("WHERE h.DocStatus IN ('CL','CO')")
 						.append(" AND h.IsSOTrx='Y'")
 						.append(" AND h.AD_Client_ID = ?")
@@ -182,7 +184,8 @@ public class CommissionCalc extends SvrProcess
 						.append(" COALESCE(prd.Value,l.Description),h.DateInvoiced ")
 						.append("FROM C_Invoice h")
 						.append(" INNER JOIN C_InvoiceLine l ON (h.C_Invoice_ID = l.C_Invoice_ID)")
-						.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
+						.append(isOnlyProductWhere(lines[i].isOnlyProduct())) //F3P
+						//.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
 						.append("WHERE h.DocStatus IN ('CL','CO','RE')")
 						.append(" AND h.IsSOTrx='Y'")
 						.append(" AND h.AD_Client_ID = ?")
@@ -391,8 +394,18 @@ public class CommissionCalc extends SvrProcess
 		finally
 		{
 			DB.close(rs, pstmt);
-			rs = null; pstmt = null;
+			rs = null; 
+			pstmt = null;
 		}
 	}	//	createDetail
+	
+	//F3P
+	public String isOnlyProductWhere(boolean isOnlyProduct)
+	{
+		if(!isOnlyProduct)
+			return " LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ";
+		else 
+			return " JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ";
+	}
 
 }	//	CommissionCalc
