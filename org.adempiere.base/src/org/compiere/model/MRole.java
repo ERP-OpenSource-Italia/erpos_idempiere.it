@@ -35,6 +35,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.logging.Level;
 
+import org.adempiere.base.IRoleAccess;
+import org.adempiere.base.Service;
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
@@ -1900,6 +1902,34 @@ public final class MRole extends X_AD_Role
 		Boolean retValue = m_workflowAccess.get(AD_Workflow_ID);
 		return retValue;
 	}	//	getTaskAccess
+	
+	
+	/** Get all role access rules for the given parameters
+	 * 
+	 * @see IRoleAccess
+	 * @return where clause
+	 */
+	
+	public String getAdditionalSQLRoleAccessConditions(String TableNameIn,AccessSqlParser.TableInfo[] ti, boolean fullyQualified, boolean rw)
+	{
+		List<IRoleAccess> rules = Service.locator().list(IRoleAccess.class).getServices();
+		StringBuilder	sbConditions = new StringBuilder(); 
+		
+		for(IRoleAccess rule:rules)
+		{
+			String sqlRule = rule.getSQLAccessCondition(this, TableNameIn, ti, fullyQualified, rw);
+			
+			if(sqlRule != null)
+			{
+				sbConditions.append(" AND ").append(sqlRule);
+			}			
+		}
+		
+		if(sbConditions.length() > 0)
+			return sbConditions.toString();
+		
+		return null;
+	}	
 
 	
 	/*************************************************************************
@@ -2092,6 +2122,16 @@ public final class MRole extends X_AD_Role
 			whereColumnName = getDependentRecordWhereColumn (mainSql, columnName);
 		}	//	for all dependent records
 		retSQL.append(getDependentAccess(whereColumnName, includes, excludes));
+		
+		// Additional conditions
+		
+		String addtionalConditions = getAdditionalSQLRoleAccessConditions(tableName, ti, fullyQualified, rw);
+		
+		if(addtionalConditions != null)
+		{
+			retSQL.append(addtionalConditions);
+		}
+				
 		//
 		retSQL.append(orderBy);
 		if (log.isLoggable(Level.FINEST)) log.finest(retSQL.toString());
