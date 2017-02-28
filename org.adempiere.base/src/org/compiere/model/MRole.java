@@ -1921,7 +1921,7 @@ public final class MRole extends X_AD_Role
 			
 			if(sqlRule != null)
 			{
-				sbConditions.append(" AND ").append(sqlRule);
+				sbConditions.append(" AND (").append(sqlRule).append(")");
 			}			
 		}
 		
