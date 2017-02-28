@@ -42,6 +42,7 @@ import javax.swing.event.EventListenerList;
 
 import org.adempiere.base.Core;
 import org.adempiere.base.IColumnCallout;
+import org.adempiere.base.UIBehaviour;
 import org.adempiere.model.MTabCustomization;
 import org.adempiere.util.ContextRunnable;
 import org.compiere.Adempiere;
@@ -1556,6 +1557,11 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		//  no restrictions
 		if (m_vo.ReadOnlyLogic == null || m_vo.ReadOnlyLogic.equals(""))
 			return m_vo.IsReadOnly;
+		
+		// FIN (st): check ui behaviour
+		
+		if(UIBehaviour.isEditable(m_vo.ctx,this) == false)
+			return true;
 
 		// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
 		if (m_vo.ReadOnlyLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
