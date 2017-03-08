@@ -439,7 +439,7 @@ public class GridField
 	 */
 	public boolean isEditable (Properties ctx, boolean checkContext,boolean isGrid)
 	{
-		// FIN (st): check ui behaviour
+		// FIN (st): IDEMPIERE-3308, check ui behaviour
 		
 		if(UIBehaviour.isEditable(ctx, this, checkContext, isGrid) == false)
 			return false;

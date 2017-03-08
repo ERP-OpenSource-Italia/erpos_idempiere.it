@@ -1558,7 +1558,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		if (m_vo.ReadOnlyLogic == null || m_vo.ReadOnlyLogic.equals(""))
 			return m_vo.IsReadOnly;
 		
-		// FIN (st): check ui behaviour
+		// FIN (st): IDEMPIERE-3308, check ui behaviour
 		
 		if(UIBehaviour.isEditable(m_vo.ctx,this) == false)
 			return true;
