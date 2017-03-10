@@ -40,6 +40,7 @@ import javax.script.ScriptException;
 
 import org.adempiere.base.ILookupFactory;
 import org.adempiere.base.Service;
+import org.adempiere.base.UIBehaviour;
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.util.CLogMgt;
 import org.compiere.util.CLogger;
@@ -438,6 +439,11 @@ public class GridField
 	 */
 	public boolean isEditable (Properties ctx, boolean checkContext,boolean isGrid)
 	{
+		// FIN (st): IDEMPIERE-3308, check ui behaviour
+		
+		if(UIBehaviour.isEditable(ctx, this, checkContext, isGrid) == false)
+			return false;
+		
 		if (isVirtualColumn())
 			return false;
 		//  Fields always enabled (are usually not updateable)

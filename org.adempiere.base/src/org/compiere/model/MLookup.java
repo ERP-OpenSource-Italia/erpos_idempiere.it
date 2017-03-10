@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 
+import org.adempiere.base.UIBehaviour;
 import org.adempiere.util.ContextRunnable;
 import org.compiere.Adempiere;
 import org.compiere.util.CLogMgt;
@@ -72,8 +73,12 @@ public final class MLookup extends Lookup implements Serializable
 		// F3P: added tabNo
 		m_iTabNo = TabNo;
 		
+		// FIN (st): IDEMPIERE-3308, can we keep cache ?
+		
+		m_bUseCache = UIBehaviour.isLookupCacheable(this, info);		
+		
 		//  load into local lookup, if already cached
-		if (Ini.isClient()) 
+		if (Ini.isClient() && m_bUseCache) // FIN (st): IDEMPIERE-3308, check cache validity
 		{
 			if (MLookupCache.loadFromCache (m_info, m_lookup, m_iTabNo))	// F3P: updated call to loadFromCache
 				return;
@@ -135,6 +140,10 @@ public final class MLookup extends Lookup implements Serializable
 	
 	// F3P: added tabNo
 	private int					m_iTabNo;
+	
+	// FIN (st): IDEMPIERE-3308, added to keep forced no-cache
+	
+	private boolean			m_bUseCache;
 	
 	/**
 	 *  Dispose
@@ -350,6 +359,9 @@ public final class MLookup extends Lookup implements Serializable
 	 */
 	public boolean isValidated()
 	{
+		if(m_bUseCache == false) // FIN (st): IDEMPIERE-3308, check cache validity
+			return false;
+		
 		if (m_info == null)
 			return false;
 		//return m_info.IsValidated;
