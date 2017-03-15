@@ -23,12 +23,15 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.logging.Level;
 
+import org.adempiere.model.ImportValidator;
+import org.adempiere.process.ImportProcess;
 import org.compiere.model.MBPartner;
 import org.compiere.model.MBPartnerLocation;
 import org.compiere.model.MLocation;
 import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
 import org.compiere.model.MUser;
+import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.X_I_Order;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -40,8 +43,10 @@ import org.compiere.util.Env;
  * 			<li>https://sourceforge.net/tracker/?func=detail&aid=2936629&group_id=176962&atid=879332
  * 	@author 	Jorg Janke
  * 	@version 	$Id: ImportOrder.java,v 1.2 2006/07/30 00:51:02 jjanke Exp $
+ * 
+ *  @author freepath  IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
  */
-public class ImportOrder extends SvrProcess
+public class ImportOrder extends SvrProcess implements ImportProcess
 {
 	/**	Client to be imported to		*/
 	private int				m_AD_Client_ID = 0;
@@ -90,7 +95,7 @@ public class ImportOrder extends SvrProcess
 	{
 		StringBuilder sql = null;
 		int no = 0;
-		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(m_AD_Client_ID);
+		String clientCheck = getWhereClause();//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
 
 		//	****	Prepare	****
 
@@ -118,6 +123,9 @@ public class ImportOrder extends SvrProcess
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info ("Reset=" + no);
 
+		//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_BEFORE_VALIDATE);
+		
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Org, '")
 			.append("WHERE (AD_Org_ID IS NULL OR AD_Org_ID=0")
@@ -491,6 +499,9 @@ public class ImportOrder extends SvrProcess
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid Tax=" + no);
+		
+		//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);
 
 		commitEx();
 		
@@ -655,9 +666,13 @@ public class ImportOrder extends SvrProcess
 			//
 			MOrder order = null;
 			int lineNo = 0;
+			
+			//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+			X_I_Order lastImp=null;
+			X_I_Order imp=null;
 			while (rs.next ())
 			{
-				X_I_Order imp = new X_I_Order (getCtx (), rs, get_TrxName());
+				imp = new X_I_Order (getCtx (), rs, get_TrxName());
 				String cmpDocumentNo = imp.getDocumentNo();
 				if (cmpDocumentNo == null)
 					cmpDocumentNo = "";
@@ -669,6 +684,8 @@ public class ImportOrder extends SvrProcess
 				{
 					if (order != null)
 					{
+						//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+						ModelValidationEngine.get().fireImportValidate(this, lastImp, order, ImportValidator.TIMING_AFTER_IMPORT);
 						if (m_docAction != null && m_docAction.length() > 0)
 						{
 							order.setDocAction(m_docAction);
@@ -735,6 +752,9 @@ public class ImportOrder extends SvrProcess
 					// Set Order Source
 					if (imp.getC_OrderSource() != null)
 						order.setC_OrderSource_ID(imp.getC_OrderSource_ID());
+
+					//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+					ModelValidationEngine.get().fireImportValidate(this, imp, order, ImportValidator.TIMING_BEFORE_IMPORT);
 					//
 					order.saveEx();
 					noInsert++;
@@ -764,16 +784,30 @@ public class ImportOrder extends SvrProcess
 					line.setFreightAmt(imp.getFreightAmt());
 				if (imp.getLineDescription() != null)
 					line.setDescription(imp.getLineDescription());
+				
+				//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_BEFORE_IMPORT);
+				
 				line.saveEx();
+				
+				//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_AFTER_IMPORT);
+				
 				imp.setC_OrderLine_ID(line.getC_OrderLine_ID());
 				imp.setI_IsImported(true);
 				imp.setProcessed(true);
 				//
 				if (imp.save())
 					noInsertLine++;
+				
+				//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+				lastImp = imp;
 			}
 			if (order != null)
 			{
+				//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+				ModelValidationEngine.get().fireImportValidate(this, imp, order, ImportValidator.TIMING_AFTER_IMPORT);
+				
 				if (m_docAction != null && m_docAction.length() > 0)
 				{
 					order.setDocAction(m_docAction);
@@ -809,5 +843,18 @@ public class ImportOrder extends SvrProcess
 		StringBuilder msgreturn = new StringBuilder("#").append(noInsert).append("/").append(noInsertLine);
 		return msgreturn.toString();
 	}	//	doIt
+
+	//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+	@Override
+	public String getImportTableName() {
+		return X_I_Order.Table_Name;
+	}
+
+	//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+	@Override
+	public String getWhereClause() {
+		StringBuilder whereClause = new StringBuilder(" AND AD_Client_ID=").append(m_AD_Client_ID);
+		return whereClause.toString();
+	}
 
 }	//	ImportOrder
