@@ -21,6 +21,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.LinkedList;
 import java.util.logging.Level;
 
 import org.adempiere.model.ImportValidator;
@@ -56,7 +57,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 	private boolean			m_deleteOldImported = false;
 	/**	Document Action					*/
 	private String			m_docAction = MOrder.DOCACTION_Prepare;
-
+	/** F3P: Document no*/
+	private String 			m_documentNo;
 
 	/** Effective						*/
 	private Timestamp		m_DateValue = null;
@@ -78,8 +80,11 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 				m_deleteOldImported = "Y".equals(para[i].getParameter());
 			else if (name.equals("DocAction"))
 				m_docAction = (String)para[i].getParameter();
+			else if (name.equals("DocumentNo")) //F3P: param added 
+				m_documentNo = (String)para[i].getParameter();
 			else
-				log.log(Level.SEVERE, "Unknown Parameter: " + name);
+				// F3P: this process can be overrided to be driven by external import, reduced level of log for unknown params
+				log.log(Level.INFO, "Unknown Parameter: " + name);
 		}
 		if (m_DateValue == null)
 			m_DateValue = new Timestamp (System.currentTimeMillis());
@@ -119,7 +124,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append(" UpdatedBy = COALESCE (UpdatedBy, 0),")
 			  .append(" I_ErrorMsg = ' ',")
 			  .append(" I_IsImported = 'N' ")
-			  .append("WHERE I_IsImported<>'Y' OR I_IsImported IS NULL");
+			  .append("WHERE I_IsImported<>'Y' OR I_IsImported IS NULL")
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info ("Reset=" + no);
 
@@ -130,7 +136,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Org, '")
 			.append("WHERE (AD_Org_ID IS NULL OR AD_Org_ID=0")
 			.append(" OR EXISTS (SELECT * FROM AD_Org oo WHERE o.AD_Org_ID=oo.AD_Org_ID AND (oo.IsSummary='Y' OR oo.IsActive='N')))")
-			.append(" AND I_IsImported<>'Y'").append (clientCheck);
+			.append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid Org=" + no);
@@ -139,26 +146,30 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		sql = new StringBuilder ("UPDATE I_Order o ")	//	PO Document Type Name
 			  .append("SET C_DocType_ID=(SELECT C_DocType_ID FROM C_DocType d WHERE d.Name=o.DocTypeName")
 			  .append(" AND d.DocBaseType='POO' AND o.AD_Client_ID=d.AD_Client_ID) ")
-			  .append("WHERE C_DocType_ID IS NULL AND IsSOTrx='N' AND DocTypeName IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE C_DocType_ID IS NULL AND IsSOTrx='N' AND DocTypeName IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set PO DocType=" + no);
 		sql = new StringBuilder ("UPDATE I_Order o ")	//	SO Document Type Name
 			  .append("SET C_DocType_ID=(SELECT C_DocType_ID FROM C_DocType d WHERE d.Name=o.DocTypeName")
 			  .append(" AND d.DocBaseType='SOO' AND o.AD_Client_ID=d.AD_Client_ID) ")
-			  .append("WHERE C_DocType_ID IS NULL AND IsSOTrx='Y' AND DocTypeName IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE C_DocType_ID IS NULL AND IsSOTrx='Y' AND DocTypeName IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set SO DocType=" + no);
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET C_DocType_ID=(SELECT C_DocType_ID FROM C_DocType d WHERE d.Name=o.DocTypeName")
 			  .append(" AND d.DocBaseType IN ('SOO','POO') AND o.AD_Client_ID=d.AD_Client_ID) ")
 			//+ "WHERE C_DocType_ID IS NULL AND IsSOTrx IS NULL AND DocTypeName IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
-			  .append("WHERE C_DocType_ID IS NULL AND DocTypeName IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE C_DocType_ID IS NULL AND DocTypeName IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set DocType=" + no);
 		sql = new StringBuilder ("UPDATE I_Order ")	//	Error Invalid Doc Type Name
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid DocTypeName, ' ")
 			  .append("WHERE C_DocType_ID IS NULL AND DocTypeName IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid DocTypeName=" + no);
@@ -166,25 +177,29 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		sql = new StringBuilder ("UPDATE I_Order o ")	//	Default PO
 			  .append("SET C_DocType_ID=(SELECT MAX(C_DocType_ID) FROM C_DocType d WHERE d.IsDefault='Y'")
 			  .append(" AND d.DocBaseType='POO' AND o.AD_Client_ID=d.AD_Client_ID) ")
-			  .append("WHERE C_DocType_ID IS NULL AND IsSOTrx='N' AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE C_DocType_ID IS NULL AND IsSOTrx='N' AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set PO Default DocType=" + no);
 		sql = new StringBuilder ("UPDATE I_Order o ")	//	Default SO
 			  .append("SET C_DocType_ID=(SELECT MAX(C_DocType_ID) FROM C_DocType d WHERE d.IsDefault='Y'")
 			  .append(" AND d.DocBaseType='SOO' AND o.AD_Client_ID=d.AD_Client_ID) ")
-			  .append("WHERE C_DocType_ID IS NULL AND IsSOTrx='Y' AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE C_DocType_ID IS NULL AND IsSOTrx='Y' AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set SO Default DocType=" + no);
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET C_DocType_ID=(SELECT MAX(C_DocType_ID) FROM C_DocType d WHERE d.IsDefault='Y'")
 			  .append(" AND d.DocBaseType IN('SOO','POO') AND o.AD_Client_ID=d.AD_Client_ID) ")
-			  .append("WHERE C_DocType_ID IS NULL AND IsSOTrx IS NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE C_DocType_ID IS NULL AND IsSOTrx IS NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Default DocType=" + no);
 		sql = new StringBuilder ("UPDATE I_Order ")	// No DocType
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=No DocType, ' ")
 			  .append("WHERE C_DocType_ID IS NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("No DocType=" + no);
@@ -193,13 +208,15 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		sql = new StringBuilder ("UPDATE I_Order o SET IsSOTrx='Y' ")
 			  .append("WHERE EXISTS (SELECT * FROM C_DocType d WHERE o.C_DocType_ID=d.C_DocType_ID AND d.DocBaseType='SOO' AND o.AD_Client_ID=d.AD_Client_ID)")
 			  .append(" AND C_DocType_ID IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set IsSOTrx=Y=" + no);
 		sql = new StringBuilder ("UPDATE I_Order o SET IsSOTrx='N' ")
 			  .append("WHERE EXISTS (SELECT * FROM C_DocType d WHERE o.C_DocType_ID=d.C_DocType_ID AND d.DocBaseType='POO' AND o.AD_Client_ID=d.AD_Client_ID)")
 			  .append(" AND C_DocType_ID IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set IsSOTrx=N=" + no);
 
@@ -207,32 +224,37 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET M_PriceList_ID=(SELECT MAX(M_PriceList_ID) FROM M_PriceList p WHERE p.IsDefault='Y'")
 			  .append(" AND p.C_Currency_ID=o.C_Currency_ID AND p.IsSOPriceList=o.IsSOTrx AND o.AD_Client_ID=p.AD_Client_ID) ")
-			  .append("WHERE M_PriceList_ID IS NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE M_PriceList_ID IS NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Default Currency PriceList=" + no);
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET M_PriceList_ID=(SELECT MAX(M_PriceList_ID) FROM M_PriceList p WHERE p.IsDefault='Y'")
 			  .append(" AND p.IsSOPriceList=o.IsSOTrx AND o.AD_Client_ID=p.AD_Client_ID) ")
-			  .append("WHERE M_PriceList_ID IS NULL AND C_Currency_ID IS NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE M_PriceList_ID IS NULL AND C_Currency_ID IS NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Default PriceList=" + no);
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET M_PriceList_ID=(SELECT MAX(M_PriceList_ID) FROM M_PriceList p ")
 			  .append(" WHERE p.C_Currency_ID=o.C_Currency_ID AND p.IsSOPriceList=o.IsSOTrx AND o.AD_Client_ID=p.AD_Client_ID) ")
-			  .append("WHERE M_PriceList_ID IS NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE M_PriceList_ID IS NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Currency PriceList=" + no);
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET M_PriceList_ID=(SELECT MAX(M_PriceList_ID) FROM M_PriceList p ")
 			  .append(" WHERE p.IsSOPriceList=o.IsSOTrx AND o.AD_Client_ID=p.AD_Client_ID) ")
-			  .append("WHERE M_PriceList_ID IS NULL AND C_Currency_ID IS NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE M_PriceList_ID IS NULL AND C_Currency_ID IS NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set PriceList=" + no);
 		//
 		sql = new StringBuilder ("UPDATE I_Order ")
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=No PriceList, ' ")
 			  .append("WHERE M_PriceList_ID IS NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning("No PriceList=" + no);
@@ -241,44 +263,62 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET C_OrderSource_ID=(SELECT C_OrderSource_ID FROM C_OrderSource p")
 			  .append(" WHERE o.C_OrderSourceValue=p.Value AND o.AD_Client_ID=p.AD_Client_ID) ")
-			  .append("WHERE C_OrderSource_ID IS NULL AND C_OrderSourceValue IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE C_OrderSource_ID IS NULL AND C_OrderSourceValue IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Order Source=" + no);
 		// Set proper error message
 		sql = new StringBuilder ("UPDATE I_Order ")
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Not Found Order Source, ' ")
-			  .append("WHERE C_OrderSource_ID IS NULL AND C_OrderSourceValue IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE C_OrderSource_ID IS NULL AND C_OrderSourceValue IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning("No OrderSource=" + no);
 		
-		//	Payment Term
+		// angelo (genied) Payment Term moved after BPartner
+
+		// angelo (genied) assign Project from ProjectValue
 		sql = new StringBuilder ("UPDATE I_Order o ")
-			  .append("SET C_PaymentTerm_ID=(SELECT C_PaymentTerm_ID FROM C_PaymentTerm p")
-			  .append(" WHERE o.PaymentTermValue=p.Value AND o.AD_Client_ID=p.AD_Client_ID) ")
-			  .append("WHERE C_PaymentTerm_ID IS NULL AND PaymentTermValue IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
+			.append("SET C_Project_ID=(SELECT C_Project_ID FROM C_Project p")
+			.append(" WHERE o.ProjectValue=p.Value AND o.AD_Client_ID=p.AD_Client_ID) ")
+			.append("WHERE C_Project_ID IS NULL AND ProjectValue IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck)
+			.append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
-		if (log.isLoggable(Level.FINE)) log.fine("Set PaymentTerm=" + no);
-		sql = new StringBuilder ("UPDATE I_Order o ")
-			  .append("SET C_PaymentTerm_ID=(SELECT MAX(C_PaymentTerm_ID) FROM C_PaymentTerm p")
-			  .append(" WHERE p.IsDefault='Y' AND o.AD_Client_ID=p.AD_Client_ID) ")
-			  .append("WHERE C_PaymentTerm_ID IS NULL AND o.PaymentTermValue IS NULL AND I_IsImported<>'Y'").append (clientCheck);
-		no = DB.executeUpdate(sql.toString(), get_TrxName());
-		if (log.isLoggable(Level.FINE)) log.fine("Set Default PaymentTerm=" + no);
-		//
+		log.fine("Set Project=" + no);
 		sql = new StringBuilder ("UPDATE I_Order ")
-			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=No PaymentTerm, ' ")
-			  .append("WHERE C_PaymentTerm_ID IS NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Project, ' ")
+			.append("WHERE C_Project_ID IS NULL AND (ProjectValue IS NOT NULL)")
+			.append(" AND I_IsImported<>'Y'").append (clientCheck)
+			.append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
-			log.warning ("No PaymentTerm=" + no);
+			log.warning ("Invalid Project=" + no);
+		//	angelo (genied) assign Activity from ActivityValue
+		sql = new StringBuilder ("UPDATE I_Order o ")
+			.append("SET C_Activity_ID=(SELECT C_Activity_ID FROM C_Activity p")
+			.append(" WHERE o.ActivityValue=p.Value AND o.AD_Client_ID=p.AD_Client_ID) ")
+			.append("WHERE C_Activity_ID IS NULL AND ActivityValue IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck)
+			.append(getDocumentNoFilter()); //F3P: added filter by docNo
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set Activity=" + no);
+	
+		sql = new StringBuilder ("UPDATE I_Order ")
+			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Activity, ' ")
+			.append("WHERE C_Activity_ID IS NULL AND (ActivityValue IS NOT NULL)")
+			.append(" AND I_IsImported<>'Y'").append (clientCheck)
+			.append(getDocumentNoFilter()); //F3P: added filter by docNo
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (no != 0)
+			log.warning ("Invalid Activity=" + no);
+		//angelo end
 
 		//	Warehouse
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET M_Warehouse_ID=(SELECT MAX(M_Warehouse_ID) FROM M_Warehouse w")
 			  .append(" WHERE o.AD_Client_ID=w.AD_Client_ID AND o.AD_Org_ID=w.AD_Org_ID) ")
-			  .append("WHERE M_Warehouse_ID IS NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE M_Warehouse_ID IS NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());	//	Warehouse for Org
 		if (no != 0)
 			if (log.isLoggable(Level.FINE)) log.fine("Set Warehouse=" + no);
@@ -287,7 +327,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append(" WHERE o.AD_Client_ID=w.AD_Client_ID) ")
 			  .append("WHERE M_Warehouse_ID IS NULL")
 			  .append(" AND EXISTS (SELECT AD_Client_ID FROM M_Warehouse w WHERE w.AD_Client_ID=o.AD_Client_ID GROUP BY AD_Client_ID HAVING COUNT(*)=1)")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.FINE)) log.fine("Set Only Client Warehouse=" + no);
@@ -295,7 +336,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		sql = new StringBuilder ("UPDATE I_Order ")
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=No Warehouse, ' ")
 			  .append("WHERE M_Warehouse_ID IS NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("No Warehouse=" + no);
@@ -305,7 +347,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append("SET (C_BPartner_ID,AD_User_ID)=(SELECT C_BPartner_ID,AD_User_ID FROM AD_User u")
 			  .append(" WHERE o.EMail=u.EMail AND o.AD_Client_ID=u.AD_Client_ID AND u.C_BPartner_ID IS NOT NULL) ")
 			  .append("WHERE C_BPartner_ID IS NULL AND EMail IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set BP from EMail=" + no);
 		//	BP from ContactName
@@ -314,7 +357,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append(" WHERE o.ContactName=u.Name AND o.AD_Client_ID=u.AD_Client_ID AND u.C_BPartner_ID IS NOT NULL) ")
 			  .append("WHERE C_BPartner_ID IS NULL AND ContactName IS NOT NULL")
 			  .append(" AND EXISTS (SELECT Name FROM AD_User u WHERE o.ContactName=u.Name AND o.AD_Client_ID=u.AD_Client_ID AND u.C_BPartner_ID IS NOT NULL GROUP BY Name HAVING COUNT(*)=1)")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set BP from ContactName=" + no);
 		//	BP from Value
@@ -322,7 +366,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append("SET C_BPartner_ID=(SELECT MAX(C_BPartner_ID) FROM C_BPartner bp")
 			  .append(" WHERE o.BPartnerValue=bp.Value AND o.AD_Client_ID=bp.AD_Client_ID) ")
 			  .append("WHERE C_BPartner_ID IS NULL AND BPartnerValue IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set BP from Value=" + no);
 		//	Default BP
@@ -330,10 +375,37 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append("SET C_BPartner_ID=(SELECT C_BPartnerCashTrx_ID FROM AD_ClientInfo c")
 			  .append(" WHERE o.AD_Client_ID=c.AD_Client_ID) ")
 			  .append("WHERE C_BPartner_ID IS NULL AND BPartnerValue IS NULL AND Name IS NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Default BP=" + no);
 
+		// angelo (genied) Payment Term moved after BPartner
+		// Payment Term
+		sql = new StringBuilder ("UPDATE I_Order o ")
+			  .append("SET C_PaymentTerm_ID=(SELECT C_PaymentTerm_ID FROM C_PaymentTerm p")
+			  .append(" WHERE o.PaymentTermValue=p.Value AND o.AD_Client_ID=p.AD_Client_ID) ")
+			  .append("WHERE C_PaymentTerm_ID IS NULL AND PaymentTermValue IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (log.isLoggable(Level.FINE)) log.fine("Set PaymentTerm=" + no);
+		sql = new StringBuilder ("UPDATE I_Order o ")
+			  .append("SET C_PaymentTerm_ID=(SELECT MAX(C_PaymentTerm_ID) FROM C_PaymentTerm p")
+			  .append(" WHERE p.IsDefault='Y' AND o.AD_Client_ID=p.AD_Client_ID) ")
+			  .append("WHERE C_PaymentTerm_ID IS NULL AND o.PaymentTermValue IS NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (log.isLoggable(Level.FINE)) log.fine("Set Default PaymentTerm=" + no);
+		//
+		sql = new StringBuilder ("UPDATE I_Order ")
+			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=No PaymentTerm, ' ")
+			  .append("WHERE C_PaymentTerm_ID IS NULL")
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (no != 0)
+			log.warning ("No PaymentTerm=" + no);
+		
 		//	Existing Location ? Exact Match
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET (BillTo_ID,C_BPartner_Location_ID)=(SELECT C_BPartner_Location_ID,C_BPartner_Location_ID")
@@ -343,7 +415,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append(" AND DUMP(o.City)=DUMP(l.City) AND DUMP(o.Postal)=DUMP(l.Postal)")
 			  .append(" AND o.C_Region_ID=l.C_Region_ID AND o.C_Country_ID=l.C_Country_ID) ")
 			  .append("WHERE C_BPartner_ID IS NOT NULL AND C_BPartner_Location_ID IS NULL")
-			  .append(" AND I_IsImported='N'").append (clientCheck);
+			  .append(" AND I_IsImported='N'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Found Location=" + no);
 		//	Set Bill Location from BPartner
@@ -353,7 +426,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append(" AND ((l.IsBillTo='Y' AND o.IsSOTrx='Y') OR (l.IsPayFrom='Y' AND o.IsSOTrx='N'))")
 			  .append(") ")
 			  .append("WHERE C_BPartner_ID IS NOT NULL AND BillTo_ID IS NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set BP BillTo from BP=" + no);
 		//	Set Location from BPartner
@@ -363,14 +437,16 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append(" AND ((l.IsShipTo='Y' AND o.IsSOTrx='Y') OR o.IsSOTrx='N')")
 			  .append(") ")
 			  .append("WHERE C_BPartner_ID IS NOT NULL AND C_BPartner_Location_ID IS NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set BP Location from BP=" + no);
 		//
 		sql = new StringBuilder ("UPDATE I_Order ")
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=No BP Location, ' ")
 			  .append("WHERE C_BPartner_ID IS NOT NULL AND (BillTo_ID IS NULL OR C_BPartner_Location_ID IS NULL)")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("No BP Location=" + no);
@@ -389,14 +465,16 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append("SET C_Country_ID=(SELECT C_Country_ID FROM C_Country c")
 			  .append(" WHERE o.CountryCode=c.CountryCode AND c.AD_Client_ID IN (0, o.AD_Client_ID)) ")
 			  .append("WHERE C_BPartner_ID IS NULL AND C_Country_ID IS NULL AND CountryCode IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Country=" + no);
 		//
 		sql = new StringBuilder ("UPDATE I_Order ")
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Country, ' ")
 			  .append("WHERE C_BPartner_ID IS NULL AND C_Country_ID IS NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid Country=" + no);
@@ -407,7 +485,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append(" WHERE r.IsDefault='Y' AND r.C_Country_ID=o.C_Country_ID")
 			  .append(" AND r.AD_Client_ID IN (0, o.AD_Client_ID)) ")
 			  .append("WHERE C_BPartner_ID IS NULL AND C_Region_ID IS NULL AND RegionName IS NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Region Default=" + no);
 		//
@@ -416,7 +495,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append(" WHERE r.Name=o.RegionName AND r.C_Country_ID=o.C_Country_ID")
 			  .append(" AND r.AD_Client_ID IN (0, o.AD_Client_ID)) ")
 			  .append("WHERE C_BPartner_ID IS NULL AND C_Region_ID IS NULL AND RegionName IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Region=" + no);
 		//
@@ -425,7 +505,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append("WHERE C_BPartner_ID IS NULL AND C_Region_ID IS NULL ")
 			  .append(" AND EXISTS (SELECT * FROM C_Country c")
 			  .append(" WHERE c.C_Country_ID=o.C_Country_ID AND c.HasRegion='Y')")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid Region=" + no);
@@ -435,27 +516,31 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append("SET M_Product_ID=(SELECT MAX(M_Product_ID) FROM M_Product p")
 			  .append(" WHERE o.ProductValue=p.Value AND o.AD_Client_ID=p.AD_Client_ID) ")
 			  .append("WHERE M_Product_ID IS NULL AND ProductValue IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Product from Value=" + no);
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET M_Product_ID=(SELECT MAX(M_Product_ID) FROM M_Product p")
 			  .append(" WHERE o.UPC=p.UPC AND o.AD_Client_ID=p.AD_Client_ID) ")
 			  .append("WHERE M_Product_ID IS NULL AND UPC IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Product from UPC=" + no);
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET M_Product_ID=(SELECT MAX(M_Product_ID) FROM M_Product p")
 			  .append(" WHERE o.SKU=p.SKU AND o.AD_Client_ID=p.AD_Client_ID) ")
 			  .append("WHERE M_Product_ID IS NULL AND SKU IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Product fom SKU=" + no);
 		sql = new StringBuilder ("UPDATE I_Order ")
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Product, ' ")
 			  .append("WHERE M_Product_ID IS NULL AND (ProductValue IS NOT NULL OR UPC IS NOT NULL OR SKU IS NOT NULL)")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid Product=" + no);
@@ -464,13 +549,15 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET C_Charge_ID=(SELECT C_Charge_ID FROM C_Charge c")
 			  .append(" WHERE o.ChargeName=c.Name AND o.AD_Client_ID=c.AD_Client_ID) ")
-			  .append("WHERE C_Charge_ID IS NULL AND ChargeName IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE C_Charge_ID IS NULL AND ChargeName IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Charge=" + no);
 		sql = new StringBuilder ("UPDATE I_Order ")
 				  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Charge, ' ")
 				  .append("WHERE C_Charge_ID IS NULL AND (ChargeName IS NOT NULL)")
-				  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+				  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+				  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid Charge=" + no);
@@ -479,7 +566,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		sql = new StringBuilder ("UPDATE I_Order ")
 				  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Product and Charge, ' ")
 				  .append("WHERE M_Product_ID IS NOT NULL AND C_Charge_ID IS NOT NULL ")
-				  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+				  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+				  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid Product and Charge exclusive=" + no);
@@ -489,13 +577,15 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append("SET C_Tax_ID=(SELECT MAX(C_Tax_ID) FROM C_Tax t")
 			  .append(" WHERE o.TaxIndicator=t.TaxIndicator AND o.AD_Client_ID=t.AD_Client_ID) ")
 			  .append("WHERE C_Tax_ID IS NULL AND TaxIndicator IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Tax=" + no);
 		sql = new StringBuilder ("UPDATE I_Order ")
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Tax, ' ")
 			  .append("WHERE C_Tax_ID IS NULL AND TaxIndicator IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid Tax=" + no);
@@ -509,7 +599,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 
 		//	Go through Order Records w/o C_BPartner_ID
 		sql = new StringBuilder ("SELECT * FROM I_Order ")
-			  .append("WHERE I_IsImported='N' AND C_BPartner_ID IS NULL").append (clientCheck);
+			  .append("WHERE I_IsImported='N' AND C_BPartner_ID IS NULL").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
@@ -638,7 +729,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		sql = new StringBuilder ("UPDATE I_Order ")
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=No BPartner, ' ")
 			  .append("WHERE C_BPartner_ID IS NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("No BPartner=" + no);
@@ -651,9 +743,19 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		int noInsertLine = 0;
 
 		//	Go through Order Records w/o
-		sql = new StringBuilder ("SELECT * FROM I_Order ")
-			  .append("WHERE I_IsImported='N'").append (clientCheck)
+		sql = new StringBuilder ("SELECT * FROM I_Order ").append("WHERE I_IsImported='N'")
+			//F3P: Import only full-order. Does not proceed with order that has at least one line with error 
+			.append("AND NOT EXISTS (SELECT * FROM I_ORDER o WHERE I_ORDER.documentno = o.documentNo AND I_IsImported='E'")
+			.append(clientCheck).append(")")
+			//F3P: End
+			.append (clientCheck)
+			.append(getDocumentNoFilter()) //F3P: added filter by docNo
 			.append(" ORDER BY C_BPartner_ID, BillTo_ID, C_BPartner_Location_ID, I_Order_ID");
+
+		LinkedList<X_I_Order> lstImportedIOrder = new LinkedList<X_I_Order>(); //F3P from adempiere
+		X_I_Order potentialErrorImp=null;
+		MOrder order = null;//F3P: moved here to be able to delete it if import fails
+		
 		try
 		{
 			pstmt = DB.prepareStatement (sql.toString(), get_TrxName());
@@ -664,7 +766,6 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			int oldC_BPartner_Location_ID = 0;
 			String oldDocumentNo = "";
 			//
-			MOrder order = null;
 			int lineNo = 0;
 			
 			//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
@@ -673,6 +774,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			while (rs.next ())
 			{
 				imp = new X_I_Order (getCtx (), rs, get_TrxName());
+				
 				String cmpDocumentNo = imp.getDocumentNo();
 				if (cmpDocumentNo == null)
 					cmpDocumentNo = "";
@@ -684,6 +786,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 				{
 					if (order != null)
 					{
+						potentialErrorImp=lastImp;// F3P: mark processing imp
 						//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
 						ModelValidationEngine.get().fireImportValidate(this, lastImp, order, ImportValidator.TIMING_AFTER_IMPORT);
 						if (m_docAction != null && m_docAction.length() > 0)
@@ -696,6 +799,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 							}
 						}
 						order.saveEx();
+						lstImportedIOrder.clear(); //F3P from adempiere
 					}
 					oldC_BPartner_ID = imp.getC_BPartner_ID();
 					oldC_BPartner_Location_ID = imp.getC_BPartner_Location_ID();
@@ -703,6 +807,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 					oldDocumentNo = imp.getDocumentNo();
 					if (oldDocumentNo == null)
 						oldDocumentNo = "";
+					
+					potentialErrorImp=imp;// F3P: mark processing imp
 					//
 					order = new MOrder (getCtx(), 0, get_TrxName());
 					order.setClientOrg (imp.getAD_Client_ID(), imp.getAD_Org_ID());
@@ -784,6 +890,9 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 					line.setFreightAmt(imp.getFreightAmt());
 				if (imp.getLineDescription() != null)
 					line.setDescription(imp.getLineDescription());
+				// SVT set project on line
+				if (imp.getC_Project_ID() != 0)
+					line.setC_Project_ID(imp.getC_Project_ID());
 				
 				//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
 				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_BEFORE_IMPORT);
@@ -792,6 +901,9 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 				
 				//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
 				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_AFTER_IMPORT);
+				
+				//F3P: save this line as imported
+				lstImportedIOrder.add(imp);
 				
 				imp.setC_OrderLine_ID(line.getC_OrderLine_ID());
 				imp.setI_IsImported(true);
@@ -823,6 +935,45 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		catch (Exception e)
 		{
 			log.log(Level.SEVERE, "Order - " + sql.toString(), e);
+			
+			//F3P: Doesn't allow partially imported order
+			//delete previosly created order
+
+			if(order.getC_Order_ID() > 0)
+				noInsert--;
+			
+			order.delete(false);
+						
+			//mark all already imported lines as not imported
+			for(X_I_Order impOrderLine : lstImportedIOrder)
+			{
+				impOrderLine.setI_IsImported(false);
+				impOrderLine.setI_ErrorMsg("ERR=another line has a problem");
+				impOrderLine.setProcessed(false);
+				impOrderLine.save();
+				
+				noInsertLine--;
+			}
+			//save exception in actual line
+			
+			// F3P: error on right column
+			
+			if(potentialErrorImp != null)
+			{
+				String sMessage = e.getMessage();
+				
+				if(sMessage == null)
+					sMessage = "NullPointer";
+				
+				sql = new StringBuilder("UPDATE I_Order ")
+				  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR='||")
+				  .append(DB.TO_STRING(sMessage)).append(", Processed='N' ")
+				  .append("WHERE I_Order_ID =?");
+				  			
+				// Object params[] = {e.getMessage(), };
+				DB.executeUpdate(sql.toString(), potentialErrorImp.getI_Order_ID(), false, null);
+			}
+			//F3P end
 		}
 		finally
 		{
@@ -831,10 +982,12 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			pstmt = null;
 		}
 
+		//F3P: errors from order was not logged in I_Order, fixed
 		//	Set Error to indicator to not imported
 		sql = new StringBuilder ("UPDATE I_Order ")
-			.append("SET I_IsImported='N', Updated=SysDate ")
-			.append("WHERE I_IsImported<>'Y'").append(clientCheck);
+			.append("SET I_IsImported='E' ")
+			.append("WHERE I_IsImported<>'Y'").append(clientCheck)
+			.append(getDocumentNoFilter()); //F3P: added filter by docNo;
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		addLog (0, null, new BigDecimal (no), "@Errors@");
 		//
@@ -844,6 +997,22 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		return msgreturn.toString();
 	}	//	doIt
 
+	//F3P: added filter by docNo
+	/**
+	 * Returns sql used to filter by documentNo, if it was populated in the 
+	 * process startup window. Otherwise it will returns an empty string that 
+	 * will not affect any query.
+	 * @return
+	 */
+	public String getDocumentNoFilter(){
+		String sqlFilter = "";
+		if(m_documentNo != null && m_documentNo.length() > 0)
+			sqlFilter = " AND DocumentNo = '" + m_documentNo + "'";
+		
+		return sqlFilter;
+	}
+	//F3P: End
+	
 	//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
 	@Override
 	public String getImportTableName() {
