@@ -31,7 +31,7 @@ Import-Package: javax.activation,
  org.slf4j.helpers;version="1.7.2",
  org.slf4j.spi;version="1.7.2"
 DynamicImport-Package: action.images
-Bundle-ClassPath: .
+Bundle-ClassPath: org-adempiere-base-ui-zk-custom.jar, org-adempiere-base-ui-zk-extension.jar,.
 Export-Package: fi.jawsy.jawwa.zk.atmosphere,
  metainfo.zk,
  org.adempiere.webui,
