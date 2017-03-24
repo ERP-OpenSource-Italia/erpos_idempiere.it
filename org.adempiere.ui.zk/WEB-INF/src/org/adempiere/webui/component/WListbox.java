@@ -53,6 +53,7 @@ import org.zkoss.zul.ListModel;
  *
  * @author Andrew Kimball
  * @author Sendy Yagambrum
+ * 
  */
 public class WListbox extends Listbox implements IMiniTable, TableValueChangeListener, WTableModelListener
 {
@@ -96,7 +97,7 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 		setItemRenderer(rowRenderer);
 		setModel(new ListModelTable());
 	}
-
+	
 	/**
 	 * Set the data model and column header names for the Listbox.
 	 *
@@ -105,11 +106,38 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 	 */
 	public void setData(ListModelTable model, List< ? extends String> columnNames)
 	{
+		setData(model, columnNames, null);
+	}
+
+	/**
+	 * Set the data model and column header names for the Listbox.
+	 *
+	 * @param model        The data model to assign to the table
+	 * @param columnNames  The names of the table columns
+	 * @param identifier   Unique Listbox Identifier 
+	 */
+	//F3P: add id
+	public void setData(ListModelTable model, List< ? extends String> columnNames, String identifier)
+	{
+		setData(model, columnNames, identifier, null);
+	}
+	
+	/**
+	 * Set the data model and column header names for the Listbox.
+	 *
+	 * @param model        The data model to assign to the table
+	 * @param columnNames  The names of the table columns
+	 * @param identifier   Unique Listbox Identifier 
+	 * @param columnWidths Column widths
+	 */
+	//FIN: possibilità di indicare il width
+	public void setData(ListModelTable model, List< ? extends String> columnNames, String identifier, List< ? extends Integer> columnWidths)
+	{
 		WListItemRenderer rowRenderer = null;
 		if (columnNames != null && columnNames.size() > 0)
 		{
 	    	//	 instantiate our custom row renderer
-		    rowRenderer = new WListItemRenderer(columnNames);
+		    rowRenderer = new WListItemRenderer(columnNames, identifier);	//F3P: add id
 
 	    	// add listener for listening to component changes
 	    	rowRenderer.addTableValueChangeListener(this);
@@ -126,12 +154,12 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 		    if (head != null)
 		    {
 		    	head.getChildren().clear();
-		    	rowRenderer.renderListHead(head);
+		    	rowRenderer.renderListHead(head, columnWidths);//FIN: possibilità di indicare il width
 	    	}
 	    }
 
 	    // re-render
-	    this.repaint();
+	    this.repaint(columnWidths);
 
 	    return;
 	}
@@ -152,8 +180,10 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 	 * Create the listbox header by fetching it from the renderer and adding
 	 * it to the Listbox.
 	 *
+	 * @param columnWidths
+	 *
 	 */
-	private void initialiseHeader()
+	private void initialiseHeader(List<? extends Integer> columnWidths) //FIN possibilità di indicare il width
 	{
 	    ListHead head = null;
 
@@ -170,7 +200,7 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 	    // render list head
 	    if (this.getItemRenderer() instanceof WListItemRenderer)
 	    {
-	    	((WListItemRenderer)this.getItemRenderer()).renderListHead(head);
+	    	((WListItemRenderer)this.getItemRenderer()).renderListHead(head, columnWidths);
 	    }
 	    else
 	    {
@@ -1060,8 +1090,19 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 	 */
 	public void repaint()
 	{
+		repaint(null);
+	}
+	
+	/**
+	 * FIN possibilità di indicare il width
+	 * Repaint the Table.
+	 * 
+	 * @param columnWidths
+	 */
+	public void repaint(List<? extends Integer> columnWidths)
+	{
 	    // create the head
-	    initialiseHeader();
+	    initialiseHeader(columnWidths);
 
 	    // this causes re-rendering of the Listbox
 		this.setModel(this.getModel());
