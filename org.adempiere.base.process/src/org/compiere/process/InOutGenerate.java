@@ -19,13 +19,17 @@ package org.compiere.process;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.util.ProcessUtil;
 import org.compiere.model.MClient;
 import org.compiere.model.MInOut;
 import org.compiere.model.MInOutLine;
@@ -33,12 +37,17 @@ import org.compiere.model.MLocator;
 import org.compiere.model.MLocatorType;
 import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
+import org.compiere.model.MProcess;
 import org.compiere.model.MProduct;
 import org.compiere.model.MStorageOnHand;
+import org.compiere.model.PO;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.Trx;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *	Generate Shipments.
@@ -49,6 +58,19 @@ import org.compiere.util.Msg;
  */
 public class InOutGenerate extends SvrProcess
 {
+	// F3P: SelectionLine query
+	
+	public static final String SQL_SELECTIONLINE = "SELECT ol.C_OrderLine_ID,tl.Qty "
+													+ " FROM T_SelectionLine tl INNER JOIN C_OrderLine ol on (tl.T_SelectionLine_ID = ol.C_OrderLine_ID AND ol.C_Order_ID = ?)"
+													+ " WHERE tl.AD_PInstance_ID = ?"
+													+ " ORDER BY ol.C_BPartner_Location_ID,ol.M_Product_ID,ol.line";
+
+	// F3P: process associated to DocAction, prerequisite to obtain wf
+	public static final String SQL_DOCACTION_ADPROCESSID = "SELECT c.AD_Process_ID FROM AD_Table t inner join AD_Column c on (t.AD_Table_ID = c.AD_Table_ID) WHERE t.tablename = 'M_InOut' AND c.ColumnName = 'DocAction'";
+	
+	// F3P: new parameters. Compatible with patches ruling (no dictionary changes needed)
+	public static final String P_SELECTIONLINE = "SelectionLine";
+	
 	/**	Manual Selection		*/
 	private boolean 	p_Selection = false;
 	/** Warehouse				*/
@@ -65,6 +87,13 @@ public class InOutGenerate extends SvrProcess
 	private boolean		p_ConsolidateDocument = true;
     /** Shipment Date                       */
 	private Timestamp       p_DateShipped = null;
+	
+	// F3P: selection line
+	private boolean p_SelectionLine = false;
+	private int	DocProcess_AD_Workflow_ID = -1;
+	
+	//F3P: renumber line
+	private boolean	p_overrideLineNo = false;
 	
 	/**	The current Shipment	*/
 	private MInOut 		m_shipment = null;
@@ -116,6 +145,8 @@ public class InOutGenerate extends SvrProcess
 				p_docAction = (String)para[i].getParameter();
 			else if (name.equals("MovementDate"))
                 p_DateShipped = (Timestamp)para[i].getParameter();
+			else if (name.equals(P_SELECTIONLINE)) // F3P: selection line
+				p_SelectionLine = para[i].getParameterAsBoolean();
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 			
@@ -127,6 +158,16 @@ public class InOutGenerate extends SvrProcess
 			} else
 				m_movementDate = p_DateShipped;
 		}
+		
+		// F3P: use workflow instead of plain 
+		if(STDSysConfig.isInOutGenerateUseWorkflow(getAD_Client_ID()))
+		{
+			DocProcess_AD_Workflow_ID = getDocProcess_AD_Workflow_ID();
+		}
+		
+		//F3P: renumber inoutline
+		p_overrideLineNo = STDSysConfig.isOverrideGeneratedInOutLineNo(getAD_Client_ID()); // Spostato qui per evitare l'uso di Env.getCtx, che puo creare problemi in caso di processi eseguiti dal server
+		
 	}	//	prepare
 
 	/**
@@ -167,16 +208,19 @@ public class InOutGenerate extends SvrProcess
 				.append(" AND EXISTS (SELECT * FROM C_OrderLine ol ")
 					.append("WHERE ol.M_Warehouse_ID=?");					//	#1
 			if (p_DatePromised != null)
-				m_sql.append(" AND TRUNC(ol.DatePromised)<=?");		//	#2
+				m_sql.append(" AND TRUNC(ol.DatePromised, 'DD')<=?");		//	#2 //F3P: porting adempiere add 'DD'
 			m_sql.append(" AND o.C_Order_ID=ol.C_Order_ID AND ol.QtyOrdered<>ol.QtyDelivered)");
 			//
 			if (p_C_BPartner_ID != 0)
 				m_sql.append(" AND o.C_BPartner_ID=?");					//	#3
 		}
-		m_sql.append(" ORDER BY M_Warehouse_ID, PriorityRule, M_Shipper_ID, C_BPartner_ID, C_BPartner_Location_ID, C_Order_ID");
-	//	m_sql += " FOR UPDATE";
+		//F3P: add order by dateOrdered, DocumentNo
+		m_sql.append(" ORDER BY M_Warehouse_ID, PriorityRule, M_Shipper_ID, C_BPartner_ID, C_BPartner_Location_ID, DateOrdered, DocumentNo, C_Order_ID");
+		//	m_sql += " FOR UPDATE";
 
 		PreparedStatement pstmt = null;
+		//F3P: log error
+		boolean error = false;
 		try
 		{
 			pstmt = DB.prepareStatement (m_sql.toString(), get_TrxName());
@@ -197,8 +241,17 @@ public class InOutGenerate extends SvrProcess
 		}
 		catch (Exception e)
 		{
-			throw new AdempiereException(e);
+			//F3P: log error
+			//throw new AdempiereException(e);
+			log.log(Level.SEVERE, m_sql.toString(), e);
+			addLog(e.getMessage());
+			error = true;
+
 		}
+		//F3P: log error
+		if(error)
+			return "@Errors@";
+		
 		return generate(pstmt);
 	}	//	doIt
 	
@@ -209,7 +262,8 @@ public class InOutGenerate extends SvrProcess
 	 */
 	private String generate (PreparedStatement pstmt)
 	{
-
+		String sError = null; // F3P: errors as of now are ignored, manage them
+		
 		ResultSet rs = null;
 		try
 		{
@@ -246,7 +300,53 @@ public class InOutGenerate extends SvrProcess
 							.append(" INNER JOIN M_InOut io ON (iol.M_InOut_ID=io.M_InOut_ID) ")
 								.append("WHERE iol.C_OrderLine_ID=C_OrderLine.C_OrderLine_ID AND io.DocStatus IN ('DR','IN','IP','WC'))");
 				//	Deadlock Prevention - Order by M_Product_ID
-				MOrderLine[] lines = order.getLines (where.toString(), "C_BPartner_Location_ID, M_Product_ID");
+				// F3P: support for T_SelectionLine
+				MOrderLine[] lines = null;
+				Map<Integer,BigDecimal> mapSelectionLineQty = null;
+				
+				if(p_SelectionLine)
+				{
+					mapSelectionLineQty = new HashMap<Integer, BigDecimal>();
+					
+					PreparedStatement ptmtSL = null;
+					ResultSet rsLS = null;
+					
+					try
+					{
+						List<MOrderLine> lstLines = new ArrayList<MOrderLine>();
+						
+						ptmtSL = DB.prepareStatement(SQL_SELECTIONLINE, get_TrxName());
+						ptmtSL.setInt(1,order.getC_Order_ID());
+						ptmtSL.setInt(2, getProcessInfo().getAD_PInstance_ID());
+						rsLS = ptmtSL.executeQuery();
+						
+						while(rsLS.next())
+						{
+							int C_OrderLine_ID = rsLS.getInt(MOrderLine.COLUMNNAME_C_OrderLine_ID);
+							BigDecimal bdQty = rsLS.getBigDecimal("Qty");
+							
+							mapSelectionLineQty.put(C_OrderLine_ID, bdQty);
+							
+							MOrderLine mOLine = PO.get(getCtx(), MOrderLine.Table_Name, C_OrderLine_ID, get_TrxName());
+							lstLines.add(mOLine);						
+						}
+						
+						lines = lstLines.toArray(new MOrderLine[lstLines.size()]);
+					}
+					catch(Exception e)
+					{
+						throw new AdempiereException("Selection Line not supported",e);
+					}
+					finally
+					{
+						DB.close(rsLS, ptmtSL);
+					}
+				}
+				else
+				{
+					lines = order.getLines (where.toString(), "C_BPartner_Location_ID, M_Product_ID");
+				}
+				
 				for (int i = 0; i < lines.length; i++)
 				{
 					MOrderLine line = lines[i];
@@ -256,14 +356,33 @@ public class InOutGenerate extends SvrProcess
 					BigDecimal onHand = Env.ZERO;
 					BigDecimal toDeliver = line.getQtyOrdered()
 						.subtract(line.getQtyDelivered());
+					
+					// F3P: if we are using T_SelectionLine, correct toDeliver
+					if(mapSelectionLineQty != null && mapSelectionLineQty.containsKey(line.getC_OrderLine_ID()))
+						toDeliver = mapSelectionLineQty.get(line.getC_OrderLine_ID());
+					
 					MProduct product = line.getProduct();
 					//	Nothing to Deliver
 					if (product != null && toDeliver.signum() == 0)
+					{
+						logOrderLineInfo(line, " skipped: product to deliver = 0"); // F3P: Helper for order line-related logs (level info)
 						continue;
+					}
 					
 					// or it's a charge - Bug#: 1603966 
 					if (line.getC_Charge_ID()!=0 && toDeliver.signum() == 0)
+					{
+						logOrderLineInfo(line, " skipped: charge to deliver = 0"); // F3P: Helper for order line-related logs (level info)
 						continue;
+					}
+											
+					// F3P: or it is not a comment
+					
+					if (line.getQtyOrdered().signum() != 0 && toDeliver.signum() == 0)
+					{
+						logOrderLineInfo(line, " skipped: to deliver = 0 and ordered != 0"); // F3P: Helper for order line-related logs (level info)
+						continue;
+					}
 					
 					//	Check / adjust for confirmations
 					BigDecimal unconfirmedShippedQty = Env.ZERO;
@@ -295,6 +414,8 @@ public class InOutGenerate extends SvrProcess
 					{
 						if (!MOrder.DELIVERYRULE_CompleteOrder.equals(order.getDeliveryRule()))	//	printed later
 							createLine (order, line, toDeliver, null, false);
+						else
+							logOrderLineInfo(line, " skipped: delivery rule == complete order");  // F3P: Helper for order line-related logs (level info)
 						continue;
 					}
 
@@ -392,12 +513,29 @@ public class InOutGenerate extends SvrProcess
 						createLine (order, line, toDeliver, storages, false);
 					}
 				}
-				m_line += 1000;
+				// F3P: avoid mix order when there are more than 100 lines
+				//m_line += 1000;
+				m_line += 100000;
 			}	//	while order
 		}
 		catch (Exception e)
 		{
-			throw new AdempiereException(e);
+			//throw new AdempiereException(e);
+			// F3P: improved log of error
+			if(m_shipment != null)
+			{
+				sError = e.getLocalizedMessage();
+				
+				if(sError == null)
+					sError = e.getMessage();
+				
+				if(sError == null)
+					sError = e.toString();
+				
+				addLog(m_shipment.getM_InOut_ID(), m_shipment.getMovementDate(), null, m_shipment.getDocumentNo() + " - @Error@ " + sError);
+			}
+			
+			log.log(Level.SEVERE, m_sql.toString(), e);
 		}
 		finally
 		{
@@ -405,9 +543,16 @@ public class InOutGenerate extends SvrProcess
 			rs = null;
 			pstmt = null;
 		}
-		completeShipment();
-		StringBuilder msgreturn = new StringBuilder("@Created@ = ").append(m_created);
-		return msgreturn.toString();
+		// F3P: management of error, avoid failing silently
+		if(sError == null)
+		{
+			completeShipment();
+			return "@Created@ = " + m_created;
+		}
+		else
+		{
+			return "@Errors@";
+		}
 	}	//	generate
 	
 	
@@ -524,18 +669,36 @@ public class InOutGenerate extends SvrProcess
 			}
 			else 
 			{
+				// F3P: with 'force', try to accumulate lines instead of splitting them
+				MInOutLine line = null;
 				
-				 MInOutLine line = new MInOutLine (m_shipment);
-				 line.setOrderLine(orderLine, 0, order.isSOTrx() ? toDeliver : Env.ZERO);
-				 line.setQty(toDeliver);
-				 if (orderLine.getQtyEntered().compareTo(orderLine.getQtyOrdered()) != 0)
-					 line.setQtyEntered(line.getMovementQty().multiply(orderLine.getQtyEntered())
-						 .divide(orderLine.getQtyOrdered(), 12, BigDecimal.ROUND_HALF_UP));
-				 line.setLine(m_line + orderLine.getLine());
-			     if (!line.save())
-					 throw new IllegalStateException("Could not create Shipment Line");
-					 
-
+				if(list.size() > 0)
+				{
+					line = list.get(list.size() - 1); // Fetch last line
+					BigDecimal bdQty = line.getQtyEntered();
+					bdQty = bdQty.add(toDeliver);
+					line.setQty(bdQty);
+				}
+				else
+				{
+					// F3P: generate a new line only if we cannot accumulate it
+					line = new MInOutLine (m_shipment);
+					line.setOrderLine(orderLine, 0, order.isSOTrx() ? toDeliver : Env.ZERO);
+					line.setQty(toDeliver);
+					if (orderLine.getQtyEntered().compareTo(orderLine.getQtyOrdered()) != 0)
+						 line.setQtyEntered(line.getMovementQty().multiply(orderLine.getQtyEntered())
+							 .divide(orderLine.getQtyOrdered(), 12, BigDecimal.ROUND_HALF_UP));
+					 line.setLine(m_line + orderLine.getLine());
+				}	
+				
+				 /* F3P: changed to saveEx to avoid silently ignore the real error 
+					if (!line.save())
+				    {
+							throw new IllegalStateException("Could not create Shipment Line");
+				    }
+				  */
+					
+				 line.saveEx(get_TrxName());
 			}
 		}	
 	}	//	createLine
@@ -592,17 +755,68 @@ public class InOutGenerate extends SvrProcess
 	{
 		if (m_shipment != null)
 		{
-			if (!DocAction.ACTION_None.equals(p_docAction))
+			//F3P renumber
+			if(p_overrideLineNo)
 			{
-				//	Fails if there is a confirmation
-				if (!m_shipment.processIt(p_docAction)) {
-					log.warning("Failed: " + m_shipment);
-					throw new IllegalStateException("Shipment Process Failed: " + m_shipment + " - " + m_shipment.getProcessMsg());
+				MInOutLine[] lines = m_shipment.getLines();
+				
+				int lineNo = 0;
+				
+				for(MInOutLine line : lines)
+				{
+					lineNo += 10;
+					line.setLine(lineNo); 
+					line.saveEx(get_TrxName());
 				}
 			}
-			m_shipment.saveEx();
-			String message = Msg.parseTranslation(getCtx(), "@ShipmentProcessed@ " + m_shipment.getDocumentNo());
-			addBufferLog(m_shipment.getM_InOut_ID(), m_shipment.getMovementDate(), null, message, m_shipment.get_Table_ID(),m_shipment.getM_InOut_ID());
+			
+			// F3P: rollback complete if there is an error
+			
+			Trx trx = Trx.get(get_TrxName(), false);
+			Savepoint savepoint = null;
+			
+			try
+			{
+				savepoint = trx.setSavepoint("beforeComplete");
+				
+				if(DocProcess_AD_Workflow_ID > 0) // F3P use workflow instead of plain process
+				{
+					ProcessInfo pi = new ProcessInfo("CompleteWF", getProcessInfo().getAD_Process_ID(), 0, m_shipment.getM_InOut_ID());
+					pi.setAD_User_ID (Env.getAD_User_ID(Env.getCtx()));
+					pi.setAD_Client_ID(m_shipment.getAD_Client_ID());
+					pi.setTransactionName(trx.getTrxName());
+					
+					ProcessUtil.startWorkFlow(getCtx(), pi, DocProcess_AD_Workflow_ID);
+				}
+				else
+				{
+					if (!DocAction.ACTION_None.equals(p_docAction))
+					{
+						//	Fails if there is a confirmation
+						if (!m_shipment.processIt(p_docAction))
+						{
+							log.warning("Failed: " + m_shipment);
+							//
+							addLog(m_shipment.getM_InOut_ID(), m_shipment.getMovementDate(), null, m_shipment.getDocumentNo() + " - @Error@ " + m_shipment.getProcessMsg());
+	
+							//
+							rollback(trx,savepoint);
+							m_shipment.setDocStatus(MInOut.DOCSTATUS_Invalid);
+						}
+						else
+						{
+							addLog(m_shipment.getM_InOut_ID(), m_shipment.getMovementDate(), null, m_shipment.getDocumentNo());
+						}
+					}
+					m_shipment.saveEx();
+				}
+			}
+			catch(Exception e)
+			{
+				addLog(m_shipment.getM_InOut_ID(), m_shipment.getMovementDate(), null, m_shipment.getDocumentNo() + " - @Error@ " + e.getLocalizedMessage());
+				rollback(trx,savepoint);
+			}
+			
 			m_created++;
 			
 			//reset storage cache as MInOut.completeIt will update m_storage
@@ -614,6 +828,48 @@ public class InOutGenerate extends SvrProcess
 		m_line = 0;
 	}	//	completeOrder
 	
+	// F3P: added to simplify rollback management
+	private void rollback(Trx trx,Savepoint savepoint)
+	{
+		try
+		{
+			if(savepoint != null)
+				trx.rollback(savepoint);
+		}
+		catch(SQLException ex)
+		{
+			log.warning("Failed rollback: " + ex.getMessage());
+		}
+	}
+	
+	// F3P: Helper for order line-related logs (level info)
+	
+	private void logOrderLineInfo(MOrderLine orderLine,String info)
+	{
+		if(log.isLoggable(Level.INFO))
+		{
+			StringBuilder sbLog = new StringBuilder("Order line");
+			sbLog.append(orderLine.toString())
+				.append(" [")
+				.append(orderLine.getLine())
+				.append(" ] ")
+				.append(info);
+			
+			log.info(sbLog.toString());
+		}		
+	}
+	
+	/** Get the workflow associated to doc. processing of InOut
+	 *  
+	 * @return
+	 */
+	protected int getDocProcess_AD_Workflow_ID()
+	{
+		int AD_Process_ID = DB.getSQLValue(get_TrxName(), SQL_DOCACTION_ADPROCESSID);
+		MProcess mProcess = PO.get(getCtx(), MProcess.Table_Name, AD_Process_ID, get_TrxName());
+		
+		return mProcess.getAD_Workflow_ID();
+	}
 	/**
 	 * 	InOutGenerate Parameter
 	 */

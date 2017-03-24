@@ -260,7 +260,7 @@ public class RequestEMailProcessor extends SvrProcess implements ProcessEmailHan
 		String documentNo = emailContent.messageID;
 		
 		if (documentNo.length() > maxlen)
-			documentNo = documentNo.substring(0,30);
+			documentNo = documentNo.substring(0,maxlen); //F3P set maxlen
 		
 		// Review if the e-mail was already created, comparing Message-ID+From+body
 		int retValuedup = 0;
