@@ -29,9 +29,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.logging.Level;
 
+import org.adempiere.model.ImportValidator;
 import org.compiere.model.MPriceList;
 import org.compiere.model.MPriceListVersion;
 import org.compiere.model.MProductPrice;
+import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.X_I_PriceList;
 import org.compiere.model.X_M_ProductPriceVendorBreak;
 import org.compiere.process.ProcessInfoParameter;
@@ -45,7 +47,7 @@ import org.compiere.util.Env;
  *
  * 	@author 	Carlos Ruiz
  */
-public class ImportPriceList extends SvrProcess
+public class ImportPriceList extends SvrProcess implements ImportProcess
 {
 	/**	Client to be imported to		*/
 	private int				m_AD_Client_ID = 0;
@@ -127,6 +129,9 @@ public class ImportPriceList extends SvrProcess
 			.append("WHERE I_IsImported<>'Y' OR I_IsImported IS NULL");
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info("Reset=" + no);
+		
+		//F3P: fire import model validator
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_BEFORE_VALIDATE);
 
 		//	Set Optional BPartner
 		sql = new StringBuilder ("UPDATE I_PriceList ")
@@ -261,6 +266,9 @@ public class ImportPriceList extends SvrProcess
 		if (no != 0)
 			log.warning("No Mandatory BreakValue=" + no);
 
+		//F3P: fire import model validator
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);
+
 		commitEx();
 		
 		//	-------------------------------------------------------------------
@@ -308,6 +316,10 @@ public class ImportPriceList extends SvrProcess
 				if (newPriceList)			//	Insert new Price List
 				{
 					pricelist = new MPriceList(imp);
+					
+					//F3P: fire import model validator
+					ModelValidationEngine.get().fireImportValidate(this, imp, pricelist, ImportValidator.TIMING_BEFORE_IMPORT);
+					
 					if (pricelist.save())
 					{
 						M_PriceList_ID = pricelist.getM_PriceList_ID();
@@ -346,6 +358,10 @@ public class ImportPriceList extends SvrProcess
 					pricelistversion.setValidFrom(imp.getValidFrom());
 					pricelistversion.setName(pricelist.getName() + " " + imp.getValidFrom());
 					pricelistversion.setM_DiscountSchema_ID(m_discountschema_id);
+					
+					//F3P: fire import model validator
+					ModelValidationEngine.get().fireImportValidate(this, imp, pricelistversion, ImportValidator.TIMING_BEFORE_IMPORT);
+					
 					if (pricelistversion.save())
 					{
 						M_PriceList_Version_ID = pricelistversion.getM_PriceList_Version_ID();
@@ -393,6 +409,10 @@ public class ImportPriceList extends SvrProcess
 					if (p_importPriceLimit) ppvb.setPriceLimit(imp.getPriceLimit());
 					if (p_importPriceList) ppvb.setPriceList(imp.getPriceList());
 					if (p_importPriceStd) ppvb.setPriceStd(imp.getPriceStd());
+					
+					//F3P: fire import model validator
+					ModelValidationEngine.get().fireImportValidate(this, imp, ppvb, ImportValidator.TIMING_BEFORE_IMPORT);
+					
 					if (ppvb.save())
 					{
 						if (isInsert)
@@ -424,6 +444,10 @@ public class ImportPriceList extends SvrProcess
 								, p_importPriceLimit?imp.getPriceLimit():Env.ZERO);
 						isInsert = true;
 					}
+					
+					//F3P: fire import model validator
+					ModelValidationEngine.get().fireImportValidate(this, imp, pp, ImportValidator.TIMING_BEFORE_IMPORT);
+					
 					if (pp.save())
 					{
 						log.finer("Insert/Update Product Price");
@@ -475,5 +499,16 @@ public class ImportPriceList extends SvrProcess
 		addLog (0, null, new BigDecimal (noUpdateppvb), "@M_ProductPriceVendorBreak_ID@: @Updated@");
 		return "";
 	}	//	doIt
+
+
+	@Override
+	public String getImportTableName() {
+		return X_I_PriceList.Table_Name;
+	}
+
+	@Override
+	public String getWhereClause() {
+		return " AND AD_Client_ID=" + m_AD_Client_ID;
+	}
 
 }	//	ImportProduct
