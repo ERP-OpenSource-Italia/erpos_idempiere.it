@@ -1388,6 +1388,10 @@ public class FinReport extends SvrProcess
 				}
 				// end globalqss
 			}
+			else // Angelo Dabala' (genied) nectosoft - must filter with PostingType at line level
+			{
+				select.append(" AND fb.PostingType=x.PostingType ");
+			}
 			//	Report Where
 			String s = m_report.getWhereClause();
 			if (s != null && s.length() > 0)
@@ -1459,6 +1463,10 @@ public class FinReport extends SvrProcess
 		//
 		insert.append(m_parameterWhere)
 			.append(" GROUP BY ").append(variable);
+		
+		// Angelo Dabala' (genied) nectosoft - add postingtype to group by clause
+		if (m_lines[line].isPostingType())
+			insert.append(", PostingType ");
 
 		if (listSourceNoTrx) {
 			if (unionWhere.length() > 0)
@@ -1484,14 +1492,18 @@ public class FinReport extends SvrProcess
 			return;
 
 		//	Set Name,Description
-		StringBuffer sql = new StringBuffer ("UPDATE T_Report SET (Name,Description)=(")
-			.append(m_lines[line].getSourceValueQuery()).append("T_Report.Record_ID) "
-			//
-			+ "WHERE Record_ID <> 0 AND AD_PInstance_ID=").append(getAD_PInstance_ID())
-			.append(" AND PA_ReportLine_ID=").append(m_lines[line].getPA_ReportLine_ID())
-			.append(" AND Fact_Acct_ID=0");
-		no = DB.executeUpdate(sql.toString(), get_TrxName());
-		if (log.isLoggable(Level.FINE)) log.fine("Name #=" + no + " - " + sql.toString());
+		if(m_lines[line].getSourceValueQuery() != null) //F3P: bug-fix
+		{
+			StringBuffer sql = new StringBuffer ("UPDATE T_Report SET (Name,Description)=(")
+				.append(m_lines[line].getSourceValueQuery()).append("T_Report.Record_ID) "
+				//
+				+ "WHERE Record_ID <> 0 AND AD_PInstance_ID=").append(getAD_PInstance_ID())
+				.append(" AND PA_ReportLine_ID=").append(m_lines[line].getPA_ReportLine_ID())
+				.append(" AND Fact_Acct_ID=0");
+			no = DB.executeUpdate(sql.toString(), get_TrxName());
+			if (log.isLoggable(Level.FINE)) log.fine("Name #=" + no + " - " + sql.toString());
+		}
+		
 
 		if (m_report.isListTrx())
 			insertLineTrx (line, variable);
@@ -1619,7 +1631,7 @@ public class FinReport extends SvrProcess
 		if (p_PA_ReportCube_ID > 0)
 			whereClause = whereClause.replaceAll(" AND PA_ReportCube_ID=" + p_PA_ReportCube_ID, "");
 		insert.append(whereClause); // IDEMPIERE-130
-
+				
 		int no = DB.executeUpdate(insert.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINEST)) log.finest("Trx #=" + no + " - " + insert);
 		if (no == 0)

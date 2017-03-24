@@ -22,6 +22,7 @@ import net.sf.jasperreports.engine.JasperExportManager;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperReport;
 import net.sf.jasperreports.engine.export.JRXlsExporter;
+import net.sf.jasperreports.engine.export.JRXlsExporterParameter;
 import net.sf.jasperreports.view.JRViewer;
 
 import org.compiere.apps.EMailDialog;
@@ -30,6 +31,7 @@ import org.compiere.tools.FileUtil;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
 
 public class JasperReportViewer extends JRViewer {
 
@@ -126,6 +128,13 @@ class ExportListener implements ActionListener {
                     JRXlsExporter exporter = new  net.sf.jasperreports.engine.export.JRXlsExporter();
                     exporter.setParameter(JRExporterParameter.OUTPUT_FILE_NAME, file.getAbsolutePath());
                     exporter.setParameter(JRExporterParameter.JASPER_PRINT, viewer.getJasperPrint());
+                    // Angelo Dabala'(genied) nectosoft: need to set the correct cell type for dates and numbers
+                    exporter.setParameter(JRXlsExporterParameter.IS_DETECT_CELL_TYPE, Boolean.TRUE);
+                    exporter.setParameter(JRXlsExporterParameter.IS_REMOVE_EMPTY_SPACE_BETWEEN_ROWS, Boolean.TRUE);
+                    // Remove pagination and ignore margins
+                    exporter.setParameter(JRXlsExporterParameter.IGNORE_PAGE_MARGINS, Boolean.TRUE);
+                    exporter.setParameter(JRXlsExporterParameter.IS_ONE_PAGE_PER_SHEET, Boolean.FALSE);
+                    //
                     exporter.exportReport();
                 }
             } catch (JRException e) {
@@ -149,9 +158,11 @@ class SendByEmailListener implements ActionListener {
 
     public void actionPerformed(ActionEvent event) {
         String to = "";
+        // FIXME Angelo Dabala' (genied) client and org ID could be different because object is returned from cache
 		MUser from = MUser.get(Env.getCtx(), Env.getAD_User_ID(Env.getCtx()));
 		String subject = viewer.getJasperPrint().getName();
-		String message = "";
+		String signature = from.get_ValueAsString("EMailSignature");	// Angelo Dabala' (genied) retrieve EMail Signature
+		String message = Util.isEmpty(signature, true) ? "" : signature;
 		File attachment = null;
 		
 		try

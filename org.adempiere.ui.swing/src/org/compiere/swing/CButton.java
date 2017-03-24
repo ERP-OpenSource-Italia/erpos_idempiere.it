@@ -318,7 +318,8 @@ public class CButton extends JButton implements CEditor {
 		super.setMnemonic(mnemonic);
 
 		// Angelo Dabala' (genied) avoid to register Ctrl+Alt modifier mask without mnemonic
-		if (mnemonic==KeyEvent.VK_UNDEFINED) {
+		if (mnemonic==KeyEvent.VK_UNDEFINED || mnemonic == KeyEvent.VK_E) // F3P: having E as mnemonic effectively disable the euro symbol
+		{
 			return;
 		}
 		

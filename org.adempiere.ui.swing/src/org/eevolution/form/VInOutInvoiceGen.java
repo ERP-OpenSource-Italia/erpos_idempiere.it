@@ -53,6 +53,7 @@ import org.compiere.grid.ed.VComboBox;
 import org.compiere.grid.ed.VLookup;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.minigrid.MiniTable;
+import org.compiere.model.MInvoice;
 import org.compiere.model.MLookup;
 import org.compiere.model.MLookupFactory;
 import org.compiere.model.MOrder;
@@ -77,6 +78,8 @@ import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *	Manual Shipment Selection
@@ -780,8 +783,23 @@ public class VInOutInvoiceGen extends CPanel
 			log.log(Level.SEVERE, msg);
 			return;
 		}
+		
+		//F3P
+		String docAction = STDSysConfig.getDefaultDocAction(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx()));
+		
+		if(docAction != null)
+		{
+			docAction = docAction.trim();
+			
+			if((docAction.equalsIgnoreCase(MInvoice.ACTION_Complete) || 
+					docAction.equalsIgnoreCase(MInvoice.ACTION_Prepare)) == false)
+			{
+				docAction = MInvoice.ACTION_Complete;
+			}
+		}
+		//F3P end
 		para = new MPInstancePara(instance, 20);
-		para.setParameter("DocAction", "CO");
+		para.setParameter("DocAction", docAction); //F3P set docAction
 		if (!para.save())
 		{
 			String msg = "No DocAction Parameter added";  //  not translated
