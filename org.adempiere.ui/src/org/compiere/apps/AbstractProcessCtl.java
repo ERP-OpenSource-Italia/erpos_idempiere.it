@@ -490,12 +490,7 @@ public abstract class AbstractProcessCtl implements Runnable
 				return ProcessUtil.startScriptProcess(Env.getCtx(), m_pi, m_trx);
 			} else {
 				// LS CommitTrxOnClose
-				if (isCommitTrxOnClose()) {
-					return ProcessUtil.startJavaProcess(Env.getCtx(), m_pi, m_trx);
-	
-				} else {
-					return ProcessUtil.startJavaProcessWithoutTrxClose(Env.getCtx(), m_pi, m_trx);
-				}
+				return ProcessUtil.startJavaProcess(Env.getCtx(), m_pi, m_trx, isCommitTrxOnClose(), m_processUI);
 				// LS end
 			}
 		}
