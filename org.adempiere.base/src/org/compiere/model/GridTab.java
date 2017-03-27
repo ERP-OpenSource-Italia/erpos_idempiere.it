@@ -659,6 +659,11 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			String lc = getLinkColumnName();
 			if (lc.equals("")) {
 				log.warning ("No link column");
+				
+				//F3P: bug-fix
+				if(where.length() > 0)
+					where.append(" AND ");
+				//F3P:end
 				where.append (" 2=3");
 			}
 			else
@@ -695,14 +700,21 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				}
 				else
 				{
-					//	we have column and value
-					if (where.length() != 0)
-						where.append(" AND ");
-					where.append(getTableName()).append(".").append(lc).append("=");
-					if (lc.endsWith("_ID"))
-						where.append(DB.TO_NUMBER(new BigDecimal(value), DisplayType.ID));
-					else
-						where.append(DB.TO_STRING(value));
+					if (!m_query.isActive()) //F3P: porting adempiere
+					{ // create a where criteria - otherwise, use the query.
+						//	we have column and value
+						if (where.length() != 0)
+							where.append(" AND ");
+						where.append(getTableName()).append(".").append(lc).append("=");
+						if (lc.endsWith("_ID"))
+							where.append(DB.TO_NUMBER(new BigDecimal(value), DisplayType.ID));
+						else
+							where.append(DB.TO_STRING(value));
+					}
+					else //F3P: bug-fix: update variable 'where' or the next search action will search on all records, not filtered on parent tab
+					{
+						where.append(m_query.getWhereClause());
+					}
 				}
 			}
 		}	//	isDetail
@@ -1012,8 +1024,12 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		try
 		{
 			if (hasChangedCurrentTabAndParents())
-				return false;
-
+			{
+				// Fail only if it's a true change - teo_sarca [ 3017560 ]
+				if (manualCmd || m_mTable.hasChanged(m_currentRow))
+					return false;
+			}
+			
 			boolean retValue = (m_mTable.dataSave(manualCmd) == GridTable.SAVE_OK);
 			if (manualCmd)
 			{
@@ -1330,8 +1346,6 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			m_parentColumnName = DB.getSQLValueString(null, sql, m_vo.Parent_Column_ID );
 		if ( m_parentColumnName == null )
 			m_parentColumnName = "";
-
-
 
 		if (linkColumnName != null)
 			m_linkColumnName = linkColumnName;
@@ -2635,8 +2649,9 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			{
 				Object value = m_mTable.getValueAt(m_currentRow, i);
 				mField.setValue(value, m_mTable.isInserting());
-				if (m_mTable.isInserting())		//	set invalid values to null
-					mField.validateValue();
+				// Angelo Dabala' (genied) wait until lookups are refreshed
+				//if (m_mTable.isInserting())		//	set invalid values to null
+				//	mField.validateValue();
 				if (mField.isKey())
 					keyCalloutDelayed = mField;
 			}
@@ -3461,6 +3476,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		selection.clear();
 	}
 	
+	// Angelo Dabala' (genied)
 	/**
 	 * Evaluate Display, ReadOnly and Mandatory logic using a script
 	 * @author Angelo Dabala' (genied)
@@ -3521,6 +3537,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		}
 		return false;
 	}
+	//Angelo Dabala' (genied) end
 	
 	//LS added to be able to refresh properly included and parent tabs from ADTabPanel,
 	//need to retreive current params 'onlyCurrentRows' and 'onlyCurrentDays' without override them

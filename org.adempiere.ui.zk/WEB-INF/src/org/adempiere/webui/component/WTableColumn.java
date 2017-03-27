@@ -44,7 +44,15 @@ public class WTableColumn
     protected Class<?> columnClass;
     
     protected String tooltipText;
-
+    
+    //F3P
+    protected String	cssClass = null;
+    
+    protected boolean emptyNullValue = false;
+    
+    protected Integer	fixedWidth;
+    //F3P: end
+    
     /** 
      *  Cover method, using a default width of 75 
      *  @see #WTableColumn(int)
@@ -288,4 +296,34 @@ public class WTableColumn
 	public void setTooltipText(String tooltipText) {
 		this.tooltipText = tooltipText;
 	}
+	
+	//F3P: Css Class
+	public String getCssClass()
+	{
+		return cssClass;
+	}
+	
+	public void setCssClass(String cssClass)
+	{
+		this.cssClass = cssClass;
+	}
+	
+	public boolean isEmptyNullValue()
+	{
+		return emptyNullValue;
+	}
+	
+	public void setEmptyNullValue(boolean emptyNullValue)
+	{
+		this.emptyNullValue = emptyNullValue;
+	}
+
+	public Integer getFixedWidth() {
+		return fixedWidth;
+	}
+
+	public void setFixedWidth(Integer fixedWidth) {
+		this.fixedWidth = fixedWidth;
+	}
+	//F3P end
 }

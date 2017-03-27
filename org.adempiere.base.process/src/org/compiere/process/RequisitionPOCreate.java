@@ -52,6 +52,10 @@ import org.compiere.util.Msg;
  *  			http://sourceforge.net/tracker/?func=detail&atid=879332&aid=2811718&group_id=176962
  *  		<li>FR [ 2844074  ] Requisition PO Create - more selection fields
  *  			https://sourceforge.net/tracker/?func=detail&aid=2844074&group_id=176962&atid=879335
+ *  
+ *  @author Silvano Trinchero, www.freepath.it
+ *  		<li>FR [ 3471930 ] Alllow consolidation of PO from Req. with different dates
+ *  			https://sourceforge.net/tracker/?func=detail&aid=3471930&group_id=176962&atid=879335 
  */
 public class RequisitionPOCreate extends SvrProcess
 {
@@ -82,7 +86,10 @@ public class RequisitionPOCreate extends SvrProcess
 
 	/** Consolidate			*/
 	private boolean		p_ConsolidateDocument = false;
-
+	
+	/** FR [ 3471930 ] added new parameter **/
+	private boolean		p_ConsolidateByDatePromised = true;
+	
 	/** Order				*/
 	private MOrder		m_order = null;
 	/** Order Line			*/
@@ -129,6 +136,8 @@ public class RequisitionPOCreate extends SvrProcess
 				p_M_Requisition_ID = para[i].getParameterAsInt();
 			else if (name.equals("ConsolidateDocument"))
 				p_ConsolidateDocument = "Y".equals(para[i].getParameter());
+			else if (name.equals("ConsolidateByDatePromised")) // FR [ 3471930 ] read value for new parameter
+				p_ConsolidateByDatePromised = para[i].getParameterAsBoolean();
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -170,7 +179,8 @@ public class RequisitionPOCreate extends SvrProcess
 			+ ", PriorityRule=" + p_PriorityRule
 			+ ", AD_User_ID=" + p_AD_User_ID
 			+ ", M_Product_ID=" + p_M_Product_ID
-			+ ", ConsolidateDocument" + p_ConsolidateDocument);
+			+ ", ConsolidateDocument=" + p_ConsolidateDocument
+			+ ", ConsolidateByDatePromised=" + p_ConsolidateByDatePromised); // FR [ 3471930 ] added param to log, minor typo in ConsolidateDocument line
 		
 		ArrayList<Object> params = new ArrayList<Object>();
 		StringBuilder whereClause = new StringBuilder("C_OrderLine_ID IS NULL");
@@ -301,7 +311,9 @@ public class RequisitionPOCreate extends SvrProcess
 			|| rLine.getM_AttributeSetInstance_ID() != m_M_AttributeSetInstance_ID
 			|| rLine.getC_Charge_ID() != 0		//	single line per charge
 			|| m_order == null
-			|| m_order.getDatePromised().compareTo(rLine.getDateRequired()) != 0
+			|| (p_ConsolidateByDatePromised == true && m_order.getDatePromised().compareTo(rLine.getDateRequired()) != 0) // FR [ 3471930 ] If consolidation by date promised is true, then consider it
+			// FR [ 3471930 ] Due to the changes to the previous line, we need to check if two lines differ by date and avoid consolidating them
+			|| (m_orderLine.getDatePromised().compareTo(rLine.getDateRequired()) != 0) 
 			)
 		{
 			newLine(rLine);
@@ -450,7 +462,7 @@ public class RequisitionPOCreate extends SvrProcess
 		//	New Order - Different Vendor
 		if (m_order == null 
 			|| m_order.getC_BPartner_ID() != C_BPartner_ID
-			|| m_order.getDatePromised().compareTo(rLine.getDateRequired()) != 0
+			|| (p_ConsolidateByDatePromised == true && m_order.getDatePromised().compareTo(rLine.getDateRequired()) != 0) // FR [ 3471930 ] If consolidation by date promised is true, then consider it
 			)
 		{
 			newOrder(rLine, C_BPartner_ID);

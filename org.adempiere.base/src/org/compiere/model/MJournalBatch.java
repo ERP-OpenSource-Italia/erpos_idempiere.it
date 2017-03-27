@@ -626,6 +626,7 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 			}
 		}
 		
+		/* F3P removed, porting adempiere
 		//	Reverse it
 		MJournalBatch reverse = new MJournalBatch (this);
 		reverse.setDateDoc(getDateDoc());
@@ -638,14 +639,14 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 		//[ 1948157  ]
 		reverse.setReversal_ID(getGL_JournalBatch_ID());
 		reverse.saveEx();
-		
+		*/
 		//	Reverse Journals
 		for (int i = 0; i < journals.length; i++)
 		{
 			MJournal journal = journals[i];
 			if (!journal.isActive())
 				continue;
-			if (journal.reverseCorrectIt(reverse.getGL_JournalBatch_ID()) == null)
+			if (!journal.processIt(DOCACTION_Reverse_Correct)) //nectosoft
 			{
 				m_processMsg = "Could not reverse " + journal;
 				return false;
@@ -653,6 +654,7 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 			journal.saveEx();
 		}
 		//
+		/* F3P porting adempiere
 		if (!reverse.processIt(DocAction.ACTION_Complete))
 		{
 			m_processMsg = "Reversal ERROR: " + reverse.getProcessMsg();
@@ -667,9 +669,12 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 		msgd = new StringBuilder("(").append(reverse.getDocumentNo()).append("<-)");
 		addDescription(msgd.toString());
 
-		setProcessed(true);
+		
 		//[ 1948157  ]
 		setReversal_ID(reverse.getGL_JournalBatch_ID());
+		*/
+		setProcessed(true);
+		//F3P end
 		setDocStatus(DOCSTATUS_Reversed);
 		setDocAction(DOCACTION_None);
 		saveEx();
@@ -710,6 +715,7 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 				return false;
 			}
 		}
+		/* nectosoft
 		//	Reverse it
 		MJournalBatch reverse = new MJournalBatch (this);
 		reverse.setC_Period_ID(0);
@@ -720,14 +726,14 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 		reverse.addDescription(msgd.toString());
 		reverse.setReversal_ID(getGL_JournalBatch_ID());
 		reverse.saveEx();
-		
+		*/
 		//	Reverse Journals
 		for (int i = 0; i < journals.length; i++)
 		{
 			MJournal journal = journals[i];
 			if (!journal.isActive())
 				continue;
-			if (journal.reverseAccrualIt(reverse.getGL_JournalBatch_ID()) == null)
+			if (!journal.processIt(DOCACTION_Reverse_Accrual))//nectosoft
 			{
 				m_processMsg = "Could not reverse " + journal;
 				return false;
@@ -735,6 +741,7 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 			journal.saveEx();
 		}
 		//
+		/* F3P porting adempiere
 		if (!reverse.processIt(DocAction.ACTION_Complete))
 		{
 			m_processMsg = "Reversal ERROR: " + reverse.getProcessMsg();
@@ -751,6 +758,9 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 
 		setProcessed(true);
 		setReversal_ID(reverse.getGL_JournalBatch_ID());
+		*/
+		setProcessed(true);
+		//F3P end
 		setDocStatus(DOCSTATUS_Reversed);
 		setDocAction(DOCACTION_None);
 		saveEx();

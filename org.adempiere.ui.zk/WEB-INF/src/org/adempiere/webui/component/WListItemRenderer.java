@@ -17,39 +17,25 @@
 
 package org.adempiere.webui.component;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.sql.Timestamp;
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.adempiere.base.Service;
 import org.adempiere.webui.AdempiereWebUI;
-import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.event.TableValueChangeEvent;
 import org.adempiere.webui.event.TableValueChangeListener;
+import org.adempiere.webui.factory.ICellComponentFactory;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.minigrid.IDColumn;
-import org.compiere.model.MImage;
-import org.compiere.util.DisplayType;
-import org.compiere.util.Env;
-import org.compiere.util.Language;
 import org.compiere.util.MSort;
 import org.compiere.util.Util;
-import org.zkoss.image.AImage;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
-import org.zkoss.zul.Decimalbox;
-import org.zkoss.zul.Image;
 import org.zkoss.zul.ListModel;
 import org.zkoss.zul.Listbox;
 import org.zkoss.zul.Listcell;
@@ -62,7 +48,8 @@ import org.zkoss.zul.ListitemRendererExt;
  * for the {@link org.adempiere.webui.component.Listbox}.
  *
  * @author Andrew Kimball
- *
+ * @author Monica Bean, www.freepath.it
+ * @see  IDEMPIERE-3318 Factory for generating cell renderers https://idempiere.atlassian.net/browse/IDEMPIERE-3318
  */
 public class WListItemRenderer implements ListitemRenderer<Object>, EventListener<Event>, ListitemRendererExt
 {
@@ -81,6 +68,9 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 
 	private EventListener<Event> cellListener;
 
+	//F3P: identifier
+	private String	identifier;
+	
 	/**
 	 * Default constructor.
 	 *
@@ -89,15 +79,29 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	{
 		super();
 	}
-
+	
 	/**
 	 * Constructor specifying the column headers.
 	 *
 	 * @param columnNames	vector of column titles.
 	 */
-	public WListItemRenderer(List< ? extends String> columnNames)
+	public WListItemRenderer(List< ? extends String> columnNames) 
+	{
+		this(columnNames, null); //F3P: identifier
+	}
+
+	/**
+	 * Constructor specifying the column headers.
+	 *
+	 * @param columnNames	vector of column titles.
+	 * @param identifier	identifier
+	 */
+	public WListItemRenderer(List< ? extends String> columnNames, String identifier) //F3P: identifier
 	{
 		super();
+		
+		this.identifier = identifier;
+		
 		WTableColumn tableColumn;
 
 		for (String columnName : columnNames)
@@ -114,7 +118,8 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	 * @param columnIndex	The index of the column for which details are to be retrieved.
 	 * @return	The details of the column at the specified index.
 	 */
-	private WTableColumn getColumn(int columnIndex)
+	//F3P: changed into public
+	public WTableColumn getColumn(int columnIndex)
 	{
 		try
 		{
@@ -208,156 +213,20 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 		}
 		boolean isCellEditable = table != null ? table.isCellEditable(rowIndex, columnIndex) : false;
 
-        // TODO put this in factory method for generating cell renderers, which
-        // are assigned to Table Columns
 		if (field != null)
 		{
-			if (field instanceof Boolean)
-			{
-				listcell.setValue(Boolean.valueOf(field.toString()));
-
-				if (table != null && columnIndex == 0)
-					table.setCheckmark(false);
-				Checkbox checkbox = new Checkbox();
-				checkbox.setChecked(Boolean.valueOf(field.toString()));
-
-				if (isCellEditable)
+			// F3P: IDEMPIERE-3318 - Factory for generating cell renderers
+			List<ICellComponentFactory> factories = Service.locator().list(ICellComponentFactory.class).getServices();
+			
+			if (factories != null) {
+				for(ICellComponentFactory factory : factories) 
 				{
-					checkbox.setEnabled(true);
-					checkbox.addEventListener(Events.ON_CHECK, this);
+					boolean managed = factory.createCellComponent(this, listcell, table, field, rowIndex, columnIndex, 
+							isCellEditable, identifier);
+					
+					if(managed)
+						break;	
 				}
-				else
-				{
-					checkbox.setEnabled(false);
-				}
-
-				listcell.appendChild(checkbox);
-				ZkCssHelper.appendStyle(listcell, "text-align:center");
-			}
-			else if (field instanceof Number)
-			{
-				if (m_tableColumns != null && columnIndex < m_tableColumns.size()
-						&& m_tableColumns.get(columnIndex).getColumnClass() != null
-						&& m_tableColumns.get(columnIndex).getColumnClass().getName().equals(MImage.class.getName()) 
-						&& field instanceof Integer)
-				{
-					MImage mImage = MImage.get(Env.getCtx(), (Integer) field);
-					AImage img = null;
-					byte[] data = mImage.getData();
-					if (data != null && data.length > 0) {
-						try {
-							img = new AImage(null, data);
-						} catch (Exception e) {
-							throw new RuntimeException(e);
-						}
-					}
-					Image image = new Image();
-					image.setContent(img);
-					image.setStyle("width: 48px; height: 48px;");
-					listcell.appendChild(image);
-					listcell.setStyle("text-align: center;");
-				}
-				else
-				{
-					Language lang = AEnv.getLanguage(Env.getCtx());
-					int displayType = (field instanceof BigDecimal || field instanceof Double || field instanceof Float)
-							? DisplayType.Amount
-						    : DisplayType.Integer;
-					DecimalFormat format = DisplayType.getNumberFormat(displayType, lang);
-
-					// set cell value to allow sorting
-					listcell.setValue(field.toString());
-
-					if (isCellEditable)
-					{
-						NumberBox numberbox = new NumberBox(false);
-						numberbox.getDecimalbox().setFormat(format.toPattern());
-						numberbox.getDecimalbox().setLocale(lang.getLocale());
-						numberbox.setFormat(format);
-						numberbox.setValue(field);
-//						numberbox.setWidth("100px");
-						numberbox.setEnabled(true);
-						numberbox.setStyle("text-align:right; width: 96%;"
-										+ listcell.getStyle());
-						numberbox.addEventListener(Events.ON_CHANGE, this);
-						listcell.appendChild(numberbox);
-					}
-					else
-					{
-						listcell.setLabel(format.format(((Number)field).doubleValue()));
-						ZkCssHelper.appendStyle(listcell, "text-align: right");
-					}
-				}
-			}
-			else if (field instanceof Timestamp)
-			{
-
-				SimpleDateFormat dateFormat = DisplayType.getDateFormat(DisplayType.Date, AEnv.getLanguage(Env.getCtx()));
-				listcell.setValue(dateFormat.format((Timestamp)field));
-				if (isCellEditable)
-				{
-					Datebox datebox = new Datebox();
-					datebox.setValue(new Date(((Timestamp)field).getTime()));
-					datebox.addEventListener(Events.ON_CHANGE, this);
-					listcell.appendChild(datebox);
-				}
-				else
-				{
-					listcell.setLabel(dateFormat.format((Timestamp)field));
-					ZkCssHelper.appendStyle(listcell, "margin: auto");
-				}
-			}
-			else if (field instanceof String)
-			{
-				if (m_tableColumns != null && columnIndex < m_tableColumns.size()
-						&& m_tableColumns.get(columnIndex).getColumnClass() != null
-						&& m_tableColumns.get(columnIndex).getColumnClass().getName().equals(MImage.class.getName()))
-				{
-					try {
-						URL url = new URL(field.toString());
-						AImage aImage = new AImage(url);
-						Image image = new Image();
-						image.setContent(aImage);
-						image.setStyle("width: 48px; height: 48px;");
-						listcell.appendChild(image);
-						listcell.setStyle("text-align: center;");
-					} catch (MalformedURLException e) {
-						throw new RuntimeException(e);
-					} catch (IOException e) {
-						throw new RuntimeException(e);
-					}
-				}
-				else
-				{
-					listcell.setValue(field.toString());
-					if (isCellEditable)
-					{
-						Textbox textbox = new Textbox();
-						textbox.setValue(field.toString());
-						textbox.addEventListener(Events.ON_CHANGE, this);
-						ZkCssHelper.appendStyle(textbox, "width: 96%;");
-						listcell.appendChild(textbox);
-					}
-					else
-					{
-						listcell.setLabel(field.toString());
-					}
-				}
-			}
-			// if ID column make it invisible
-			else if (field instanceof IDColumn)
-			{
-				listcell.setValue(((IDColumn) field).getRecord_ID());
-				if (!table.isCheckmark()) {
-					table.setCheckmark(true);
-					table.removeEventListener(Events.ON_SELECT, this);
-					table.addEventListener(Events.ON_SELECT, this);
-				}
-			}
-			else
-			{
-				listcell.setLabel(field.toString());
-				listcell.setValue(field.toString());
 			}
 		}
 		else
@@ -447,10 +316,11 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	 * @param tooltipText
      * @param headerIndex   The column index of the header
 	 * @param classType
+	 * @param columnWidth			The width of column, if null default value
 	 * @return The generated ListHeader
 	 * @see #renderListHead(ListHead)
 	 */
-	private Component getListHeaderComponent(Object headerValue, String tooltipText, int headerIndex, Class<?> classType)
+	private Component getListHeaderComponent(Object headerValue, String tooltipText, int headerIndex, Class<?> classType, Integer columnWidth)
 	{
         ListHeader header = null;
 
@@ -519,6 +389,10 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
             }
         }
 
+        //FINMATICA set width
+        if(columnWidth != null)
+        	ZKUpdateUtil.setWidth(header, columnWidth + "px");
+        
 		return header;
 	}
 
@@ -589,14 +463,38 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	 */
 	public void renderListHead(ListHead head)
 	{
+		renderListHead(head, null);
+	}
+	
+	
+	/**
+	 * FIN possibilità di indicare il width
+	 * 
+	 * Render the ListHead for the table with headers for the table columns.
+	 *
+	 * @param head	The ListHead component to render.
+	 * @param columnWidths
+	 * @see #addColumn(String)
+	 * @see #WListItemRenderer(List)
+	 */
+	public void renderListHead(ListHead head, List<? extends Integer> columnWidths)
+	{
 		Component header;
         WTableColumn column;
+        
+        if(columnWidths != null && columnWidths.size() == m_tableColumns.size())
+        {
+        	for (int columnIndex = 0; columnIndex < m_tableColumns.size(); columnIndex++)
+            {
+        		m_tableColumns.get(columnIndex).setFixedWidth(columnWidths.get(columnIndex));
+            }
+        }
 
 		for (int columnIndex = 0; columnIndex < m_tableColumns.size(); columnIndex++)
         {
             column = m_tableColumns.get(columnIndex);
-			header = getListHeaderComponent(column.getHeaderValue(), column.getTooltipText(), columnIndex, column.getColumnClass());
-            head.appendChild(header);
+			header = getListHeaderComponent(column.getHeaderValue(), column.getTooltipText(), columnIndex, column.getColumnClass(), column.getFixedWidth());
+			head.appendChild(header);
 		}
 		head.setSizable(true);
 
@@ -622,25 +520,18 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 			col = getColumnPosition(source);
 
 			tableColumn = m_tableColumns.get(col);
-
-			if (source instanceof Checkbox)
-			{
-				value = Boolean.valueOf(((Checkbox)source).isChecked());
+			
+			// F3P: IDEMPIERE-3318 - Factory for generating cell renderers
+			List<ICellComponentFactory> factories = Service.locator().list(ICellComponentFactory.class).getServices();
+			
+			if (factories != null) {
+				for(ICellComponentFactory factory : factories) {
+					value = factory.getValueForCell(this, tableColumn, row, col, source, identifier);
+					if(value != null)
+						break;	
+				}
 			}
-			else if (source instanceof Decimalbox)
-			{
-				value = ((Decimalbox)source).getValue();
-			}
-			else if (source instanceof Datebox)
-			{
-				if (((Datebox)source).getValue() != null)
-					value = new Timestamp(((Datebox)source).getValue().getTime());
-			}
-			else if (source instanceof Textbox)
-			{
-				value = ((Textbox)source).getValue();
-			}
-
+			
 			if(value != null)
 			{
 				vcEvent = new TableValueChangeEvent(source,
@@ -848,6 +739,11 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 		{
 			m_tableColumns.get(index).setColumnClass(classType);
 		}
+	}
+
+	//F3P: IDEMPIERE-3318 - Factory for generating cell renderers
+	public ArrayList<WTableColumn> getTableColumns() {
+		return m_tableColumns;
 	}
 
 	class CellListener implements EventListener<Event> {
