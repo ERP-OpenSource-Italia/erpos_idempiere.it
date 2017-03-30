@@ -81,6 +81,8 @@ import org.supercsv.prefs.CsvPreference;
  * CSV Importer for GridTab
  * @author Carlos Ruiz
  * @author Juan David Arboleda 
+ * @author Silvano Trinchero, www.freepath.it
+ * 					ID-XYZ: csv format can be configured via sys config
  */
 public class GridTabCSVImporter implements IGridTabImporter
 {
@@ -114,7 +116,7 @@ public class GridTabCSVImporter implements IGridTabImporter
 	private PrintWriter errFileW;
 	private PrintWriter logFileW;
 	
-	private CsvPreference csvpref = CsvPreference.STANDARD_PREFERENCE;
+	private CsvPreference csvpref = GridTabCSVExporter.getCvPreferences(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx()));
 	private String delimiter = String.valueOf((char) csvpref.getDelimiterChar());
 	private String quoteChar = String.valueOf((char) csvpref.getQuoteChar());
 	
@@ -209,7 +211,7 @@ public class GridTabCSVImporter implements IGridTabImporter
 					StringBuilder rowResult = new StringBuilder();
 					boolean isDetail = false;
 
-					if (rawLine.charAt(0)==','){
+					if (rawLine.charAt(0)==delimiter.charAt(0)){
 						isDetail=true;
 						//check out if master row comes empty  
 						Map<String, Object> rowMap = data.get(idx);

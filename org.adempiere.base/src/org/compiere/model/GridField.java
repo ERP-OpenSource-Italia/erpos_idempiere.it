@@ -439,13 +439,14 @@ public class GridField
 	 */
 	public boolean isEditable (Properties ctx, boolean checkContext,boolean isGrid)
 	{
+		if (isVirtualColumn())
+			return false;
+		
 		// FIN (st): IDEMPIERE-3308, check ui behaviour
 		
 		if(UIBehaviour.isEditable(ctx, this, checkContext, isGrid) == false)
-			return false;
+			return false;		
 		
-		if (isVirtualColumn())
-			return false;
 		//  Fields always enabled (are usually not updateable)
 		if (m_vo.ColumnName.equals("Posted")
 			|| (m_vo.ColumnName.equals("Record_ID") && m_vo.displayType == DisplayType.Button))	//  Zoom

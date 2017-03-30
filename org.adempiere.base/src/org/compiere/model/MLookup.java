@@ -359,9 +359,6 @@ public final class MLookup extends Lookup implements Serializable
 	 */
 	public boolean isValidated()
 	{
-		if(m_bUseCache == false) // FIN (st): IDEMPIERE-3308, check cache validity
-			return false;
-		
 		if (m_info == null)
 			return false;
 		//return m_info.IsValidated;
@@ -516,6 +513,10 @@ public final class MLookup extends Lookup implements Serializable
 	 */
 	public NamePair getDirect (Object key, boolean saveInCache, boolean cacheLocal)
 	{
+		// FIN (st): IDEMPIERE-3308, check cache validity
+		saveInCache = (saveInCache && m_bUseCache);
+		cacheLocal = (cacheLocal && m_bUseCache);
+		
 		//	Nothing to query
 		if (key == null || m_info.QueryDirect == null || m_info.QueryDirect.length() == 0)
 			return null;
@@ -737,6 +738,10 @@ public final class MLookup extends Lookup implements Serializable
 	
 	private boolean isValidated(MLookupInfo info)
 	{
+		// FIN (st): IDEMPIERE-3308, check cache validity
+		if(m_bUseCache == false)
+			return m_bUseCache;
+		
 		if (info.IsValidated) return true;
 		if (info.ValidationCode.length() == 0) return true;
 		// F3P: added TabNo

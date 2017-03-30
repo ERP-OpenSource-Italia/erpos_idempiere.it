@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import org.adempiere.base.IGridTabExporter;
 import org.adempiere.exceptions.AdempiereException;
@@ -42,6 +43,7 @@ import org.compiere.model.MColumn;
 import org.compiere.model.MLocation;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRefList;
+import org.compiere.model.MSysConfig;
 import org.compiere.model.MTab;
 import org.compiere.model.MTable;
 import org.compiere.util.CLogger;
@@ -60,16 +62,49 @@ import org.supercsv.cellprocessor.ift.CellProcessor;
 import org.supercsv.io.CsvMapWriter;
 import org.supercsv.io.ICsvMapWriter;
 import org.supercsv.prefs.CsvPreference;
+import org.supercsv.prefs.CsvPreference.Builder;
+
+import groovy.json.StringEscapeUtils;
 
 /**
  * CSV Exporter for GridTab
  * @author Carlos Ruiz
  * @author Juan David Arboleda 
+ * @author Silvano Trinchero, www.freepath.it
+ * 					ID-XYZ: csv format can be configured via sys config
  */
 public class GridTabCSVExporter implements IGridTabExporter
 {
 	/**	Logger			*/
 	private static CLogger log = CLogger.getCLogger(GridTabCSVExporter.class);
+	
+	private static final String CSV_EXPORT_PREFS_DEFINTION = "CSV_IMPEXP_FORMAT"; // 1st char: quote char. 2nd char: separator. remaining string: new line seps (\n\r)
+	
+	public static final CsvPreference getCvPreferences(int AD_Client_ID, int AD_Org_ID)
+	{
+		String prefs = MSysConfig.getValue(CSV_EXPORT_PREFS_DEFINTION, null, AD_Client_ID, AD_Org_ID);
+		
+		if(prefs == null)
+			return CsvPreference.STANDARD_PREFERENCE;
+		
+		if(prefs.length() < 3) // less then 3 chars is an invalid configuration (3 is borderline, newline is defined with only one char, wich cant be a real newline
+		{
+			log.log(Level.SEVERE, "Csv imp/exp format should have at least 3 chars (quote, separator, newline), check value:" + prefs);
+			return CsvPreference.STANDARD_PREFERENCE;
+		}
+		
+		char quote = prefs.charAt(0);
+		char separator = prefs.charAt(1);
+		String newLine = prefs.substring(2);
+		
+		// Unescape common new lines
+		
+		newLine = newLine.replaceAll("\\Q\\n\\E", "\n");
+		newLine = newLine.replaceAll("\\Q\\r\\E", "\r");
+		
+		Builder builder = new CsvPreference.Builder(quote,separator,newLine);
+		return builder.build();
+	}
 
 	@Override
 	public void export(GridTab gridTab, List<GridTab> childs, boolean currentRowOnly, File file,int indxDetailSelected) {
@@ -82,7 +117,7 @@ public class GridTabCSVExporter implements IGridTabExporter
 			FileOutputStream fileOut = new FileOutputStream (file); 			
 			OutputStreamWriter oStrW = new OutputStreamWriter(fileOut, Ini.getCharset());
 			BufferedWriter bw = new BufferedWriter(oStrW); 
-			mapWriter = new CsvMapWriter(bw, CsvPreference.STANDARD_PREFERENCE);
+			mapWriter = new CsvMapWriter(bw, getCvPreferences(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())));
 			String isValidTab = isValidTabToExport(gridTab);
 			if(isValidTab!=null){
 			   throw new AdempiereException(isValidTab);

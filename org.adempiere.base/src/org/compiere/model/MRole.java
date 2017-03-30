@@ -46,6 +46,7 @@ import org.compiere.util.Ini;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
 import org.compiere.util.Trace;
+import org.compiere.util.Util;
 
 /**
  *	Role Model.
@@ -1910,16 +1911,16 @@ public final class MRole extends X_AD_Role
 	 * @return where clause
 	 */
 	
-	public String getAdditionalSQLRoleAccessConditions(String TableNameIn,AccessSqlParser.TableInfo[] ti, boolean fullyQualified, boolean rw)
+	public String getAdditionalSQLRoleAccessConditions(String TableNameIn,AccessSqlParser.TableInfo[] ti, boolean fullyQualified, boolean rw, Boolean additionaRW)
 	{
 		List<IRoleAccess> rules = Service.locator().list(IRoleAccess.class).getServices();
 		StringBuilder	sbConditions = new StringBuilder(); 
 		
 		for(IRoleAccess rule:rules)
 		{
-			String sqlRule = rule.getSQLAccessCondition(this, TableNameIn, ti, fullyQualified, rw);
+			String sqlRule = rule.getSQLAccessCondition(this, TableNameIn, ti, fullyQualified, rw, additionaRW);
 			
-			if(sqlRule != null)
+			if(Util.isEmpty(sqlRule, true) == false)
 			{
 				sbConditions.append(" AND (").append(sqlRule).append(")");
 			}			
@@ -1930,7 +1931,6 @@ public final class MRole extends X_AD_Role
 		
 		return null;
 	}	
-
 	
 	/*************************************************************************
 	 *	Appends where clause to SQL statement for Table
@@ -1941,8 +1941,25 @@ public final class MRole extends X_AD_Role
 	 *	@param rw			if false, includes System Data
 	 *	@return				updated SQL statement
 	 */
+
 	public String addAccessSQL (String SQL, String TableNameIn, 
-		boolean fullyQualified, boolean rw)
+			boolean fullyQualified, boolean rw)
+	{
+		return addAccessSQL(SQL, TableNameIn, fullyQualified, rw, rw);
+	}
+	
+	/*************************************************************************
+	 *	Appends where clause to SQL statement for Table
+	 *
+	 *	@param SQL			existing SQL statement
+	 *	@param TableNameIn	Table Name or list of table names AAA, BBB or AAA a, BBB b
+	 *	@param fullyQualified	fullyQualified names
+	 *	@param rw			if false, includes System Data
+	 *  @param additionalAccessRW rw condition for additional role access plugins.
+	 *	@return				updated SQL statement
+	 */
+	public String addAccessSQL (String SQL, String TableNameIn, 
+		boolean fullyQualified, boolean rw, Boolean additionalAccessRW) // FIN (st): added rw condition for additional check, should it has a different meaning for additioanl rw.
 	{
 		StringBuilder retSQL = new StringBuilder();
 
@@ -2125,7 +2142,7 @@ public final class MRole extends X_AD_Role
 		
 		// Additional conditions
 		
-		String addtionalConditions = getAdditionalSQLRoleAccessConditions(tableName, ti, fullyQualified, rw);
+		String addtionalConditions = getAdditionalSQLRoleAccessConditions(tableName, ti, fullyQualified, rw, additionalAccessRW);
 		
 		if(addtionalConditions != null)
 		{
