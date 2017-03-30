@@ -386,10 +386,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	protected String prevWhereClause = null;
 	/**
-	 * save value of parameter to set info query paramenter
+	 * save value of parameter to set info query parameter
 	 */
 	protected List<Object> prevParameterValues = null;
 	protected List<String> prevQueryOperators = null;
+	protected List<String> prevQueryFunctions = null;
 	protected List<WEditor> prevRefParmeterEditor = null;
 	private static final String[] lISTENER_EVENTS = {};
 

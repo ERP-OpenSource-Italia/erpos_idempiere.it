@@ -113,6 +113,9 @@ import org.zkoss.zul.Space;
 import org.zkoss.zul.Tab;
 import org.zkoss.zul.Vlayout;
 
+import it.idempiere.base.util.FilterQuery;
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *  This class is based on org.compiere.apps.search.Find written by Jorg Janke.
  *  Find/Search Records.
@@ -244,7 +247,7 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
         m_title = title;
         m_AD_Table_ID = AD_Table_ID;
         m_tableName = tableName;
-        m_whereExtended = whereExtended;
+        m_whereExtended = Env.parseContext(Env.getCtx(), targetWindowNo, whereExtended, false);//F3P from adempiere parse context
         m_findFields = findFields;
         m_sNew = "** ".concat(Msg.getMsg(Env.getCtx(), "New Query")).concat(" **");		
         m_AD_Tab_ID = adTabId;
@@ -976,6 +979,11 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
             }
             if (field.isKey())
                 header += (" (ID)");
+            //F3P: check if it is a not displayed lookup: if it is, don't add to list or we will have an empty combobox
+			else if(field.isLookup() && !field.isDisplayed())
+				continue;
+			//F3P: End
+            
             ValueNamePair pp = new ValueNamePair(columnName, header.toString());
             items.add(pp);
         }
@@ -1380,6 +1388,11 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
 	{
 		if (in == null)
 			return null;
+		
+		// F3P: parse string with env to support context-aware variables
+		in = parseStringWithEnv(in);
+		//F3P end
+		
 		int dt = field.getDisplayType();
 		try
 		{
@@ -1562,7 +1575,6 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
                 	value2 = cellQueryFrom.getAttribute("value");
                 }
                 
-                
                 value2 = cellQueryTo.getAttribute("value");
                 if (value2 == null)
                     continue;
@@ -1579,6 +1591,26 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
                 }
                 m_query.addRestriction(getSubCategoryWhereClause(((Integer) parsedValue).intValue()), and, openBrackets);
             }
+            //F3P filter special char
+            if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())) && 
+            		MQuery.LIKE.equals(Operator) && parsedValue instanceof String)
+        	{
+        		String function = FilterQuery.SPECIAL_CHAR_FUNCTION.replaceFirst("[?]", ColumnSQL.toString());
+        		
+        		if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())))
+        			function = FilterQuery.getFilterFunction(function);
+
+        		StringBuilder filteredValue = new StringBuilder(FilterQuery.filterString(parsedValue.toString()));
+        		
+        		if(filteredValue.toString().endsWith("%") == false)
+        			filteredValue.append("%");
+        		
+        		parsedValue = filteredValue.toString();
+        		
+        		m_query.addRestriction(function, Operator, parsedValue,
+        				infoName, infoDisplay, and, openBrackets);
+        	}
+            //F3P end
             else
             	m_query.addRestriction(ColumnSQL, Operator, parsedValue,
             			infoName, infoDisplay, and, openBrackets);
@@ -1720,11 +1752,27 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
                     // Be more permissive for String columns
                     if (isSearchLike(field))
                     {
-                        StringBuilder valueStr = new StringBuilder(value.toString().toUpperCase());
+                    	//F3P filter special chars
+                    	StringBuilder valueStr = new StringBuilder();
+                    	if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())))
+                    	{
+                    		String function = FilterQuery.SPECIAL_CHAR_FUNCTION.replaceFirst("[?]", ColumnSQL.toString());
+                    		
+                    		if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())))
+                    			function = FilterQuery.getFilterFunction(function);
+                    		
+                    		ColumnSQL = new StringBuilder(function);
+                    		valueStr.append(FilterQuery.filterString(value.toString()));
+                    	}//F3P end
+                    	else
+                    	{
+                    		valueStr.append(value.toString().toUpperCase());
+                    		ColumnSQL = new StringBuilder("UPPER(").append(ColumnSQL).append(")");
+                    	}
+                    	
                         if (!valueStr.toString().endsWith("%"))
                             valueStr.append("%");
                         //
-                        ColumnSQL = new StringBuilder("UPPER(").append(ColumnSQL).append(")");
                         value = valueStr.toString();
                     }
                     //
@@ -2266,6 +2314,12 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
     {
         if (in == null)
             return null;
+        
+        // F3P: parse string with env to support context-aware variables
+ 		if(in instanceof String)
+ 			in = parseStringWithEnv((String)in);
+ 		// F3P: end
+ 		
         int dt = field.getDisplayType();
         try
         {
@@ -2418,5 +2472,63 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
 	{
 		return isvalid;
 	}	
+	
+	// F3P: parse string with env, supporting sql value
+	private String parseStringWithEnv(String in)
+	{
+		// F3P: parse... form GridField.getDefault
+	
+		if(in.startsWith("|@|"))
+		{
+			in = in.substring(3);
+			Properties ctx = Env.getCtx();
+			
+			if (in.startsWith("@SQL="))
+			{				
+				String defStr = null;
+				
+				String sql = in.substring(5);			//	w/o tag
+				//sql = Env.parseContext(m_vo.ctx, m_vo.WindowNo, sql, false, true);	//	replace variables
+				//hengsin, capture unparseable error to avoid subsequent sql exception
+				sql = Env.parseContext(ctx, m_targetWindowNo, sql, false, false);	//	replace variables
+				if (sql.equals(""))
+				{
+					log.log(Level.WARNING, "SQL variable parse failed: "
+						+ in);
+				}
+				else
+				{
+					try
+					{
+						PreparedStatement stmt = DB.prepareStatement(sql, null);
+						ResultSet rs = stmt.executeQuery();
+						if (rs.next())
+							defStr = rs.getString(1);
+						else
+							log.log(Level.WARNING, "SQL parse - no Result: " + sql);
+						rs.close();
+						stmt.close();
+					}
+					catch (SQLException e)
+					{
+						log.log(Level.WARNING, "SQL parse " + sql, e);
+					}
+				}
+				
+				if (defStr != null && defStr.length() > 0)
+				{
+					log.fine("[SQL] =" + defStr);
+					in = defStr;
+				}
+			}	//	SQL Statement
+			else
+			{
+				in = Env.parseContext(ctx, m_targetWindowNo, in, false, false);
+			}
+		}
+		
+		return in;
+	}
+	// F3P end	
 	
 }   //  FindPanel

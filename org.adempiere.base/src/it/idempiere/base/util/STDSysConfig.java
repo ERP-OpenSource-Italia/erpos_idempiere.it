@@ -20,6 +20,7 @@ public class STDSysConfig
 	public static final String	ROLE_AUTO_UPDATE_DOCACTIONACCESS = "ROLE_AUTO_UPDATE_DOCACTIONACCESS";
 	public static final String	SYS_BACKUP_IMPORT = "F3P_BACKUP_PACKIN";
 	public static final String	FILTER_SEARCH_QUERY = "FILTER_SEARCH_QUERY";
+	public static final String	FILTER_SPECIAL_LETTERS = "FILTER_SPECIAL_LETTERS";
 	public static final String	F3P_CASHLINE_USE_DEFAULT_CASHTYPE = "F3P_CASHLINE_USE_DEFAULT_CASHTYPE";
 	
 	public static final String LIT_ISSO_VAT_INVOICE_UNFORCED = "LIT_ISSO_VAT_INVOICE_UNFORCED";
@@ -35,6 +36,8 @@ public class STDSysConfig
 	public static final String F3P_SKIP_SUBJECT_IN_HTMLMAILBODY = "F3P_SKIP_SUBJECT_IN_HTML_MAIL_BODY";
 	
 	public static final String SYSCFG_OVERRIDE_INOUT_LINE_NO = "F3P_OVERRIDE_GENERATED_INOUT_LINE_NO";
+	public static final String SYSCFG_OVERRIDE_INVOICE_LINE_NO = "F3P_OVERRIDE_GENERATED_INVOICE_LINE_NO";
+	
 	public static final String F3P_EXPLODE_BOM_SERVICE = "F3P_EXPLODE_BOM_SERVICE";
 	public static final String F3P_CREATE_REVERSE_ORDER = "F3P_CREATE_REVERSE_ORDER";
 	//LS variabile per gestire i termini pag fatture prima del completa
@@ -150,6 +153,19 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(FILTER_SEARCH_QUERY, false, AD_Client_ID, AD_Org_ID);
 	}
+	
+	
+	/**
+	 * Se true, quando il filtro dei caratteri speciali e' abilitato vengono filtrate anche le
+	 * le lettere speciali (ä,ë,ö,ü,ß,ç,ì,ğ,ş,č,š,ž,á,ó,ñ,á,í,ú,è,é,â,ê) 
+	 * 
+	 * @param AD_Client_ID, AD_Org_ID
+	 * @return
+	 */
+	public static boolean isFilterSpecialLetter(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(FILTER_SPECIAL_LETTERS, false, AD_Client_ID, AD_Org_ID);
+	}
 
 	/**
 	 * Se true  verifica il CashType, se non è valido imposta CASHTYPE_GeneralExpense (v. MCashLine.beforeSave )
@@ -203,6 +219,17 @@ public class STDSysConfig
 	public static boolean isOverrideGeneratedInOutLineNo(int AD_Client_ID)
 	{
 		return MSysConfig.getBooleanValue(SYSCFG_OVERRIDE_INOUT_LINE_NO, false, AD_Client_ID);
+	}
+	
+	/**
+	 * Parametro che indica se le linee della fattura devono esser rinumerate
+	 * @param AD_Client_ID
+	 * @param AD_Org_ID
+	 * @return 
+	 */
+	public static boolean isOverrideGeneratedInvoiceLineNo(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(SYSCFG_OVERRIDE_INVOICE_LINE_NO, false, AD_Client_ID);
 	}
 	
 	/** Regola il comportamento dell'esplosione della bom, per i prodotti servizio
