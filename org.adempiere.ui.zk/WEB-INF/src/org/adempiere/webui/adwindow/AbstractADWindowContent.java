@@ -707,7 +707,8 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
         {
         	m_findCancelled = false;
         	m_findCreateNew = false;
-            GridField[] findFields = mTab.getFields();
+        	// F3P: dont pass the tab field, but a copy, since FindWindow may change them
+    		GridField[] findFields = GridField.createFields(ctx, curWindowNo, 0,mTab.getAD_Tab_ID());
             findWindow = new FindWindow(curWindowNo,
                     mTab.getName(), mTab.getAD_Table_ID(), mTab.getTableName(),
                     where.toString(), findFields, 10, mTab.getAD_Tab_ID()); // no query below 10

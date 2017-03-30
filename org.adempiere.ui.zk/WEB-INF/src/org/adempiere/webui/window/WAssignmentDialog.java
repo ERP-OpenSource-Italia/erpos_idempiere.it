@@ -292,8 +292,27 @@ public class WAssignmentDialog extends Window implements EventListener<Event>
 		Timestamp assignDateTo = TimeUtil.addMinutess(assignDateFrom, minutes);
 		m_mAssignment.setAssignDateTo (assignDateTo);
 		//
-	//	m_mAssignment.dump();
-		return m_mAssignment.save();
+		//	m_mAssignment.dump();
+		
+		// F3P: save() eats any thrown exception, changed to manage them
+		// return m_mAssignment.save();
+		
+		boolean bRes = true;
+		
+		try
+		{
+			m_mAssignment.saveEx();
+		}
+		catch(Exception e)
+		{
+			log.severe(e.getMessage());
+			FDialog.error(0, this, e.getMessage());
+			bRes = false;
+		}
+		
+		return bRes; 
+		//return m_mAssignment.save();
+		//F3P end
 	}	//	cmdSave
 
 	

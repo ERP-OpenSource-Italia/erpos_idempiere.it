@@ -380,19 +380,29 @@ public abstract class WEditor implements EventListener<Event>, PropertyChangeLis
      */
     public void propertyChange(final PropertyChangeEvent evt)
     {
-        if (evt.getPropertyName().equals(org.compiere.model.GridField.PROPERTY))
-        {
-        	if (Executions.getCurrent() == null) {
-        		Executions.schedule(this.getComponent().getDesktop(), new EventListener<Event>() {
-					@Override
-					public void onEvent(Event event) throws Exception {
-						setValue((evt.getNewValue()));
-					}
-				}, new Event("onPropertyChange"));
-        	} else {
-        		setValue((evt.getNewValue()));
-        	}
-        }
+    	Object	oldValue = evt.getOldValue(),
+				newValue = evt.getNewValue();
+
+		if( (oldValue == null || newValue == null) ||
+				(oldValue.equals(newValue) == false))
+		{
+	        if (evt.getPropertyName().equals(org.compiere.model.GridField.PROPERTY))
+	        {
+	        	ValueChangeEvent changeEvent = new ValueChangeEvent(this, this.getColumnName(), evt.getOldValue(), evt.getNewValue());
+    			fireValueChange(changeEvent);
+	        	
+	        	if (Executions.getCurrent() == null) {
+	        		Executions.schedule(this.getComponent().getDesktop(), new EventListener<Event>() {
+						@Override
+						public void onEvent(Event event) throws Exception {
+							setValue((evt.getNewValue()));
+						}
+					}, new Event("onPropertyChange"));
+	        	} else {
+	        		setValue((evt.getNewValue()));
+	        	}
+	        }
+		}
     }
 
     /**
@@ -826,4 +836,5 @@ public abstract class WEditor implements EventListener<Event>, PropertyChangeLis
 		}
 		
 	}
+	
 }

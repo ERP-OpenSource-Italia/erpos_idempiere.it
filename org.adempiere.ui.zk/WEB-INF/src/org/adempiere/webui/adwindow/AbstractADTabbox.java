@@ -149,7 +149,8 @@ public abstract class AbstractADTabbox extends AbstractUIPart implements IADTabb
 					if (adtab.getTabLevel() < currentLevel)
 					{
 						parents.add(i);
-						currentLevel = adtab.getTabLevel();
+						// Angelo (genied) transplanted from development: (66167562b9f5) Fix #31 Context problem when parent column can be in multiple tabs
+						//currentLevel = adtab.getTabLevel();
 					}
 				}
 				parents.add(0);
@@ -181,7 +182,9 @@ public abstract class AbstractADTabbox extends AbstractUIPart implements IADTabb
 				GridField[] fields = adtab.getGridTab().getFields();
 				for (GridField gf : fields)
 				{
-					gf.updateContext();
+					// Angelo (genied) transplanted from development: (66167562b9f5) Fix #31 Context problem when parent column can be in multiple tabs
+					if (gf.getValue() != null) // preserve value of tab above if null on current tab
+						gf.updateContext();
 				}
 			}
 		}
