@@ -23,8 +23,12 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.compiere.model.MAcctSchemaElement;
+import org.compiere.model.MSysConfig;
+import org.compiere.model.X_C_AcctSchema_Element;
 import org.compiere.model.X_PA_ReportLine;
 import org.compiere.util.DB;
+
+import it.idempiere.base.util.STDSysConfig;
 
 
 /**
@@ -158,7 +162,20 @@ public class MReportLine extends X_PA_ReportLine
 	 * 	@return Query for first source element or null
 	 */
 	public String getSourceValueQuery()
-	{
+	{	
+		//F3P: Enable userElement management
+		if (m_sources != null && m_sources.length > 0)
+		{
+			if(m_sources[0].getElementType().equals(X_C_AcctSchema_Element.ELEMENTTYPE_UserColumn1))
+			{
+				return STDSysConfig.getReportSourceUserElement1ValueSQL(m_sources[0].getAD_Client_ID(), m_sources[0].getAD_Org_ID());			
+			}
+			if(m_sources[0].getElementType().equals(X_C_AcctSchema_Element.ELEMENTTYPE_UserColumn2))
+			{
+				return STDSysConfig.getReportSourceUserElement2ValueSQL(m_sources[0].getAD_Client_ID(), m_sources[0].getAD_Org_ID());			
+			}
+		}
+		//F3P: End
 		if (m_sources != null && m_sources.length > 0)
 			return MAcctSchemaElement.getValueQuery(m_sources[0].getElementType());
 		return null;

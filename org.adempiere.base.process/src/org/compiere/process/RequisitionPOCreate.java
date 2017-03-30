@@ -83,6 +83,10 @@ public class RequisitionPOCreate extends SvrProcess
 	private int			p_C_BP_Group_ID = 0;
 	/** Requisition			*/
 	private int 		p_M_Requisition_ID = 0;
+	//F3P: gestione fornitori
+	/** BP			*/
+	private int 		p_C_BPartner_ID = 0;
+	//end
 
 	/** Consolidate			*/
 	private boolean		p_ConsolidateDocument = false;
@@ -96,6 +100,9 @@ public class RequisitionPOCreate extends SvrProcess
 	private MOrderLine	m_orderLine = null;
 	/** Orders Cache : (C_BPartner_ID, DateRequired, M_PriceList_ID) -> MOrder */
 	private HashMap<MultiKey, MOrder> m_cacheOrders = new HashMap<MultiKey, MOrder>();
+	
+	private int m_M_Warehouse_ID = 0; //F3P: Gestione rottura per magazzino
+	
 	
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -138,6 +145,10 @@ public class RequisitionPOCreate extends SvrProcess
 				p_ConsolidateDocument = "Y".equals(para[i].getParameter());
 			else if (name.equals("ConsolidateByDatePromised")) // FR [ 3471930 ] read value for new parameter
 				p_ConsolidateByDatePromised = para[i].getParameterAsBoolean();
+			//F3P: gestione fornitori
+			else if (name.equals("C_BPartner_ID"))
+				p_C_BPartner_ID = para[i].getParameterAsInt();
+			//end
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -314,6 +325,7 @@ public class RequisitionPOCreate extends SvrProcess
 			|| (p_ConsolidateByDatePromised == true && m_order.getDatePromised().compareTo(rLine.getDateRequired()) != 0) // FR [ 3471930 ] If consolidation by date promised is true, then consider it
 			// FR [ 3471930 ] Due to the changes to the previous line, we need to check if two lines differ by date and avoid consolidating them
 			|| (m_orderLine.getDatePromised().compareTo(rLine.getDateRequired()) != 0) 
+			|| (m_M_Warehouse_ID != rLine.getM_Requisition().getM_Warehouse_ID()) //F3P: rottura ordine per magazzino
 			)
 		{
 			newLine(rLine);
@@ -352,7 +364,8 @@ public class RequisitionPOCreate extends SvrProcess
 		//	Order
 		Timestamp DateRequired = rLine.getDateRequired();
 		int M_PriceList_ID = rLine.getParent().getM_PriceList_ID();
-		MultiKey key = new MultiKey(C_BPartner_ID, DateRequired, M_PriceList_ID);
+		int M_Warehouse_ID = rLine.getParent().getM_Warehouse_ID();
+		MultiKey key = new MultiKey(C_BPartner_ID, DateRequired, M_PriceList_ID,M_Warehouse_ID);
 		m_order = m_cacheOrders.get(key);
 		if (m_order == null)
 		{
@@ -364,6 +377,7 @@ public class RequisitionPOCreate extends SvrProcess
 			m_order.setC_DocTypeTarget_ID();
 			m_order.setBPartner(m_bpartner);
 			m_order.setM_PriceList_ID(M_PriceList_ID);
+			m_order.setM_Warehouse_ID(rLine.getM_Requisition().getM_Warehouse_ID()); //F3P: il magazzino viene settato uguale a quello della RdA
 			//	default po document type
 			if (!p_ConsolidateDocument)
 			{
@@ -378,6 +392,8 @@ public class RequisitionPOCreate extends SvrProcess
 			m_cacheOrders.put(key, m_order);
 		}
 		m_M_Requisition_ID = rLine.getM_Requisition_ID();
+		m_M_Warehouse_ID = rLine.getM_Requisition().getM_Warehouse_ID(); //F3P: Set della variabile globale usata per la rottura
+		
 	}	//	newOrder
 
 	/**
@@ -417,6 +433,10 @@ public class RequisitionPOCreate extends SvrProcess
 
 		//	Get Business Partner
 		int C_BPartner_ID = rLine.getC_BPartner_ID();
+		//F3P: gestione fornitori
+		if(p_C_BPartner_ID > 0)
+			C_BPartner_ID = p_C_BPartner_ID;
+		//end
 		if (C_BPartner_ID != 0)
 		{
 			;
@@ -463,6 +483,7 @@ public class RequisitionPOCreate extends SvrProcess
 		if (m_order == null 
 			|| m_order.getC_BPartner_ID() != C_BPartner_ID
 			|| (p_ConsolidateByDatePromised == true && m_order.getDatePromised().compareTo(rLine.getDateRequired()) != 0) // FR [ 3471930 ] If consolidation by date promised is true, then consider it
+			|| (rLine.getM_Requisition().getM_Warehouse_ID() != m_M_Warehouse_ID)
 			)
 		{
 			newOrder(rLine, C_BPartner_ID);

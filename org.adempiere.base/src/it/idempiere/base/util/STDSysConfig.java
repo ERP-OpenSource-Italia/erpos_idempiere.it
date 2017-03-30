@@ -48,6 +48,22 @@ public class STDSysConfig
 	protected static final String  F3P_DEFAULT_DOC_ACTION = "F3P_Default_DocAction_On_Create";
 	/** F3P: show only order with service line */
 	public static final String F3P_CREATEFROMORDER_ONLYSERVICE = "F3P_CREATEFROMORDER_ONLYSERVICE";	
+	
+	//F3P:
+  	public static final String USERELEM1_SQL_CONF = "REPORTSOURCE_USERELEMENT1_VALUESQL";
+  	public static final String USERELEM2_SQL_CONF = "REPORTSOURCE_USERELEMENT2_VALUESQL";
+  	//F3P: End
+  	
+  	public static String getReportSourceUserElement1ValueSQL(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getValue(USERELEM1_SQL_CONF, AD_Client_ID,AD_Org_ID);
+	}
+  	
+  	public static String getReportSourceUserElement2ValueSQL(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getValue(USERELEM2_SQL_CONF, AD_Client_ID,AD_Org_ID);
+	}
+  	
 	/**
 	 * Parametro che indica se bisogna ripetere il soggetto come sottotitolo nell'email
 	 * @param AD_Client_ID

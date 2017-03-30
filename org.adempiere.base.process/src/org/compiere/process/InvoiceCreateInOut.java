@@ -17,6 +17,7 @@
 package org.compiere.process;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
@@ -26,8 +27,10 @@ import org.compiere.model.MInOut;
 import org.compiere.model.MInOutLine;
 import org.compiere.model.MInvoice;
 import org.compiere.model.MInvoiceLine;
+import org.compiere.model.X_M_InOut;
 import org.compiere.util.Env;
- 
+import org.compiere.util.Util;
+
 /**
  * Create (Generate) Shipment from Invoice
  *	
@@ -41,13 +44,30 @@ public class InvoiceCreateInOut extends SvrProcess
 {
 	public static final String PARAM_M_Warehouse_ID = MInOut.COLUMNNAME_M_Warehouse_ID;
 	
+	//F3P:
+	
+	protected static final String	PARAM_Complete = "Complete",
+																PARAM_Document_No = MInOut.COLUMNNAME_DocumentNo;
+	
+	//F3P end
+	
 	/**	Warehouse			*/
 	private int p_M_Warehouse_ID = 0;
 	/** Invoice				*/
 	private int p_C_Invoice_ID = 0;
+	
+	//F3P: 
+	/** Complete */
+	private boolean p_complete = true;
+	
+	/** Document No */
+	private String p_documentNo = null;
+	//F3P end
+	
 	/** Receipt				*/
 	private MInOut m_inout = null;
 
+	
 	/**
 	 *  Prepare - e.g., get Parameters.
 	 */
@@ -60,6 +80,12 @@ public class InvoiceCreateInOut extends SvrProcess
 				;
 			else if (name.equals(PARAM_M_Warehouse_ID))
 				p_M_Warehouse_ID = para.getParameterAsInt();
+			//F3P: 
+			else if (name.equals(PARAM_Document_No))
+				p_documentNo = (String)para.getParameter();
+			else if (name.equals(PARAM_Complete))
+				p_complete = para.getParameterAsBoolean();
+			//F3P end
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -74,7 +100,7 @@ public class InvoiceCreateInOut extends SvrProcess
 	 */
 	protected String doIt () throws Exception
 	{
-		if (log.isLoggable(Level.INFO)) log.info("C_Invoice_ID=" + p_C_Invoice_ID + ", M_Warehouse_ID=" + p_M_Warehouse_ID);
+		log.info("C_Invoice_ID=" + p_C_Invoice_ID + ", M_Warehouse_ID=" + p_M_Warehouse_ID);
 		if (p_C_Invoice_ID <= 0)
 			throw new FillMandatoryException("C_Invoice_ID");
 		if (p_M_Warehouse_ID == 0)
@@ -93,7 +119,15 @@ public class InvoiceCreateInOut extends SvrProcess
 		if (m_inout == null)
 			throw new InvoiceFullyMatchedException();
 		
-		addLog(m_inout.getM_InOut_ID(), m_inout.getMovementDate(), null, m_inout.getDocumentNo(), m_inout.get_Table_ID(), m_inout.getM_InOut_ID());
+		//F3P:
+		
+		if(p_complete)
+		{
+			m_inout.processIt(DocAction.ACTION_Complete);
+		}
+		
+		//F3P end
+		
 		//
 		return m_inout.getDocumentNo();
 	}	//	doIt
@@ -108,6 +142,16 @@ public class InvoiceCreateInOut extends SvrProcess
 		if (m_inout != null)
 			return m_inout;
 		m_inout = new MInOut (invoice, 0, null, p_M_Warehouse_ID);
+		
+		//F3P:
+		if(Util.isEmpty(p_documentNo) == false)
+		{
+			m_inout.setDocumentNo(p_documentNo);
+		}
+		
+		setF3P_DocDate(m_inout, invoice.getDateInvoiced());
+		
+		//F3P end
 		m_inout.saveEx();
 		return m_inout;
 	}
@@ -145,5 +189,12 @@ public class InvoiceCreateInOut extends SvrProcess
 		invoiceLine.saveEx();
 		//
 		return sLine;
+	}
+	
+	/*Attenzione è un duplicato che è presente anche in it.adempiere.localization.model.LITMInOut*/
+	private void setF3P_DocDate (X_M_InOut mInOut, Timestamp F3P_DocDate)
+	{
+		String COLUMNNAME_F3P_DocDate = "F3P_DocDate";
+		mInOut.set_ValueOfColumn (COLUMNNAME_F3P_DocDate, F3P_DocDate);
 	}
 }	//	InvoiceCreateInOut

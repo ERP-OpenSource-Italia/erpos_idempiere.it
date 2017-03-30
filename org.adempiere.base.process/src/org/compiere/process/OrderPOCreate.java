@@ -26,6 +26,7 @@ import org.compiere.model.MBPartner;
 import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
 import org.compiere.model.MOrgInfo;
+import org.compiere.model.MRole;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
 import org.compiere.util.Msg;
@@ -54,6 +55,9 @@ public class OrderPOCreate extends SvrProcess
 	/** Drop Ship			*/
 	private boolean		p_IsDropShip = false;
 	
+	// F3P: purchaser to set
+	private int	p_SalesRep_ID = -1;
+	
 	/**
 	 *  Prepare - e.g., get Parameters.
 	 */
@@ -78,6 +82,9 @@ public class OrderPOCreate extends SvrProcess
 				p_C_Order_ID = ((BigDecimal)para[i].getParameter()).intValue();
 			else if (name.equals("IsDropShip"))
 				p_IsDropShip = ((String) para[i].getParameter()).equals("Y");
+			// F3P: input sales rep
+			else if(name.equals("SalesRep_ID"))
+				p_SalesRep_ID = para[i].getParameterAsInt();
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -107,7 +114,10 @@ public class OrderPOCreate extends SvrProcess
 			.append("WHERE o.IsSOTrx='Y'")
 			//	No Duplicates
 			//	" AND o.Link_Order_ID IS NULL"
-			.append(" AND NOT EXISTS (SELECT * FROM C_OrderLine ol WHERE o.C_Order_ID=ol.C_Order_ID AND ol.Link_OrderLine_ID IS NOT NULL)"); 
+			//.append(" AND NOT EXISTS (SELECT * FROM C_OrderLine ol WHERE o.C_Order_ID=ol.C_Order_ID AND ol.Link_OrderLine_ID IS NOT NULL)"); 
+			.append("AND EXISTS (SELECT * FROM C_OrderLine ol WHERE o.C_Order_ID=ol.C_Order_ID AND ol.Link_OrderLine_ID IS NULL)") //F3P: allow to create order from different BP
+			.append("AND o.DocStatus NOT IN ('NA','VO','CL','IN','DR','RE','??')") // F3P: avoid generating from order in invalid status
+			.append(" AND NOT EXISTS (SELECT 'ko' FROM C_DocType dt WHERE dt.C_DocType_ID = o.C_DocTypeTarget_ID AND dt.DocSubTypeSO IN ('ON','OB','RM'))");	// F3P: Avoid generating orders for inappropriate docsubtyes
 		if (p_C_Order_ID != 0)
 			sql.append(" AND o.C_Order_ID=?");
 		else
@@ -119,12 +129,15 @@ public class OrderPOCreate extends SvrProcess
 					.append(" INNER JOIN M_Product_PO po ON (ol.M_Product_ID=po.M_Product_ID) ")
 						.append("WHERE o.C_Order_ID=ol.C_Order_ID AND po.C_BPartner_ID=?)"); 
 			if (p_DateOrdered_From != null && p_DateOrdered_To != null)
-				sql.append("AND TRUNC(o.DateOrdered) BETWEEN ? AND ?");
+				sql.append("AND TRUNC(o.DateOrdered, 'DD') BETWEEN ? AND ?");
 			else if (p_DateOrdered_From != null && p_DateOrdered_To == null)
-				sql.append("AND TRUNC(o.DateOrdered) >= ?");
+				sql.append("AND TRUNC(o.DateOrdered, 'DD') >= ?");
 			else if (p_DateOrdered_From == null && p_DateOrdered_To != null)
-				sql.append("AND TRUNC(o.DateOrdered) <= ?");
+				sql.append("AND TRUNC(o.DateOrdered, 'DD') <= ?");
 		}
+		
+		sql = new StringBuilder(MRole.getDefault().addAccessSQL(sql.toString(), MOrder.Table_Name,MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO));
+
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		int counter = 0;
@@ -189,6 +202,9 @@ public class OrderPOCreate extends SvrProcess
 			+ "FROM M_Product_PO po"
 			+ " INNER JOIN C_OrderLine ol ON (po.M_Product_ID=ol.M_Product_ID) "
 			+ "WHERE ol.C_Order_ID=? AND po.IsCurrentVendor='Y' "
+			//F3P
+			+ "AND ol.Link_OrderLine_ID IS NULL "
+			//F3P end
 			+ "AND po.IsActive='Y' "
 			+ ((p_Vendor_ID > 0) ? " AND po.C_BPartner_ID=? " : "")
 			+ "GROUP BY po.M_Product_ID "
@@ -310,6 +326,10 @@ public class OrderPOCreate extends SvrProcess
 		po.setUser1_ID(so.getUser1_ID());
 		po.setUser2_ID(so.getUser2_ID());
 		//
+		// F3P: if we have a sales rep, impose it
+		if(p_SalesRep_ID > 0)
+			po.setSalesRep_ID(p_SalesRep_ID);
+				
 		po.saveEx();
 		return po;
 	}	//	createPOForVendor

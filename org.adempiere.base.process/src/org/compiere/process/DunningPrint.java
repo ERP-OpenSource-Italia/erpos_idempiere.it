@@ -54,7 +54,8 @@ public class DunningPrint extends SvrProcess
 	private boolean		p_IsOnlyIfBPBalance = true;
 	/** Print only unprocessed lines */
 	private boolean p_PrintUnprocessedOnly = true;
-	
+	/** F3P: added mail from **/
+	private String 		p_mailFrom = null;
 	
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -77,6 +78,8 @@ public class DunningPrint extends SvrProcess
 				p_IsOnlyIfBPBalance = "Y".equals(para[i].getParameter());
 			else if (name.equals("PrintUnprocessedOnly"))
 				p_PrintUnprocessedOnly = "Y".equals(para[i].getParameter());
+			else if (name.equals("EMail_From")) // F3P: add from
+				p_mailFrom =(String)para[i].getParameter();
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -176,6 +179,13 @@ public class DunningPrint extends SvrProcess
 			if (p_EMailPDF)
 			{
 				EMail email = client.createEMail(to.getEMail(), null, null);
+				
+				// F3P: added parameter to force mail from
+				if(p_mailFrom != null)
+				{
+					email.setFrom(p_mailFrom);
+				}		
+				
 				if (!email.isValid())
 				{
 					StringBuilder msglog = new StringBuilder(
