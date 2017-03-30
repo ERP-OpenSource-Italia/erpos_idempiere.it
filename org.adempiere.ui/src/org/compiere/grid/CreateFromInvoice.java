@@ -36,6 +36,7 @@ import org.compiere.model.MOrderPaySchedule;
 import org.compiere.model.MProduct;
 import org.compiere.model.MRMA;
 import org.compiere.model.MRMALine;
+import org.compiere.model.MUOM;
 import org.compiere.model.MUOMConversion;
 import org.compiere.model.PO;
 import org.compiere.util.DB;
@@ -43,6 +44,8 @@ import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *  Create Invoice Transactions from PO Orders or Receipt
@@ -96,19 +99,23 @@ public abstract class CreateFromInvoice extends CreateFrom
 			+ "WHERE s.C_BPartner_ID=? AND s.IsSOTrx=? AND s.DocStatus IN ('CL','CO')"
 			+ " AND s.M_InOut_ID IN "
 				+ "(SELECT sl.M_InOut_ID FROM M_InOutLine sl");
-			if(!isSOTrx)
-				sql.append(" LEFT OUTER JOIN M_MatchInv mi ON (sl.M_InOutLine_ID=mi.M_InOutLine_ID) "
-					+ " JOIN M_InOut s2 ON (sl.M_InOut_ID=s2.M_InOut_ID) "
-					+ " WHERE s2.C_BPartner_ID=? AND s2.IsSOTrx=? AND s2.DocStatus IN ('CL','CO') "
-					+ " GROUP BY sl.M_InOut_ID,sl.MovementQty,mi.M_InOutLine_ID"
-					+ " HAVING (sl.MovementQty<>SUM(mi.Qty) AND mi.M_InOutLine_ID IS NOT NULL)"
-					+ " OR mi.M_InOutLine_ID IS NULL ");
+			if(!isSOTrx) //F3P from adempiere modify query
+				sql.append(" LEFT OUTER JOIN M_MatchInv mi ON (sl.M_InOutLine_ID=mi.M_InOutLine_ID) ")
+					.append(" JOIN M_InOut s2 ON (sl.M_InOut_ID=s2.M_InOut_ID) ")
+					.append(" WHERE s2.C_BPartner_ID=? AND s2.IsSOTrx=? AND s2.DocStatus IN ('CL','CO') ")
+					.append(" GROUP BY sl.M_InOut_ID,sl.MovementQty,mi.M_InOutLine_ID")
+					.append(" HAVING (sl.MovementQty<>COALESCE(SUM(CASE WHEN sl.M_Product_ID IS NOT NULL THEN COALESCE(mi.Qty,0) ")
+					.append(" WHEN sl.C_Charge_ID IS NOT NULL THEN ")
+						.append(" (SELECT SUM(cil.QtyInvoiced) FROM C_InvoiceLine cil ")
+						.append(" INNER JOIN C_Invoice ci ON (ci.C_Invoice_ID = cil.C_Invoice_ID) ")
+						.append(" WHERE cil.M_InOutLine_ID = sl.M_InOutLine_ID AND ci.DocStatus IN ('CO','CL'))")
+					.append("ELSE 0 END),0))").append(" OR mi.M_InOutLine_ID IS NOT NULL ");
 			else
-				sql.append(" INNER JOIN M_InOut s2 ON (sl.M_InOut_ID=s2.M_InOut_ID)"
-					+ " LEFT JOIN C_InvoiceLine il ON sl.M_InOutLine_ID = il.M_InOutLine_ID"
-					+ " WHERE s2.C_BPartner_ID=? AND s2.IsSOTrx=? AND s2.DocStatus IN ('CL','CO')"
-					+ " GROUP BY sl.M_InOutLine_ID"
-					+ " HAVING sl.MovementQty - sum(COALESCE(il.QtyInvoiced,0)) > 0");
+				sql.append(" INNER JOIN M_InOut s2 ON (sl.M_InOut_ID=s2.M_InOut_ID)")
+					.append(" LEFT JOIN C_InvoiceLine il ON sl.M_InOutLine_ID = il.M_InOutLine_ID")
+					.append(" WHERE s2.C_BPartner_ID=? AND s2.IsSOTrx=? AND s2.DocStatus IN ('CL','CO')")
+					.append(" GROUP BY sl.M_InOutLine_ID")
+					.append(" HAVING sl.MovementQty - sum(COALESCE(il.QtyInvoiced,0)) > 0");
 			sql.append(") ORDER BY s.MovementDate");
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -191,16 +198,19 @@ public abstract class CreateFromInvoice extends CreateFrom
 		//
 		Vector<Vector<Object>> data = new Vector<Vector<Object>>();
 		StringBuilder sql = new StringBuilder("SELECT ");	//	QtyEntered
-		if(!isSOTrx)
-			sql.append("l.MovementQty-SUM(COALESCE(mi.Qty, 0)),");
+		if(!isSOTrx) //F3P: from adempiere modify query
+			sql.append("l.MovementQty-coalesce(SUM(CASE WHEN l.M_Product_ID IS NOT NULL THEN COALESCE(mi.Qty,0) ")
+				.append("WHEN l.C_Charge_ID IS NOT NULL THEN (SELECT SUM(cil.QtyInvoiced) FROM C_InvoiceLine cil ") 
+				.append("INNER JOIN C_Invoice ci ON (ci.C_Invoice_ID = cil.C_Invoice_ID) WHERE cil.M_InOutLine_ID = l.M_InOutLine_ID ")
+				.append(" AND ci.DocStatus IN ('CO','CL'))ELSE 0 END),0),");
 		else
 			sql.append("l.MovementQty-SUM(COALESCE(il.QtyInvoiced,0)),");
-		sql.append(" l.QtyEntered/l.MovementQty,"
-			+ " l.C_UOM_ID, COALESCE(uom.UOMSymbol, uom.Name),"			//  3..4
-			+ " l.M_Product_ID, p.Name, po.VendorProductNo, l.M_InOutLine_ID, l.Line,"        //  5..9
-			+ " l.C_OrderLine_ID " //  10
-			+ " FROM M_InOutLine l "
-			);
+		
+		sql.append(" l.QtyEntered/l.MovementQty,")
+			.append(" l.C_UOM_ID, COALESCE(uom.UOMSymbol, uom.Name),")			//  3..4
+			.append(" l.M_Product_ID, p.Name, po.VendorProductNo, l.M_InOutLine_ID, l.Line," )       //  5..9
+			.append(" l.C_OrderLine_ID ") //  10
+			.append(" FROM M_InOutLine l ");
 		if (Env.isBaseLanguage(Env.getCtx(), "C_UOM"))
 			sql.append(" LEFT OUTER JOIN C_UOM uom ON (l.C_UOM_ID=uom.C_UOM_ID)");
 		else
@@ -216,9 +226,9 @@ public abstract class CreateFromInvoice extends CreateFrom
 		sql.append(" LEFT OUTER JOIN M_Product_PO po ON (l.M_Product_ID = po.M_Product_ID AND io.C_BPartner_ID = po.C_BPartner_ID)")
 
 			.append(" WHERE l.M_InOut_ID=? AND l.MovementQty<>0 ")
-			.append("GROUP BY l.MovementQty, l.QtyEntered/l.MovementQty, "
-				+ "l.C_UOM_ID, COALESCE(uom.UOMSymbol, uom.Name), "
-				+ "l.M_Product_ID, p.Name, po.VendorProductNo, l.M_InOutLine_ID, l.Line, l.C_OrderLine_ID ");
+			.append("GROUP BY l.MovementQty, l.QtyEntered/l.MovementQty, ")
+			.append("l.C_UOM_ID, COALESCE(uom.UOMSymbol, uom.Name), ")
+			.append("l.M_Product_ID, p.Name, po.VendorProductNo, l.M_InOutLine_ID, l.Line, l.C_OrderLine_ID ");
 		if(!isSOTrx)
 			sql.append(" HAVING l.MovementQty-SUM(COALESCE(mi.Qty, 0)) <>0");
 		else
@@ -384,6 +394,17 @@ public abstract class CreateFromInvoice extends CreateFrom
 		int C_Invoice_ID = ((Integer)getGridTab().getValue("C_Invoice_ID")).intValue();
 		MInvoice invoice = new MInvoice (Env.getCtx(), C_Invoice_ID, trxName);
 		if (log.isLoggable(Level.CONFIG)) log.config(invoice.toString());
+		
+		// F3P: override default line no with a sequenced one
+		boolean	bOverrideLineNo = STDSysConfig.isOverrideGeneratedInvoiceLineNo(Env.getAD_Client_ID(Env.getCtx()));
+		int iOverridenLineNo = -1;
+		
+		if(bOverrideLineNo)
+		{
+			String sql = "SELECT COALESCE(MAX(Line),0)+10 FROM C_InvoiceLine WHERE C_Invoice_ID=?";
+			iOverridenLineNo = DB.getSQLValue (trxName, sql, C_Invoice_ID);			
+		}
+		// F3P end
 
 		if (p_order != null)
 		{
@@ -414,7 +435,6 @@ public abstract class CreateFromInvoice extends CreateFrom
 		{
 			if (((Boolean)miniTable.getValueAt(i, 0)).booleanValue())
 			{
-				MProduct product = null;
 				//  variable values
 				BigDecimal QtyEntered = (BigDecimal)miniTable.getValueAt(i, 1);              //  1-Qty
 
@@ -441,12 +461,10 @@ public abstract class CreateFromInvoice extends CreateFrom
 					M_RMALine_ID = pp.getKey();
 
 				//	Precision of Qty UOM
-				int precision = 2;
-				if (M_Product_ID != 0)
-				{
-					product = MProduct.get(Env.getCtx(), M_Product_ID);
-					precision = product.getUOMPrecision();
-				}
+				//F3P precision from uom instead of product
+				MUOM uom = MUOM.get(Env.getCtx(), C_UOM_ID);
+				int precision = uom.getStdPrecision();
+				//End
 				QtyEntered = QtyEntered.setScale(precision, BigDecimal.ROUND_HALF_DOWN);
 				//
 				if (log.isLoggable(Level.FINE)) log.fine("Line QtyEntered=" + QtyEntered
@@ -458,8 +476,12 @@ public abstract class CreateFromInvoice extends CreateFrom
 				invoiceLine.setM_Product_ID(M_Product_ID, C_UOM_ID);	//	Line UOM
 				invoiceLine.setQty(QtyEntered);							//	Invoiced/Entered
 				BigDecimal QtyInvoiced = null;
-				if (M_Product_ID > 0 && product.getC_UOM_ID() != C_UOM_ID) {
-					QtyInvoiced = MUOMConversion.convertProductFrom(Env.getCtx(), M_Product_ID, C_UOM_ID, QtyEntered);
+				if (M_Product_ID > 0)
+				{
+					MProduct product = MProduct.get(Env.getCtx(), M_Product_ID);
+					
+					if(product.getC_UOM_ID() != C_UOM_ID)
+						QtyInvoiced = MUOMConversion.convertProductFrom(Env.getCtx(), M_Product_ID, C_UOM_ID, QtyEntered);
 				}
 				if (QtyInvoiced == null)
 					QtyInvoiced = QtyEntered;
@@ -563,6 +585,14 @@ public abstract class CreateFromInvoice extends CreateFrom
 					else
 						log.fine("No RMA Line");
 				}
+				
+				// F3P: override with generated lineno
+				if(bOverrideLineNo)
+				{
+					invoiceLine.setLine(iOverridenLineNo);
+					iOverridenLineNo+=10;
+				}
+				// F3P end
 				invoiceLine.saveEx();
 			}   //   if selected
 		}   //  for all rows
