@@ -67,6 +67,13 @@ import it.idempiere.base.util.STDUtils;
  *  @author Jorg Janke
  *  @version $Id: InvoiceGenerate.java,v 1.2 2006/07/30 00:51:01 jjanke Exp $
  */
+
+//--------------------------------------------------
+//--------------------------------------------------
+// ----> ATTENZIONE: F3P Usata quella in LIT <------
+//--------------------------------------------------
+//--------------------------------------------------
+
 public class InvoiceGenerate extends SvrProcess
 {
 	// F3P: Custom fields and key sep

@@ -6,6 +6,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.compiere.model.MSysConfig;
+import org.compiere.util.Env;
 
 /** Variabili di configurazione applicabili all'implementazione standard iDempiere
  *  
@@ -52,7 +53,44 @@ public class STDSysConfig
 	//F3P:
   	public static final String USERELEM1_SQL_CONF = "REPORTSOURCE_USERELEMENT1_VALUESQL";
   	public static final String USERELEM2_SQL_CONF = "REPORTSOURCE_USERELEMENT2_VALUESQL";
+  	
+  	public static final String  F3P_EXPENSE_PROCESS_BREAKBYBP = "F3P_EXPENSE_PROCESS_BREAKBYBP";
+  	public static final String	SYS_TAX_ID = "F3P_EXPENSE_PROCESS_TAX";
+ 	public static final String MANDATORY_SALESREGION = "F3P_BP_MANDATORYSALESREGION";
   	//F3P: End
+ 	
+ 	public static final String SYSCFG_OVERRIDE_LINE_NO = "F3P_OVERRIDE_GENERATED_INVOICE_LINE_NO";
+ 	public static final String SYSCFG_CHARGE_TO_ADD = "F3P_DELIVERY_CHARGE_TO_ADD";
+ 	public static final String SYSCFG_CHARGE_TO_REMOVE = "F3P_DELIVERY_CHARGE_TO_REMOVE";
+ 	
+ 	public static String getOverrideLineNo(int AD_Client_ID,int AD_Org_ID)
+ 	{
+ 		return MSysConfig.getValue(SYSCFG_OVERRIDE_LINE_NO, null, AD_Client_ID, AD_Org_ID);
+ 	}
+ 	
+ 	public static String getChargeToRemove(int AD_Client_ID,int AD_Org_ID)
+ 	{
+ 		return MSysConfig.getValue(SYSCFG_CHARGE_TO_REMOVE, null, AD_Client_ID, AD_Org_ID);
+ 	}
+ 	
+ 	public static int getChargeToAdd_ID(int AD_Client_ID,int AD_Org_ID)
+ 	{
+ 		return MSysConfig.getIntValue(SYSCFG_CHARGE_TO_ADD, 0, AD_Client_ID, AD_Org_ID);
+ 	}
+  	
+  	public static boolean isSalesRegionMandatory(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(MANDATORY_SALESREGION, false, AD_Client_ID, AD_Org_ID);
+	}
+  	
+  	public static int getSysTaxID (int AD_Client_ID,int AD_Org_ID)
+  	{
+  		return MSysConfig.getIntValue(SYS_TAX_ID, -1,  AD_Client_ID,AD_Org_ID);
+  	}
+  	public static boolean isBreakByBP(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(F3P_EXPENSE_PROCESS_BREAKBYBP, true, AD_Client_ID);
+	}
   	
   	public static String getReportSourceUserElement1ValueSQL(int AD_Client_ID,int AD_Org_ID)
 	{
