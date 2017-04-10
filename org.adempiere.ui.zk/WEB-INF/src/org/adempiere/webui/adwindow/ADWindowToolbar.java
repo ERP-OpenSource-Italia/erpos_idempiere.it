@@ -134,6 +134,10 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 //	public int 				lastModifiers;
 	//
 
+	//F3P custom print button
+	private static final String	PREVIEW_BUTTON_ID = "Window - Print Preview",
+								PRINT_BUTTON_ID = "Window - Print";
+	
     public ADWindowToolbar()
     {
     	this(0);
@@ -509,6 +513,22 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
     public void enablePrint(boolean enabled)
     {
     	this.btnPrint.setDisabled(!enabled);
+    	//F3P custom print button
+    	for(ToolbarCustomButton button : toolbarCustomButtons)
+    	{
+    		Toolbarbutton btn = button.getToolbarbutton();
+    	
+    		if(btn instanceof ToolBarButton)
+    		{
+    			ToolBarButton customBtn = (ToolBarButton) btn;
+    			String name = customBtn.getId();
+    			
+    			if(name.equalsIgnoreCase(PREVIEW_BUTTON_ID) ||
+    					name.equalsIgnoreCase(PRINT_BUTTON_ID))
+    				customBtn.setDisabled(!enabled);
+    		}
+    	}
+    	//F3P end
     }
 
     public void enableReport(boolean enabled)

@@ -46,6 +46,35 @@ import javax.print.attribute.PrintRequestAttributeSet;
 import javax.print.attribute.standard.Copies;
 import javax.print.attribute.standard.JobName;
 
+import org.adempiere.base.Service;
+import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.exceptions.DBException;
+import org.adempiere.util.IProcessUI;
+import org.compiere.model.MAttachment;
+import org.compiere.model.MAttachmentEntry;
+import org.compiere.model.MProcess;
+import org.compiere.model.MQuery;
+import org.compiere.model.MSysConfig;
+import org.compiere.model.MTable;
+import org.compiere.model.PrintInfo;
+import org.compiere.model.X_AD_PInstance_Para;
+import org.compiere.print.MPrintFormat;
+import org.compiere.print.PrintUtil;
+import org.compiere.print.ServerReportCtl;
+import org.compiere.process.ClientProcess;
+import org.compiere.process.ProcessCall;
+import org.compiere.process.ProcessInfo;
+import org.compiere.process.ProcessInfoParameter;
+import org.compiere.util.CLogger;
+import org.compiere.util.DB;
+import org.compiere.util.Env;
+import org.compiere.util.Ini;
+import org.compiere.util.Language;
+import org.compiere.util.Trx;
+import org.compiere.util.Util;
+import org.compiere.utils.DigestOfFile;
+
+import it.idempiere.base.util.StartedFromPrintPreview;
 import net.sf.jasperreports.engine.DefaultJasperReportsContext;
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JRParameter;
@@ -87,34 +116,6 @@ import net.sf.jasperreports.export.SimpleWriterExporterOutput;
 import net.sf.jasperreports.export.SimpleXlsExporterConfiguration;
 import net.sf.jasperreports.export.SimpleXmlExporterOutput;
 
-import org.adempiere.base.Service;
-import org.adempiere.exceptions.AdempiereException;
-import org.adempiere.exceptions.DBException;
-import org.adempiere.util.IProcessUI;
-import org.compiere.model.MAttachment;
-import org.compiere.model.MAttachmentEntry;
-import org.compiere.model.MProcess;
-import org.compiere.model.MQuery;
-import org.compiere.model.MSysConfig;
-import org.compiere.model.MTable;
-import org.compiere.model.PrintInfo;
-import org.compiere.model.X_AD_PInstance_Para;
-import org.compiere.print.MPrintFormat;
-import org.compiere.print.PrintUtil;
-import org.compiere.print.ServerReportCtl;
-import org.compiere.process.ClientProcess;
-import org.compiere.process.ProcessCall;
-import org.compiere.process.ProcessInfo;
-import org.compiere.process.ProcessInfoParameter;
-import org.compiere.util.CLogger;
-import org.compiere.util.DB;
-import org.compiere.util.Env;
-import org.compiere.util.Ini;
-import org.compiere.util.Language;
-import org.compiere.util.Trx;
-import org.compiere.util.Util;
-import org.compiere.utils.DigestOfFile;
-
 /**
  * @author rlemeill
  * Originally coming from an application note from compiere.co.uk
@@ -134,15 +135,43 @@ public class ReportStarter implements ProcessCall, ClientProcess
 	private static final int DEFAULT_SWAP_MAX_PAGES = 100;
 	/** Logger */
 	private static CLogger log = CLogger.getCLogger(ReportStarter.class);
-	private static File REPORT_HOME = null;
+	// private static File REPORT_HOME = null; F3P: changed to string	
+	private static String REPORT_HOME_KEY = "REPORT_HOME_PATH";
+	
+	// F3P: standard jr parameters
+	private static String JRSTDPARAM_IGNORE_PAGINATION = "IS_IGNORE_PAGINATION";
 
-    static {
-        String reportPath = System.getProperty("org.compiere.report.path");
-        if (reportPath == null) {
-        	REPORT_HOME = new File(Ini.getAdempiereHome() + File.separator + "reports");
-        } else {
-			REPORT_HOME = new File(reportPath);
-        }
+	//F3P ext reporting
+	public static String ADD_FILE_TO_PROC_INFO = "F3P_AddFileToProcInfo";
+	public static String FINAL_REPORT_NAME = "F3P_ReportFileName";
+	
+	/** F3P
+	 * Read report home path from properties or MSysConfig
+	 * 
+	 * @param AD_Client_ID	client
+	 * @param AD_Org_ID		Org
+	 * @return String value of the report home
+	 *         
+	 */
+	public String getReportHome(int AD_Client_ID,int AD_Org_ID)
+	{
+		String	sReportHome = System.getProperty("org.compiere.report.path");
+		if (sReportHome == null)
+		{
+			//F3P: Try to find report home in AD_SYSCONFIG table. If it isn't presents use a default
+			sReportHome = MSysConfig.getValue(REPORT_HOME_KEY, Ini.getAdempiereHome() + File.separator + "reports",AD_Client_ID,AD_Org_ID);
+		}
+		
+		if(sReportHome.toLowerCase().startsWith("http"))
+		{
+			sReportHome += "/";
+		}
+		else
+		{
+			sReportHome += File.separator; // F3P: as string
+		}
+		
+		return sReportHome;
     }
 
 	private ProcessInfo processInfo;
@@ -345,23 +374,38 @@ public class ReportStarter implements ProcessCall, ClientProcess
 	 */
     public boolean startProcess(Properties ctx, ProcessInfo pi, Trx trx)
     {
+    	return startProcess(ctx, pi, trx, null, new HashMap<String, Object>());
+    }
+    
+    //F3P ext reporting
+    public boolean startProcess(Properties ctx, ProcessInfo pi, Trx trx, File reportFile, Map<String, Object> params)
+    {
     	ClassLoader cl1 = Thread.currentThread().getContextClassLoader();
     	ClassLoader cl2 = JasperReport.class.getClassLoader();
     	try {
     		if (!cl1.equals(cl2)) {
     			Thread.currentThread().setContextClassLoader(cl2);
     		}
-    		return startProcess0(ctx, pi, trx);
+    		return startProcess0(ctx, pi, trx, reportFile, params);
     	} finally {
     		if (!cl1.equals(Thread.currentThread().getContextClassLoader())) {
     			Thread.currentThread().setContextClassLoader(cl1);
     		}
     	}
     }
-        
-    private boolean startProcess0(Properties ctx, ProcessInfo pi, Trx trx)
+    //F3P end
+    
+    //F3P add reportFile and params
+    private boolean startProcess0(Properties ctx, ProcessInfo pi, Trx trx, File reportFile, Map<String, Object> params)
     {
+    	//F3P
+    	int AD_Client_ID = Env.getAD_Client_ID(ctx),
+    		AD_Org_ID = Env.getAD_Org_ID(ctx);
+    	
+		String reportHome = getReportHome(AD_Client_ID,AD_Org_ID);
+		//F3P end
     	processInfo = pi;
+    	
     	int nrows = 0;
     	Object onrows = null;
 		String Name=pi.getTitle();
@@ -373,13 +417,20 @@ public class ReportStarter implements ProcessCall, ClientProcess
         if (trx != null) {
         	trxName = trx.getTrxName();
         }
+        
         ReportData reportData = getReportData(pi, trxName);
         if (reportData == null) {
             reportResult(AD_PInstance_ID, "Can not find report data", trxName);
             return false;
         }
-
-        String reportPath = reportData.getReportFilePath();
+        
+        String reportPath = null;
+        
+        if(reportFile == null)
+            reportPath = reportData.getReportFilePath();
+        else
+        	reportPath = reportFile.getName();
+        
         if (Util.isEmpty(reportPath, true))
 		{
             reportResult(AD_PInstance_ID, "Can not find report", trxName);
@@ -392,15 +443,19 @@ public class ReportStarter implements ProcessCall, ClientProcess
         	}
         }
 
+        // nectosoft: translate report variables
+        Env.setContext(ctx, "#"+REPORT_HOME_KEY, reportHome);
+        reportPath = Env.parseContext(ctx, 0, reportPath, false, true);
+        
 		JasperData data = null;
-		File reportFile = null;
 		String fileExtension = "";
-		HashMap<String, Object> params = new HashMap<String, Object>();
 
 		addProcessParameters(AD_PInstance_ID, params, trxName);
 		addProcessInfoParameters(params, pi.getParameter());
 
-		reportFile = getReportFile(reportPath, (String)params.get("ReportType"));
+		if(reportFile == null)
+			reportFile = getReportFile(reportPath, (String)params.get("ReportType"));
+		
 		if (reportFile == null || reportFile.exists() == false)
 		{
 			log.severe("No report file found for given type, falling back to " + reportPath);
@@ -510,7 +565,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
         }
 
         if (jasperReport != null) {
-			File[] subreports;
+        	File[] subreports;
 
             // Subreports
 			if(reportPath.startsWith("http://") || reportPath.startsWith("https://"))
@@ -545,6 +600,22 @@ public class ReportStarter implements ProcessCall, ClientProcess
                     }
             	} // @Trifon - end
             }
+            
+            // Angelo Dabala'(genied) nectosoft: discover and download other subreports
+
+            if (!reportPath.startsWith("attachment:"))
+            {
+ 				// subreports are downloaded from the same location of main report
+            	// F3P: use report home if its setup for http/https (reportDir will point to local path)
+            	if(reportHome.startsWith("http:") || reportHome.startsWith("https:"))
+            	{
+            		params.put("SUBREPORT_DIR",reportHome);
+            	}
+            	else
+            	{
+            		params.put("SUBREPORT_DIR",reportDir.getAbsolutePath() + System.getProperty("file.separator"));
+            	}						
+            }
 
             if (Record_ID > 0)
             	params.put("RECORD_ID", new Integer( Record_ID));
@@ -558,6 +629,22 @@ public class ReportStarter implements ProcessCall, ClientProcess
         	params.put("AD_ROLE_ID", new Integer( Env.getAD_Role_ID(Env.getCtx())));
         	params.put("AD_USER_ID", new Integer( Env.getAD_User_ID(Env.getCtx())));
 
+        	/*
+             * Angelo Dabala'(genied) nectosoft
+             * Added more Context variable passed directly to Jasper so we don't have to retrieve them by ourself
+             * using AD_PINSTANCE_ID which is fine, but harder to test in iReport
+             */
+        	 params.put("AD_ROLE_ID", new Integer(Env.getAD_Role_ID(ctx)));
+             params.put("REPORT_HOME_PATH", reportHome);
+             //F3P: if exists a param named IS_IGNORE_PAGINATION, convert its value from String to boolean
+             if(params.containsKey(JRParameter.IS_IGNORE_PAGINATION))
+             {
+             	String sValue = params.get(JRParameter.IS_IGNORE_PAGINATION).toString();
+             	params.remove(JRParameter.IS_IGNORE_PAGINATION);
+             	params.put(JRParameter.IS_IGNORE_PAGINATION, sValue.equals("Y"));
+             }
+             //End
+        	
         	Language currLang = Env.getLanguage(Env.getCtx());
         	String printerName = null;
         	MPrintFormat printFormat = null;
@@ -635,13 +722,26 @@ public class ReportStarter implements ProcessCall, ClientProcess
 				JasperPrint jasperPrint = filler.fill(params, conn);
 				onrows = filler.getVariableValue(JRVariable.REPORT_COUNT);
 
+				//F3P ext reporting
+				String reportFilename = (String)params.get(FINAL_REPORT_NAME);
+				
                 if (!processInfo.isExport())
                 {
-	                if (reportData.isDirectPrint() || processInfo.isBatch())
+                	//F3P ext reporting
+                	boolean addFileToProcessInfo = false;
+                	
+                	Object	addFileParam = params.get(ADD_FILE_TO_PROC_INFO);
+
+                	if(addFileParam != null)
+                		addFileToProcessInfo = (boolean) addFileParam;
+                	
+                	//F3P add print preview and  addFileToProcessInfo
+	                if (addFileToProcessInfo || (StartedFromPrintPreview.isPrintPreview(processInfo) == false && 
+	                		(reportData.isDirectPrint() || processInfo.isBatch())))
 	                {
 	                    if (log.isLoggable(Level.INFO)) log.info( "ReportStarter.startProcess print report -" + jasperPrint.getName());
 	                    //RF 1906632
-	                    if (!processInfo.isBatch()) {
+	                    if (reportData.isDirectPrint() && StartedFromPrintPreview.isPrintPreview(processInfo) == false) { //F3P
 	
 	                    	// Get printer job
 	                    	PrinterJob printerJob = PrintUtil.getPrinterJob(printerName);
@@ -657,8 +757,9 @@ public class ReportStarter implements ProcessCall, ClientProcess
 	                			prats.add (new Copies(printInfo.getCopies()));
 	                		Locale locale = Language.getLoginLanguage().getLocale();
 	                		// @Trifon
-	                		String printFormat_name = printFormat == null ? "" : printFormat.getName();
-	                		int numCopies = printInfo == null ? 0 : printInfo.getCopies();
+	                		String printFormat_name = printFormat == null ? pi.getTitle() : printFormat.getName(); //F3P pi.getTitle()
+	                		int numCopies = printInfo == null ? 1 : printInfo.getCopies(); //F3P from adempiere: set 1 copy if null
+	                		
 	                		prats.add(new JobName(printFormat_name + "_" + pi.getRecord_ID(), locale));
 	                		prats.add(PrintUtil.getJobPriority(jasperPrint.getPages().size(), numCopies, true));
 	
@@ -675,16 +776,22 @@ public class ReportStarter implements ProcessCall, ClientProcess
                     		exporter.setConfiguration(configuration);
 	                    	// Print report / document
 	                    	exporter.exportReport();
-	
 	                    }
 	                    else
 	                    {
 	                    	try
 	                    	{
 	                    		File PDF;
+	                    		
 	                    		if (processInfo.getPDFFileName() != null) {
 		                    		PDF = new File(processInfo.getPDFFileName());
-	                    		} else {
+	                    		}
+	                    		//F3P ext reporting 
+	                    		else if(Util.isEmpty(reportFilename) == false)
+	                    		{
+	                    			PDF = new File(reportFilename);
+	                    		}
+	                    		else {
 		                    		PDF = File.createTempFile(makePrefix(jasperPrint.getName()), ".pdf");
 	                    		}
 	                    		DefaultJasperReportsContext jrContext = DefaultJasperReportsContext.getInstance();
@@ -715,7 +822,13 @@ public class ReportStarter implements ProcessCall, ClientProcess
                 		if (ext == null)
                 			ext = "pdf";
                 		
-                		File file = File.createTempFile(makePrefix(jasperPrint.getName()), "." + ext);
+                		File file = null;
+                		//F3P ext reporting
+                		if(Util.isEmpty(reportFilename) == false)
+                			file = new File(reportFilename);
+                		else
+                			file = File.createTempFile(makePrefix(jasperPrint.getName()), "." + ext);
+                		
                 		DefaultJasperReportsContext jrContext = DefaultJasperReportsContext.getInstance();
                 		LocalJasperReportsContext ljrContext = new LocalJasperReportsContext(jrContext);
                 		ljrContext.setClassLoader(this.getClass().getClassLoader());
@@ -786,8 +899,29 @@ public class ReportStarter implements ProcessCall, ClientProcess
                 	}
                 }
             } catch (JRException e) {
+	            {
+	            	log.severe("ReportStarter.startProcess: Can not run report - "+ e.getMessage());
+	            	//F3P from adempiere
+	            	if(e.getCause() != null)
+	    			{
+	    				log.severe("Cause: "
+	    						+ e.getCause().getMessage());					
+	    			}
+	            	reportResult( AD_PInstance_ID, e.getMessage(), trxName);
+	            	return false;
+		             //F3P end
+	            }
+            }catch (Exception e)//F3P from adempiere
+            {
                 log.severe("ReportStarter.startProcess: Can not run report - "+ e.getMessage());
-            } finally {
+                if(e.getCause() != null)
+      			{
+      				log.severe("Cause: "
+      						+ e.getCause().getMessage());					
+      			}
+                reportResult( AD_PInstance_ID, e.getMessage(), trxName);
+                return false; //F3P end
+            }finally {
             	if (conn != null) {
 					try {
 						conn.close();
@@ -982,6 +1116,72 @@ public class ReportStarter implements ProcessCall, ClientProcess
 
 			subreports.add(subreport);
 		}
+		
+		// F3P: added support for 3 additional cases:
+		// 1. report images, some conventions as subreports, as of now only jpg is
+		// supported.
+		String remoteDir = reportPath.substring(0, reportPath.lastIndexOf("/"));
+		
+		for (int i = 1; i < 10; i++)
+		{
+			// Check if subreport img i exists
+			File image = null;
+			try
+			{
+				image = getFileAsResource(remoteDir + "/" + reportName + i + ".jpg");
+			}
+			catch (Exception e)
+			{
+				// just ignore it
+			}
+			if (image == null) // Subreport doesn't exist, abort further approaches
+				break;
+
+			subreports.add(image);
+		}
+
+		// 2. commons subreports (like subreports used in more then one report)
+
+		for (int i = 1; i < 10; i++)
+		{
+			// Check if subreport number i exists
+			File subreport = null;
+			try
+			{
+				subreport = getFileAsResource("resource:sub_common" + i + fileExtension);
+			}
+			catch (Exception e)
+			{
+				// just ignore it
+			}
+			if (subreport == null) // Subreport doesn't exist, abort further
+															// approaches
+				break;
+
+			subreports.add(subreport);
+		}
+
+		// 3. common images
+
+		for (int i = 1; i < 10; i++)
+		{
+			// Check if subreport img i exists
+			File image = null;
+			try
+			{
+				image = getFileAsResource("resource:img_common" + i + ".jpg");
+			}
+			catch (Exception e)
+			{
+				// just ignore it
+			}
+			if (image == null) // Subreport doesn't exist, abort further approaches
+				break;
+
+			subreports.add(image);
+		}
+
+		// end F3P
 
 		File[] subreportsTemp = new File[subreports.size()];
 		subreportsTemp = subreports.toArray(subreportsTemp);
@@ -1004,16 +1204,22 @@ public class ReportStarter implements ProcessCall, ClientProcess
 
 		return getReportFile(reportPath);
 	}
+	
+	// F3P: added re-entry management
+	public File getReportFile(String reportPath)
+	{
+		return getReportFile(reportPath, true);
+	}
 
 	/**
 	 * @author alinv
 	 * @param reportPath
 	 * @return the abstract file corresponding to report
 	 */
-	protected File getReportFile(String reportPath)
+	protected File getReportFile(String reportPath, boolean bTryReportsHome) //F3P add tryReportHome
 	{
 		File reportFile = null;
-
+		
 		// Reports deployment on web server Thanks to Alin Vaida
 		if (reportPath.startsWith("http://") || reportPath.startsWith("https://")) {
 			reportFile = httpDownloadedReport(reportPath);
@@ -1036,8 +1242,17 @@ public class ReportStarter implements ProcessCall, ClientProcess
 				log.warning(e.getLocalizedMessage());
 				reportFile = null;
 			}
-		} else {
-			reportFile = new File(REPORT_HOME, reportPath);
+		} 
+		else if (bTryReportsHome)
+		{
+			String reportHome = getReportHome(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx()));
+			reportFile = getReportFile(reportHome + reportPath, false);
+		}
+		else
+		// F3P: we are trying re-entried reportPath, now all other controls failed,
+		// lets assume its a file
+		{
+			reportFile = new File(reportPath);
 		}
 
 		return reportFile;
@@ -1077,7 +1292,11 @@ public class ReportStarter implements ProcessCall, ClientProcess
 			throw e;
 		} finally {
 			if (out != null)
+			{
+				// F3P: added flush
+				out.flush();
 				out.close();
+			}
 			if (inputStream != null)
 				inputStream.close();
 		}
@@ -1232,6 +1451,21 @@ public class ReportStarter implements ProcessCall, ClientProcess
                 BigDecimal pNum = rs.getBigDecimal(4);
                 BigDecimal pNumTo = rs.getBigDecimal(5);
 
+                // F3P: convert standad jasper parameters
+                
+                if(name != null && name.equals(JRSTDPARAM_IGNORE_PAGINATION))
+                {
+                	boolean bIgnorePagination = false;
+                	
+                	if(pStr != null && pStr.equals("Y"))
+                	{
+                		bIgnorePagination = true;
+                	}
+                	
+                	params.put(name, Boolean.valueOf(bIgnorePagination));
+                	continue;
+                }
+                
                 Timestamp pDate = rs.getTimestamp(6);
                 Timestamp pDateTo = rs.getTimestamp(7);
                 if (pStr != null) {
@@ -1344,15 +1578,14 @@ public class ReportStarter implements ProcessCall, ClientProcess
     {
     	log.info("");
         String sql = "SELECT pr.JasperReport, pr.IsDirectPrint "
-        		   + "FROM AD_Process pr, AD_PInstance pi "
-                   + "WHERE pr.AD_Process_ID = pi.AD_Process_ID "
-                   + " AND pi.AD_PInstance_ID=?";
+        		   + "FROM AD_Process pr "
+                   + "WHERE pr.AD_Process_ID = ?"; //F3P: set directly AD_Process_ID
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try
         {
             pstmt = DB.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, trxName);
-            pstmt.setInt(1, pi.getAD_PInstance_ID());
+            pstmt.setInt(1, pi.getAD_Process_ID()); //F3P: set directly AD_Process_ID
             rs = pstmt.executeQuery();
             String path = null;
             boolean	directPrint = false;
@@ -1382,7 +1615,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
             rs = null; pstmt = null;
         }
     }
-
+    
     static class ReportData {
         private String reportFilePath;
         private boolean directPrint;
