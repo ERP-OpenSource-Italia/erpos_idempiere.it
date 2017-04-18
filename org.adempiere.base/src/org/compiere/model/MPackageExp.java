@@ -21,6 +21,7 @@ import java.sql.ResultSet;
 import java.util.Properties;
 
 import org.compiere.util.DB;
+import org.compiere.util.Msg;
 
 /**
  *	Package Export Model
@@ -30,6 +31,9 @@ import org.compiere.util.DB;
  * 
  * @author Teo Sarca, SC ARHIPAC SERVICE SRL
  * 			<li>BF [ 1826273 ] Error when creating MPackageExp
+ 
+ * @author Monica Bean, www.freepath.it
+ * @see  IDEMPIERE-3217 Add entity type filter on pack out process https://idempiere.atlassian.net/browse/IDEMPIERE-3217
  */
 public class MPackageExp extends X_AD_Package_Exp
 {	
@@ -39,6 +43,9 @@ public class MPackageExp extends X_AD_Package_Exp
 	 */
 	private static final long serialVersionUID = -8923634972273479831L;
 
+	//IDEMPIERE-3217 Add entity type filter on pack out process
+	private static final String	ENTITY_TYPE_SEPARATOR = ",";
+	
 	/**
 	 * 	MPackageExp
 	 *	@param ctx
@@ -75,5 +82,30 @@ public class MPackageExp extends X_AD_Package_Exp
 		return false;
 	 return true;
 	}	//	afterDelete
+
+	//IDEMPIERE-3217 Add entity type filter on pack out process
+	/**
+	 * 	Before Save
+	 * 	@param newRecord new record
+	 *	@return true if record can be saved
+	 */
+	@Override
+	protected boolean beforeSave(boolean newRecord)
+	{
+		String entityTypeFilter = getEntityTypeFilter();
+		
+		if(entityTypeFilter != null && entityTypeFilter.length() > 0) {
+			String[] entityTypes = entityTypeFilter.split(ENTITY_TYPE_SEPARATOR);
+			
+			for(String entityType : entityTypes) {
+				if(entityType.equalsIgnoreCase(X_AD_EntityType.ENTITYTYPE_Dictionary)) {
+					log.saveError(Msg.parseTranslation(getCtx(), "@Error@"), Msg.parseTranslation(getCtx(), "@EntityTypeFilterError@"));
+					return false;
+				}
+			}
+		}
+		
+		return true;
+	}	//beforeSave
 	
 }	//	MPackageExp

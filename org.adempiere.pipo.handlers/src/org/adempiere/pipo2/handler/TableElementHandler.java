@@ -78,6 +78,8 @@ public class TableElementHandler extends AbstractElementHandler {
 				return;
 			}
 			
+			//TODO issue idempiere
+			element.recordId = mTable.getAD_Table_ID();
 			if (mTable.is_new() || mTable.is_Changed()) {
 				X_AD_Package_Imp_Detail impDetail = createImportDetail(ctx, element.qName, X_AD_Table.Table_Name,
 						X_AD_Table.Table_ID);
@@ -91,8 +93,9 @@ public class TableElementHandler extends AbstractElementHandler {
 				}
 				if (mTable.save(getTrxName(ctx)) == true){
 					logImportDetail (ctx, impDetail, 1, mTable.getName(),mTable.get_ID(),action);
-					tables.add(mTable.getAD_Table_ID());
+					tables.add(mTable.getAD_Table_ID());					
 					packIn.addTable(mTable.getTableName(), mTable.getAD_Table_ID());
+					//TODO issue idempiere
 					element.recordId = mTable.getAD_Table_ID();
 				}
 				else{
@@ -161,6 +164,14 @@ public class TableElementHandler extends AbstractElementHandler {
 			addTypeName(atts, "table");
 			document.startElement("","",I_AD_Table.Table_Name,atts);
 			createTableBinding(ctx,document,m_Table);
+			
+			//TODO creare issue per traduzioni
+			packOut.getCtx().ctx.put("Table_Name",X_AD_Table.Table_Name);
+			try {
+				new CommonTranslationHandler().packOut(packOut,document,null,m_Table.get_ID());
+			} catch(Exception e) {
+				if (log.isLoggable(Level.INFO)) log.info(e.toString());
+			}
 		}
 
 		String sql = "SELECT * FROM AD_Column WHERE AD_Table_ID = ? "

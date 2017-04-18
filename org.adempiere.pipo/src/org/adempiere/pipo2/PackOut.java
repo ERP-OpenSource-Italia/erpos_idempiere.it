@@ -61,6 +61,9 @@ import org.adempiere.exceptions.AdempiereException;
  * @author Teo Sarca, SC ARHIPAC SERVICE SRL
  * 			<li>BF [ 1819315 ] PackOut: fix xml indentation not working
  * 			<li>BF [ 1819319 ] PackOut: use just active AD_Package_Exp_Detail lines
+ * 
+ * @author Monica Bean, www.freepath.it
+ * @see  IDEMPIERE-3217 Add entity type filter on pack out process https://idempiere.atlassian.net/browse/IDEMPIERE-3217
  */
 
 public class PackOut
@@ -82,7 +85,11 @@ public class PackOut
 	private PIPOContext pipoContext = new PIPOContext();
 	private Timestamp fromDate;
 	private boolean isExportDictionaryEntity = false;
-
+	
+	//IDEMPIERE-3217 Add entity type filter on pack out process
+	private String entityTypeFilter;
+	private List<String> entityTypesExported;
+	
 	public static final int MAX_OFFICIAL_ID = MTable.MAX_OFFICIAL_ID;
 
 	public static void addTextElement(TransformerHandler handler, String qName, String text, AttributesImpl atts) throws SAXException {
@@ -221,7 +228,9 @@ public class PackOut
 		atts.addAttribute("","","UpdatedDate","CDATA",packoutDocument.getUpdated().toString());
 		atts.addAttribute("","","PackOutVersion","CDATA",PackOutVersion);
 		atts.addAttribute("","","UpdateDictionary","CDATA", isExportDictionaryEntity ? "true" : "false");
-
+		//IDEMPIERE-3217 Add entity type filter on pack out process
+		atts.addAttribute("","","EntityTypeFilter","CDATA",entityTypeFilter == null ? "" : entityTypeFilter);
+		
 		MClient client = MClient.get(pipoContext.ctx);
 		StringBuffer sb = new StringBuffer ()
 			.append(client.get_ID())
@@ -476,5 +485,28 @@ public class PackOut
 
 	public void setExportDictionaryEntity(boolean isExportDictionaryEntity) {
 		this.isExportDictionaryEntity = isExportDictionaryEntity;
+	}
+	
+	//IDEMPIERE-3217 Add entity type filter on pack out process
+	public String getEntityTypeFilter() {
+		return entityTypeFilter;
+	}
+	
+	/**
+	 * @param entityTypeFilter
+	 */
+	public void setEntityTypeFilter(String entityTypeFilter) {
+		this.entityTypeFilter = entityTypeFilter;
+	}
+
+	public List<String> getEntityTypesExported() {
+		return entityTypesExported;
+	}
+
+	/**
+	 * @param entityTypesExported
+	 */
+	public void setEntityTypesExported(List<String> entityTypesExported) {
+		this.entityTypesExported = entityTypesExported;
 	}
 }	//	PackOut
