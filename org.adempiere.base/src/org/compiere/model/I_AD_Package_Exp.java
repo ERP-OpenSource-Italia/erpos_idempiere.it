@@ -144,6 +144,19 @@ public interface I_AD_Package_Exp
 	  */
 	public String getEMail();
 
+    /** Column name EntityTypeFilter */
+    public static final String COLUMNNAME_EntityTypeFilter = "EntityTypeFilter";
+
+	/** Set Entity Type Filter.
+	  * Extract only elements having Entity Type included in the list
+	  */
+	public void setEntityTypeFilter (String EntityTypeFilter);
+
+	/** Get Entity Type Filter.
+	  * Extract only elements having Entity Type included in the list
+	  */
+	public String getEntityTypeFilter();
+	
     /** Column name File_Directory */
     public static final String COLUMNNAME_File_Directory = "File_Directory";
 

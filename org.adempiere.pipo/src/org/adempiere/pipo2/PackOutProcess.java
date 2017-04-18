@@ -60,6 +60,9 @@ import org.compiere.util.Env;
  * @author Teo Sarca, SC ARHIPAC SERVICE SRL
  * 			<li>BF [ 1819315 ] PackOut: fix xml indentation not working
  * 			<li>BF [ 1819319 ] PackOut: use just active AD_Package_Exp_Detail lines
+ * 
+ * @author Monica Bean, www.freepath.it
+ * @see  IDEMPIERE-3217 Add entity type filter on pack out process https://idempiere.atlassian.net/browse/IDEMPIERE-3217
  */
 
 public class PackOutProcess extends SvrProcess
@@ -70,6 +73,9 @@ public class PackOutProcess extends SvrProcess
 	private MPackageExp packageExp;
 	private String packoutDirectory;
 
+	//IDEMPIERE-3217 Add entity type filter on pack out process
+	public static final String ENTITY_TYPE_SEPARATOR = ",";
+	
     /**
 	 *  Prepare - e.g., get Parameters.
 	 */
@@ -137,6 +143,23 @@ public class PackOutProcess extends SvrProcess
 				}
 				
 				packOut.setExportDictionaryEntity(packageExp.isExportDictionaryEntity());
+				//IDEMPIERE-3217 Add entity type filter on pack out process
+				String entityTypeFilter = packageExp.getEntityTypeFilter();
+				packOut.setEntityTypeFilter(entityTypeFilter);
+				if(entityTypeFilter != null && entityTypeFilter.trim().length() > 0)
+				{
+					String[] entityTypesExported = entityTypeFilter.split(ENTITY_TYPE_SEPARATOR);
+					List<String> lstEntity = new ArrayList<String>();
+					
+					for(String entity : entityTypesExported)
+					{
+						if(entity.trim().length() > 0)
+							lstEntity.add(entity.trim());
+					}
+					
+					if(!lstEntity.isEmpty())
+						packOut.setEntityTypesExported(lstEntity);
+				}
 				packOut.export(packoutDirectory, null, packoutDocument, packoutItems, get_TrxName());
 				processedCount = packOut.getExportCount();
 				exportFile = packOut.getExportFile();

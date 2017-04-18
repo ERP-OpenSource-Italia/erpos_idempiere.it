@@ -184,6 +184,23 @@ public class X_AD_Package_Exp extends PO implements I_AD_Package_Exp, I_Persiste
 		return (String)get_Value(COLUMNNAME_EMail);
 	}
 
+	/** Set Entity Type Filter.
+		@param EntityTypeFilter 
+		Extract only elements having Entity Type included in the list
+	  */
+	public void setEntityTypeFilter (String EntityTypeFilter)
+	{
+		set_Value (COLUMNNAME_EntityTypeFilter, EntityTypeFilter);
+	}
+
+	/** Get Entity Type Filter.
+		@return Extract only elements having Entity Type included in the list
+	  */
+	public String getEntityTypeFilter () 
+	{
+		return (String)get_Value(COLUMNNAME_EntityTypeFilter);
+	}
+
 	/** Set File_Directory.
 		@param File_Directory File_Directory	  */
 	public void setFile_Directory (String File_Directory)

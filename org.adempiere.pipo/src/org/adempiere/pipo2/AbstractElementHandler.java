@@ -52,6 +52,8 @@ import org.adempiere.pipo2.exception.DatabaseAccessException;
  *
  * @author hengsin
  *
+ * @author Monica Bean, www.freepath.it
+ * @see  IDEMPIERE-3217 Add entity type filter on pack out process https://idempiere.atlassian.net/browse/IDEMPIERE-3217
  */
 public abstract class AbstractElementHandler implements ElementHandler {
 
@@ -526,11 +528,25 @@ public abstract class AbstractElementHandler implements ElementHandler {
 				return false;
 			}
 		}
-		if (!ctx.packOut.isExportDictionaryEntity() && element.get_ColumnIndex("EntityType") >= 0) {
+		//IDEMPIERE-3217 Add entity type filter on pack out process
+		if (element.get_ColumnIndex("EntityType") >= 0) {
 			Object entityType = element.get_Value("EntityType");
-			if (X_AD_EntityType.ENTITYTYPE_Dictionary.equals(entityType)) {
-				return false;
+			
+			if(X_AD_EntityType.ENTITYTYPE_Dictionary.equals(entityType))
+			{
+				if(!ctx.packOut.isExportDictionaryEntity()) {
+					return false;
+				}
 			}
+			else
+			{
+				List<String> entityTypesExported = ctx.packOut.getEntityTypesExported();
+				
+				if(entityTypesExported != null && !entityTypesExported.contains(entityType)) {
+					return false;
+				}
+			}
+			
 		}
 		return true;
 	}        

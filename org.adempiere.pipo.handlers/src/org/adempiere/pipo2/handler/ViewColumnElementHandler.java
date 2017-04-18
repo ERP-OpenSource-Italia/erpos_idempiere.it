@@ -37,6 +37,8 @@ import org.xml.sax.helpers.AttributesImpl;
  * View column (AD_ViewColumn) element handler
  * @author Elaine
  *
+ * @author Monica Bean, www.freepath.it
+ * @see  IDEMPIERE-3217 Add entity type filter on pack out process https://idempiere.atlassian.net/browse/IDEMPIERE-3217
  */
 public class ViewColumnElementHandler extends AbstractElementHandler {
 
@@ -113,10 +115,9 @@ public class ViewColumnElementHandler extends AbstractElementHandler {
 		int AD_ViewColumn_ID = Env.getContextAsInt(ctx.ctx, MViewColumn.COLUMNNAME_AD_ViewColumn_ID);
 		MViewColumn m_ViewColumn = new MViewColumn(ctx.ctx, AD_ViewColumn_ID, getTrxName(ctx));
 
-		if (ctx.packOut.getFromDate() != null) {
-			if (m_ViewColumn.getUpdated().compareTo(ctx.packOut.getFromDate()) < 0) {
+		//IDEMPIERE-3217 Add entity type filter on pack out process
+		if(!isPackOutElement(ctx, m_ViewColumn)){
 				return;
-			}
 		}
 
 		AttributesImpl atts = new AttributesImpl();
