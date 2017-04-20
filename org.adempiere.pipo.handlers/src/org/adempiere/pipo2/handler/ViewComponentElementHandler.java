@@ -37,6 +37,8 @@ import org.xml.sax.helpers.AttributesImpl;
  * View component (AD_ViewComponent) element handler
  * @author Elaine
  *
+ * @author Monica Bean, www.freepath.it
+ * @see  IDEMPIERE-3217 Add entity type filter on pack out process https://idempiere.atlassian.net/browse/IDEMPIERE-3217
  */
 public class ViewComponentElementHandler extends AbstractElementHandler {
 
@@ -95,12 +97,8 @@ public class ViewComponentElementHandler extends AbstractElementHandler {
 
 		MViewComponent m_ViewComponent = new MViewComponent(ctx.ctx, AD_ViewComponent_ID, null);
 		
-		boolean createElement = true;
-		if (ctx.packOut.getFromDate() != null) {
-			if (m_ViewComponent.getUpdated().compareTo(ctx.packOut.getFromDate()) < 0) {
-				createElement = false;
-			}
-		}
+		//IDEMPIERE-3217 Add entity type filter on pack out process
+		boolean createElement = isPackOutElement(ctx, m_ViewComponent);
 		
 		if (createElement) {
 			verifyPackOutRequirement(m_ViewComponent);

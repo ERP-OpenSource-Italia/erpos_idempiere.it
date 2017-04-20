@@ -29,6 +29,7 @@ import org.adempiere.pipo2.PoFiller;
 import org.adempiere.pipo2.exception.POSaveFailedException;
 import org.compiere.model.I_AD_Preference;
 import org.compiere.model.MPreference;
+import org.compiere.model.MSysConfig;
 import org.compiere.model.Query;
 import org.compiere.model.X_AD_Package_Imp_Detail;
 import org.compiere.model.X_AD_Preference;
@@ -108,7 +109,11 @@ public class PreferenceElementHandler extends AbstractElementHandler {
 				X_AD_Preference.COLUMNNAME_AD_Preference_ID);
 		if (ctx.packOut.isExported(X_AD_Preference.COLUMNNAME_AD_Preference_ID+"|"+AD_Preference_ID))
 			return;
-
+		
+		//F3P: export preference only if 2PACK_HANDLE_PREFERENCES='Y'
+		if(MSysConfig.getBooleanValue(MSysConfig.TWOPACK_HANDLE_PREFERENCES, false) == false)
+			return;
+		
 		X_AD_Preference m_Preference = new X_AD_Preference(ctx.ctx,
 				AD_Preference_ID, getTrxName(ctx));
 		

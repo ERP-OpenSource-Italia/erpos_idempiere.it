@@ -181,7 +181,9 @@ public class MenuElementHandler extends AbstractElementHandler {
 		int AD_Menu_ID = Env.getContextAsInt(ctx.ctx, "AD_Menu_ID");
 		if (ctx.packOut.isExported("AD_Menu_ID"+"|"+AD_Menu_ID))
 			return;
+		
 		X_AD_Menu m_Menu = new X_AD_Menu(ctx.ctx, AD_Menu_ID, null);
+
 		if (m_Menu.isSummary() == false) {
 			createApplication(ctx, document, AD_Menu_ID);
 		} else {
@@ -243,54 +245,58 @@ public class MenuElementHandler extends AbstractElementHandler {
 			while (rs.next()) {
 
 				X_AD_Menu m_Menu = new X_AD_Menu(ctx.ctx, rs.getInt("AD_Menu_ID"), null);
-				verifyPackOutRequirement(m_Menu);
-				AttributesImpl atts = new AttributesImpl();
-				addTypeName(atts, "table");
-				document.startElement("", "", I_AD_Menu.Table_Name, atts);
-				createMenuBinding(ctx, document, m_Menu);
+				
+				//IDEMPIERE-3217 Add entity type filter on pack out process
+				if(isPackOutElement(ctx, m_Menu)){
+					verifyPackOutRequirement(m_Menu);
+					AttributesImpl atts = new AttributesImpl();
+					addTypeName(atts, "table");
+					document.startElement("", "", I_AD_Menu.Table_Name, atts);
+					createMenuBinding(ctx, document, m_Menu);
 
-				packOut.getCtx().ctx.put("Table_Name",X_AD_Menu.Table_Name);
-				try {
-					new CommonTranslationHandler().packOut(packOut,document,null,m_Menu.get_ID());
-				} catch(Exception e) {
-					if (log.isLoggable(Level.INFO)) log.info(e.toString());
-				}
+					packOut.getCtx().ctx.put("Table_Name",X_AD_Menu.Table_Name);
+					try {
+						new CommonTranslationHandler().packOut(packOut,document,null,m_Menu.get_ID());
+					} catch(Exception e) {
+						if (log.isLoggable(Level.INFO)) log.info(e.toString());
+					}
 
-				if (rs.getInt("AD_WINDOW_ID") > 0
-						|| rs.getInt("AD_WORKFLOW_ID") > 0
-						|| rs.getInt("AD_TASK_ID") > 0
-						|| rs.getInt("AD_PROCESS_ID") > 0
-						|| rs.getInt("AD_FORM_ID") > 0) {
-					// Call CreateWindow.
-					if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Window_ID)>0)
-					{
-						ElementHandler handler = packOut.getHandler(I_AD_Window.Table_Name);
-						handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Window_ID));
+					if (rs.getInt("AD_WINDOW_ID") > 0
+							|| rs.getInt("AD_WORKFLOW_ID") > 0
+							|| rs.getInt("AD_TASK_ID") > 0
+							|| rs.getInt("AD_PROCESS_ID") > 0
+							|| rs.getInt("AD_FORM_ID") > 0) {
+						// Call CreateWindow.
+						if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Window_ID)>0)
+						{
+							ElementHandler handler = packOut.getHandler(I_AD_Window.Table_Name);
+							handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Window_ID));
+						}
+						else if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Process_ID)>0)
+						{
+							ElementHandler handler = packOut.getHandler(I_AD_Process.Table_Name);
+							handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Process_ID));
+						} else if (rs.getInt(X_AD_Task.COLUMNNAME_AD_Task_ID)>0)
+						{
+							ElementHandler handler = packOut.getHandler(I_AD_Task.Table_Name);
+							handler.packOut(packOut,document,null,rs.getInt(X_AD_Task.COLUMNNAME_AD_Task_ID));
+						}
+						else if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Form_ID) > 0)
+						{
+							ElementHandler handler = packOut.getHandler(I_AD_Form.Table_Name);
+							handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Form_ID));
+						}
+						else if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Workflow_ID) > 0)
+						{
+							ElementHandler handler = packOut.getHandler(I_AD_Workflow.Table_Name);
+							handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Workflow_ID));
+						}
+						// Call CreateModule because entry is a summary menu
+					} else {
+						createModule(ctx, document, rs.getInt("Node_ID"));
 					}
-					else if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Process_ID)>0)
-					{
-						ElementHandler handler = packOut.getHandler(I_AD_Process.Table_Name);
-						handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Process_ID));
-					} else if (rs.getInt(X_AD_Task.COLUMNNAME_AD_Task_ID)>0)
-					{
-						ElementHandler handler = packOut.getHandler(I_AD_Task.Table_Name);
-						handler.packOut(packOut,document,null,rs.getInt(X_AD_Task.COLUMNNAME_AD_Task_ID));
-					}
-					else if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Form_ID) > 0)
-					{
-						ElementHandler handler = packOut.getHandler(I_AD_Form.Table_Name);
-						handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Form_ID));
-					}
-					else if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Workflow_ID) > 0)
-					{
-						ElementHandler handler = packOut.getHandler(I_AD_Workflow.Table_Name);
-						handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Workflow_ID));
-					}
-					// Call CreateModule because entry is a summary menu
-				} else {
-					createModule(ctx, document, rs.getInt("Node_ID"));
+					document.endElement("", "", I_AD_Menu.Table_Name);
 				}
-				document.endElement("", "", I_AD_Menu.Table_Name);
 			}
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "getWindows", e);
@@ -320,47 +326,51 @@ public class MenuElementHandler extends AbstractElementHandler {
 				// Menu tag Start.
 				X_AD_Menu m_Menu = new X_AD_Menu(ctx.ctx, rs.getInt("AD_Menu_ID"),
 						null);
-				verifyPackOutRequirement(m_Menu);
-				AttributesImpl atts = new AttributesImpl();
-				addTypeName(atts, "table");
-				document.startElement("", "", I_AD_Menu.Table_Name, atts);
-				createMenuBinding(ctx, document, m_Menu);
-				if (rs.getInt("AD_WINDOW_ID") > 0
-						|| rs.getInt("AD_WORKFLOW_ID") > 0
-						|| rs.getInt("AD_TASK_ID") > 0
-						|| rs.getInt("AD_PROCESS_ID") > 0
-						|| rs.getInt("AD_FORM_ID") > 0) {
-					// Call CreateWindow.
-					if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Window_ID)>0)
-					{
-						ElementHandler handler = packOut.getHandler("AD_Window");
-						handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Window_ID));
+				
+				//IDEMPIERE-3217 Add entity type filter on pack out process
+				if(isPackOutElement(ctx, m_Menu)){
+					verifyPackOutRequirement(m_Menu);
+					AttributesImpl atts = new AttributesImpl();
+					addTypeName(atts, "table");
+					document.startElement("", "", I_AD_Menu.Table_Name, atts);
+					createMenuBinding(ctx, document, m_Menu);
+					if (rs.getInt("AD_WINDOW_ID") > 0
+							|| rs.getInt("AD_WORKFLOW_ID") > 0
+							|| rs.getInt("AD_TASK_ID") > 0
+							|| rs.getInt("AD_PROCESS_ID") > 0
+							|| rs.getInt("AD_FORM_ID") > 0) {
+						// Call CreateWindow.
+						if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Window_ID)>0)
+						{
+							ElementHandler handler = packOut.getHandler("AD_Window");
+							handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Window_ID));
+						}
+						else if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Process_ID)>0)
+						{
+							ElementHandler handler = packOut.getHandler("AD_Process");
+							handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Process_ID));
+						}
+						else if (rs.getInt(X_AD_Task.COLUMNNAME_AD_Task_ID)>0)
+						{
+							ElementHandler handler = packOut.getHandler("AD_Task");
+							handler.packOut(packOut,document,null,rs.getInt(X_AD_Task.COLUMNNAME_AD_Task_ID));
+						}
+						else if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Form_ID) > 0)
+						{
+							ElementHandler handler = packOut.getHandler("AD_Form");
+							handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Form_ID));
+						}
+						else if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Workflow_ID) > 0)
+						{
+							ElementHandler handler = packOut.getHandler("AD_Workflow");
+							handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Workflow_ID));
+						}
+						// Call CreateModule because entry is a summary menu
+					} else {
+						createModule(ctx, document, rs.getInt("Node_ID"));
 					}
-					else if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Process_ID)>0)
-					{
-						ElementHandler handler = packOut.getHandler("AD_Process");
-						handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Process_ID));
-					}
-					else if (rs.getInt(X_AD_Task.COLUMNNAME_AD_Task_ID)>0)
-					{
-						ElementHandler handler = packOut.getHandler("AD_Task");
-						handler.packOut(packOut,document,null,rs.getInt(X_AD_Task.COLUMNNAME_AD_Task_ID));
-					}
-					else if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Form_ID) > 0)
-					{
-						ElementHandler handler = packOut.getHandler("AD_Form");
-						handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Form_ID));
-					}
-					else if (rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Workflow_ID) > 0)
-					{
-						ElementHandler handler = packOut.getHandler("AD_Workflow");
-						handler.packOut(packOut,document,null,rs.getInt(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Workflow_ID));
-					}
-					// Call CreateModule because entry is a summary menu
-				} else {
-					createModule(ctx, document, rs.getInt("Node_ID"));
+					document.endElement("", "", I_AD_Menu.Table_Name);
 				}
-				document.endElement("", "", I_AD_Menu.Table_Name);
 			}
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "getWindows", e);
