@@ -52,7 +52,7 @@ public class MUserDefField extends X_AD_UserDef_Field
 		" from AD_UserDef_Win w inner join AD_UserDef_Tab tb on (w.AD_UserDef_Win_ID = tb.AD_UserDef_Win_ID)" +
 		"   inner join AD_UserDef_Field u on (u.AD_UserDef_Tab_ID = tb.AD_UserDef_Tab_ID) " +
 		"	left outer join AD_UserDef_Field_Trl t on (u.AD_UserDef_Field_ID = t.AD_UserDef_Field_ID)" +
-		" where u.AD_Field_ID = ? and u.isActive = 'Y'" + // AD_Field_ID			
+		" where u.AD_Field_ID = ? and u.isActive = 'Y' and tb.isActive = 'Y' and w.isActive = 'Y'" + // AD_Field_ID			
 		"  and (t.AD_Language = ? or t.AD_Language IS NULL)" + // Language
 		"  and (w.ad_client_id = 0 or w.ad_client_id = ?) " + // AD_Client_ID
 		"  and (w.ad_org_id = 0 or w.ad_org_id = ?) " + // AD_Org_ID

@@ -47,7 +47,7 @@ public class MUserDefTab extends X_AD_UserDef_Tab
 			" select u.*, COALESCE(t.name,u.name) name_t, COALESCE(t.description,u.description) description_t, COALESCE(t.help,u.help) help_t" +
 			" from AD_UserDef_Win w inner join AD_UserDef_Tab u on (w.AD_UserDef_Win_ID = u.AD_UserDef_Win_ID)" +
 			"	left outer join AD_UserDef_Tab_Trl t on (u.AD_UserDef_Tab_ID = t.AD_UserDef_Tab_ID)" +
-			" where u.AD_Tab_ID = ? and u.isActive = 'Y'" + // AD_Tab_ID			
+			" where u.AD_Tab_ID = ? and u.isActive = 'Y' and w.isActive = 'Y'" + // AD_Tab_ID			
 			"  and (t.AD_Language = ? or t.AD_Language IS NULL)" + // Language
 			"  and (w.ad_client_id = 0 or w.ad_client_id = ?) " + // AD_Client_ID
 			"  and (w.ad_org_id = 0 or w.ad_org_id = ?) " + // AD_Org_ID
