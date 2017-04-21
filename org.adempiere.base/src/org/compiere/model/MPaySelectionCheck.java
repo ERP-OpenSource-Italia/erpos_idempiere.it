@@ -40,6 +40,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 
 import it.idempiere.base.model.LITMPaySelection;
+import it.idempiere.base.util.BaseMessages;
 import it.idempiere.base.util.RifDoc;
 
 /**
@@ -549,7 +550,7 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 							.format(dateInvoiced);
 
 					String sDescr = MessageFormat.format(Msg.getMsg(sBPLanguage,
-							"LIT_PayExportDescr"), psLine.getC_Invoice()
+							BaseMessages.MSG_PAYEXPORTDESCR), psLine.getC_Invoice()
 							.getDocumentNo(), sDateInv, psLine.getC_Invoice()
 							.getC_BPartner().getName(),psLine.getDescription());
 					rfd.setDescrizione(sDescr);
