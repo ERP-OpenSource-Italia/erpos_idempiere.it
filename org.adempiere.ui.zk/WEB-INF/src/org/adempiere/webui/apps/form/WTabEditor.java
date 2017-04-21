@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 
 import org.adempiere.webui.LayoutUtils;
+import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.Column;
 import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.EditorBox;
@@ -171,6 +172,14 @@ public class WTabEditor extends TabEditor implements IFormController, EventListe
 	 *  Same createUI algorithm used on ADTabPanel
 	 */
 	private void createUI() {
+		
+		if(isUserDefTab())
+		{
+			Button customizeBtn = confirmPanel.createButton(ConfirmPanel.A_CUSTOMIZE);
+			customizeBtn.addEventListener(Events.ON_CLICK, this);
+			confirmPanel.addComponentsLeft(customizeBtn);
+		}
+					
 		mapCellField.clear();
 		mapEmptyCellField.clear();
 
@@ -732,6 +741,12 @@ public class WTabEditor extends TabEditor implements IFormController, EventListe
 		else if (e.getTarget().getId().equals("Ok"))
 		{
 			if (cmd_save())
+				tabform.detach();
+		}
+		//	Customize - Save all customs
+		else if (e.getTarget().getId().equals(ConfirmPanel.A_CUSTOMIZE))
+		{
+			if (cmd_save(true))
 				tabform.detach();
 		}
 	}	//	actionPerformed
