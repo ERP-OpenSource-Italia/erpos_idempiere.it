@@ -35,9 +35,10 @@ public interface IRoleAccess
 	 * @param fullyQualified	fullyQualified names
 	 * @param rw	if false, includes System Data
 	 * @param additionalRw rw condition for additional rules, may be null indicating that no additional rules should be applied
+	 * @param AD_Column_ID column for which generate additional rules, < 0 if irrelevant
 	 * 
 	 * @return the sql where clause to add for this rule, or null if nothing has to be added
 	 */
-	public String getSQLAccessCondition(MRole role, String tableName,AccessSqlParser.TableInfo[] ti, boolean fullyQualified, boolean rw, Boolean additionaRW);
+	public String getSQLAccessCondition(MRole role, String tableName,AccessSqlParser.TableInfo[] ti, boolean fullyQualified, boolean rw, Boolean additionaRW, int AD_Column_ID);
 
 }

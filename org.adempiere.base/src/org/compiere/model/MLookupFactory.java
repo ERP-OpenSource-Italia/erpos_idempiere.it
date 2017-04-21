@@ -218,12 +218,12 @@ public class MLookupFactory
 		else if ((AD_Reference_ID == DisplayType.Table || AD_Reference_ID == DisplayType.Search)
 			&& AD_Reference_Value_ID != 0)
 		{
-			info = getLookup_Table (ctx, language, WindowNo, AD_Reference_Value_ID);
+			info = getLookup_Table (ctx, language, WindowNo, AD_Reference_Value_ID, Column_ID);
 		}
 		//	TableDir, Search, ID, ...
 		else
 		{
-			info = getLookup_TableDir (ctx, language, WindowNo, ColumnName);
+			info = getLookup_TableDir (ctx, language, WindowNo, ColumnName, Column_ID);
 		}
 		//  do we have basic info?
 		if (info == null)
@@ -302,7 +302,7 @@ public class MLookupFactory
 		//	Add Security
 		if (needToAddSecurity)
 			info.Query = MRole.getDefault(ctx, false).addAccessSQL(info.Query,
-				info.TableName, MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO);
+				info.TableName, MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO, Column_ID); // FIN (st) 170420: added column parameter
 		//
 	//	s_log.finest("Query:  " + info.Query);
 	//	s_log.finest("Direct: " + info.QueryDirect);
@@ -390,11 +390,12 @@ public class MLookupFactory
 	 *  @param language report language
 	 *  @param WindowNo window no
 	 *  @param AD_Reference_Value_ID reference value
+	 *  @param Column_ID id of column using this lookup
 	 *	@return	SELECT Key, NULL, Name, IsActive FROM Table - if KeyColumn end with _ID
 	 *	  otherwise	SELECT NULL, Key, Name, IsActive FROM Table
 	 */
 	static private MLookupInfo getLookup_Table (Properties ctx, Language language,
-		int WindowNo, int AD_Reference_Value_ID)
+		int WindowNo, int AD_Reference_Value_ID, int Column_ID) // FIN (st) 170420: added Column_ID for addRoleAccess
 	{
 		String lang;
 		if (language == null) {
@@ -612,7 +613,7 @@ public class MLookupFactory
 			msginf.toString(), ZoomWindow, ZoomWindowPO, zoomQuery);
 		retValue.DisplayColumn = lookupDisplayColumn;		
 		retValue.InfoWindowId = infoWindowId;
-		retValue.QueryDirect = MRole.getDefault().addAccessSQL(directQuery, TableName, true, false, null); // FIN (st): dont apply additional rules for query direct
+		retValue.QueryDirect = MRole.getDefault().addAccessSQL(directQuery, TableName, true, false, null, Column_ID); // FIN (st): dont apply additional rules for query direct
 		s_cacheRefTable.put(key.toString(), retValue.cloneIt());
 		return retValue;
 	}	//	getLookup_Table
@@ -747,10 +748,11 @@ public class MLookupFactory
 	 * @param language report language
 	 * @param ColumnName column name
 	 * @param WindowNo Window (for SOTrx)
+	 * @param Column_ID id of column using this lookup
 	 * @return SELECT Key, NULL, Name, IsActive from Table (fully qualified)
 	 */
 	static private MLookupInfo getLookup_TableDir (Properties ctx, Language language,
-		int WindowNo, String ColumnName)
+		int WindowNo, String ColumnName, int Column_ID) // FIN (st) 170420: added AD_Column_ID needed to invoke addRoleAccessSQL
 	{
 		if (!ColumnName.endsWith("_ID"))
 		{
@@ -834,8 +836,8 @@ public class MLookupFactory
 		StringBuilder msginf = new StringBuilder().append(TableName).append(".").append(KeyColumn);
 		MLookupInfo lInfo = new MLookupInfo(realSQL.toString(), TableName,
 			msginf.toString(), ZoomWindow, ZoomWindowPO, zoomQuery);
-		lInfo.DisplayColumn = displayColumn.toString();
-		lInfo.QueryDirect = MRole.getDefault().addAccessSQL(directQuery, TableName, true, false, null); // FIN (st): dont apply additional rules for query direct
+		lInfo.DisplayColumn = displayColumn.toString();		
+		lInfo.QueryDirect = MRole.getDefault().addAccessSQL(directQuery, TableName, true, false, null, Column_ID); // FIN (st): dont apply additional rules for query direct
 		s_cacheRefTable.put(cacheKey.toString(), lInfo.cloneIt());
 		return lInfo;
 	}	//	getLookup_TableDir
