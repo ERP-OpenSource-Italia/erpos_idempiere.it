@@ -49,6 +49,9 @@ import org.compiere.util.Trx;
  * IntPackIn Tool.
  *
  * @author: Robert KLEIN. robeklein@hotmail.com
+ * 
+ * @author Monica Bean, www.freepath.it
+ * @see  IDEMPIERE-3227 Pack in process doesn't close input stream when an exception is thrown https://idempiere.atlassian.net/browse/IDEMPIERE-3227
  */
 public class PackIn {
 
@@ -131,12 +134,21 @@ public class PackIn {
 			if (log.isLoggable(Level.INFO)) log.info("importXML:" + msg);
 			return msg;
 		}
+		
+		FileInputStream input = null;
+		
 		try {
-			FileInputStream input = new FileInputStream(in);
+			input = new FileInputStream(in);
 			return importXML(input, ctx, trxName);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "importXML:", e);
 			throw e;
+		}
+		//IDEMPIERE-3227 close input stream when an exception is thrown
+		finally
+		{
+			if(input != null)
+				input.close();
 		}
 	}
 

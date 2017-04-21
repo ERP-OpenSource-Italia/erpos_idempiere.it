@@ -154,8 +154,12 @@ public class WDatetimeEditor extends WEditor implements ContextMenuListener
     	}
     	else if (value instanceof Timestamp)
         {
-            getComponent().setValue((Timestamp)value);
-            oldValue = (Timestamp)value;
+    		// Angelo Dabala' (genied) must point to new objects
+            // getComponent().setValue((Timestamp)value);
+            // oldValue = (Timestamp)value;
+    		
+           getComponent().setValue(new Timestamp(((Timestamp)value).getTime()));
+           oldValue = new Timestamp(((Timestamp)value).getTime());
         }
     	else
     	{

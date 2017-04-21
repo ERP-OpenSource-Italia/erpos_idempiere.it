@@ -98,6 +98,9 @@ import org.zkoss.zul.South;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Vbox;
 
+import it.idempiere.base.util.FilterQuery;
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  * AD_InfoWindow implementation
  * @author hengsin
@@ -116,6 +119,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	/** List of WEditors            */
     protected List<WEditor> editors;
     protected List<WEditor> identifiers;
+    //F3P editor to fill when queryValue is not null and no identifier is filled
+    protected WEditor defaultQueryCriteria;
     protected Properties infoContext;
 
     /** embedded Panel **/
@@ -133,7 +138,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	
 	private List<GridField> gridFields;
 	private Checkbox checkAND;
-	
+
 	/**
 	 * Menu contail process menu item
 	 */
@@ -479,7 +484,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			executeQuery();
 			renderItems();
 		} else if (!splitValue) {
-			editors.get(0).setValue(queryValue);
+			//F3P default filter to fill
+			if(defaultQueryCriteria != null)
+				defaultQueryCriteria.setValue(queryValue);
+			else //F3P end
+				editors.get(0).setValue(queryValue);
 		}
 		isQueryByUser = false;
 	}
@@ -842,13 +851,39 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 							function = s;
 						}
 					}
+					//F3P filter special chars
+					if(function.equalsIgnoreCase("upper") && mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_Like) &&
+							STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
+					{
+						function = FilterQuery.SPECIAL_CHAR_FUNCTION;
+						
+						if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
+						{
+							function = FilterQuery.getFilterFunction(function);
+						}
+					}
+					//F3P
 					if (function.indexOf("?") >= 0) {
 						columnClause = function.replaceFirst("[?]", columnName);
 					} else {
 						columnClause = function+"("+columnName+")";
 					}
 				} else {
-					columnClause = columnName;
+					//F3P filter special chars
+					if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())) &&
+						mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_Like))
+					{
+						columnClause = FilterQuery.SPECIAL_CHAR_FUNCTION;
+						
+						if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
+						{
+							columnClause = FilterQuery.getFilterFunction(columnClause);
+						}
+						
+						columnClause.replaceFirst("[?]", columnName);
+					}
+					else
+						columnClause = columnName;
 				}
 				builder.append(columnClause)
 					   .append(" ")
@@ -924,7 +959,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		// when query not by click requery button, reuse parameter value
 		if (!isQueryByUser && prevParameterValues != null){
 			for (int parameterIndex = 0; parameterIndex < prevParameterValues.size(); parameterIndex++){
-				setParameter (pstmt, parameterIndex + 1, prevParameterValues.get(parameterIndex), prevQueryOperators.get(parameterIndex));
+				setParameter (pstmt, parameterIndex + 1, prevParameterValues.get(parameterIndex), prevQueryFunctions.get(parameterIndex), prevQueryOperators.get(parameterIndex));
 			}
 			return;
 		}
@@ -933,10 +968,12 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		if (prevParameterValues == null){
 			prevParameterValues = new ArrayList<Object> ();
 			prevQueryOperators = new ArrayList<String> ();
+			prevQueryFunctions = new ArrayList<String> ();
 			prevRefParmeterEditor = new ArrayList<WEditor>(); 
 		}else{
 			prevParameterValues.clear();
 			prevQueryOperators.clear();
+			prevQueryFunctions.clear();
 			prevRefParmeterEditor.clear();
 		}
 
@@ -954,8 +991,9 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				parameterIndex++;
 				prevParameterValues.add(value);
 				prevQueryOperators.add(mInfoColumn.getQueryOperator());
+				prevQueryFunctions.add(mInfoColumn.getQueryFunction());
 				prevRefParmeterEditor.add(editor);
-				setParameter (pstmt, parameterIndex, value, mInfoColumn.getQueryOperator());
+				setParameter (pstmt, parameterIndex, value, mInfoColumn.getQueryFunction(), mInfoColumn.getQueryOperator());
 			}
 		}
 
@@ -970,23 +1008,32 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	 * @param queryOperator
 	 * @throws SQLException
 	 */
-	protected void setParameter (PreparedStatement pstmt, int parameterIndex, Object value, String queryOperator) throws SQLException{
-				if (value instanceof Boolean) {					
-					pstmt.setString(parameterIndex, ((Boolean) value).booleanValue() ? "Y" : "N");
-				} else if (value instanceof String) {
+	protected void setParameter (PreparedStatement pstmt, int parameterIndex, Object value, String queryFunction, String queryOperator) throws SQLException{
+		if (value instanceof Boolean) {					
+			pstmt.setString(parameterIndex, ((Boolean) value).booleanValue() ? "Y" : "N");
+		} else if (value instanceof String) {
 			if (queryOperator.equals(X_AD_InfoColumn.QUERYOPERATOR_Like)) {
-						StringBuilder valueStr = new StringBuilder(value.toString().toUpperCase());
-	                    if (!valueStr.toString().endsWith("%"))
-	                        valueStr.append("%");
-	                    pstmt.setString(parameterIndex, valueStr.toString());
-					} else {
-						pstmt.setString(parameterIndex, (String)value);
-					}
-				} else {
-					pstmt.setObject(parameterIndex, value);
-				}
+					//F3P filter special char	
+					StringBuilder valueStr = new StringBuilder();
+					if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())) && 
+							(Util.isEmpty(queryFunction, true)) || queryFunction.equalsIgnoreCase("upper"))
+					{
+						valueStr.append(FilterQuery.filterString(value.toString()));
+					} else if(Util.isEmpty(queryFunction, true) == false && queryFunction.equalsIgnoreCase("upper"))
+						valueStr.append(value.toString().toUpperCase());
+					else 
+						valueStr.append(value.toString());//F3P end
+					if (!valueStr.toString().endsWith("%"))
+                        valueStr.append("%");
+                    pstmt.setString(parameterIndex, valueStr.toString());
+			} else {
+				pstmt.setString(parameterIndex, (String)value);
+			}
+		} else {
+			pstmt.setObject(parameterIndex, value);
+		}
 	}
-
+	
 	@Override
 	protected void prepareTable(ColumnInfo[] layout, String from, String where,
 			String orderBy) {
@@ -1344,6 +1391,10 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
         	identifiers.add(editor);
         }
 
+        //F3P default query criteria
+        if(infoColumn.isDefaultQueryCriteria())
+        	defaultQueryCriteria = editor;
+        
         fieldEditor.addEventListener(Events.ON_OK, this);		
 
         mField.addPropertyChangeListener(editor);

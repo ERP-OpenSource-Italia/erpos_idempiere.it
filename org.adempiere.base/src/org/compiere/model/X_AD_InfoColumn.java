@@ -30,7 +30,7 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20170306L;
 
     /** Standard Constructor */
     public X_AD_InfoColumn (Properties ctx, int AD_InfoColumn_ID, String trxName)
@@ -385,6 +385,27 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 	public boolean isCentrallyMaintained () 
 	{
 		Object oo = get_Value(COLUMNNAME_IsCentrallyMaintained);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Default Query Criteria.
+		@param IsDefaultQueryCriteria Default Query Criteria	  */
+	public void setIsDefaultQueryCriteria (boolean IsDefaultQueryCriteria)
+	{
+		set_Value (COLUMNNAME_IsDefaultQueryCriteria, Boolean.valueOf(IsDefaultQueryCriteria));
+	}
+
+	/** Get Default Query Criteria.
+		@return Default Query Criteria	  */
+	public boolean isDefaultQueryCriteria () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsDefaultQueryCriteria);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 

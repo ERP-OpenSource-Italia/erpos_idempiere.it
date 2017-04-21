@@ -22,6 +22,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.logging.Level;
 
@@ -45,6 +46,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.Util;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
+import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.Div;
@@ -52,6 +54,9 @@ import org.zkoss.zul.North;
 import org.zkoss.zul.Separator;
 import org.zkoss.zul.South;
 import org.zkoss.zul.Vbox;
+
+import it.idempiere.base.util.FilterQuery;
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  * Zk Port
@@ -85,6 +90,14 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 	private ArrayList<String> m_queryColumnsSql = new ArrayList<String>();
 	private Borderlayout layout;
 	private Vbox southBody;
+	
+	//F3P: support translation of values in data
+	private String	p_fromClause; // generalize from
+	private static final String TRANSLATED_COLUMN_PATTERN = "COALESCE(TRL.{0},{1}.{0})";
+	private static final MessageFormat	TRANSLATED_COLUMN = new MessageFormat(TRANSLATED_COLUMN_PATTERN), 
+										ALIASED_TRANSLATED_COLUMN = new MessageFormat(TRANSLATED_COLUMN_PATTERN + " as {0}"), // 0: columnName, 1: p_tableName
+										FULLYQUALIFIED_COLUMN = new MessageFormat("{0}.{1}"), // 0: p_tableName, 1: columnName
+										TRANSLATED_FROM = new MessageFormat("{0} LEFT OUTER JOIN {0}_Trl TRL ON ({0}.{1} = TRL.{1} AND TRL.AD_Language = ''{2}'')"); // 0: p_tableName, 1: key, 2: language
 
 	public InfoGeneralPanel(String queryValue, int windowNo,String tableName,String keyColumn, boolean isSOTrx, String whereClause)
 	{
@@ -207,10 +220,18 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 
 	private void init()
 	{
+		//F3P: add event listener
 		txt1 = new Textbox();
+		txt1.addEventListener(Events.ON_OK, this);
+		
 		txt2 = new Textbox();
+		txt2.addEventListener(Events.ON_OK, this);
+		
 		txt3 = new Textbox();
+		txt3.addEventListener(Events.ON_OK, this);
+		
 		txt4 = new Textbox();
+		txt4.addEventListener(Events.ON_OK, this);
 		
 		txt1.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "textbox1");
 		txt2.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "textbox2");
@@ -229,12 +250,15 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 			return false;
 
 		//  Prepare table
-
-		StringBuilder where = new StringBuilder("IsActive='Y'");
+		StringBuffer where = new StringBuffer(p_tableName); // F3P: prepended isActive with tablename
+		where.append(".IsActive='Y'");
 
 		if (p_whereClause.length() > 0)
 			where.append(" AND ").append(p_whereClause);
-		prepareTable(m_generalLayout, p_tableName, where.toString(), "2");
+		
+		prepareTable(m_generalLayout, 
+				p_fromClause, // F3P: generalize from clause 
+				where.toString(), "2");
 
 		//	Set & enable Fields
 
@@ -357,16 +381,22 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 		//	Get Display Columns
 
 		ArrayList<ColumnInfo> list = new ArrayList<ColumnInfo>();
-		sql = "SELECT c.ColumnName, c.AD_Reference_ID, c.IsKey, f.IsDisplayed, c.AD_Reference_Value_ID, c.ColumnSql "
+		sql = "SELECT c.ColumnName, c.AD_Reference_ID, c.IsKey, f.IsDisplayed, c.AD_Reference_Value_ID, c.ColumnSql, c.IsTranslated " // F3P: added isItranslated
 			+ "FROM AD_Column c"
 			+ " INNER JOIN AD_Table t ON (c.AD_Table_ID=t.AD_Table_ID)"
 			+ " INNER JOIN AD_Tab tab ON (t.AD_Window_ID=tab.AD_Window_ID)"
 			+ " INNER JOIN AD_Field f ON (tab.AD_Tab_ID=f.AD_Tab_ID AND f.AD_Column_ID=c.AD_Column_ID) "
 			+ "WHERE t.AD_Table_ID=? "
+			+ " AND c.ColumnName NOT IN ('IsActive') " // F3P: Exclude irrelevant column (isactive is not relevant since its always filtered, and cause problems with translation)
 			+ " AND (c.IsKey='Y' OR "
 				+ " (f.IsEncrypted='N' AND f.ObscureType IS NULL)) "
 			+ "ORDER BY c.IsKey DESC, f.SeqNo";
 
+		// F3P: added to manage translation
+		boolean bHasTranslation = false;
+		String	sKeyColumn = null;
+		p_fromClause = p_tableName;
+		
 		try
 		{
 			pstmt = DB.prepareStatement(sql, null);
@@ -380,6 +410,7 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 				boolean isDisplayed = rs.getString(4).equals("Y");
 				int AD_Reference_Value_ID = rs.getInt(5);
 				String columnSql = rs.getString(6);
+				boolean isTranslated = rs.getString(7).equals("Y"); // F3P: we need to know if the column is translated
 				if (columnSql != null && columnSql.contains("@"))
 					columnSql = Env.parseContext(Env.getCtx(), -1, columnSql, false, true);
 				if (columnSql == null || columnSql.length() == 0)
@@ -419,10 +450,44 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 							.append(" AND t.AD_Language='").append(Env.getAD_Language(Env.getCtx()))
 							.append("') AS ").append(columnName);
 					colClass = String.class;
+					
+					isTranslated = false; // F3P: lists are already translated
 				}
 
 				if (colClass != null)
 				{
+					// F3P: manage translation
+					// the key is needed for the join to the translation table, and we need to know if the column is translated
+					
+					if(isKey && sKeyColumn == null)
+						sKeyColumn = columnName;
+					
+					if(isTranslated)
+						bHasTranslation = true;
+					
+					if(isKey)
+					{
+						colSql = new StringBuffer(FULLYQUALIFIED_COLUMN.format(new Object[]{p_tableName,sKeyColumn}));
+						isTranslated = false;
+					}
+					else if(isTranslated)
+					{
+						colSql = new StringBuffer(ALIASED_TRANSLATED_COLUMN.format(new Object[]{columnName,p_tableName}));
+
+						// Update parameter values
+						
+						for(int i=0, len = m_queryColumnsSql.size(); i < len; i++)
+						{
+							if(m_queryColumnsSql.get(i).equals(columnName))
+							{
+								String sWhereCol = TRANSLATED_COLUMN.format(new Object[]{columnName,p_tableName});
+								m_queryColumnsSql.set(i, sWhereCol);
+								break;
+							}
+						}
+					}
+					// F3p end
+					
 					list.add(new ColumnInfo(Msg.translate(Env.getCtx(), columnName), colSql.toString(), colClass));
 					if (log.isLoggable(Level.FINEST)) log.finest("Added Column=" + columnName);
 				}
@@ -451,6 +516,11 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 
 		if (log.isLoggable(Level.FINEST)) log.finest("InfoColumns #" + list.size());
 
+		// F3P: manage from if we have a translation
+		if(bHasTranslation)
+			p_fromClause = TRANSLATED_FROM.format(new Object[]{p_tableName,sKeyColumn,Env.getAD_Language(Env.getCtx())});
+		// F3p end		
+		
 		//  Convert ArrayList to Array
 		m_generalLayout = new ColumnInfo[list.size()];
 		list.toArray(m_generalLayout);
@@ -472,6 +542,17 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 	{
 		if (!(value.equals("") || value.equals("%")) && index < m_queryColumns.size())
 		{
+			//F3P filter special chars
+			if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
+			{
+				String function = FilterQuery.SPECIAL_CHAR_FUNCTION.replaceFirst("[?]", m_queryColumnsSql.get(index).toString());
+				
+				if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())))
+        			function = FilterQuery.getFilterFunction(function);
+				
+				sql.append(" AND ").append(function).append(" LIKE ?");
+			}
+			else
 			// Angelo Dabala' (genied) nectosoft: [2893220] avoid to append string parameters directly because of special chars like quote(s)
 			sql.append(" AND UPPER(").append(m_queryColumnsSql.get(index).toString()).append(") LIKE ?");
 		}
@@ -485,6 +566,13 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 	private String getSQLText (Textbox f)
 	{
 		String s = f.getText().toUpperCase();
+		
+		//F3P filter special chars
+		if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
+		{
+			s = FilterQuery.filterString(s);
+		}
+		
 		if (!s.endsWith("%"))
 			s += "%";
 		if (log.isLoggable(Level.FINE)) log.fine( "String=" + s);
@@ -517,4 +605,19 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 		southBody.insertBefore(paging, southBody.getFirstChild());
 		layout.invalidate();
     }
+
+    //F3P: filter event listener
+	@Override
+	public void onEvent(Event event) {
+		
+		if(event.getName().equals(Events.ON_OK) && 
+				(event.getTarget() == txt1 || event.getTarget() == txt2 ||
+					event.getTarget() == txt3 || event.getTarget() == txt4))
+		{
+			onUserQuery();
+		}
+		else
+			super.onEvent(event);
+	}
+	//F3P end
 }

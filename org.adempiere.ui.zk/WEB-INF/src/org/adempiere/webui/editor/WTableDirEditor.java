@@ -341,7 +341,17 @@ ContextMenuListener, IZoomableEditor
 	                if (obj instanceof KeyNamePair)
 	                {
 	                    KeyNamePair lookupKNPair = (KeyNamePair) obj;
-	                    getComponent().appendItem(lookupKNPair.getName(), lookupKNPair.getKey());
+	                    // F3P bug fix empty item combobox
+	                    //getComponent().appendItem(lookupKNPair.getName(), lookupKNPair.getKey());
+
+	                    String sName = lookupKNPair.getName();
+	                    
+	                    if(sName.length() == 0 && !mandatory)
+	                    	sName = " ";
+	                    
+	                    getComponent().appendItem(sName, lookupKNPair.getKey());
+	                    
+	                    // F3P end
 	                    if (!found && oldValue != null && oldValue instanceof Integer &&
 	                    	lookupKNPair.getKey() == (Integer)oldValue)
 	                    {
@@ -645,7 +655,7 @@ ContextMenuListener, IZoomableEditor
 		}
 		// IDEMPIERE 90
 	}
-	
+	/*F3P:Da porting Adempiere
 	public  void propertyChange(PropertyChangeEvent evt)
 	{
 		if ("FieldValue".equals(evt.getPropertyName()))
@@ -653,7 +663,8 @@ ContextMenuListener, IZoomableEditor
 			setValue(evt.getNewValue());
 		}
 	}
-	
+	F3P End
+	*/
 	@Override
 	public void dynamicDisplay()
     {    	

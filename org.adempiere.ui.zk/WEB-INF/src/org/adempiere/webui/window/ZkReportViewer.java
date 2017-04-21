@@ -893,7 +893,8 @@ public class ZkReportViewer extends Window implements EventListener<Event>, ITab
 		String to = "";
 		MUser from = MUser.get(Env.getCtx(), Env.getAD_User_ID(Env.getCtx()));
 		String subject = m_reportEngine.getName();
-		String message = "";
+		String signature = from.get_ValueAsString("EMailSignature");
+		String message = Util.isEmpty(signature, true) ? "" : signature;
 		File attachment = null;
 		
 		try

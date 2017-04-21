@@ -62,6 +62,8 @@ import org.zkoss.zul.Listitem;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Vlayout;
 
+import it.idempiere.base.util.StartedFromUI;
+
 
 
 public class WDocActionPanel extends Window implements EventListener<Event>, DialogEvents
@@ -199,6 +201,13 @@ public class WDocActionPanel extends Window implements EventListener<Event>, Dia
 
 		DocAction = docActionHolder[0];
 
+		// F3P: index may exceed options len
+		ArrayList<String>	lstAdded = new ArrayList<String>();
+		
+		if(index > options.length)
+			index = options.length;
+		//F3P end
+				
 		/**
 		 *	Fill actionCombo
 		 */
@@ -211,7 +220,8 @@ public class WDocActionPanel extends Window implements EventListener<Event>, Dia
 
 			for (int j = 0; j < s_value.length && !added; j++)
 			{
-				if (options[i].equals(s_value[j]))
+				if (options[i] != null && options[i].equals(s_value[j]) // F3P: added check for null
+						&& lstAdded.contains(s_name[j]) == false) // F3P: action already added ?	
 				{
 					Listitem newitem = lstDocAction.appendItem(s_name[j],s_value[j]);
 					if (firstadded) {
@@ -220,6 +230,9 @@ public class WDocActionPanel extends Window implements EventListener<Event>, Dia
 						firstadded = false;
 					}
 					added = true;
+					
+					// F3P: added and used to filter
+					lstAdded.add(s_name[j]);
 				}
 			}
 		}
@@ -328,7 +341,11 @@ public class WDocActionPanel extends Window implements EventListener<Event>, Dia
 		if (Events.ON_CLICK.equals(event.getName()))
 		{
 			if (confirmPanel.getButton("Ok").equals(event.getTarget()))
-			{				
+			{		
+				//F3P UI action flag
+				StartedFromUI.add(Env.getCtx(),  gridTab.getAD_Table_ID(), gridTab.getRecord_ID(), null);
+				//F3P end
+				
 				MClientInfo clientInfo = MClientInfo.get(Env.getCtx());
 				if(clientInfo.isConfirmOnDocClose() || clientInfo.isConfirmOnDocVoid())
 				{

@@ -70,7 +70,9 @@ public class WStringEditor extends WEditor implements ContextMenuListener
 
     public WStringEditor(GridField gridField, boolean tableEditor)
     {
-        super(gridField.isAutocomplete() ? new Combobox() : new Textbox(), gridField);
+    	//F3P
+    	super(isEffectiveAutocomplete(gridField) ? new Combobox() : new Textbox(), gridField); //F3P: Used to avoid problem with autocomplete flag and text field drawn as combobox instead of textbox.
+        //super(gridField.isAutocomplete() ? new Combobox() : new Textbox(), gridField);
         this.tableEditor = tableEditor;
 
         if (gridField.getVFormat() != null && !gridField.getVFormat().isEmpty())
@@ -78,6 +80,19 @@ public class WStringEditor extends WEditor implements ContextMenuListener
 
         init(gridField.getObscureType());
     }
+    
+ 	//F3P: Used to avoid problem with autocomplete flag and text field drawn as combobox instead of textbox.  
+    protected static boolean isEffectiveAutocomplete(GridField gridField)
+    {
+    	if(gridField.isAutocomplete()
+    			&& !(gridField.getDisplayType() == DisplayType.Text
+    			|| gridField.getDisplayType() == DisplayType.TextLong
+    			|| gridField.getDisplayType() == DisplayType.Memo))
+    		return true;
+    	else
+    		return false;
+    }
+    //
 
     /**
      * to ease porting of swing form
@@ -159,7 +174,9 @@ public class WStringEditor extends WEditor implements ContextMenuListener
 	        	addChangeLogMenu(popupMenu);
 	        }
 
-	        if (gridField.isAutocomplete()) {
+	        //F3P
+	        //if (gridField.isAutocomplete()) {
+	        	 if (isEffectiveAutocomplete(gridField)){
 	        	Combobox combo = (Combobox)getComponent();
 	        	combo.setAutodrop(true);
 	        	combo.setAutocomplete(true);
@@ -295,7 +312,9 @@ public class WStringEditor extends WEditor implements ContextMenuListener
 	public void dynamicDisplay() {
 		super.dynamicDisplay();
 		//referesh auto complete list
-		if (gridField.isAutocomplete()) {
+		//F3P
+		//if (gridField.isAutocomplete()) {
+			if (isEffectiveAutocomplete(gridField)) { //F3P: Used to avoid problem with autocomplete flag and text field drawn as combobox instead of textbox.
         	Combobox combo = (Combobox)getComponent();
         	List<String> items = gridField.getEntries();
         	if (items.size() != combo.getItemCount())

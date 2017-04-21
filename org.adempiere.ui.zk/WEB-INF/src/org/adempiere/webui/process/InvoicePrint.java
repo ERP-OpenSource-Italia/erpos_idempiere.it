@@ -32,6 +32,8 @@ import org.adempiere.webui.window.SimplePDFViewer;
 import org.compiere.model.MClient;
 import org.compiere.model.MInvoice;
 import org.compiere.model.MMailText;
+import org.compiere.model.MPInstance;
+import org.compiere.model.MProcess;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.model.MUser;
@@ -39,6 +41,7 @@ import org.compiere.model.MUserMail;
 import org.compiere.model.PrintInfo;
 import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportEngine;
+import org.compiere.process.ProcessInfo;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
 import org.compiere.util.AdempiereUserError;
@@ -47,6 +50,7 @@ import org.compiere.util.EMail;
 import org.compiere.util.Env;
 import org.compiere.util.Ini;
 import org.compiere.util.Language;
+import org.compiere.util.Trx;
 import org.compiere.util.Util;
 
 /**
@@ -214,19 +218,65 @@ public class InvoicePrint extends SvrProcess
 				}
 				format.setLanguage(language);
 				format.setTranslationLanguage(language);
-				//	query
-				MQuery query = new MQuery("C_Invoice_Header_v");
-				query.addRestriction("C_Invoice_ID", MQuery.EQUAL, new Integer(C_Invoice_ID));
-
-				//	Engine
-				PrintInfo info = new PrintInfo(
-					DocumentNo,
-					MInvoice.Table_ID,
-					C_Invoice_ID,
-					C_BPartner_ID);
-				info.setCopies(copies);
-				ReportEngine re = new ReportEngine(getCtx(), format, query, info);
+				//F3P
+				File f_invoice = null;
+				boolean processOK = false;
 				boolean printed = false;
+				if(format.getJasperProcess_ID() > 0)
+				{
+					MProcess process = MProcess.get (getCtx(), format.getJasperProcess_ID());
+					MPInstance pInstance = new MPInstance (process, C_Invoice_ID);
+					ProcessInfo pi = new ProcessInfo (process.getName(), process.getAD_Process_ID(), MInvoice.Table_ID, C_Invoice_ID);		
+					pi.setAD_User_ID(Env.getAD_User_ID(getCtx()));
+					pi.setAD_Client_ID(Env.getAD_Client_ID(getCtx()));
+					pi.setClassName(process.getClassname());
+					pi.setAD_PInstance_ID(pInstance.getAD_PInstance_ID());			
+					pi.setPrintPreview (false);
+					pi.setIsBatch(true);
+					Trx trx = Trx.get(Trx.createTrxName("WebPrc"), true);
+					try
+					{				
+						processOK = process.processIt(pi, trx);			
+						trx.commit();
+						trx.close();
+					}
+					catch (Throwable t)
+					{
+						trx.rollback();
+						trx.close();
+					}
+					if(processOK)
+					{
+						f_invoice=pi.getPDFReport();
+						if(f_invoice == null)
+						{
+							addLog (C_Invoice_ID, null, null, DocumentNo + " Jasper Error: "+pi.getSummary());
+							errors++;
+							continue;
+						}
+					}
+					
+				}
+				else
+				{
+					//	query
+					MQuery query = new MQuery("C_Invoice_Header_v");
+					query.addRestriction("C_Invoice_ID", MQuery.EQUAL, new Integer(C_Invoice_ID));
+
+					//	Engine
+					PrintInfo info = new PrintInfo(
+						DocumentNo,
+						MInvoice.Table_ID,
+						C_Invoice_ID,
+						C_BPartner_ID);
+					info.setCopies(copies);
+					ReportEngine re = new ReportEngine(getCtx(), format, query, info);
+					File invoice = null;
+					if (!Ini.isClient())
+						invoice = new File(MInvoice.getPDFFileName(documentDir, C_Invoice_ID));
+					f_invoice = re.getPDF(invoice);
+				}
+				//F3P End
 				if (p_EMailPDF)
 				{
 					String subject = mText.getMailHeader() + " - " + DocumentNo;
@@ -249,11 +299,8 @@ public class InvoicePrint extends SvrProcess
 						email.setSubject (subject);
 						email.setMessageText (message);
 					}
-					//
-					File invoice = null;
-					if (!Ini.isClient())
-						invoice = new File(MInvoice.getPDFFileName(documentDir, C_Invoice_ID));
-					File attachment = re.getPDF(invoice);
+					//F3P: use f_invoice no pdf file name
+					File attachment = f_invoice;
 					if (log.isLoggable(Level.FINE)) log.fine(to + " - " + attachment);
 					email.addAttachment(attachment);
 					//
@@ -277,7 +324,8 @@ public class InvoicePrint extends SvrProcess
 				}
 				else
 				{
-					pdfList.add(re.getPDF());
+					//F3P: use f_invoice no pdf file name
+					pdfList.add(f_invoice);
 					count++;
 					printed = true;
 				}

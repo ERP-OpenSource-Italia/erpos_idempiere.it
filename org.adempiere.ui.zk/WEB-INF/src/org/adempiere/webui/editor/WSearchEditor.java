@@ -847,8 +847,20 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 
 		if (whereClause.indexOf('@') != -1)
 		{
-			String validated = Env.parseContext(Env.getCtx(), lookup.getWindowNo(), whereClause, false);
-
+			//F3P parse with tabNo
+			//String validated = Env.parseContext(Env.getCtx(), lookup.getWindowNo(), whereClause, false);
+			String validated = null;
+			
+			if(gridTab != null)
+			{
+				int iTabNo = gridTab.getTabNo();
+				validated = Env.parseContext(Env.getCtx(), lookup.getWindowNo(), iTabNo,whereClause, false);
+			}
+			if(validated == null)
+			{
+				validated = Env.parseContext(Env.getCtx(), lookup.getWindowNo(),whereClause, false);	
+			}
+			//F3P end
 			if (validated.length() == 0)
 				log.severe(getColumnName() + " - Cannot Parse=" + whereClause);
 			else

@@ -237,7 +237,12 @@ public class WCreateFromInvoiceUI extends CreateFromInvoice implements EventList
 		//  BPartner - load Order/Invoice/Shipment
 		if (e.getPropertyName().equals("C_BPartner_ID"))
 		{
-			int C_BPartner_ID = ((Integer)e.getNewValue()).intValue();
+			int C_BPartner_ID = 0;
+			Integer newValue = (Integer)e.getNewValue();
+			
+			if(newValue != null)
+				C_BPartner_ID = newValue.intValue();
+			
 			initBPOrderDetails (C_BPartner_ID, true);
 		}
 		window.tableChanged(null);

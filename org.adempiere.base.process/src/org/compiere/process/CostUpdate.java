@@ -19,11 +19,14 @@ package org.compiere.process;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 
+import org.compiere.model.I_AD_WF_Node;
+import org.compiere.model.I_AD_Workflow;
 import org.compiere.model.I_C_DocType;
 import org.compiere.model.I_M_Inventory;
 import org.compiere.model.MAcctSchema;
@@ -34,12 +37,21 @@ import org.compiere.model.MDocType;
 import org.compiere.model.MInventory;
 import org.compiere.model.MInventoryLine;
 import org.compiere.model.MProduct;
+import org.compiere.model.MRole;
+import org.compiere.model.Query;
+import org.compiere.model.X_AD_WF_Node;
+import org.compiere.model.X_AD_Workflow;
+import org.compiere.model.X_M_CostElement;
 import org.compiere.util.AdempiereSystemError;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+import org.eevolution.model.I_PP_WF_Node_Product;
+import org.eevolution.model.X_PP_WF_Node_Product;
+
+import it.idempiere.base.util.CostElementHelper;
 
 /**
  * 	Standard Cost Update
@@ -72,6 +84,8 @@ public class CostUpdate extends SvrProcess
 	private static final String	TO_FutureStandardCost = "f";
 	private static final String	TO_LastInvoicePrice = "i";
 	private static final String	TO_LastPOPrice = "p";
+	private static final String	TO_OldStandardCost = "x";	
+
 
 	/** Standard Cost Element		*/
 	private MCostElement 	m_ce = null;
@@ -79,6 +93,9 @@ public class CostUpdate extends SvrProcess
 	private MAcctSchema[]	m_ass = null;
 	/** Map of Cost Elements		*/
 	private HashMap<String,MCostElement>	m_ces = new HashMap<String,MCostElement>();
+	// F3P: added new CostElement map for product not purchased
+	private HashMap<String,MCostElement>	m_cesExternal = new HashMap<String,MCostElement>();
+		
 	private MDocType m_docType = null;
 	
 	
@@ -254,6 +271,15 @@ public class CostUpdate extends SvrProcess
 	 */
 	private boolean createNew (MProduct product, MAcctSchema as)
 	{
+		// F3P: if product is not purchased, check if exist a subcontracting
+		if(product.isPurchased() == false)
+		{
+			MCost cost = getCostForNonPurchased(product, as);			
+			cost.saveEx();
+			
+			return true;
+		}	
+				
 		MCost cost = MCost.get(product, 0, as, 0, m_ce.getM_CostElement_ID(), get_TrxName());
 		if (cost.is_new())
 			return cost.save();
@@ -615,4 +641,536 @@ public class CostUpdate extends SvrProcess
 		return retValue;
 	}	//	getPrice
 	
+	// F3P: added to manage non-purchased costs
+	
+	protected int updateNonPurchased() throws Exception
+	{
+		int						iUpdated = 0;
+		MClient 			mClient = MClient.get(getCtx());
+		MCostElement	mCEnp = CostElementHelper.getCostElementByType(mClient, MAcctSchema.COSTINGMETHOD_StandardCosting, 
+											X_M_CostElement.COSTELEMENTTYPE_OutsideProcessing);
+		
+		String sql = "SELECT * FROM M_Cost c WHERE M_CostElement_ID=?";
+		if (p_M_Product_Category_ID != 0)
+			sql += " AND EXISTS (SELECT * FROM M_Product p "
+				+ "WHERE c.M_Product_ID=p.M_Product_ID AND p.M_Product_Category_ID=?)";
+		PreparedStatement pstmt = DB.prepareStatement (sql, get_TrxName());
+		ResultSet rs = null;
+		
+		try
+		{ 
+			pstmt.setInt (1, mCEnp.getM_CostElement_ID());
+			if (p_M_Product_Category_ID != 0)
+				pstmt.setInt (2, p_M_Product_Category_ID);
+			rs = pstmt.executeQuery ();
+			
+			while (rs.next ())
+			{
+				MCost cost = new MCost (getCtx(), rs, get_TrxName());
+
+				for (int i = 0; i < m_ass.length; i++)
+				{
+					//	Update Costs only for default Cost Type
+					if (m_ass[i].getC_AcctSchema_ID() == cost.getC_AcctSchema_ID() 
+						&& m_ass[i].getM_CostType_ID() == cost.getM_CostType_ID())
+					{
+						MProduct	mProd = MProduct.get(getCtx(),cost.getM_Product_ID());
+						
+						if(mProd.isPurchased())
+							continue;
+												
+						if (updateNonPurchased (cost))
+							iUpdated++;
+					}
+				}
+			}
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+		}
+		
+		return iUpdated;		
+	}
+		
+		// F3P: added to calculate the cost for a non-purchased product
+		
+		protected MCost	getCostForNonPurchased(MProduct product, MAcctSchema as)
+		{
+			if(product.isPurchased())
+				return null;
+			
+			MCostElement	mExtCostElement = getCostElementNonPurchased(as.getCostingMethod());		
+			MCost mFinalCost = MCost.get(product, 0, as, 0, mExtCostElement.getM_CostElement_ID(),get_TrxName());
+
+			return getCostForNonPurchased(product, mFinalCost);
+		}
+		
+		protected List<X_PP_WF_Node_Product> getSubcontractingProductsFromWF(MProduct product)
+		{
+			// From the product obtain the manufactoring workflow by using 
+			// 1. product planning, or
+			// 2. PP_Workflow.Value == product.Value && WorkflowType=Manufacting
+			
+			int AD_Workflow_ID = -1;
+			
+			String sSQLProductPlanning = "SELECT AD_Workflow.AD_Workflow_ID FROM PP_Product_Planning,AD_Workflow " +
+																	 " WHERE PP_Product_Planning.M_Product_ID = ? AND " +
+																	 "  PP_Product_Planning.AD_Workflow_ID = AD_Workflow.AD_Workflow_ID AND" +
+																	 "  AD_Workflow.WorkflowType = 'M' AND " +
+																	 "  PP_Product_Planning.IsActive = 'Y' AND " +
+																	 "  AD_Workflow.IsActive = 'Y' AND " +
+																	 "  AD_Workflow.IsValid = 'Y' " +
+																	 " ORDER BY AD_Workflow.IsDefault DESC";
+
+			MRole mRole = MRole.get(getCtx(), Env.getAD_Role_ID(getCtx()));
+			sSQLProductPlanning = mRole.addAccessSQL(sSQLProductPlanning, "PP_Product_Planning", true, false);
+			
+			PreparedStatement	pstmt = DB.prepareStatement(sSQLProductPlanning, get_TrxName());			
+			ResultSet rs = null;
+			
+			try
+			{
+				pstmt.setInt(1, product.getM_Product_ID());
+				rs = pstmt.executeQuery();
+				
+				while(rs.next())
+				{
+					AD_Workflow_ID = rs.getInt("AD_Workflow_ID");
+					
+					if(AD_Workflow_ID > 0)
+						break;
+				}				
+			}
+			catch(SQLException e)
+			{
+			}			
+			finally
+			{
+				DB.close(rs,pstmt);
+			}
+			
+			if(AD_Workflow_ID <= 0)
+			{
+				Query qWorkflow = new Query(getCtx(), I_AD_Workflow.Table_Name, 
+							I_AD_Workflow.COLUMNNAME_Value + " = ? AND " + I_AD_Workflow.COLUMNNAME_WorkflowType + " = ?", get_TrxName());
+				qWorkflow.setApplyAccessFilter(true).setOnlyActiveRecords(true).setParameters(product.getValue(),X_AD_Workflow.WORKFLOWTYPE_Manufacturing);
+				X_AD_Workflow mWorkflow = qWorkflow.first();
+				
+				if(mWorkflow != null)				
+					AD_Workflow_ID = mWorkflow.getAD_Workflow_ID(); 
+			}
+			
+			if(AD_Workflow_ID > 0)
+			{
+				Query	qWFNodes = new Query(getCtx(), I_AD_WF_Node.Table_Name, I_AD_WF_Node.COLUMNNAME_AD_Workflow_ID + " =  ? AND 'Y' = " +I_AD_WF_Node.COLUMNNAME_IsSubcontracting,get_TrxName());
+				qWFNodes.setOnlyActiveRecords(true).setParameters(AD_Workflow_ID);
+				List<X_AD_WF_Node> lstWFNodes = qWFNodes.list();
+				
+				if(lstWFNodes != null)
+				{
+					for(X_AD_WF_Node mWFNode:lstWFNodes)
+					{
+						Query qPPWFNodeProduct = new Query(getCtx(),I_PP_WF_Node_Product.Table_Name, 
+																		I_PP_WF_Node_Product.COLUMNNAME_AD_WF_Node_ID + " = ? AND 'Y' = " +I_PP_WF_Node_Product.COLUMNNAME_IsSubcontracting,get_TrxName());
+						qPPWFNodeProduct.setOnlyActiveRecords(true).setParameters(mWFNode.getAD_WF_Node_ID());
+						
+						List<X_PP_WF_Node_Product> lstPPNodesProduct= qPPWFNodeProduct.list();
+						
+						return lstPPNodesProduct;
+					}
+				}
+			}		
+			
+			return null;
+		}
+		
+		protected MCost	getCostForNonPurchased(MProduct product, MCost mFinalCost)
+		{
+			if(product.isPurchased())
+				return null;
+			
+			BigDecimal	bdCurrentCostPrice = BigDecimal.ZERO,
+									bdCurrentCostPriceLL = BigDecimal.ZERO,
+									bdFutureCostPrice =  BigDecimal.ZERO,
+									bdFutureCostPriceLL = BigDecimal.ZERO;
+			
+			List<X_PP_WF_Node_Product> lstWFNodeProducts = getSubcontractingProductsFromWF(product);
+			
+			if(lstWFNodeProducts != null)
+			{
+				int M_CostElement_ID = m_ce.getM_CostElement_ID(), // mFinalCost.getM_CostElement_ID(),
+						C_AcctSchema_ID = mFinalCost.getC_AcctSchema_ID(),
+						AD_Org_ID = mFinalCost.getAD_Org_ID(),
+						AD_Client_ID =  mFinalCost.getAD_Client_ID(),
+						M_CostType_ID = mFinalCost.getM_CostType_ID(),
+						M_AttributeSetInstance_ID = mFinalCost.getM_AttributeSetInstance_ID();
+					
+				for(X_PP_WF_Node_Product mPPNodeProduct:lstWFNodeProducts)
+				{
+					MProduct	mNodeProduct = MProduct.get(getCtx(), mPPNodeProduct.getM_Product_ID());
+					
+					MCost mCost = MCost.get(getCtx(), AD_Client_ID, AD_Org_ID, mNodeProduct.getM_Product_ID(), M_CostType_ID, C_AcctSchema_ID, M_CostElement_ID, M_AttributeSetInstance_ID,get_TrxName());
+					
+					BigDecimal	bdCurrentCost = mCost.getCurrentCostPrice(),
+											bdCurrentCostLL = mCost.getCurrentCostPriceLL(),
+											bdFutureCost = mCost.getFutureCostPrice(),
+											bdFutureCostLL = mCost.getFutureCostPriceLL();
+					
+					bdCurrentCost = bdCurrentCost.multiply(mPPNodeProduct.getQty());
+					bdCurrentCostLL = bdCurrentCostLL.multiply(mPPNodeProduct.getQty());
+					bdFutureCost = bdFutureCost.multiply(mPPNodeProduct.getQty());
+					bdFutureCostLL = bdFutureCostLL.multiply(mPPNodeProduct.getQty());							
+												
+					bdCurrentCostPrice = bdCurrentCostPrice.add(bdCurrentCost);
+					bdCurrentCostPriceLL = bdCurrentCostPriceLL.add(bdCurrentCostLL);
+					bdFutureCostPrice = bdFutureCostPrice.add(bdFutureCost);
+					bdFutureCostPriceLL = bdFutureCostPrice.add(bdFutureCostPriceLL);										
+					
+				}
+			}
+			
+			mFinalCost.setCurrentCostPrice(bdCurrentCostPrice);
+			mFinalCost.setCurrentCostPriceLL(bdCurrentCostPriceLL);
+			mFinalCost.setFutureCostPrice(bdFutureCostPrice);
+			mFinalCost.setFutureCostPriceLL(bdFutureCostPriceLL);
+			
+			return mFinalCost;
+		}	
+		
+		/**
+		 * 	Get Cost Element for non-purchased item
+		 *	@param CostingMethod method
+		 *	@return costing element or null
+		 */
+		private MCostElement getCostElementNonPurchased (String CostingMethod)
+		{
+			MCostElement mExtCostElement = null;
+			
+			if(m_cesExternal.containsKey(CostingMethod))
+			{
+				mExtCostElement = m_cesExternal.get(CostingMethod);
+			}
+			else
+			{
+				MClient mClient = MClient.get(getCtx());
+				mExtCostElement = CostElementHelper.getCostElementByType(mClient, CostingMethod, X_M_CostElement.COSTELEMENTTYPE_OutsideProcessing);
+				m_cesExternal.put(CostingMethod, mExtCostElement);
+			}
+			
+			return mExtCostElement;
+		}	//	getCostElementNonPurchased
+		
+		/**
+		 * 	Update Cost Records
+		 *	@param cost cost
+		 *	@return true if updated
+		 *	@throws Exception
+		 */
+		private boolean updateNonPurchased (MCost cost) throws Exception
+		{
+			boolean updated = false;
+			if (p_SetFutureCostTo.equals(p_SetStandardCostTo))
+			{
+				BigDecimal costs = getCostsNonPurchased(cost, p_SetFutureCostTo);
+				if (costs != null && costs.signum() != 0)
+				{
+					cost.setFutureCostPrice(costs);
+					cost.setCurrentCostPrice(costs);
+					updated = true;
+				}
+			}
+			else
+			{
+				if (p_SetStandardCostTo.length() > 0)
+				{
+					BigDecimal costs = getCostsNonPurchased(cost, p_SetStandardCostTo);
+					if (costs != null && costs.signum() != 0)
+					{
+						cost.setCurrentCostPrice(costs);
+						updated = true;
+					}
+				}
+				if (p_SetFutureCostTo.length() > 0)
+				{
+					BigDecimal costs = getCostsNonPurchased(cost, p_SetFutureCostTo);
+					if (costs != null && costs.signum() != 0)
+					{
+						cost.setFutureCostPrice(costs);
+						updated = true;
+					}
+				}
+			}
+			if (updated)
+				updated = cost.save();
+			return updated;
+		}	//	update
+		
+		private BigDecimal getCostsNonPurchased (MCost cost, String to) throws Exception
+		{
+			BigDecimal retValue = null;
+			MProduct	mProduct = MProduct.get(getCtx(), cost.getM_Product_ID());
+			
+			//	Average Invoice
+			if (to.equals(TO_AverageInvoice))
+			{
+				MCostElement ce = getCostElementNonPurchased(TO_AverageInvoice);
+				if (ce == null)
+					throw new AdempiereSystemError("CostElement not found: " + TO_AverageInvoice);
+				
+				MCost xCost = MCost.get(getCtx(), cost.getAD_Client_ID(), cost.getAD_Org_ID(), cost.getM_Product_ID(), cost.getM_CostType_ID(), cost.getC_AcctSchema_ID(), ce.getM_CostElement_ID(), cost.getM_AttributeSetInstance_ID(),get_TrxName());
+				
+				xCost = getCostForNonPurchased(mProduct, xCost);
+				
+				if (xCost != null)
+					retValue = xCost.getCurrentCostPrice();
+			}
+			//	Average Invoice History
+			else if (to.equals(TO_AverageInvoiceHistory))
+			{
+				MCostElement ce = getCostElementNonPurchased(TO_AverageInvoice);
+				if (ce == null)
+					throw new AdempiereSystemError("CostElement not found: " + TO_AverageInvoice);
+				MCost xCost = MCost.get(getCtx(), cost.getAD_Client_ID(), cost.getAD_Org_ID(), cost.getM_Product_ID(), cost.getM_CostType_ID(), cost.getC_AcctSchema_ID(), ce.getM_CostElement_ID(), cost.getM_AttributeSetInstance_ID(),get_TrxName());
+				
+				xCost = getCostForNonPurchased(mProduct, xCost);
+				
+				if (xCost != null) 
+					retValue = xCost.getHistoryAverage();
+			}
+			
+			//	Average PO
+			else if (to.equals(TO_AveragePO))
+			{
+				MCostElement ce = getCostElementNonPurchased(TO_AveragePO);
+				if (ce == null)
+					throw new AdempiereSystemError("CostElement not found: " + TO_AveragePO);
+				MCost xCost = MCost.get(getCtx(), cost.getAD_Client_ID(), cost.getAD_Org_ID(), cost.getM_Product_ID(), cost.getM_CostType_ID(), cost.getC_AcctSchema_ID(), ce.getM_CostElement_ID(), cost.getM_AttributeSetInstance_ID(),get_TrxName());
+				
+				xCost = getCostForNonPurchased(mProduct, xCost);
+				
+				if (xCost != null)
+					retValue = xCost.getCurrentCostPrice();
+			}
+			//	Average PO History
+			else if (to.equals(TO_AveragePOHistory))
+			{
+				MCostElement ce = getCostElementNonPurchased(TO_AveragePO);
+				if (ce == null)
+					throw new AdempiereSystemError("CostElement not found: " + TO_AveragePO);
+				MCost xCost = MCost.get(getCtx(), cost.getAD_Client_ID(), cost.getAD_Org_ID(), cost.getM_Product_ID(), cost.getM_CostType_ID(), cost.getC_AcctSchema_ID(), ce.getM_CostElement_ID(), cost.getM_AttributeSetInstance_ID(),get_TrxName());
+				
+				xCost = getCostForNonPurchased(mProduct, xCost);
+				
+				if (xCost != null) 
+					retValue = xCost.getHistoryAverage();
+			}
+			
+			//	FiFo
+			else if (to.equals(TO_FiFo))
+			{
+				MCostElement ce = getCostElementNonPurchased(TO_FiFo);
+				if (ce == null)
+					throw new AdempiereSystemError("CostElement not found: " + TO_FiFo);
+				MCost xCost = MCost.get(getCtx(), cost.getAD_Client_ID(), cost.getAD_Org_ID(), cost.getM_Product_ID(), cost.getM_CostType_ID(), cost.getC_AcctSchema_ID(), ce.getM_CostElement_ID(), cost.getM_AttributeSetInstance_ID(),get_TrxName());
+				
+				xCost = getCostForNonPurchased(mProduct, xCost);
+				
+				if (xCost != null)
+					retValue = xCost.getCurrentCostPrice();
+			}
+
+			//	Future Std Costs
+			else if (to.equals(TO_FutureStandardCost))
+			{
+				cost = getCostForNonPurchased(mProduct, cost);
+				retValue = cost.getFutureCostPrice();
+			}
+			//	Last Inv Price
+			else if (to.equals(TO_LastInvoicePrice))
+			{
+				MCostElement ce = getCostElementNonPurchased(TO_LastInvoicePrice);
+				if (ce != null)
+				{
+					MCost xCost = MCost.get(getCtx(), cost.getAD_Client_ID(), cost.getAD_Org_ID(), cost.getM_Product_ID(), cost.getM_CostType_ID(), cost.getC_AcctSchema_ID(), ce.getM_CostElement_ID(), cost.getM_AttributeSetInstance_ID(),get_TrxName());
+					
+					xCost = getCostForNonPurchased(mProduct, xCost);
+					
+					if (xCost != null)
+						retValue = xCost.getCurrentCostPrice();
+				}
+				if (retValue == null)
+				{
+					retValue = getLastPriceNotPurchased(cost,true);
+				}
+			}
+			
+			//	Last PO Price
+			else if (to.equals(TO_LastPOPrice))
+			{
+				MCostElement ce = getCostElementNonPurchased(TO_LastPOPrice);
+				if (ce != null)
+				{
+					MCost xCost = MCost.get(getCtx(), cost.getAD_Client_ID(), cost.getAD_Org_ID(), cost.getM_Product_ID(), cost.getM_CostType_ID(), cost.getC_AcctSchema_ID(), ce.getM_CostElement_ID(), cost.getM_AttributeSetInstance_ID(),get_TrxName());
+					
+					xCost = getCostForNonPurchased(mProduct, xCost);
+					
+					if (xCost != null)
+						retValue = xCost.getCurrentCostPrice();
+				}
+				if (retValue == null)
+				{
+					retValue = getLastPriceNotPurchased(cost,false);
+				}
+			}
+		
+			//	FiFo
+			else if (to.equals(TO_LiFo))
+			{
+				MCostElement ce = getCostElementNonPurchased(TO_LiFo);
+				if (ce == null)
+					throw new AdempiereSystemError("CostElement not found: " + TO_LiFo);
+				MCost xCost = MCost.get(getCtx(), cost.getAD_Client_ID(), cost.getAD_Org_ID(), cost.getM_Product_ID(), cost.getM_CostType_ID(), cost.getC_AcctSchema_ID(), ce.getM_CostElement_ID(), cost.getM_AttributeSetInstance_ID(),get_TrxName());
+				
+				xCost = getCostForNonPurchased(mProduct, xCost);
+							
+				if (xCost != null)
+					retValue = xCost.getCurrentCostPrice();
+			}
+			
+			//	Old Std Costs
+			else if (to.equals(TO_OldStandardCost))
+				retValue = getOldCurrentCostPrice(cost);
+			
+			//	Price List
+			else if (to.equals(TO_PriceListLimit))
+				retValue = getPriceNotPurchased(cost);
+			
+			//	Standard Costs
+			else if (to.equals(TO_StandardCost))
+			{
+				cost = getCostForNonPurchased(mProduct, cost);
+				
+				retValue = cost.getCurrentCostPrice();
+			}
+			
+			return retValue;
+		}	//	getCosts	
+		
+		protected BigDecimal getPriceNotPurchased(MCost cost)
+		{
+			MProduct	mProduct = MProduct.get(getCtx(),cost.getM_Product_ID());
+			
+			List<X_PP_WF_Node_Product> lstWFNodeProducts = getSubcontractingProductsFromWF(mProduct);
+			
+			BigDecimal	bdCost = BigDecimal.ZERO;
+			
+			if(lstWFNodeProducts != null)
+			{
+				int M_CostElement_ID = m_ce.getM_CostElement_ID(), // cost.getM_CostElement_ID(),
+						C_AcctSchema_ID = cost.getC_AcctSchema_ID(),
+						AD_Org_ID = cost.getAD_Org_ID(),
+						AD_Client_ID =  cost.getAD_Client_ID(),
+						M_CostType_ID = cost.getM_CostType_ID(),
+						M_AttributeSetInstance_ID = cost.getM_AttributeSetInstance_ID();
+				
+				for(X_PP_WF_Node_Product mPPNodeProduct:lstWFNodeProducts)
+				{
+					MProduct	mNodeProduct = MProduct.get(getCtx(), mPPNodeProduct.getM_Product_ID());
+					
+					MCost mCost = MCost.get(getCtx(), AD_Client_ID, AD_Org_ID, mNodeProduct.getM_Product_ID(), M_CostType_ID, C_AcctSchema_ID, M_CostElement_ID, M_AttributeSetInstance_ID,get_TrxName());
+					
+					bdCost = bdCost.add(getPrice(mCost));
+				}			
+			}		
+			
+			return bdCost;
+		}
+		
+		protected BigDecimal getLastPriceNotPurchased(MCost cost,boolean bInvoiceOrOrder)
+		{
+			MProduct	mProduct = MProduct.get(getCtx(),cost.getM_Product_ID());
+			
+			List<X_PP_WF_Node_Product> lstWFNodeProducts = getSubcontractingProductsFromWF(mProduct);
+			
+			BigDecimal	bdPrice = BigDecimal.ZERO;
+			
+			if(lstWFNodeProducts != null)
+			{
+				int M_CostElement_ID = m_ce.getM_CostElement_ID(), // cost.getM_CostElement_ID(),
+						C_AcctSchema_ID = cost.getC_AcctSchema_ID(),
+						AD_Org_ID = cost.getAD_Org_ID(),
+						AD_Client_ID =  cost.getAD_Client_ID(),
+						M_CostType_ID = cost.getM_CostType_ID(),
+						M_AttributeSetInstance_ID = cost.getM_AttributeSetInstance_ID();
+
+				MAcctSchema as = MAcctSchema.get(getCtx(), C_AcctSchema_ID);
+				
+				for(X_PP_WF_Node_Product mPPNodeProduct:lstWFNodeProducts)
+				{
+					MProduct	mNodeProduct = MProduct.get(getCtx(), mPPNodeProduct.getM_Product_ID());
+					
+					MCost mCost = MCost.get(getCtx(), AD_Client_ID, AD_Org_ID, mNodeProduct.getM_Product_ID(), M_CostType_ID, C_AcctSchema_ID, M_CostElement_ID, M_AttributeSetInstance_ID,get_TrxName());
+					
+					if(bInvoiceOrOrder)
+					{
+						bdPrice = bdPrice.add(MCost.getLastInvoicePrice(mNodeProduct, 
+								mCost.getM_AttributeSetInstance_ID(), mCost.getAD_Org_ID(), as.getC_Currency_ID()));					
+					}
+					else
+					{
+						bdPrice = bdPrice.add( MCost.getLastPOPrice(mNodeProduct, 
+								cost.getM_AttributeSetInstance_ID(), cost.getAD_Org_ID(), as.getC_Currency_ID()));									
+					}
+				}			
+			}		
+			
+			return bdPrice;
+		}
+		
+		/**
+		 * 	Get Old Current Cost Price
+		 *	@param cost costs
+		 *	@return price if found
+		 */
+		private BigDecimal getOldCurrentCostPrice(MCost cost)
+		{
+			BigDecimal retValue = null;
+			String sql = "SELECT CostStandard, CurrentCostPrice "
+				+ "FROM M_Product_Costing "
+				+ "WHERE M_Product_ID=? AND C_AcctSchema_ID=?";
+			PreparedStatement pstmt = null;
+			try
+			{
+				pstmt = DB.prepareStatement (sql, null);
+				pstmt.setInt (1, cost.getM_Product_ID());
+				pstmt.setInt (2, cost.getC_AcctSchema_ID());
+				ResultSet rs = pstmt.executeQuery ();
+				if (rs.next ())
+				{
+					retValue = rs.getBigDecimal(1);
+					if (retValue == null || retValue.signum() == 0)
+						retValue = rs.getBigDecimal(2);
+				}
+				rs.close ();
+				pstmt.close ();
+				pstmt = null;
+			}
+			catch (Exception e)
+			{
+				log.log (Level.SEVERE, sql, e);
+			}
+			try
+			{
+				if (pstmt != null)
+					pstmt.close ();
+				pstmt = null;
+			}
+			catch (Exception e)
+			{
+				pstmt = null;
+			}
+			return retValue;
+		}	//	getOldCurrentCostPrice
+		
 }	//	CostUpdate

@@ -23,6 +23,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -100,7 +101,10 @@ public class FinReport extends SvrProcess
 	/** The Report Lines				*/
 	private MReportLine[] 		m_lines;
 
-
+	//F3P
+	HashMap<Integer, Integer> m_hmTrl = new HashMap<Integer, Integer>();
+		
+	
 	/**
 	 *  Prepare - e.g., get Parameters.
 	 */
@@ -311,11 +315,37 @@ public class FinReport extends SvrProcess
 		//	** Create Temporary and empty Report Lines from PA_ReportLine
 		//	- AD_PInstance_ID, PA_ReportLine_ID, 0, 0
 		int PA_ReportLineSet_ID = m_report.getLineSet().getPA_ReportLineSet_ID();
+		//F3P: get translation
+				/*
+				StringBuffer sql = new StringBuffer ("INSERT INTO T_Report "
+					+ "(AD_PInstance_ID, PA_ReportLine_ID, Record_ID,Fact_Acct_ID, SeqNo,LevelNo, Name,Description) "
+					+ "SELECT ").append(getAD_PInstance_ID()).append(", PA_ReportLine_ID, 0,0, SeqNo,0, Name,Description "
+					+ "FROM PA_ReportLine "
+					+ "WHERE IsActive='Y' AND PA_ReportLineSet_ID=").append(PA_ReportLineSet_ID);
+		*/
+		//F3P: get translation
+				/*
+				StringBuffer sql = new StringBuffer ("INSERT INTO T_Report "
+					+ "(AD_PInstance_ID, PA_ReportLine_ID, Record_ID,Fact_Acct_ID, SeqNo,LevelNo, Name,Description) "
+					+ "SELECT ").append(getAD_PInstance_ID()).append(", PA_ReportLine_ID, 0,0, SeqNo,0, Name,Description "
+					+ "FROM PA_ReportLine "
+					+ "WHERE IsActive='Y' AND PA_ReportLineSet_ID=").append(PA_ReportLineSet_ID);
+		*/
+		//F3P: get translation
+				/*
+				StringBuffer sql = new StringBuffer ("INSERT INTO T_Report "
+					+ "(AD_PInstance_ID, PA_ReportLine_ID, Record_ID,Fact_Acct_ID, SeqNo,LevelNo, Name,Description) "
+					+ "SELECT ").append(getAD_PInstance_ID()).append(", PA_ReportLine_ID, 0,0, SeqNo,0, Name,Description "
+					+ "FROM PA_ReportLine "
+					+ "WHERE IsActive='Y' AND PA_ReportLineSet_ID=").append(PA_ReportLineSet_ID);
+		*/
 		StringBuffer sql = new StringBuffer ("INSERT INTO T_Report "
-			+ "(AD_PInstance_ID, PA_ReportLine_ID, Record_ID,Fact_Acct_ID, SeqNo,LevelNo, Name,Description) "
-			+ "SELECT ").append(getAD_PInstance_ID()).append(", PA_ReportLine_ID, 0,0, SeqNo,0, Name,Description "
-			+ "FROM PA_ReportLine "
-			+ "WHERE IsActive='Y' AND PA_ReportLineSet_ID=").append(PA_ReportLineSet_ID);
+				+ "(AD_PInstance_ID, PA_ReportLine_ID, Record_ID,Fact_Acct_ID, SeqNo,LevelNo, Name,Description) "
+				+ "SELECT ").append(getAD_PInstance_ID()).append(", PA_ReportLine.PA_ReportLine_ID, 0,0, SeqNo,0, "
+				+ "coalesce(PA_ReportLine_Trl.Name,PA_ReportLine.Name),coalesce(PA_ReportLine_Trl.Description,PA_ReportLine.Description) "
+				+ "FROM PA_ReportLine left join PA_ReportLine_Trl on PA_ReportLine.PA_ReportLine_ID = PA_ReportLine_Trl.PA_ReportLine_ID "
+				+ "AND PA_ReportLine_Trl.IsActive = 'Y' AND PA_ReportLine_Trl.AD_Language = '").append(Env.getAD_Language(getCtx()))
+				.append("' WHERE PA_ReportLine.IsActive='Y' AND PA_ReportLine.PA_ReportLineSet_ID=").append(PA_ReportLineSet_ID);
 
 		int no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Report Lines = " + no);
@@ -495,6 +525,10 @@ public class FinReport extends SvrProcess
 					select.append(" AND GL_Budget_ID=" + m_columns[col].getGL_Budget_ID());
 			}
 			// end globalqss
+			else // Angelo Dabala' (genied) nectosoft - must filter with PostingType at line level
+			{
+				select.append(" AND fb.PostingType=x.PostingType ");
+			}
 		}
 
 			if (m_columns[col].isColumnTypeSegmentValue())
@@ -1762,6 +1796,10 @@ public class FinReport extends SvrProcess
 						pfi.setName (s);
 						pfi.setPrintName (s);
 					}
+					
+					//F3P: update translation
+					m_hmTrl.put(pfi.getAD_PrintFormatItem_ID(), m_columns[index].getPA_ReportColumn_ID());
+					
 					int seq = 30 + index;
 					if (pfi.getSeqNo() != seq)
 						pfi.setSeqNo(seq);
@@ -1832,12 +1870,31 @@ public class FinReport extends SvrProcess
 			pfi.saveEx();
 			if (log.isLoggable(Level.FINE)) log.fine(pfi.toString());
 		}
-		//	set translated to original
-		pf.setTranslation();
+
+		//F3P: translation
+		//pf.setTranslation();
+		updateTranslationFromColumn();
 		
 		// Reload to pick up changed pfi
 		pf = MPrintFormat.get (getCtx(), AD_PrintFormat_ID, true);	//	no cache
 		return pf;
 	}	//	getPrintFormat
+	
+	//F3P
+	protected void updateTranslationFromColumn()
+	{
+		int no = 0;
+		
+		for(int AD_PrintFormatItem_ID : m_hmTrl.keySet())
+		{
+			StringBuffer sb = new StringBuffer("UPDATE AD_PrintFormatItem_Trl t SET (PrintName)=");
+			sb.append("(SELECT Name FROM PA_ReportColumn_Trl rc WHERE rc.PA_ReportColumn_ID = ").append(m_hmTrl.get(AD_PrintFormatItem_ID))
+			.append(" AND rc.AD_Language = t.AD_LANGUAGE ) WHERE AD_PrintFormatItem_ID =").append(AD_PrintFormatItem_ID);
+			
+			no += DB.executeUpdate(sb.toString(), get_TrxName());
+		}
+		
+		log.fine("setTranslation #" + no);
+	}
 
 }	//	FinReport

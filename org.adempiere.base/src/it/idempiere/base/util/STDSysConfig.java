@@ -6,6 +6,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.compiere.model.MSysConfig;
+import org.compiere.util.Env;
 
 /** Variabili di configurazione applicabili all'implementazione standard iDempiere
  *  
@@ -20,6 +21,7 @@ public class STDSysConfig
 	public static final String	ROLE_AUTO_UPDATE_DOCACTIONACCESS = "ROLE_AUTO_UPDATE_DOCACTIONACCESS";
 	public static final String	SYS_BACKUP_IMPORT = "F3P_BACKUP_PACKIN";
 	public static final String	FILTER_SEARCH_QUERY = "FILTER_SEARCH_QUERY";
+	public static final String	FILTER_SPECIAL_LETTERS = "FILTER_SPECIAL_LETTERS";
 	public static final String	F3P_CASHLINE_USE_DEFAULT_CASHTYPE = "F3P_CASHLINE_USE_DEFAULT_CASHTYPE";
 	
 	public static final String LIT_ISSO_VAT_INVOICE_UNFORCED = "LIT_ISSO_VAT_INVOICE_UNFORCED";
@@ -35,6 +37,8 @@ public class STDSysConfig
 	public static final String F3P_SKIP_SUBJECT_IN_HTMLMAILBODY = "F3P_SKIP_SUBJECT_IN_HTML_MAIL_BODY";
 	
 	public static final String SYSCFG_OVERRIDE_INOUT_LINE_NO = "F3P_OVERRIDE_GENERATED_INOUT_LINE_NO";
+	public static final String SYSCFG_OVERRIDE_INVOICE_LINE_NO = "F3P_OVERRIDE_GENERATED_INVOICE_LINE_NO";
+	
 	public static final String F3P_EXPLODE_BOM_SERVICE = "F3P_EXPLODE_BOM_SERVICE";
 	public static final String F3P_CREATE_REVERSE_ORDER = "F3P_CREATE_REVERSE_ORDER";
 	//LS variabile per gestire i termini pag fatture prima del completa
@@ -45,6 +49,59 @@ public class STDSysConfig
 	protected static final String  F3P_DEFAULT_DOC_ACTION = "F3P_Default_DocAction_On_Create";
 	/** F3P: show only order with service line */
 	public static final String F3P_CREATEFROMORDER_ONLYSERVICE = "F3P_CREATEFROMORDER_ONLYSERVICE";	
+	
+	//F3P:
+  	public static final String USERELEM1_SQL_CONF = "REPORTSOURCE_USERELEMENT1_VALUESQL";
+  	public static final String USERELEM2_SQL_CONF = "REPORTSOURCE_USERELEMENT2_VALUESQL";
+  	
+  	public static final String  F3P_EXPENSE_PROCESS_BREAKBYBP = "F3P_EXPENSE_PROCESS_BREAKBYBP";
+  	public static final String	SYS_TAX_ID = "F3P_EXPENSE_PROCESS_TAX";
+ 	public static final String MANDATORY_SALESREGION = "F3P_BP_MANDATORYSALESREGION";
+  	//F3P: End
+ 	
+ 	public static final String SYSCFG_OVERRIDE_LINE_NO = "F3P_OVERRIDE_GENERATED_INVOICE_LINE_NO";
+ 	public static final String SYSCFG_CHARGE_TO_ADD = "F3P_DELIVERY_CHARGE_TO_ADD";
+ 	public static final String SYSCFG_CHARGE_TO_REMOVE = "F3P_DELIVERY_CHARGE_TO_REMOVE";
+ 	
+ 	public static String getOverrideLineNo(int AD_Client_ID,int AD_Org_ID)
+ 	{
+ 		return MSysConfig.getValue(SYSCFG_OVERRIDE_LINE_NO, null, AD_Client_ID, AD_Org_ID);
+ 	}
+ 	
+ 	public static String getChargeToRemove(int AD_Client_ID,int AD_Org_ID)
+ 	{
+ 		return MSysConfig.getValue(SYSCFG_CHARGE_TO_REMOVE, null, AD_Client_ID, AD_Org_ID);
+ 	}
+ 	
+ 	public static int getChargeToAdd_ID(int AD_Client_ID,int AD_Org_ID)
+ 	{
+ 		return MSysConfig.getIntValue(SYSCFG_CHARGE_TO_ADD, 0, AD_Client_ID, AD_Org_ID);
+ 	}
+  	
+  	public static boolean isSalesRegionMandatory(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(MANDATORY_SALESREGION, false, AD_Client_ID, AD_Org_ID);
+	}
+  	
+  	public static int getSysTaxID (int AD_Client_ID,int AD_Org_ID)
+  	{
+  		return MSysConfig.getIntValue(SYS_TAX_ID, -1,  AD_Client_ID,AD_Org_ID);
+  	}
+  	public static boolean isBreakByBP(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(F3P_EXPENSE_PROCESS_BREAKBYBP, true, AD_Client_ID);
+	}
+  	
+  	public static String getReportSourceUserElement1ValueSQL(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getValue(USERELEM1_SQL_CONF, AD_Client_ID,AD_Org_ID);
+	}
+  	
+  	public static String getReportSourceUserElement2ValueSQL(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getValue(USERELEM2_SQL_CONF, AD_Client_ID,AD_Org_ID);
+	}
+  	
 	/**
 	 * Parametro che indica se bisogna ripetere il soggetto come sottotitolo nell'email
 	 * @param AD_Client_ID
@@ -150,6 +207,19 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(FILTER_SEARCH_QUERY, false, AD_Client_ID, AD_Org_ID);
 	}
+	
+	
+	/**
+	 * Se true, quando il filtro dei caratteri speciali e' abilitato vengono filtrate anche le
+	 * le lettere speciali (ä,ë,ö,ü,ß,ç,ì,ğ,ş,č,š,ž,á,ó,ñ,á,í,ú,è,é,â,ê) 
+	 * 
+	 * @param AD_Client_ID, AD_Org_ID
+	 * @return
+	 */
+	public static boolean isFilterSpecialLetter(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(FILTER_SPECIAL_LETTERS, false, AD_Client_ID, AD_Org_ID);
+	}
 
 	/**
 	 * Se true  verifica il CashType, se non è valido imposta CASHTYPE_GeneralExpense (v. MCashLine.beforeSave )
@@ -203,6 +273,17 @@ public class STDSysConfig
 	public static boolean isOverrideGeneratedInOutLineNo(int AD_Client_ID)
 	{
 		return MSysConfig.getBooleanValue(SYSCFG_OVERRIDE_INOUT_LINE_NO, false, AD_Client_ID);
+	}
+	
+	/**
+	 * Parametro che indica se le linee della fattura devono esser rinumerate
+	 * @param AD_Client_ID
+	 * @param AD_Org_ID
+	 * @return 
+	 */
+	public static boolean isOverrideGeneratedInvoiceLineNo(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(SYSCFG_OVERRIDE_INVOICE_LINE_NO, false, AD_Client_ID);
 	}
 	
 	/** Regola il comportamento dell'esplosione della bom, per i prodotti servizio

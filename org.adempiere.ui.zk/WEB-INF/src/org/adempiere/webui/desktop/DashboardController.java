@@ -43,6 +43,7 @@ import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.ZkReportViewerProvider;
 import org.compiere.model.I_AD_Menu;
+import org.compiere.model.I_AD_PrintFormat;
 import org.compiere.model.MChart;
 import org.compiere.model.MDashboardContent;
 import org.compiere.model.MDashboardContentAccess;
@@ -52,7 +53,12 @@ import org.compiere.model.MMenu;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MPInstancePara;
 import org.compiere.model.MProcess;
+import org.compiere.model.MQuery;
 import org.compiere.model.MSysConfig;
+import org.compiere.model.MTable;
+import org.compiere.model.PrintInfo;
+import org.compiere.model.Query;
+import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.ProcessInfo;
 import org.compiere.util.CLogger;
@@ -783,9 +789,23 @@ public class DashboardController implements EventListener<Event> {
 		pi.setAD_PInstance_ID(pInstance.getAD_PInstance_ID());		
 		if (!process.processIt(pi, null) && pi.getClassName() != null) 
 			throw new IllegalStateException("Process failed: (" + pi.getClassName() + ") " + pi.getSummary());
-	
-		//	Report
-		ReportEngine re = ReportEngine.get(Env.getCtx(), pi);
+		
+		//F3P if selected use printformat of process
+		ReportEngine re = null;
+		if(process.getAD_PrintFormat_ID()>0)
+		{
+			MPrintFormat format = (MPrintFormat) process.getAD_PrintFormat();
+			String TableName = MTable.getTableName(process.getCtx(), format.getAD_Table_ID());
+			MQuery queryPf = MQuery.get (process.getCtx(), pi.getAD_PInstance_ID(), TableName);
+			PrintInfo info = new PrintInfo(pi);
+			
+			re = new ReportEngine(process.getCtx(), format, queryPf, info);
+		}
+		 
+		if (re == null)//F3P End
+			//	Report
+			re = ReportEngine.get(Env.getCtx(), pi);
+
 		if (re == null)
 			throw new IllegalStateException("Cannot create Report AD_Process_ID=" + process.getAD_Process_ID()
 				+ " - " + process.getName());

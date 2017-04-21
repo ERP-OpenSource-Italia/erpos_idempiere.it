@@ -99,14 +99,26 @@ public class MReportSource extends X_PA_ReportSource
 			ID = getC_ElementValue_ID();
 		else if (MReportSource.ELEMENTTYPE_UserElementList2.equals(et))
 			ID = getC_ElementValue_ID();
-		else if (MReportSource.ELEMENTTYPE_UserColumn1.equals(et))
-			return "UserElement1_ID="+getUserElement1_ID(); // Not Tree
-		else if (MReportSource.ELEMENTTYPE_UserColumn2.equals(et))
-			return "UserElement2_ID="+getUserElement2_ID(); // Not Tree
+		//F3P: Ue1 e Ue2 management
+		else if (MReportSource.ELEMENTTYPE_UserColumn1.equals(et)) // Not Tree
+		{
+			if(getUserElement1_ID() == 0)
+				return "";
+			else
+				return "UserElement1_ID="+getUserElement1_ID();
+		}
+		else if (MReportSource.ELEMENTTYPE_UserColumn2.equals(et))// Not Tree
+		{
+			if(getUserElement2_ID() == 0)
+				return "";
+			else
+				return "UserElement2_ID="+getUserElement2_ID();
+		}
+		//F3P: End
 		// Financial Report Source with Type Combination
 		else if (MReportSource.ELEMENTTYPE_Combination.equals(et))
 			return getWhereCombination(PA_Hierarchy_ID);
-
+		
 		//
 		return MReportTree.getWhereClause (getCtx(), PA_Hierarchy_ID, et, ID);
 	}	//	getWhereClause

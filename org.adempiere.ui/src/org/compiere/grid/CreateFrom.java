@@ -109,18 +109,18 @@ public abstract class CreateFrom implements ICreateFrom
 			+ " AND o.C_Order_ID IN "
 				  + "(SELECT ol.C_Order_ID FROM C_OrderLine ol"
 				  + " LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID" //F3P: added product link
-				  + " WHERE ol.QtyOrdered - ").append(column).append(" != 0) ");
+				  + " WHERE ol.QtyOrdered - ").append(column).append(" != 0 ");
 		
 		//F3P: show only service order
 		if(isShowOnlyServiceOrder() && forInvoice)
 			sql.append(" AND (ol.c_charge_id IS NOT NULL OR p.producttype <> 'I' )");
-		sql.append(")");
+		sql.append(") ");
 				
 		if(sameWarehouseOnly)
 		{
 			sql = sql.append(" AND o.M_Warehouse_ID=? ");
 		}
-		sql = sql.append("ORDER BY o.DateOrdered,o.DocumentNo");
+		sql = sql.append(" ORDER BY o.DateOrdered,o.DocumentNo");
 		//
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;

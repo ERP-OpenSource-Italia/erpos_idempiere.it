@@ -70,6 +70,11 @@ public class InfoProductWindow extends InfoWindow {
 	//IDEMPIERE-337
 	protected WListbox productpriceTbl;
 	protected String m_sqlProductprice;
+	
+	//Angelo Dabala' (genied): added tab to show availability by Locator
+	//Availability by Locator
+	protected WListbox locatorTbl;
+	protected String m_sqlLocator;
     
 	protected Textbox fieldDescription;
     
@@ -82,6 +87,8 @@ public class InfoProductWindow extends InfoWindow {
 	protected Button	m_PAttributeButton;
 
 	protected int m_M_Locator_ID;
+	
+	protected static final String Q_WAREHOUSE = "SELECT M_Warehouse_ID FROM M_Warehouse WHERE UPPER(Name) = UPPER(?) AND AD_Client_ID=?";
 	
 	/**
 	 * @param WindowNo
@@ -307,6 +314,19 @@ public class InfoProductWindow extends InfoWindow {
 		desktopTabPanel.appendChild(productpriceTbl);
 		tabPanels.appendChild(desktopTabPanel);
 		//
+		//Angelo Dabala' (genied): added tab to show availability by Locator
+		 //Locator Tab
+		locatorTbl = ListboxFactory.newDataTableAutoSize();
+		locatorTbl.setMultiSelection(false);
+		
+		tab = new Tab(Msg.getElement(Env.getCtx(), "M_Locator_ID"));
+		tabs.appendChild(tab);
+		desktopTabPanel = new Tabpanel();
+		ZKUpdateUtil.setHeight(desktopTabPanel, "100%");
+		desktopTabPanel.appendChild(locatorTbl);
+		tabPanels.appendChild(desktopTabPanel);
+		//Angelo Dabala' (genied): end
+		
 		int height = SessionManager.getAppDesktop().getClientInfo().desktopHeight * 90 / 100;
 		
 		contentBorderLayout = new Borderlayout();
@@ -366,6 +386,18 @@ public class InfoProductWindow extends InfoWindow {
 					} else {
 						m_PAttributeButton.setEnabled(false);
 					}
+				}
+			}
+		});
+		
+		warehouseTbl.addActionListener(new EventListener<Event>() {
+			public void onEvent(Event event) throws Exception {
+				int row = warehouseTbl.getSelectedRow();
+				if (row >= 0) {
+					String value = (String)warehouseTbl.getValueAt(warehouseTbl.getSelectedRow(),0);
+					int M_Warehouse_ID = DB.getSQLValue(null, Q_WAREHOUSE, new Object[] { value ,Env.getAD_Client_ID(Env.getCtx())});
+					int m_M_Product_ID = getSelectedRowKey();
+					initLocatorTab(M_Warehouse_ID, m_M_Product_ID);
 				}
 			}
 		});
@@ -635,6 +667,9 @@ public class InfoProductWindow extends InfoWindow {
 			DB.close(rs, pstmt);
 			rs = null; pstmt = null;
 		}
+		
+		//Angelo Dabala' (genied): added tab to show availability by Locator
+		initLocatorTab(M_Warehouse_ID, m_M_Product_ID);
 	}	//	refresh
 	
 	// Elaine 2008/11/26
@@ -654,6 +689,7 @@ public class InfoProductWindow extends InfoWindow {
 		columnNames.add(Msg.translate(Env.getCtx(), "QtyReserved"));
 		columnNames.add(Msg.translate(Env.getCtx(), "M_Locator_ID"));
 		columnNames.add(Msg.translate(Env.getCtx(), "M_AttributeSetInstance_ID"));
+		columnNames.add(Msg.translate(Env.getCtx(), "M_Lot_ID")); // Angelo Dabala' (genied) added display of lot description
 		columnNames.add(Msg.translate(Env.getCtx(), "DocumentNo"));
 		columnNames.add(Msg.translate(Env.getCtx(), "M_Warehouse_ID"));
 
@@ -664,12 +700,14 @@ public class InfoProductWindow extends InfoWindow {
 		if (!showDetail)
 			sql = "SELECT SUM(s.QtyOnHand), SUM(s.QtyReserved), SUM(s.QtyOrdered),"
 				+ " productAttribute(s.M_AttributeSetInstance_ID), 0,";
-		sql += " w.Name, l.Value "
+		sql += " w.Name, l.Value, lot.description as lot " // Angelo Dabala' (genied) added display of lot description
 			+ "FROM M_Storage s"
 			+ " INNER JOIN M_Locator l ON (s.M_Locator_ID=l.M_Locator_ID)"
 			+ " LEFT JOIN M_LocatorType lt ON (l.M_LocatorType_ID=lt.M_LocatorType_ID)"
 			+ " INNER JOIN M_Warehouse w ON (l.M_Warehouse_ID=w.M_Warehouse_ID) "
-			+ "WHERE M_Product_ID=?";
+			+ " LEFT JOIN M_AttributeSetInstance asi ON (asi.M_AttributeSetInstance_ID=s.M_AttributeSetInstance_ID)" //Angelo Dabala' (genied) added display of lot description
+			+ " LEFT JOIN M_Lot lot ON (lot.M_Lot_ID=asi.M_Lot_ID)" //Angelo Dabala' (genied) added display of lot description
+			+ "WHERE s.M_Product_ID=?";
 		if (m_M_Warehouse_ID != 0)
 			sql += " AND l.M_Warehouse_ID=?";
 		if (m_M_AttributeSetInstance_ID > 0)
@@ -677,7 +715,7 @@ public class InfoProductWindow extends InfoWindow {
 		sql += " AND (s.QtyOnHand<>0 OR s.QtyReserved<>0 OR s.QtyOrdered<>0)";
 		sql += " AND COALESCE(lt.IsAvailableForReservation,'Y')='Y'";
 		if (!showDetail)
-			sql += " GROUP BY productAttribute(s.M_AttributeSetInstance_ID), w.Name, l.Value";
+			sql += " GROUP BY productAttribute(s.M_AttributeSetInstance_ID), w.Name, l.Value, lot.description"; // Angelo Dabala' (genied) added display of lot description
 		sql += " ORDER BY l.Value";
 
 		Vector<Vector<Object>> data = new Vector<Vector<Object>>();
@@ -695,7 +733,7 @@ public class InfoProductWindow extends InfoWindow {
 			rs = pstmt.executeQuery();
 			while (rs.next())
 			{
-				Vector<Object> line = new Vector<Object>(9);
+				Vector<Object> line = new Vector<Object>(10);//Angelo Dabala' (genied) added display of lot description
 				line.add(null);							//  Date
 				double qtyOnHand = rs.getDouble(1);
 				qty += qtyOnHand;
@@ -708,6 +746,7 @@ public class InfoProductWindow extends InfoWindow {
 				if (showDetail && (asi == null || asi.length() == 0))
 					asi = "{" + rs.getInt(5) + "}";
 				line.add(asi);							//  ASI
+				line.add(rs.getString(8));				// Angelo Dabala' (genied) added display of lot description
 				line.add(null);							//  DocumentNo
 				line.add(rs.getString(6));  			//	Warehouse
 				data.add(line);
@@ -726,31 +765,80 @@ public class InfoProductWindow extends InfoWindow {
 		sql = "SELECT COALESCE(ol.DatePromised, o.DatePromised) AS DatePromised, ol.QtyReserved,"
 			+ " productAttribute(ol.M_AttributeSetInstance_ID), ol.M_AttributeSetInstance_ID,"
 			+ " dt.DocBaseType, bp.Name,"
-			+ " dt.PrintName || ' ' || o.DocumentNo As DocumentNo, w.Name "
+			+ " dt.PrintName || ' ' || o.DocumentNo As DocumentNo, w.Name, lot.description as lot " // Angelo Dabala' (genied) added display of lot description
 			+ "FROM C_Order o"
 			+ " INNER JOIN C_OrderLine ol ON (o.C_Order_ID=ol.C_Order_ID)"
 			+ " INNER JOIN C_DocType dt ON (o.C_DocType_ID=dt.C_DocType_ID)"
 			+ " INNER JOIN M_Warehouse w ON (ol.M_Warehouse_ID=w.M_Warehouse_ID)"
 			+ " INNER JOIN C_BPartner bp  ON (o.C_BPartner_ID=bp.C_BPartner_ID) "
+			+ " LEFT JOIN M_AttributeSetInstance asi ON (asi.M_AttributeSetInstance_ID=ol.M_AttributeSetInstance_ID) "	// Angelo Dabala' (genied) added display of lot description
+			+ " LEFT JOIN M_Lot lot ON (lot.M_Lot_ID=asi.M_Lot_ID) "	// Angelo Dabala' (genied) added display of lot description
 			+ "WHERE ol.QtyReserved<>0"
 			+ " AND ol.M_Product_ID=?";
 		if (m_M_Warehouse_ID != 0)
 			sql += " AND ol.M_Warehouse_ID=?";
 		if (m_M_AttributeSetInstance_ID > 0)
 			sql += " AND ol.M_AttributeSetInstance_ID=?";
-		sql += " ORDER BY o.DatePromised";
+		
+		// F3P: union to PP_Order (BOM -> material consumption, equivalent to sale order
+		String sqlPPOrderBOM = " UNION ALL SELECT ppo.DatePromised, ppol.QtyReserved,"
+			+ " productAttribute(ppol.M_AttributeSetInstance_ID), ppol.M_AttributeSetInstance_ID,"
+			+ " 'SOO' as DocBaseType, null as Name,"
+			+ " dt.PrintName || ' ' || ppo.DocumentNo As DocumentNo, w.Name , lot.description as lot "
+			+ " FROM PP_Order ppo"
+			+ " INNER JOIN PP_Order_BOMLine ppol ON (ppo.PP_Order_ID=ppol.PP_Order_ID)"
+			+ " INNER JOIN C_DocType dt ON (ppo.C_DocType_ID=dt.C_DocType_ID)"
+			+ " INNER JOIN M_Warehouse w ON (ppol.M_Warehouse_ID=w.M_Warehouse_ID)"			
+			+ " LEFT JOIN M_AttributeSetInstance asi ON (asi.M_AttributeSetInstance_ID=ppol.M_AttributeSetInstance_ID) "	// Angelo Dabala' (genied) added display of lot description
+			+ " LEFT JOIN M_Lot lot ON (lot.M_Lot_ID=asi.M_Lot_ID) "	// Angelo Dabala' (genied) added display of lot description
+			+ " WHERE ppol.QtyReserved<>0"
+			+ " AND ppol.M_Product_ID=?";
+		if (m_M_Warehouse_ID != 0)
+			sqlPPOrderBOM += " AND ppol.M_Warehouse_ID=?";
+		if (m_M_AttributeSetInstance_ID > 0)
+			sqlPPOrderBOM += " AND ppol.M_AttributeSetInstance_ID=?";
+		
+		// F3P: union to PP_Order (Order -> material production, equivalent to purchase order
+		
+		String sqlPPOrderHdr = " UNION ALL SELECT ppo.DatePromised, ppo.QtyReserved,"
+			+ " productAttribute(ppo.M_AttributeSetInstance_ID), ppo.M_AttributeSetInstance_ID,"
+			+ " 'POO' as DocBaseType, null as Name,"
+			+ " dt.PrintName || ' ' || ppo.DocumentNo As DocumentNo, w.Name , lot.description as lot "
+			+ " FROM PP_Order ppo"			
+			+ " INNER JOIN C_DocType dt ON (ppo.C_DocType_ID=dt.C_DocType_ID)"
+			+ " INNER JOIN M_Warehouse w ON (ppo.M_Warehouse_ID=w.M_Warehouse_ID)"			
+			+ " LEFT JOIN M_AttributeSetInstance asi ON (asi.M_AttributeSetInstance_ID=ppo.M_AttributeSetInstance_ID) "	// Angelo Dabala' (genied) added display of lot description
+			+ " LEFT JOIN M_Lot lot ON (lot.M_Lot_ID=asi.M_Lot_ID) "	// Angelo Dabala' (genied) added display of lot description
+			+ " WHERE ppo.QtyReserved<>0"
+			+ " AND ppo.M_Product_ID=?";
+		if (m_M_Warehouse_ID != 0)
+			sqlPPOrderHdr += " AND ppo.M_Warehouse_ID=?";
+		if (m_M_AttributeSetInstance_ID > 0)
+			sqlPPOrderHdr += " AND ppo.M_AttributeSetInstance_ID=?";
+		
+		sql = sql + sqlPPOrderBOM + sqlPPOrderHdr + " ORDER BY DatePromised"; 
+		//F3P: end
 		try
 		{
 			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setInt(1, m_M_Product_ID);
-			if (m_M_Warehouse_ID != 0)
-				pstmt.setInt(2, m_M_Warehouse_ID);
-			if (m_M_AttributeSetInstance_ID > 0)
-				pstmt.setInt(3, m_M_AttributeSetInstance_ID);
+			
+			// F3P: parameters adjustment
+			int idx = 1; 
+			
+			for(int i=0; i < 3;i++)
+			{
+				pstmt.setInt(idx++, m_M_Product_ID);
+				if (m_M_Warehouse_ID != 0)
+					pstmt.setInt(idx++, m_M_Warehouse_ID);
+				if (m_M_AttributeSetInstance_ID > 0)
+					pstmt.setInt(idx++, m_M_AttributeSetInstance_ID);				
+			}
+			//F3P end
+			
 			rs = pstmt.executeQuery();
 			while (rs.next())
 			{
-				Vector<Object> line = new Vector<Object>(9);
+				Vector<Object> line = new Vector<Object>(10); //  Angelo Dabala' (genied) added display of lot description
 				line.add(rs.getTimestamp(1));			//  Date
 				double oq = rs.getDouble(2);
 				String DocBaseType = rs.getString(5);
@@ -775,6 +863,7 @@ public class InfoProductWindow extends InfoWindow {
 				if (showDetail && (asi == null || asi.length() == 0))
 					asi = "{" + rs.getInt(4) + "}";
 				line.add(asi);							//  ASI
+				line.add(rs.getString(9));				//  Angelo Dabala' (genied) added display of lot description
 				line.add(rs.getString(7));				//  DocumentNo
 				line.add(rs.getString(8));  			//	Warehouse
 				data.add(line);
@@ -809,6 +898,77 @@ public class InfoProductWindow extends InfoWindow {
 	public boolean isShowDetailATP() {
 		return chbShowDetailAtp.isChecked();
 	}
+	
+	//Angelo Dabala' (genied): added tab to show availability by Locator
+	private void initLocatorTab(int  m_M_Warehouse_ID, int m_M_Product_ID)
+	{
+		boolean showWarehouse = (m_M_Warehouse_ID == 0);
+		//	Header
+		Vector<String> columnNames = new Vector<String>();
+		if(showWarehouse)
+			columnNames.add(Msg.translate(Env.getCtx(), "M_Warehouse_ID"));
+		columnNames.add(Msg.translate(Env.getCtx(), "M_Locator_ID"));
+		columnNames.add(Msg.translate(Env.getCtx(), "QtyOnHand"));
+		columnNames.add(Msg.translate(Env.getCtx(), "QtyOrdered"));
+		columnNames.add(Msg.translate(Env.getCtx(), "QtyReserved"));
+		
+		String sql = "SELECT SUM(s.QtyOnHand), SUM(s.QtyReserved), SUM(s.QtyOrdered),"
+				+ " w.Name, l.Value "
+				+ "FROM M_Storage s"
+				+ " INNER JOIN M_Locator l ON (s.M_Locator_ID=l.M_Locator_ID)"
+				+ " INNER JOIN M_Warehouse w ON (l.M_Warehouse_ID=w.M_Warehouse_ID) "
+				+ "WHERE M_Product_ID=?";
+			if (m_M_Warehouse_ID != 0)
+				sql += " AND l.M_Warehouse_ID=?";
+			sql += " AND (s.QtyOnHand<>0 OR s.QtyReserved<>0 OR s.QtyOrdered<>0)";
+			sql += " GROUP BY w.Name, l.Value";
+			sql += " ORDER BY w.Name, l.Value";
+
+			Vector<Vector<Object>> data = new Vector<Vector<Object>>();
+			PreparedStatement pstmt = null;
+			ResultSet rs = null;
+			try
+			{
+				pstmt = DB.prepareStatement(sql, null);
+				pstmt.setInt(1, m_M_Product_ID);
+				if (m_M_Warehouse_ID != 0)
+					pstmt.setInt(2, m_M_Warehouse_ID);
+				rs = pstmt.executeQuery();
+				while (rs.next())
+				{
+					Vector<Object> line = new Vector<Object>(9);
+					if(showWarehouse)
+						line.add(rs.getString(4));  		//	Warehouse
+					line.add(rs.getString(5));      		//  Locator
+					line.add(new Double(rs.getDouble(1)));  //  QtyOnHand
+					line.add(new Double(rs.getDouble(3)));  //  QtyOrdered
+					line.add(new Double(rs.getDouble(2)));  //  QtyReserved
+					data.add(line);
+				}
+			}
+			catch (SQLException e)
+			{
+				log.log(Level.SEVERE, sql, e);
+			}
+			finally {
+				DB.close(rs, pstmt);
+				rs = null; pstmt = null;
+			}
+			
+			//  Table
+			ListModelTable model = new ListModelTable(data);
+			locatorTbl.setData(model, columnNames);
+
+			int col=0;
+			if(showWarehouse)
+				locatorTbl.setColumnClass(col++, String.class, true);  //  Warehouse
+			locatorTbl.setColumnClass(col++, String.class, true);   	  //  Locator
+			locatorTbl.setColumnClass(col++, Double.class, true);      //  Quantity
+			locatorTbl.setColumnClass(col++, Double.class, true);      //  Quantity
+			locatorTbl.setColumnClass(col++, Double.class, true);      //  Quantity
+			//
+			locatorTbl.autoSize();
+	}//Angelo Dabala' end
 
 	@Override
 	protected void showHistory() {
@@ -896,6 +1056,10 @@ public class InfoProductWindow extends InfoWindow {
 			
 			if (fieldDescription != null)
 				fieldDescription.setText("");
+			
+			//Angelo Dabala' (genied): availability by Locator
+			if (locatorTbl != null && locatorTbl.getModel() != null)
+				locatorTbl.getModel().clear();
 		}
 		
 	}

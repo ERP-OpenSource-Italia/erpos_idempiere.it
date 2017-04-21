@@ -106,4 +106,14 @@ public class Label extends org.zkoss.zul.Label
 	public Component rightAlign() {
 		return LayoutUtils.makeRightAlign(this);
 	}	
+	
+	private boolean m_zoomable = false;
+
+	public boolean isZoomable() {
+		return m_zoomable;
+	}
+	
+	public void setZoomable(boolean zoomable) {
+		m_zoomable  = zoomable;
+	}
 }

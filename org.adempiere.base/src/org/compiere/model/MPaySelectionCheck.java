@@ -20,7 +20,14 @@ import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
@@ -31,6 +38,10 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
+
+import it.idempiere.base.model.LITMPaySelection;
+import it.idempiere.base.util.BaseMessages;
+import it.idempiere.base.util.RifDoc;
 
 /**
  *  Payment Print/Export model.
@@ -267,7 +278,12 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 	 * 	@param check check
 	 * 	@param batch batch
 	 */
-	public static void confirmPrint (MPaySelectionCheck check, MPaymentBatch batch)
+	public static void confirmPrint (MPaySelectionCheck check, MPaymentBatch batch){
+		//backward compatibility
+		confirmPrint(check, batch, null, true);
+	}
+	
+	public static MPayment confirmPrint (MPaySelectionCheck check, MPaymentBatch batch, Timestamp trxDate, boolean bCreateToDb)
 	{
 		boolean localTrx = false;
 		String trxName = check.get_TrxName();
@@ -278,8 +294,11 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 			trx = Trx.get(trxName, true);
 			check.set_TrxName(trxName);
 		}
+		
+		MPayment payment = null;
+		
 		try {
-			MPayment payment = new MPayment(check.getCtx(), check.getC_Payment_ID(), trxName);
+			payment = new MPayment(check.getCtx(), check.getC_Payment_ID(), trxName);
 			//	Existing Payment
 			if (check.getC_Payment_ID() != 0)
 			{
@@ -311,22 +330,35 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 				else
 				{
 					s_log.log(Level.SEVERE, "Unsupported Payment Rule=" + check.getPaymentRule());
-					return;
+					return null;
 				}
 				payment.setTrxType(X_C_Payment.TRXTYPE_CreditPayment);
 				// F3P: set receipt/payment
 				payment.setIsReceipt(check.isReceipt());
 				payment.setAmount(check.getParent().getC_Currency_ID(), check.getPayAmt());
 				payment.setDiscountAmt(check.getDiscountAmt());
-				payment.setDateTrx(check.getParent().getPayDate());
+				
+//				payment.setDateTrx(check.getParent().getPayDate());
+				//new parameter added
+				if (trxDate != null) {
+					payment.setDateTrx(trxDate);
+				}
+				//if new param missing (previous versions) coalesce between new column and PayDate
+				else {
+					payment.setDateTrx(LITMPaySelection.getPaymentTrxDate(check
+							.getParent()));
+				}
 				payment.setDateAcct(payment.getDateTrx()); // globalqss [ 2030685 ]
 				payment.setC_BPartner_ID(check.getC_BPartner_ID());
 				//	Link to Batch
 				if (batch != null)
 				{
-					if (batch.getC_PaymentBatch_ID() == 0)
-						batch.saveEx(trxName);	//	new
-					payment.setC_PaymentBatch_ID(batch.getC_PaymentBatch_ID());
+					if (bCreateToDb)// F3P: check if we need to save it
+					{
+						if (batch.getC_PaymentBatch_ID() == 0)
+							batch.saveEx(trxName); // new
+						payment.setC_PaymentBatch_ID(batch.getC_PaymentBatch_ID());
+					}
 				}
 				//	Link to Invoice
 				MPaySelectionLine[] psls = check.getPaySelectionLines(true);
@@ -349,26 +381,37 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 					payment.setWriteOffAmt(Env.ZERO); // F3P: moved into else to avoid overriding previously set value
 				}
 				// payment.setWriteOffAmt(Env.ZERO);
-				payment.saveEx();
+				if (bCreateToDb)// F3P: check if we need to save it
+				{
+					payment.saveEx();
+				}
 				//
 				int C_Payment_ID = payment.get_ID();
 				if (C_Payment_ID < 1)
 					s_log.log(Level.SEVERE, "Payment not created=" + check);
 				else
 				{
-					check.setC_Payment_ID (C_Payment_ID);
-					check.saveEx();	//	Payment process needs it
-					// added AdempiereException by zuhri
-					if (!payment.processIt(DocAction.ACTION_Complete))
-						throw new AdempiereException("Failed when processing document - " + payment.getProcessMsg());
-					// end added
-					payment.saveEx();
+					if (bCreateToDb)// F3P: check if we need to save it
+					{
+						check.setC_Payment_ID(C_Payment_ID);
+						check.saveEx(); // Payment process needs it
+						// added AdempiereException by zuhri
+						if (!payment.processIt(DocAction.ACTION_Complete))
+							throw new AdempiereException(
+									"Failed when processing document - " + payment.getProcessMsg());
+						// end added
+						payment.saveEx();
+					}
 				}
 			}	//	new Payment
 
-			check.setIsPrinted(true);
-			check.setProcessed(true);
-			check.saveEx();
+			if (bCreateToDb)// F3P: check if we need to save it.
+			{
+				check.setIsPrinted(true);
+				check.setProcessed(true);
+				check.saveEx();
+			}
+
 		} catch (Exception e) {
 			if (localTrx && trx != null) {
 				trx.rollback();
@@ -382,6 +425,8 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 				trx.close();
 			}
 		}
+		
+		return payment;
 	}	//	confirmPrint
 	
 	/**************************************************************************
@@ -441,6 +486,98 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 		if (s_log.isLoggable(Level.FINE)) s_log.fine("Last Document No = " + lastDocumentNo);
 		return lastDocumentNo;
 	}	//	confirmPrint
+	
+	/**************************************************************************
+	 * Confirm Print. Create Payments the first time
+	 * 
+	 * @param checks
+	 *            checks
+	 * @param batch
+	 *            batch
+	 * @param bCreateToDb
+	 *            if true, new MPayment and MPaymentBatch are saved to db,
+	 *            otherwise not (already created MPayment will be updated
+	 *            always)
+	 * @return hashMap tith payments and rifDoc associated
+	 */
+	public static HashMap<MPayment, ArrayList<RifDoc>> confirmPrint(
+			MPaySelectionCheck[] checks, MPaymentBatch batch,
+			boolean bCreateToDb) {
+		return confirmPrint(checks, batch, null, bCreateToDb);
+	}
+
+	public static HashMap<MPayment, ArrayList<RifDoc>> confirmPrint(
+			MPaySelectionCheck[] checks, MPaymentBatch batch,
+			Timestamp trxDate, boolean bCreateToDb) {
+		HashMap<MPayment, ArrayList<RifDoc>> hmPaymentProcessed = new HashMap<MPayment, ArrayList<RifDoc>>(); // F3P: return value
+		
+		boolean localTrx = false;
+		String trxName = null;
+		if (checks.length > 0)
+			trxName = checks[0].get_TrxName();
+		Trx trx = null;
+		if (trxName == null) {
+			localTrx = true;
+			trxName = Trx.createTrxName("ConfirmPrintMulti");
+			trx = Trx.get(trxName, true);
+		}
+		// int lastDocumentNo = 0; F3P: No longer used
+		try {
+			for (int i = 0; i < checks.length; i++)
+			{
+				MPaySelectionCheck check = checks[i];
+				if (localTrx)
+					check.set_TrxName(trxName);
+				MPayment payment = confirmPrint(check, batch, trxDate, bCreateToDb);
+				
+				// F3P: Manage reference to document
+				MPaySelectionLine[] psls = check.getPaySelectionLines(false);
+				ArrayList<RifDoc> rif = new ArrayList<RifDoc>();
+
+				for (MPaySelectionLine psLine : psls) {
+					RifDoc rfd = new RifDoc();
+
+					// reason for payment must be translated into bp language. Use
+					// client one if null
+					String sBPLanguage = psLine.getC_Invoice().getC_BPartner()
+							.getAD_Language();
+					if (sBPLanguage == null)
+						sBPLanguage = Env.getCtx().getProperty("#AD_Language");
+					Date dateInvoiced = new Date();
+					dateInvoiced.setTime(psLine.getC_Invoice().getDateInvoiced()
+							.getTime());
+					String sDateInv = new SimpleDateFormat("dd/MM/yy")
+							.format(dateInvoiced);
+
+					String sDescr = MessageFormat.format(Msg.getMsg(sBPLanguage,
+							BaseMessages.MSG_PAYEXPORTDESCR), psLine.getC_Invoice()
+							.getDocumentNo(), sDateInv, psLine.getC_Invoice()
+							.getC_BPartner().getName(),psLine.getDescription());
+					rfd.setDescrizione(sDescr);
+
+					rif.add(rfd);
+				}
+
+				// F3P: add element to list
+				hmPaymentProcessed.put(payment, rif);
+			}
+		} catch (Exception e) {
+			if (localTrx && trx != null) {
+				trx.rollback();
+				trx.close();
+				trx = null;
+			}
+			throw new AdempiereException(e);
+		} finally {
+			if (localTrx && trx != null) {
+				trx.commit();
+				trx.close();
+			}
+		}
+		
+		return 	hmPaymentProcessed;
+	}
+	
 
 	/** Logger								*/
 	static private CLogger	s_log = CLogger.getCLogger (MPaySelectionCheck.class);
@@ -688,4 +825,31 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 	return true;	
 	}
 	
+	public static MPaySelectionCheck[] getOfPaySelection(Properties ctx,
+			int C_PaySelection_ID, String trxName) {
+		String whereClause = COLUMNNAME_C_PaySelection_ID + "=?";
+
+		Query query = new Query(ctx, Table_Name, whereClause, trxName)
+				.setParameters(C_PaySelection_ID).setOnlyActiveRecords(true);
+
+		List<MPaySelectionCheck> list = query.list();
+		if (list == null)
+			list = Collections.emptyList();
+		return list.toArray(new MPaySelectionCheck[list.size()]);
+	} // getOfPaySelection
+
+	public static MPaySelectionLine[] getLinesAssociated(Properties ctx,
+			int C_PaySelectionCheck_ID, String trxName) {
+		String whereClause = MPaySelectionLine.COLUMNNAME_C_PaySelectionCheck_ID
+				+ "=?";
+
+		Query query = new Query(ctx, MPaySelectionLine.Table_Name, whereClause,
+				trxName).setParameters(C_PaySelectionCheck_ID)
+				.setOnlyActiveRecords(true);
+
+		List<MPaySelectionLine> list = query.list();
+		if (list == null)
+			list = Collections.emptyList();
+		return list.toArray(new MPaySelectionLine[list.size()]);
+	} // getLinesAssociated
 }   //  MPaySelectionCheck
