@@ -212,6 +212,19 @@ public interface I_A_Asset_Addition
 	/** Get Source Amount	  */
 	public BigDecimal getAssetSourceAmt();
 
+    /** Column name AssetSourceTaxAmt */
+    public static final String COLUMNNAME_AssetSourceTaxAmt = "AssetSourceTaxAmt";
+
+	/** Set Source Tax Amount.
+	  * Source Tax Due to sales Tax
+	  */
+	public void setAssetSourceTaxAmt (BigDecimal AssetSourceTaxAmt);
+
+	/** Get Source Tax Amount.
+	  * Source Tax Due to sales Tax
+	  */
+	public BigDecimal getAssetSourceTaxAmt();
+
     /** Column name AssetValueAmt */
     public static final String COLUMNNAME_AssetValueAmt = "AssetValueAmt";
 
@@ -482,8 +495,6 @@ public interface I_A_Asset_Addition
 
 	/** Get Imported Fixed Asset	  */
 	public int getI_FixedAsset_ID();
-
-	public org.compiere.model.I_I_FixedAsset getI_FixedAsset() throws RuntimeException;
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";

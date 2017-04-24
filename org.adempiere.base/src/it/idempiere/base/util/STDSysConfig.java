@@ -63,6 +63,9 @@ public class STDSysConfig
  	public static final String SYSCFG_CHARGE_TO_ADD = "F3P_DELIVERY_CHARGE_TO_ADD";
  	public static final String SYSCFG_CHARGE_TO_REMOVE = "F3P_DELIVERY_CHARGE_TO_REMOVE";
  	
+ 	public static final String FA_ADDITION_ALLOW_ACCDEPR_ALWAYS = "FA_ADDITION_ALLOW_ACCDEPR_ALWAYS";
+ 	public static final String FA_DEPRECIATIONEXP_SKIPZEROVALUES = "FA_DEPRECIATIONEXP_SKIPZEROVALUES";
+ 	
  	public static String getOverrideLineNo(int AD_Client_ID,int AD_Org_ID)
  	{
  		return MSysConfig.getValue(SYSCFG_OVERRIDE_LINE_NO, null, AD_Client_ID, AD_Org_ID);
@@ -331,5 +334,15 @@ public class STDSysConfig
 	public static boolean isShowOnlyServiceOrder()
 	{
 		return MSysConfig.getBooleanValue(F3P_CREATEFROMORDER_ONLYSERVICE, false);
+	}
+	
+	public static boolean isFAAdditionAllowAccDeprAlways(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(FA_ADDITION_ALLOW_ACCDEPR_ALWAYS, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static boolean isFADepreciationExpSkipZeroValues(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(FA_DEPRECIATIONEXP_SKIPZEROVALUES, false, AD_Client_ID, AD_Org_ID);
 	}
 }

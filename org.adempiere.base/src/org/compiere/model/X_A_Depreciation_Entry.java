@@ -33,7 +33,7 @@ public class X_A_Depreciation_Entry extends PO implements I_A_Depreciation_Entry
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20170419L;
 
     /** Standard Constructor */
     public X_A_Depreciation_Entry (Properties ctx, int A_Depreciation_Entry_ID, String trxName)
@@ -58,6 +58,8 @@ public class X_A_Depreciation_Entry extends PO implements I_A_Depreciation_Entry
 			setDocumentNo (null);
 			setIsApproved (false);
 // @#IsCanApproveOwnDoc@
+			setIsDepExpOutPeriod (false);
+// N
 			setPosted (false);
 // 'N'
 			setPostingType (null);
@@ -312,6 +314,20 @@ public class X_A_Depreciation_Entry extends PO implements I_A_Depreciation_Entry
 		return (Timestamp)get_Value(COLUMNNAME_DateDoc);
 	}
 
+	/** Set Depreciation Date.
+		@param DepreciationDate Depreciation Date	  */
+	public void setDepreciationDate (Timestamp DepreciationDate)
+	{
+		set_Value (COLUMNNAME_DepreciationDate, DepreciationDate);
+	}
+
+	/** Get Depreciation Date.
+		@return Depreciation Date	  */
+	public Timestamp getDepreciationDate () 
+	{
+		return (Timestamp)get_Value(COLUMNNAME_DepreciationDate);
+	}
+
 	/** Set Description.
 		@param Description 
 		Optional short description of the record
@@ -462,6 +478,27 @@ public class X_A_Depreciation_Entry extends PO implements I_A_Depreciation_Entry
 		return false;
 	}
 
+	/** Set Registrazioni di ammortamento fuori periodo.
+		@param IsDepExpOutPeriod Registrazioni di ammortamento fuori periodo	  */
+	public void setIsDepExpOutPeriod (boolean IsDepExpOutPeriod)
+	{
+		set_Value (COLUMNNAME_IsDepExpOutPeriod, Boolean.valueOf(IsDepExpOutPeriod));
+	}
+
+	/** Get Registrazioni di ammortamento fuori periodo.
+		@return Registrazioni di ammortamento fuori periodo	  */
+	public boolean isDepExpOutPeriod () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsDepExpOutPeriod);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
 	/** Set Posted.
 		@param Posted 
 		Posting status
@@ -498,6 +535,8 @@ public class X_A_Depreciation_Entry extends PO implements I_A_Depreciation_Entry
 	public static final String POSTINGTYPE_Statistical = "S";
 	/** Reservation = R */
 	public static final String POSTINGTYPE_Reservation = "R";
+	/** Competence = C */
+	public static final String POSTINGTYPE_Competence = "C";
 	/** Set PostingType.
 		@param PostingType 
 		The type of posted amount for the transaction

@@ -8,6 +8,7 @@ import java.util.logging.Level;
 
 import org.adempiere.exceptions.FillMandatoryException;
 import org.compiere.acct.Fact;
+import org.compiere.model.I_C_InvoiceLine;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MAssetAddition;
 import org.compiere.model.MAssetDisposed;
@@ -30,6 +31,8 @@ import org.idempiere.fa.exceptions.AssetProductStockedException;
 /**
  * Fixed Assets Model Validator
  * @author Teo_Sarca, SC ARHIPAC SERVICE SRL
+ * 
+ * @author Silvano Trinchero, FreePath srl (www.freepath.it)
  *
  */
 public class ModelValidator
@@ -56,6 +59,9 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 		engine.addModelChange(MInvoiceLine.Table_Name, this);		
 		engine.addDocValidate(MInvoice.Table_Name, this);
 		engine.addModelChange(MMatchInv.Table_Name, this);
+		
+		//F3P: from adempiere
+		engine.addModelChange(MAssetAddition.Table_Name, this);
 		//
 //		engine.addFactsValidate(MDepreciationEntry.Table_Name, this);
 	}
@@ -92,13 +98,27 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 		{
 			modelChange_InvoiceLine(SetGetUtil.wrap(po), type);
 		}
+		//
+		// F3P: Asset addition
+		else if(po instanceof MAssetAddition 
+				&& (TYPE_BEFORE_NEW == type || po.is_ValueChanged(MAssetAddition.COLUMNNAME_A_SourceType)))
+		{
+			MAssetAddition mAddition = (MAssetAddition)po;
+			
+			if(mAddition.getM_Product_ID() <= 0 &&
+					mAddition.getC_InvoiceLine_ID() > 0 &&
+					MAssetAddition.A_SOURCETYPE_Invoice.equals(mAddition.getA_SourceType()))
+			{
+				I_C_InvoiceLine	mInvLine = mAddition.getC_InvoiceLine();
+				mAddition.setM_Product_ID(mInvLine.getM_Product_ID());
+			}			
+		}
 		return null;
 		
 	}
 
 	public String docValidate(PO po, int timing)
 	{
-			
 		if (log.isLoggable(Level.INFO)) log.info(po.get_TableName() + " Timing: " + timing);
 		String result = null;
 		

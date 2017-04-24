@@ -114,7 +114,8 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 		setA_Asset_Remaining_F(wk.getA_Asset_Remaining_F());
 	}
 	
-	private MDepreciationWorkfile getA_Depreciation_Workfile()
+	// F3P: no reason to have it private, its just an utility function, changed to protected
+	protected MDepreciationWorkfile getA_Depreciation_Workfile()
 	{
 		return MDepreciationWorkfile.get(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
 	}
@@ -132,15 +133,35 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 				BigDecimal accumAmt, BigDecimal accumAmt_F,
 				String help, String trxName)
 	{
+		return createDepreciation(assetwk,PeriodNo,dateAcct,amt,amt_F,
+				accumAmt,accumAmt_F,help,null,trxName);
+	}
+
+	// F3P: added MDepreciaton to use to build description, can be null
+	public static Collection<MDepreciationExp> createDepreciation ( 
+				MDepreciationWorkfile assetwk,
+				int PeriodNo, Timestamp dateAcct,
+				BigDecimal amt, BigDecimal amt_F,
+				BigDecimal accumAmt, BigDecimal accumAmt_F,
+				String help, MDepreciation deprDescr,String trxName)
+	{
 		ArrayList<MDepreciationExp> list = new ArrayList<MDepreciationExp>();
 		Properties ctx = assetwk.getCtx();
 		MAssetAcct assetAcct = assetwk.getA_AssetAcct(dateAcct, trxName);
 		MDepreciationExp depexp = null;
 		
+		// F3P: if a deprDesc has been provided, use it for description generation
+		String sDescription = null; 
+		
+		if(deprDescr != null)
+			sDescription = deprDescr.getDeprExpDescription(assetwk,PeriodNo,dateAcct);
+		else
+			sDescription = MDepreciation.getDefaultDeprExpDescription();
+		
 		depexp = createEntry (ctx, A_ENTRY_TYPE_Depreciation, assetwk.getA_Asset_ID(), PeriodNo, dateAcct, assetwk.getPostingType()
 			, assetAcct.getA_Depreciation_Acct(), assetAcct.getA_Accumdepreciation_Acct()
 			, amt
-			, "@AssetDepreciationAmt@"
+			, sDescription // F3P: replaced static message
 			, assetwk);
 		if(depexp != null) {
 			depexp.setAD_Org_ID(assetwk.getA_Asset().getAD_Org_ID()); // added by zuhri
@@ -163,6 +184,12 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 	 * Process this entry and save the modified workfile.
 	 */
 	public void process()
+	{	
+		process(false);
+	}
+	
+	// F3P: added param to avoid checking when replaced with mass-check
+	public void process(boolean bSkipChecks)
 	{
 		if(isProcessed())
 		{
@@ -180,12 +207,16 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 		String entryType = getA_Entry_Type();
 		if (MDepreciationExp.A_ENTRY_TYPE_Depreciation.equals(entryType))
 		{
-			checkExistsNotProcessedEntries(getCtx(), getA_Asset_ID(), getDateAcct(), getPostingType(), get_TrxName());
-			//
-			// Check if the asset is Active:
-			if (!assetwk.getAsset().getA_Asset_Status().equals(MAsset.A_ASSET_STATUS_Activated))
+			// F3P: added way to avoid checks
+			if(bSkipChecks == false)
 			{
-				throw new AssetNotActiveException(assetwk.getAsset().get_ID());
+				checkExistsNotProcessedEntries(getCtx(), getA_Asset_ID(), getDateAcct(), getPostingType(), get_TrxName());
+				//
+				// Check if the asset is Active:
+				if (!assetwk.getAsset().getA_Asset_Status().equals(MAsset.A_ASSET_STATUS_Activated))
+				{
+					throw new AssetNotActiveException(assetwk.getAsset().get_ID());
+				}
 			}
 			//
 			setDateAcct(assetwk.getDateAcct());

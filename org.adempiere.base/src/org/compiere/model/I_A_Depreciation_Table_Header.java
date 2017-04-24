@@ -92,19 +92,27 @@ public interface I_A_Depreciation_Table_Header
     /** Column name A_Table_Rate_Type */
     public static final String COLUMNNAME_A_Table_Rate_Type = "A_Table_Rate_Type";
 
-	/** Set Type	  */
+	/** Set Type.
+	  * Define if Depreciation is made by value or by rate (percentual)
+	  */
 	public void setA_Table_Rate_Type (String A_Table_Rate_Type);
 
-	/** Get Type	  */
+	/** Get Type.
+	  * Define if Depreciation is made by value or by rate (percentual)
+	  */
 	public String getA_Table_Rate_Type();
 
     /** Column name A_Term */
     public static final String COLUMNNAME_A_Term = "A_Term";
 
-	/** Set Period/Yearly	  */
+	/** Set Period/Yearly.
+	  * Define if Depreciation is made on Period or Year base
+	  */
 	public void setA_Term (String A_Term);
 
-	/** Get Period/Yearly	  */
+	/** Get Period/Yearly.
+	  * Define if Depreciation is made on Period or Year base
+	  */
 	public String getA_Term();
 
     /** Column name Created */
@@ -135,6 +143,19 @@ public interface I_A_Depreciation_Table_Header
 	  * Optional short description of the record
 	  */
 	public String getDescription();
+
+    /** Column name F3P_Depreciation_Period */
+    public static final String COLUMNNAME_F3P_Depreciation_Period = "F3P_Depreciation_Period";
+
+	/** Set Depreciation Period.
+	  * Depreciation Period for Annual Depreciation
+	  */
+	public void setF3P_Depreciation_Period (int F3P_Depreciation_Period);
+
+	/** Get Depreciation Period.
+	  * Depreciation Period for Annual Depreciation
+	  */
+	public int getF3P_Depreciation_Period();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";

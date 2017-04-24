@@ -30,7 +30,7 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20170418L;
 
     /** Standard Constructor */
     public X_A_Depreciation_Table_Header (Properties ctx, int A_Depreciation_Table_Header_ID, String trxName)
@@ -43,6 +43,7 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 			setA_Table_Rate_Type (null);
 			setA_Term (null);
 			setDescription (null);
+			setF3P_Depreciation_Period (0);
 			setProcessed (false);
         } */
     }
@@ -89,6 +90,14 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 		return (String)get_Value(COLUMNNAME_A_Depreciation_Table_Code);
 	}
 
+    /** Get Record ID/ColumnName
+        @return ID/ColumnName pair
+      */
+    public KeyNamePair getKeyNamePair() 
+    {
+        return new KeyNamePair(get_ID(), getA_Depreciation_Table_Code());
+    }
+
 	/** Set A_Depreciation_Table_Header_ID.
 		@param A_Depreciation_Table_Header_ID A_Depreciation_Table_Header_ID	  */
 	public void setA_Depreciation_Table_Header_ID (int A_Depreciation_Table_Header_ID)
@@ -108,14 +117,6 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 			 return 0;
 		return ii.intValue();
 	}
-
-    /** Get Record ID/ColumnName
-        @return ID/ColumnName pair
-      */
-    public KeyNamePair getKeyNamePair() 
-    {
-        return new KeyNamePair(get_ID(), String.valueOf(getA_Depreciation_Table_Header_ID()));
-    }
 
 	/** Set A_Depreciation_Table_Header_UU.
 		@param A_Depreciation_Table_Header_UU A_Depreciation_Table_Header_UU	  */
@@ -138,7 +139,9 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 	/** Rate = RT */
 	public static final String A_TABLE_RATE_TYPE_Rate = "RT";
 	/** Set Type.
-		@param A_Table_Rate_Type Type	  */
+		@param A_Table_Rate_Type 
+		Define if Depreciation is made by value or by rate (percentual)
+	  */
 	public void setA_Table_Rate_Type (String A_Table_Rate_Type)
 	{
 
@@ -146,7 +149,8 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 	}
 
 	/** Get Type.
-		@return Type	  */
+		@return Define if Depreciation is made by value or by rate (percentual)
+	  */
 	public String getA_Table_Rate_Type () 
 	{
 		return (String)get_Value(COLUMNNAME_A_Table_Rate_Type);
@@ -159,7 +163,9 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 	/** Yearly = YR */
 	public static final String A_TERM_Yearly = "YR";
 	/** Set Period/Yearly.
-		@param A_Term Period/Yearly	  */
+		@param A_Term 
+		Define if Depreciation is made on Period or Year base
+	  */
 	public void setA_Term (String A_Term)
 	{
 
@@ -167,7 +173,8 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 	}
 
 	/** Get Period/Yearly.
-		@return Period/Yearly	  */
+		@return Define if Depreciation is made on Period or Year base
+	  */
 	public String getA_Term () 
 	{
 		return (String)get_Value(COLUMNNAME_A_Term);
@@ -188,6 +195,26 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 	public String getDescription () 
 	{
 		return (String)get_Value(COLUMNNAME_Description);
+	}
+
+	/** Set Depreciation Period.
+		@param F3P_Depreciation_Period 
+		Depreciation Period for Annual Depreciation
+	  */
+	public void setF3P_Depreciation_Period (int F3P_Depreciation_Period)
+	{
+		set_Value (COLUMNNAME_F3P_Depreciation_Period, Integer.valueOf(F3P_Depreciation_Period));
+	}
+
+	/** Get Depreciation Period.
+		@return Depreciation Period for Annual Depreciation
+	  */
+	public int getF3P_Depreciation_Period () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_F3P_Depreciation_Period);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
 	}
 
 	/** Set Processed.

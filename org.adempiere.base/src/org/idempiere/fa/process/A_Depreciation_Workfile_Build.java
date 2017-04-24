@@ -40,20 +40,30 @@ public class A_Depreciation_Workfile_Build extends SvrProcess
 		int cnt_all = 0;
 		if (A_Depreciation_Workfile_ID > 0) {
 			MDepreciationWorkfile wk = new MDepreciationWorkfile(getCtx(), A_Depreciation_Workfile_ID, get_TrxName());
-			wk.buildDepreciation();
-			wk.saveEx();
-			cnt_all = 1;
+			// F3P: checked if succesful, and if so save and update counter
+			if(wk.buildDepreciation())
+			{
+				wk.saveEx();
+				cnt_all = 1;
+			}
 		}
 		else {
 			String whereClause = MDepreciationWorkfile.COLUMNNAME_IsDepreciated + "='Y'";
 			POResultSet<MDepreciationWorkfile>
 			rs = new Query(getCtx(), MDepreciationWorkfile.Table_Name, whereClause, get_TrxName())
+					.setOnlyActiveRecords(true).setClient_ID().setApplyAccessFilter(true)	// F3P: only for this client, only active ones
 						.scroll();
 			try {
 				while(rs.hasNext()) {
 					MDepreciationWorkfile wk = rs.next(); 
 					wk.buildDepreciation();
-					wk.saveEx();
+					// F3P: checked if succesful, and if so save and update counter
+					if(wk.buildDepreciation())
+					{
+						wk.saveEx();
+						commitEx(); // F3P: added commit
+						cnt_all++;
+					}
 				}
 			}
 			finally {

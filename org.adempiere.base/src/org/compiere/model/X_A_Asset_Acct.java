@@ -33,7 +33,7 @@ public class X_A_Asset_Acct extends PO implements I_A_Asset_Acct, I_Persistent
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20170418L;
 
     /** Standard Constructor */
     public X_A_Asset_Acct (Properties ctx, int A_Asset_Acct_ID, String trxName)
@@ -249,11 +249,6 @@ public class X_A_Asset_Acct extends PO implements I_A_Asset_Acct, I_Persistent
 		return ii.intValue();
 	}
 
-	public org.compiere.model.I_A_Depreciation_Convention getA_Depreciation_Conv_F() throws RuntimeException
-    {
-		return (org.compiere.model.I_A_Depreciation_Convention)MTable.get(getCtx(), org.compiere.model.I_A_Depreciation_Convention.Table_Name)
-			.getPO(getA_Depreciation_Conv_F_ID(), get_TrxName());	}
-
 	/** Set Depreciation Convention (fiscal).
 		@param A_Depreciation_Conv_F_ID Depreciation Convention (fiscal)	  */
 	public void setA_Depreciation_Conv_F_ID (int A_Depreciation_Conv_F_ID)
@@ -273,11 +268,6 @@ public class X_A_Asset_Acct extends PO implements I_A_Asset_Acct, I_Persistent
 			 return 0;
 		return ii.intValue();
 	}
-
-	public org.compiere.model.I_A_Depreciation_Convention getA_Depreciation_Conv() throws RuntimeException
-    {
-		return (org.compiere.model.I_A_Depreciation_Convention)MTable.get(getCtx(), org.compiere.model.I_A_Depreciation_Convention.Table_Name)
-			.getPO(getA_Depreciation_Conv_ID(), get_TrxName());	}
 
 	/** Set Convention Type.
 		@param A_Depreciation_Conv_ID Convention Type	  */
@@ -299,11 +289,6 @@ public class X_A_Asset_Acct extends PO implements I_A_Asset_Acct, I_Persistent
 		return ii.intValue();
 	}
 
-	public org.compiere.model.I_A_Depreciation getA_Depreciation_F() throws RuntimeException
-    {
-		return (org.compiere.model.I_A_Depreciation)MTable.get(getCtx(), org.compiere.model.I_A_Depreciation.Table_Name)
-			.getPO(getA_Depreciation_F_ID(), get_TrxName());	}
-
 	/** Set Depreciation (fiscal).
 		@param A_Depreciation_F_ID Depreciation (fiscal)	  */
 	public void setA_Depreciation_F_ID (int A_Depreciation_F_ID)
@@ -323,11 +308,6 @@ public class X_A_Asset_Acct extends PO implements I_A_Asset_Acct, I_Persistent
 			 return 0;
 		return ii.intValue();
 	}
-
-	public org.compiere.model.I_A_Depreciation getA_Depreciation() throws RuntimeException
-    {
-		return (org.compiere.model.I_A_Depreciation)MTable.get(getCtx(), org.compiere.model.I_A_Depreciation.Table_Name)
-			.getPO(getA_Depreciation_ID(), get_TrxName());	}
 
 	/** Set Depreciation.
 		@param A_Depreciation_ID Depreciation	  */
@@ -387,11 +367,6 @@ public class X_A_Asset_Acct extends PO implements I_A_Asset_Acct, I_Persistent
 		return (String)get_Value(COLUMNNAME_A_Depreciation_Manual_Period);
 	}
 
-	public org.compiere.model.I_A_Depreciation_Method getA_Depreciation_Method_F() throws RuntimeException
-    {
-		return (org.compiere.model.I_A_Depreciation_Method)MTable.get(getCtx(), org.compiere.model.I_A_Depreciation_Method.Table_Name)
-			.getPO(getA_Depreciation_Method_F_ID(), get_TrxName());	}
-
 	/** Set Depreciation Method (fiscal).
 		@param A_Depreciation_Method_F_ID Depreciation Method (fiscal)	  */
 	public void setA_Depreciation_Method_F_ID (int A_Depreciation_Method_F_ID)
@@ -412,11 +387,6 @@ public class X_A_Asset_Acct extends PO implements I_A_Asset_Acct, I_Persistent
 		return ii.intValue();
 	}
 
-	public org.compiere.model.I_A_Depreciation_Method getA_Depreciation_Method() throws RuntimeException
-    {
-		return (org.compiere.model.I_A_Depreciation_Method)MTable.get(getCtx(), org.compiere.model.I_A_Depreciation_Method.Table_Name)
-			.getPO(getA_Depreciation_Method_ID(), get_TrxName());	}
-
 	/** Set Depreciation Method.
 		@param A_Depreciation_Method_ID Depreciation Method	  */
 	public void setA_Depreciation_Method_ID (int A_Depreciation_Method_ID)
@@ -432,6 +402,31 @@ public class X_A_Asset_Acct extends PO implements I_A_Asset_Acct, I_Persistent
 	public int getA_Depreciation_Method_ID () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_A_Depreciation_Method_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_A_Depreciation_Table_Header getA_Depreciation_Table_Hdr_F() throws RuntimeException
+    {
+		return (org.compiere.model.I_A_Depreciation_Table_Header)MTable.get(getCtx(), org.compiere.model.I_A_Depreciation_Table_Header.Table_Name)
+			.getPO(getA_Depreciation_Table_Hdr_F_ID(), get_TrxName());	}
+
+	/** Set Depreciation Table Fiscal.
+		@param A_Depreciation_Table_Hdr_F_ID Depreciation Table Fiscal	  */
+	public void setA_Depreciation_Table_Hdr_F_ID (int A_Depreciation_Table_Hdr_F_ID)
+	{
+		if (A_Depreciation_Table_Hdr_F_ID < 1) 
+			set_Value (COLUMNNAME_A_Depreciation_Table_Hdr_F_ID, null);
+		else 
+			set_Value (COLUMNNAME_A_Depreciation_Table_Hdr_F_ID, Integer.valueOf(A_Depreciation_Table_Hdr_F_ID));
+	}
+
+	/** Get Depreciation Table Fiscal.
+		@return Depreciation Table Fiscal	  */
+	public int getA_Depreciation_Table_Hdr_F_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_A_Depreciation_Table_Hdr_F_ID);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
@@ -979,6 +974,8 @@ public class X_A_Asset_Acct extends PO implements I_A_Asset_Acct, I_Persistent
 	public static final String POSTINGTYPE_Statistical = "S";
 	/** Reservation = R */
 	public static final String POSTINGTYPE_Reservation = "R";
+	/** Competence = C */
+	public static final String POSTINGTYPE_Competence = "C";
 	/** Set PostingType.
 		@param PostingType 
 		The type of posted amount for the transaction

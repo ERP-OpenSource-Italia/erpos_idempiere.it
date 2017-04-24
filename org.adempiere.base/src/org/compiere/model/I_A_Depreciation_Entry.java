@@ -191,6 +191,15 @@ public interface I_A_Depreciation_Entry
 	  */
 	public Timestamp getDateDoc();
 
+    /** Column name DepreciationDate */
+    public static final String COLUMNNAME_DepreciationDate = "DepreciationDate";
+
+	/** Set Depreciation Date	  */
+	public void setDepreciationDate (Timestamp DepreciationDate);
+
+	/** Get Depreciation Date	  */
+	public Timestamp getDepreciationDate();
+
     /** Column name Description */
     public static final String COLUMNNAME_Description = "Description";
 
@@ -268,6 +277,15 @@ public interface I_A_Depreciation_Entry
 	  * Indicates if this document requires approval
 	  */
 	public boolean isApproved();
+
+    /** Column name IsDepExpOutPeriod */
+    public static final String COLUMNNAME_IsDepExpOutPeriod = "IsDepExpOutPeriod";
+
+	/** Set Registrazioni di ammortamento fuori periodo	  */
+	public void setIsDepExpOutPeriod (boolean IsDepExpOutPeriod);
+
+	/** Get Registrazioni di ammortamento fuori periodo	  */
+	public boolean isDepExpOutPeriod();
 
     /** Column name Posted */
     public static final String COLUMNNAME_Posted = "Posted";

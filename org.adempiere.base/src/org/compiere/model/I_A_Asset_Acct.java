@@ -135,8 +135,6 @@ public interface I_A_Asset_Acct
 	/** Get Depreciation Convention (fiscal)	  */
 	public int getA_Depreciation_Conv_F_ID();
 
-	public org.compiere.model.I_A_Depreciation_Convention getA_Depreciation_Conv_F() throws RuntimeException;
-
     /** Column name A_Depreciation_Conv_ID */
     public static final String COLUMNNAME_A_Depreciation_Conv_ID = "A_Depreciation_Conv_ID";
 
@@ -145,8 +143,6 @@ public interface I_A_Asset_Acct
 
 	/** Get Convention Type	  */
 	public int getA_Depreciation_Conv_ID();
-
-	public org.compiere.model.I_A_Depreciation_Convention getA_Depreciation_Conv() throws RuntimeException;
 
     /** Column name A_Depreciation_F_ID */
     public static final String COLUMNNAME_A_Depreciation_F_ID = "A_Depreciation_F_ID";
@@ -157,8 +153,6 @@ public interface I_A_Asset_Acct
 	/** Get Depreciation (fiscal)	  */
 	public int getA_Depreciation_F_ID();
 
-	public org.compiere.model.I_A_Depreciation getA_Depreciation_F() throws RuntimeException;
-
     /** Column name A_Depreciation_ID */
     public static final String COLUMNNAME_A_Depreciation_ID = "A_Depreciation_ID";
 
@@ -167,8 +161,6 @@ public interface I_A_Asset_Acct
 
 	/** Get Depreciation	  */
 	public int getA_Depreciation_ID();
-
-	public org.compiere.model.I_A_Depreciation getA_Depreciation() throws RuntimeException;
 
     /** Column name A_Depreciation_Manual_Amount */
     public static final String COLUMNNAME_A_Depreciation_Manual_Amount = "A_Depreciation_Manual_Amount";
@@ -197,8 +189,6 @@ public interface I_A_Asset_Acct
 	/** Get Depreciation Method (fiscal)	  */
 	public int getA_Depreciation_Method_F_ID();
 
-	public org.compiere.model.I_A_Depreciation_Method getA_Depreciation_Method_F() throws RuntimeException;
-
     /** Column name A_Depreciation_Method_ID */
     public static final String COLUMNNAME_A_Depreciation_Method_ID = "A_Depreciation_Method_ID";
 
@@ -208,7 +198,16 @@ public interface I_A_Asset_Acct
 	/** Get Depreciation Method	  */
 	public int getA_Depreciation_Method_ID();
 
-	public org.compiere.model.I_A_Depreciation_Method getA_Depreciation_Method() throws RuntimeException;
+    /** Column name A_Depreciation_Table_Hdr_F_ID */
+    public static final String COLUMNNAME_A_Depreciation_Table_Hdr_F_ID = "A_Depreciation_Table_Hdr_F_ID";
+
+	/** Set Depreciation Table Fiscal	  */
+	public void setA_Depreciation_Table_Hdr_F_ID (int A_Depreciation_Table_Hdr_F_ID);
+
+	/** Get Depreciation Table Fiscal	  */
+	public int getA_Depreciation_Table_Hdr_F_ID();
+
+	public org.compiere.model.I_A_Depreciation_Table_Header getA_Depreciation_Table_Hdr_F() throws RuntimeException;
 
     /** Column name A_Depreciation_Table_Header_ID */
     public static final String COLUMNNAME_A_Depreciation_Table_Header_ID = "A_Depreciation_Table_Header_ID";

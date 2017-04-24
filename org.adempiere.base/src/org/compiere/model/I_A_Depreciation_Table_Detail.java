@@ -85,6 +85,17 @@ public interface I_A_Depreciation_Table_Detail
 	/** Get A_Depreciation_Table_Detail_UU	  */
 	public String getA_Depreciation_Table_Detail_UU();
 
+    /** Column name A_Depreciation_Table_Header_ID */
+    public static final String COLUMNNAME_A_Depreciation_Table_Header_ID = "A_Depreciation_Table_Header_ID";
+
+	/** Set A_Depreciation_Table_Header_ID	  */
+	public void setA_Depreciation_Table_Header_ID (int A_Depreciation_Table_Header_ID);
+
+	/** Get A_Depreciation_Table_Header_ID	  */
+	public int getA_Depreciation_Table_Header_ID();
+
+	public org.compiere.model.I_A_Depreciation_Table_Header getA_Depreciation_Table_Header() throws RuntimeException;
+
     /** Column name AD_Org_ID */
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
@@ -110,10 +121,14 @@ public interface I_A_Depreciation_Table_Detail
     /** Column name A_Table_Rate_Type */
     public static final String COLUMNNAME_A_Table_Rate_Type = "A_Table_Rate_Type";
 
-	/** Set Type	  */
+	/** Set Type.
+	  * Define if Depreciation is made by value or by rate (percentual)
+	  */
 	public void setA_Table_Rate_Type (String A_Table_Rate_Type);
 
-	/** Get Type	  */
+	/** Get Type.
+	  * Define if Depreciation is made by value or by rate (percentual)
+	  */
 	public String getA_Table_Rate_Type();
 
     /** Column name Created */

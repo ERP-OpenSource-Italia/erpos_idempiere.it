@@ -33,7 +33,7 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20170418L;
 
     /** Standard Constructor */
     public X_A_Asset_Addition (Properties ctx, int A_Asset_Addition_ID, String trxName)
@@ -61,6 +61,7 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
 // 'INV'
 			setAssetAmtEntered (Env.ZERO);
 // 0
+			setAssetSourceTaxAmt (Env.ZERO);
 			setAssetValueAmt (Env.ZERO);
 			setC_ConversionType_ID (0);
 			setC_Currency_ID (0);
@@ -401,7 +402,7 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
 		@param AssetSourceAmt Source Amount	  */
 	public void setAssetSourceAmt (BigDecimal AssetSourceAmt)
 	{
-		set_Value (COLUMNNAME_AssetSourceAmt, AssetSourceAmt);
+		set_ValueNoCheck (COLUMNNAME_AssetSourceAmt, AssetSourceAmt);
 	}
 
 	/** Get Source Amount.
@@ -409,6 +410,26 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
 	public BigDecimal getAssetSourceAmt () 
 	{
 		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_AssetSourceAmt);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
+	}
+
+	/** Set Source Tax Amount.
+		@param AssetSourceTaxAmt 
+		Source Tax Due to sales Tax
+	  */
+	public void setAssetSourceTaxAmt (BigDecimal AssetSourceTaxAmt)
+	{
+		set_Value (COLUMNNAME_AssetSourceTaxAmt, AssetSourceTaxAmt);
+	}
+
+	/** Get Source Tax Amount.
+		@return Source Tax Due to sales Tax
+	  */
+	public BigDecimal getAssetSourceTaxAmt () 
+	{
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_AssetSourceTaxAmt);
 		if (bd == null)
 			 return Env.ZERO;
 		return bd;
@@ -886,11 +907,6 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
 		return ii.intValue();
 	}
 
-	public org.compiere.model.I_I_FixedAsset getI_FixedAsset() throws RuntimeException
-    {
-		return (org.compiere.model.I_I_FixedAsset)MTable.get(getCtx(), org.compiere.model.I_I_FixedAsset.Table_Name)
-			.getPO(getI_FixedAsset_ID(), get_TrxName());	}
-
 	/** Set Imported Fixed Asset.
 		@param I_FixedAsset_ID Imported Fixed Asset	  */
 	public void setI_FixedAsset_ID (int I_FixedAsset_ID)
@@ -1131,6 +1147,8 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
 	public static final String POSTINGTYPE_Statistical = "S";
 	/** Reservation = R */
 	public static final String POSTINGTYPE_Reservation = "R";
+	/** Competence = C */
+	public static final String POSTINGTYPE_Competence = "C";
 	/** Set PostingType.
 		@param PostingType 
 		The type of posted amount for the transaction

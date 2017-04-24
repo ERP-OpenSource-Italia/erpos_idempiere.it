@@ -1,6 +1,6 @@
 /******************************************************************************
- * Product: iDempiere ERP & CRM Smart Business Solution                       *
- * Copyright (C) 1999-2012 ComPiere, Inc. All Rights Reserved.                *
+ * Product: Adempiere ERP & CRM Smart Business Solution                       *
+ * Copyright (C) 1999-2007 ComPiere, Inc. All Rights Reserved.                *
  * This program is free software, you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
  * by the Free Software Foundation. This program is distributed in the hope   *
@@ -21,8 +21,8 @@ import java.sql.Timestamp;
 import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for A_Asset_Disposed
- *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @author Adempiere (generated) 
+ *  @version Release 3.6.0LTS
  */
 public interface I_A_Asset_Disposed 
 {
@@ -31,13 +31,13 @@ public interface I_A_Asset_Disposed
     public static final String Table_Name = "A_Asset_Disposed";
 
     /** AD_Table_ID=53127 */
-    public static final int Table_ID = 53127;
+    public static final int Table_ID = MTable.getTable_ID(Table_Name);
 
     KeyNamePair Model = new KeyNamePair(Table_ID, Table_Name);
 
-    /** AccessLevel = 3 - Client - Org 
+    /** AccessLevel = 7 - System - Client - Org 
      */
-    BigDecimal accessLevel = BigDecimal.valueOf(3);
+    BigDecimal accessLevel = BigDecimal.valueOf(7);
 
     /** Load Meta Data */
 
@@ -80,20 +80,11 @@ public interface I_A_Asset_Disposed
     /** Column name A_Asset_Disposed_ID */
     public static final String COLUMNNAME_A_Asset_Disposed_ID = "A_Asset_Disposed_ID";
 
-	/** Set Asset Disposed	  */
+	/** Set Disposed Asset	  */
 	public void setA_Asset_Disposed_ID (int A_Asset_Disposed_ID);
 
-	/** Get Asset Disposed	  */
+	/** Get Disposed Asset	  */
 	public int getA_Asset_Disposed_ID();
-
-    /** Column name A_Asset_Disposed_UU */
-    public static final String COLUMNNAME_A_Asset_Disposed_UU = "A_Asset_Disposed_UU";
-
-	/** Set A_Asset_Disposed_UU	  */
-	public void setA_Asset_Disposed_UU (String A_Asset_Disposed_UU);
-
-	/** Get A_Asset_Disposed_UU	  */
-	public String getA_Asset_Disposed_UU();
 
     /** Column name A_Asset_ID */
     public static final String COLUMNNAME_A_Asset_ID = "A_Asset_ID";
@@ -108,7 +99,7 @@ public interface I_A_Asset_Disposed
 	  */
 	public int getA_Asset_ID();
 
-	public org.compiere.model.I_A_Asset getA_Asset() throws RuntimeException;
+	public I_A_Asset getA_Asset() throws RuntimeException;
 
     /** Column name A_Asset_Status */
     public static final String COLUMNNAME_A_Asset_Status = "A_Asset_Status";
@@ -128,7 +119,7 @@ public interface I_A_Asset_Disposed
 	/** Get Asset Trade	  */
 	public int getA_Asset_Trade_ID();
 
-	public org.compiere.model.I_A_Asset getA_Asset_Trade() throws RuntimeException;
+	public I_A_Asset getA_Asset_Trade() throws RuntimeException;
 
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
@@ -150,28 +141,28 @@ public interface I_A_Asset_Disposed
     /** Column name A_Disposed_Date */
     public static final String COLUMNNAME_A_Disposed_Date = "A_Disposed_Date";
 
-	/** Set Disposed Date	  */
+	/** Set A_Disposed_Date	  */
 	public void setA_Disposed_Date (Timestamp A_Disposed_Date);
 
-	/** Get Disposed Date	  */
+	/** Get A_Disposed_Date	  */
 	public Timestamp getA_Disposed_Date();
 
     /** Column name A_Disposed_Method */
     public static final String COLUMNNAME_A_Disposed_Method = "A_Disposed_Method";
 
-	/** Set Disposed Method	  */
+	/** Set A_Disposed_Method	  */
 	public void setA_Disposed_Method (String A_Disposed_Method);
 
-	/** Get Disposed Method	  */
+	/** Get A_Disposed_Method	  */
 	public String getA_Disposed_Method();
 
     /** Column name A_Disposed_Reason */
     public static final String COLUMNNAME_A_Disposed_Reason = "A_Disposed_Reason";
 
-	/** Set Disposed Reason	  */
+	/** Set A_Disposed_Reason	  */
 	public void setA_Disposed_Reason (String A_Disposed_Reason);
 
-	/** Get Disposed Reason	  */
+	/** Get A_Disposed_Reason	  */
 	public String getA_Disposed_Reason();
 
     /** Column name AD_Org_ID */
@@ -190,41 +181,11 @@ public interface I_A_Asset_Disposed
     /** Column name A_Proceeds */
     public static final String COLUMNNAME_A_Proceeds = "A_Proceeds";
 
-	/** Set Asset Proceeds	  */
+	/** Set Proceeds	  */
 	public void setA_Proceeds (BigDecimal A_Proceeds);
 
-	/** Get Asset Proceeds	  */
+	/** Get Proceeds	  */
 	public BigDecimal getA_Proceeds();
-
-    /** Column name C_DocType_ID */
-    public static final String COLUMNNAME_C_DocType_ID = "C_DocType_ID";
-
-	/** Set Document Type.
-	  * Document type or rules
-	  */
-	public void setC_DocType_ID (int C_DocType_ID);
-
-	/** Get Document Type.
-	  * Document type or rules
-	  */
-	public int getC_DocType_ID();
-
-	public org.compiere.model.I_C_DocType getC_DocType() throws RuntimeException;
-
-    /** Column name C_Invoice_ID */
-    public static final String COLUMNNAME_C_Invoice_ID = "C_Invoice_ID";
-
-	/** Set Invoice.
-	  * Invoice Identifier
-	  */
-	public void setC_Invoice_ID (int C_Invoice_ID);
-
-	/** Get Invoice.
-	  * Invoice Identifier
-	  */
-	public int getC_Invoice_ID();
-
-	public org.compiere.model.I_C_Invoice getC_Invoice() throws RuntimeException;
 
     /** Column name C_InvoiceLine_ID */
     public static final String COLUMNNAME_C_InvoiceLine_ID = "C_InvoiceLine_ID";
@@ -239,7 +200,7 @@ public interface I_A_Asset_Disposed
 	  */
 	public int getC_InvoiceLine_ID();
 
-	public org.compiere.model.I_C_InvoiceLine getC_InvoiceLine() throws RuntimeException;
+	public I_C_InvoiceLine getC_InvoiceLine() throws RuntimeException;
 
     /** Column name C_Period_ID */
     public static final String COLUMNNAME_C_Period_ID = "C_Period_ID";
@@ -254,7 +215,7 @@ public interface I_A_Asset_Disposed
 	  */
 	public int getC_Period_ID();
 
-	public org.compiere.model.I_C_Period getC_Period() throws RuntimeException;
+	public I_C_Period getC_Period() throws RuntimeException;
 
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
@@ -358,6 +319,15 @@ public interface I_A_Asset_Disposed
 
 	/** Get Expense	  */
 	public BigDecimal getExpense();
+
+    /** Column name F3P_SaleValue */
+    public static final String COLUMNNAME_F3P_SaleValue = "F3P_SaleValue";
+
+	/** Set Sale Value	  */
+	public void setF3P_SaleValue (BigDecimal F3P_SaleValue);
+
+	/** Get Sale Value	  */
+	public BigDecimal getF3P_SaleValue();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";

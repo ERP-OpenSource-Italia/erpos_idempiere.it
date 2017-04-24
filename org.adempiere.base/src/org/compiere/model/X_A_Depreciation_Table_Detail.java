@@ -32,7 +32,7 @@ public class X_A_Depreciation_Table_Detail extends PO implements I_A_Depreciatio
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20170418L;
 
     /** Standard Constructor */
     public X_A_Depreciation_Table_Detail (Properties ctx, int A_Depreciation_Table_Detail_ID, String trxName)
@@ -43,6 +43,7 @@ public class X_A_Depreciation_Table_Detail extends PO implements I_A_Depreciatio
 			setA_Depreciation_Rate (Env.ZERO);
 			setA_Depreciation_Table_Code (null);
 			setA_Depreciation_Table_Detail_ID (0);
+			setA_Depreciation_Table_Header_ID (0);
 			setA_Period (0);
 			setProcessed (false);
         } */
@@ -97,7 +98,7 @@ public class X_A_Depreciation_Table_Detail extends PO implements I_A_Depreciatio
 		@param A_Depreciation_Table_Code Depreciation Code	  */
 	public void setA_Depreciation_Table_Code (String A_Depreciation_Table_Code)
 	{
-		set_ValueNoCheck (COLUMNNAME_A_Depreciation_Table_Code, A_Depreciation_Table_Code);
+		set_Value (COLUMNNAME_A_Depreciation_Table_Code, A_Depreciation_Table_Code);
 	}
 
 	/** Get Depreciation Code.
@@ -149,6 +150,31 @@ public class X_A_Depreciation_Table_Detail extends PO implements I_A_Depreciatio
 		return (String)get_Value(COLUMNNAME_A_Depreciation_Table_Detail_UU);
 	}
 
+	public org.compiere.model.I_A_Depreciation_Table_Header getA_Depreciation_Table_Header() throws RuntimeException
+    {
+		return (org.compiere.model.I_A_Depreciation_Table_Header)MTable.get(getCtx(), org.compiere.model.I_A_Depreciation_Table_Header.Table_Name)
+			.getPO(getA_Depreciation_Table_Header_ID(), get_TrxName());	}
+
+	/** Set A_Depreciation_Table_Header_ID.
+		@param A_Depreciation_Table_Header_ID A_Depreciation_Table_Header_ID	  */
+	public void setA_Depreciation_Table_Header_ID (int A_Depreciation_Table_Header_ID)
+	{
+		if (A_Depreciation_Table_Header_ID < 1) 
+			set_ValueNoCheck (COLUMNNAME_A_Depreciation_Table_Header_ID, null);
+		else 
+			set_ValueNoCheck (COLUMNNAME_A_Depreciation_Table_Header_ID, Integer.valueOf(A_Depreciation_Table_Header_ID));
+	}
+
+	/** Get A_Depreciation_Table_Header_ID.
+		@return A_Depreciation_Table_Header_ID	  */
+	public int getA_Depreciation_Table_Header_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_A_Depreciation_Table_Header_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
 	/** Set Asset Period.
 		@param A_Period Asset Period	  */
 	public void setA_Period (int A_Period)
@@ -173,7 +199,9 @@ public class X_A_Depreciation_Table_Detail extends PO implements I_A_Depreciatio
 	/** Rate = RT */
 	public static final String A_TABLE_RATE_TYPE_Rate = "RT";
 	/** Set Type.
-		@param A_Table_Rate_Type Type	  */
+		@param A_Table_Rate_Type 
+		Define if Depreciation is made by value or by rate (percentual)
+	  */
 	public void setA_Table_Rate_Type (String A_Table_Rate_Type)
 	{
 
@@ -181,7 +209,8 @@ public class X_A_Depreciation_Table_Detail extends PO implements I_A_Depreciatio
 	}
 
 	/** Get Type.
-		@return Type	  */
+		@return Define if Depreciation is made by value or by rate (percentual)
+	  */
 	public String getA_Table_Rate_Type () 
 	{
 		return (String)get_Value(COLUMNNAME_A_Table_Rate_Type);

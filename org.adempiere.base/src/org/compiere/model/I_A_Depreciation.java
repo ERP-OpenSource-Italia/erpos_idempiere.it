@@ -41,6 +41,15 @@ public interface I_A_Depreciation
 
     /** Load Meta Data */
 
+    /** Column name A_Asset_Life_Years_Min */
+    public static final String COLUMNNAME_A_Asset_Life_Years_Min = "A_Asset_Life_Years_Min";
+
+	/** Set Life years (min)	  */
+	public void setA_Asset_Life_Years_Min (int A_Asset_Life_Years_Min);
+
+	/** Get Life years (min)	  */
+	public int getA_Asset_Life_Years_Min();
+
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
@@ -118,6 +127,19 @@ public interface I_A_Depreciation
 	  */
 	public String getDescription();
 
+    /** Column name FixMonthOffset */
+    public static final String COLUMNNAME_FixMonthOffset = "FixMonthOffset";
+
+	/** Set Fix month offset.
+	  * Number of months (0=same, 1=following)
+	  */
+	public void setFixMonthOffset (int FixMonthOffset);
+
+	/** Get Fix month offset.
+	  * Number of months (0=same, 1=following)
+	  */
+	public int getFixMonthOffset();
+
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";
 
@@ -181,4 +203,17 @@ public interface I_A_Depreciation
 	  * User who updated this records
 	  */
 	public int getUpdatedBy();
+
+    /** Column name Value */
+    public static final String COLUMNNAME_Value = "Value";
+
+	/** Set Search Key.
+	  * Search key for the record in the format required - must be unique
+	  */
+	public void setValue (String Value);
+
+	/** Get Search Key.
+	  * Search key for the record in the format required - must be unique
+	  */
+	public String getValue();
 }

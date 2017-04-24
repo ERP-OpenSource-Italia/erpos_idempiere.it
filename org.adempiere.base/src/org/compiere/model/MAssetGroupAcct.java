@@ -138,4 +138,19 @@ public class MAssetGroupAcct extends X_A_Asset_Group_Acct
 			return false;
 		return is_ValueChanged(index);
 	}
+	
+	//F3P:Start
+	@Override
+	public boolean hasColumn(String sColumnName)
+	{
+		boolean bExists = false;
+		
+		int index = get_ColumnIndex(sColumnName);
+		
+		if(index >= 0)
+			bExists = true;
+		
+		return bExists;
+	}
+	//F3P:End
 }	//	MAssetGroupAcct

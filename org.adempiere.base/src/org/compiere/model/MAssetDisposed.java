@@ -22,7 +22,10 @@ import org.idempiere.fa.util.POCacheLocal;
 /**
  * Asset Disposal Model
  * @author Teo Sarca, SC ARHIPAC SERVICE SRL
+ * 
+ * @author Silvano Trinchero, FreePath srl (www.freepath.it)
  */
+
 public class MAssetDisposed extends X_A_Asset_Disposed
 implements DocAction
 {
@@ -228,6 +231,16 @@ implements DocAction
 			}
 			else if (A_DISPOSED_METHOD_PartialRetirement.equals(method))
 			{
+				createDisposal();
+			}
+			// F3P: added 'sale' as a disposal method
+			else if(A_DISPOSED_METHOD_Sale.equals(method))
+			{
+				if(getA_Disposal_Amt().equals(getA_Asset_Cost()))
+					asset.changeStatus(MAsset.A_ASSET_STATUS_Sold, null);
+				else
+					asset.changeStatus(MAsset.A_ASSET_STATUS_Activated,null);
+				
 				createDisposal();
 			}
 			else
