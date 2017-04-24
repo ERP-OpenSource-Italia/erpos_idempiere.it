@@ -1,12 +1,13 @@
 package it.idempiere.base.util;
 
+import java.io.File;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.compiere.model.MSysConfig;
-import org.compiere.util.Env;
+import org.compiere.util.Ini;
 
 /** Variabili di configurazione applicabili all'implementazione standard iDempiere
  *  
@@ -50,14 +51,12 @@ public class STDSysConfig
 	/** F3P: show only order with service line */
 	public static final String F3P_CREATEFROMORDER_ONLYSERVICE = "F3P_CREATEFROMORDER_ONLYSERVICE";	
 	
-	//F3P:
   	public static final String USERELEM1_SQL_CONF = "REPORTSOURCE_USERELEMENT1_VALUESQL";
   	public static final String USERELEM2_SQL_CONF = "REPORTSOURCE_USERELEMENT2_VALUESQL";
   	
-  	public static final String  F3P_EXPENSE_PROCESS_BREAKBYBP = "F3P_EXPENSE_PROCESS_BREAKBYBP";
-  	public static final String	SYS_TAX_ID = "F3P_EXPENSE_PROCESS_TAX";
+  	public static final String F3P_EXPENSE_PROCESS_BREAKBYBP = "F3P_EXPENSE_PROCESS_BREAKBYBP";
+  	public static final String SYS_TAX_ID = "F3P_EXPENSE_PROCESS_TAX";
  	public static final String MANDATORY_SALESREGION = "F3P_BP_MANDATORYSALESREGION";
-  	//F3P: End
  	
  	public static final String SYSCFG_OVERRIDE_LINE_NO = "F3P_OVERRIDE_GENERATED_INVOICE_LINE_NO";
  	public static final String SYSCFG_CHARGE_TO_ADD = "F3P_DELIVERY_CHARGE_TO_ADD";
@@ -65,6 +64,8 @@ public class STDSysConfig
  	
  	public static final String FA_ADDITION_ALLOW_ACCDEPR_ALWAYS = "FA_ADDITION_ALLOW_ACCDEPR_ALWAYS";
  	public static final String FA_DEPRECIATIONEXP_SKIPZEROVALUES = "FA_DEPRECIATIONEXP_SKIPZEROVALUES";
+ 	
+ 	public static String REPORT_HOME_KEY = "REPORT_HOME_PATH";
  	
  	public static String getOverrideLineNo(int AD_Client_ID,int AD_Org_ID)
  	{
@@ -312,7 +313,7 @@ public class STDSysConfig
 	 * @param AD_Org_ID
 	 * @return create or not
 	 */
-	public static final boolean isOrderCreateReverse(int AD_Client_ID,int AD_Org_ID)
+	public static boolean isOrderCreateReverse(int AD_Client_ID,int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(F3P_CREATE_REVERSE_ORDER, true, AD_Client_ID, AD_Org_ID);
 	}
@@ -345,4 +346,16 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(FA_DEPRECIATIONEXP_SKIPZEROVALUES, false, AD_Client_ID, AD_Org_ID);
 	}
+	
+	/** Check this variable before create the reverse for onCreditOrder,warehouseOrder or POSOrder
+	 * 
+	 * @param AD_Client_ID
+	 * @param AD_Org_ID
+	 * @return report home path
+	 */
+	public static String getReportHome(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getValue(REPORT_HOME_KEY, Ini.getAdempiereHome() + File.separator + "reports",AD_Client_ID,AD_Org_ID);
+	}
+	
 }

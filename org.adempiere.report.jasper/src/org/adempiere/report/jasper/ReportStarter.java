@@ -74,6 +74,7 @@ import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.compiere.utils.DigestOfFile;
 
+import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.StartedFromPrintPreview;
 import net.sf.jasperreports.engine.DefaultJasperReportsContext;
 import net.sf.jasperreports.engine.JRException;
@@ -136,8 +137,6 @@ public class ReportStarter implements ProcessCall, ClientProcess
 	/** Logger */
 	private static CLogger log = CLogger.getCLogger(ReportStarter.class);
 	// private static File REPORT_HOME = null; F3P: changed to string	
-	private static String REPORT_HOME_KEY = "REPORT_HOME_PATH";
-	
 	// F3P: standard jr parameters
 	private static String JRSTDPARAM_IGNORE_PAGINATION = "IS_IGNORE_PAGINATION";
 
@@ -159,7 +158,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
 		if (sReportHome == null)
 		{
 			//F3P: Try to find report home in AD_SYSCONFIG table. If it isn't presents use a default
-			sReportHome = MSysConfig.getValue(REPORT_HOME_KEY, Ini.getAdempiereHome() + File.separator + "reports",AD_Client_ID,AD_Org_ID);
+			sReportHome = STDSysConfig.getReportHome(AD_Client_ID, AD_Org_ID);
 		}
 		
 		if(sReportHome.toLowerCase().startsWith("http"))
@@ -444,7 +443,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
         }
 
         // nectosoft: translate report variables
-        Env.setContext(ctx, "#"+REPORT_HOME_KEY, reportHome);
+        Env.setContext(ctx, "#"+STDSysConfig.REPORT_HOME_KEY, reportHome);
         reportPath = Env.parseContext(ctx, 0, reportPath, false, true);
         
 		JasperData data = null;
