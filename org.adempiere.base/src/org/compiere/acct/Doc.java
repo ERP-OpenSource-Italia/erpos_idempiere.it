@@ -2307,4 +2307,12 @@ public abstract class Doc
 	public ArrayList<Fact> getFacts() {
 		return m_fact;
 	}
+	
+	//F3P
+	public DocLine[] getDocLines()
+	{
+		return p_lines;
+	}
+	//F3P end
+	
 }   //  Doc
