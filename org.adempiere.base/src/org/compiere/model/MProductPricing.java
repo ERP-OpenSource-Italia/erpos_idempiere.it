@@ -20,12 +20,17 @@ import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.logging.Level;
 
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Trace;
+
+import it.idempiere.base.model.CompositeDiscount;
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *  Product Price Calculations
@@ -51,10 +56,28 @@ public class MProductPricing
 		if (Qty != null && Env.ZERO.compareTo(Qty) != 0)
 			m_Qty = Qty;
 		m_isSOTrx = isSOTrx;
-		int thereAreVendorBreakRecords = DB.getSQLValue(null, 
-				"SELECT count(M_Product_ID) FROM M_ProductPriceVendorBreak WHERE M_Product_ID=? AND (C_BPartner_ID=? OR C_BPartner_ID is NULL)",
+		
+		// F3P: management of 'flag' like value to exclude non-standard price breaks
+		String sql = "SELECT count(M_Product_ID) FROM M_ProductPriceVendorBreak WHERE M_Product_ID=? AND (C_BPartner_ID=? OR C_BPartner_ID is NULL)";
+		int iTreshold = STDSysConfig.getPriceVendorBreakIgnoreTreshold();
+		
+		if(iTreshold > 0)
+		{
+			sql += "AND BreakValue < " + iTreshold;
+		}
+		//F3P. end
+		int thereAreVendorBreakRecords = DB.getSQLValue(null, sql,
 				m_M_Product_ID, m_C_BPartner_ID);
 		m_useVendorBreak = thereAreVendorBreakRecords > 0;
+		
+		// F3P: is extended discount enabled ?
+		int AD_Client_ID = Env.getAD_Client_ID(Env.getCtx());
+		m_isExtDiscount = STDSysConfig.isAdvancedDiscountMan(AD_Client_ID);
+		
+		// F3P: init formatter
+		
+		DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Env.getLanguage(Env.getCtx()).getLocale()); 
+		m_formatDiscount = new DecimalFormat(FORMAT_DISCOUNT,symbols);
 	}	//	MProductPricing
 
 	private int 		m_M_Product_ID;
@@ -83,6 +106,17 @@ public class MProductPricing
 	private int 		m_M_Product_Category_ID;
 	private boolean		m_discountSchema = false;
 	private boolean		m_isTaxIncluded = false;
+	
+	// F3P: aggiunta gestione sconti in cascata
+	
+	private String			m_compositeDiscount = ""; 
+	private BigDecimal		m_bdStdDiscount = Env.ZERO;
+	private boolean			m_isExtDiscount = false;
+	private DecimalFormat	m_formatDiscount;
+	
+	private static final String FORMAT_DISCOUNT = "##.##";
+	
+	// F3P end
 
 	/**	Logger			*/
 	protected CLogger	log = CLogger.getCLogger(getClass());
@@ -154,6 +188,7 @@ public class MProductPricing
 			+ " bomPriceLimit(p.M_Product_ID,pv.M_PriceList_Version_ID) AS PriceLimit,"	//	3
 			+ " p.C_UOM_ID,pv.ValidFrom,pl.C_Currency_ID,p.M_Product_Category_ID,"	//	4..7
 			+ " pl.EnforcePriceLimit, pl.IsTaxIncluded "	// 8..9
+			+ " , pp.LIT_StdCompositeDisc, pp.LIT_StdDiscount " // 10..11 F3P: added composite discount
 			+ "FROM M_Product p"
 			+ " INNER JOIN M_ProductPrice pp ON (p.M_Product_ID=pp.M_Product_ID)"
 			+ " INNER JOIN  M_PriceList_Version pv ON (pp.M_PriceList_Version_ID=pv.M_PriceList_Version_ID)"
@@ -189,6 +224,9 @@ public class MProductPricing
 				m_M_Product_Category_ID = rs.getInt(7);
 				m_enforcePriceLimit = "Y".equals(rs.getString(8));
 				m_isTaxIncluded = "Y".equals(rs.getString(9));
+				// F3P: discount from query
+				m_compositeDiscount = rs.getString(CompositeDiscount.COLUMNNAME_LIT_StdCompositeDisc);
+				m_bdStdDiscount = rs.getBigDecimal(CompositeDiscount.COLUMNNAME_LIT_StdDiscount);
 				//
 				if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_Version_ID=" + m_M_PriceList_Version_ID + " - " + m_PriceStd);
 				m_calculated = true;
@@ -270,6 +308,7 @@ public class MProductPricing
 			+ " bomPriceList(p.M_Product_ID,pv.M_PriceList_Version_ID) AS PriceList,"		//	2
 			+ " bomPriceLimit(p.M_Product_ID,pv.M_PriceList_Version_ID) AS PriceLimit,"	//	3
 			+ " p.C_UOM_ID,pv.ValidFrom,pl.C_Currency_ID,p.M_Product_Category_ID,pl.EnforcePriceLimit "	// 4..8
+			+ " ,pp.LIT_StdCompositeDisc, pp.LIT_StdDiscount " // 5..6 F3P: added composite discount
 			+ "FROM M_Product p"
 			+ " INNER JOIN M_ProductPrice pp ON (p.M_Product_ID=pp.M_Product_ID)"
 			+ " INNER JOIN  M_PriceList_Version pv ON (pp.M_PriceList_Version_ID=pv.M_PriceList_Version_ID)"
@@ -312,6 +351,11 @@ public class MProductPricing
 					m_C_Currency_ID = rs.getInt (6);
 					m_M_Product_Category_ID = rs.getInt(7);
 					m_enforcePriceLimit = "Y".equals(rs.getString(8));
+					
+				  // F3P: discount from querys
+					m_compositeDiscount = rs.getString(CompositeDiscount.COLUMNNAME_LIT_StdCompositeDisc);
+					m_bdStdDiscount = rs.getBigDecimal(CompositeDiscount.COLUMNNAME_LIT_StdDiscount);
+					// F3P end
 					//
 					if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_ID=" + m_M_PriceList_ID 
 						+ "(" + plDate + ")" + " - " + m_PriceStd);
@@ -350,6 +394,7 @@ public class MProductPricing
 			+ " bomPriceLimit(p.M_Product_ID,pv.M_PriceList_Version_ID) AS PriceLimit,"	//	3
 			+ " p.C_UOM_ID,pv.ValidFrom,pl.C_Currency_ID,p.M_Product_Category_ID,"	//	4..7
 			+ " pl.EnforcePriceLimit, pl.IsTaxIncluded "	// 8..9
+			+ " ,pp.LIT_StdCompositeDisc, pp.LIT_StdDiscount " // 10..11 F3P: added composite discount			
 			+ "FROM M_Product p"
 			+ " INNER JOIN M_ProductPrice pp ON (p.M_Product_ID=pp.M_Product_ID)"
 			+ " INNER JOIN  M_PriceList_Version pv ON (pp.M_PriceList_Version_ID=pv.M_PriceList_Version_ID)"
@@ -394,6 +439,10 @@ public class MProductPricing
 					m_M_Product_Category_ID = rs.getInt(7);
 					m_enforcePriceLimit = "Y".equals(rs.getString(8));
 					m_isTaxIncluded = "Y".equals(rs.getString(9));
+					// F3P: discount from querys
+					m_compositeDiscount = rs.getString(CompositeDiscount.COLUMNNAME_LIT_StdCompositeDisc);
+					m_bdStdDiscount = rs.getBigDecimal(CompositeDiscount.COLUMNNAME_LIT_StdDiscount);
+					// F3P end
 					//
 					if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_ID=" + m_M_PriceList_ID 
 						+ "(" + plDate + ")" + " - " + m_PriceStd);
@@ -432,6 +481,7 @@ public class MProductPricing
 			+ " pp.PriceLimit,"	//	3
 			+ " p.C_UOM_ID,pv.ValidFrom,pl.C_Currency_ID,p.M_Product_Category_ID,"	//	4..7
 			+ " pl.EnforcePriceLimit, pl.IsTaxIncluded "	// 8..9
+			+ " ,pp.LIT_StdCompositeDisc, pp.LIT_StdDiscount " // 10..11 F3P: added composite discount
 			+ "FROM M_Product p"
 			+ " INNER JOIN M_ProductPriceVendorBreak pp ON (p.M_Product_ID=pp.M_Product_ID)"
 			+ " INNER JOIN  M_PriceList_Version pv ON (pp.M_PriceList_Version_ID=pv.M_PriceList_Version_ID)"
@@ -472,6 +522,10 @@ public class MProductPricing
 				m_M_Product_Category_ID = rs.getInt(7);
 				m_enforcePriceLimit = "Y".equals(rs.getString(8));
 				m_isTaxIncluded = "Y".equals(rs.getString(9));
+				// F3P: discount from query
+				m_compositeDiscount = rs.getString(CompositeDiscount.COLUMNNAME_LIT_StdCompositeDisc);
+				m_bdStdDiscount = rs.getBigDecimal(CompositeDiscount.COLUMNNAME_LIT_StdDiscount);
+				// F3P end
 				//
 				if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_Version_ID=" + m_M_PriceList_Version_ID + " - " + m_PriceStd);
 				m_calculated = true;
@@ -553,6 +607,7 @@ public class MProductPricing
 			+ " pp.PriceList,"		//	2
 			+ " pp.PriceLimit,"	//	3
 			+ " p.C_UOM_ID,pv.ValidFrom,pl.C_Currency_ID,p.M_Product_Category_ID,pl.EnforcePriceLimit "	// 4..8
+			+ " ,pp.LIT_StdCompositeDisc, pp.LIT_StdDiscount " // 9..10 F3P: added composite discount
 			+ "FROM M_Product p"
 			+ " INNER JOIN M_ProductPriceVendorBreak pp ON (p.M_Product_ID=pp.M_Product_ID)"
 			+ " INNER JOIN  M_PriceList_Version pv ON (pp.M_PriceList_Version_ID=pv.M_PriceList_Version_ID)"
@@ -599,6 +654,10 @@ public class MProductPricing
 					m_C_Currency_ID = rs.getInt (6);
 					m_M_Product_Category_ID = rs.getInt(7);
 					m_enforcePriceLimit = "Y".equals(rs.getString(8));
+					// F3P: discount from querys
+					m_compositeDiscount = rs.getString(CompositeDiscount.COLUMNNAME_LIT_StdCompositeDisc);
+					m_bdStdDiscount = rs.getBigDecimal(CompositeDiscount.COLUMNNAME_LIT_StdDiscount);
+					// F3P end	
 					//
 					if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_ID=" + m_M_PriceList_ID 
 						+ "(" + plDate + ")" + " - " + m_PriceStd);
@@ -637,6 +696,7 @@ public class MProductPricing
 			+ " pp.PriceLimit,"	//	3
 			+ " p.C_UOM_ID,pv.ValidFrom,pl.C_Currency_ID,p.M_Product_Category_ID,"	//	4..7
 			+ " pl.EnforcePriceLimit, pl.IsTaxIncluded "	// 8..9
+			+ " ,pp.LIT_StdCompositeDisc, pp.LIT_StdDiscount " // 10..11 F3P: added composite discount
 			+ "FROM M_Product p"
 			+ " INNER JOIN M_ProductPriceVendorBreak pp ON (p.M_Product_ID=pp.M_Product_ID)"
 			+ " INNER JOIN  M_PriceList_Version pv ON (pp.M_PriceList_Version_ID=pv.M_PriceList_Version_ID)"
@@ -685,6 +745,10 @@ public class MProductPricing
 					m_M_Product_Category_ID = rs.getInt(7);
 					m_enforcePriceLimit = "Y".equals(rs.getString(8));
 					m_isTaxIncluded = "Y".equals(rs.getString(9));
+					// F3P: discount from querys
+					m_compositeDiscount = rs.getString(CompositeDiscount.COLUMNNAME_LIT_StdCompositeDisc);
+					m_bdStdDiscount = rs.getBigDecimal(CompositeDiscount.COLUMNNAME_LIT_StdDiscount);
+					// F3P end	
 					//
 					if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_ID=" + m_M_PriceList_ID 
 						+ "(" + plDate + ")" + " - " + m_PriceStd);
@@ -784,9 +848,57 @@ public class MProductPricing
 		if (sd.get_ID() == 0 || (MDiscountSchema.DISCOUNTTYPE_Breaks.equals(sd.getDiscountType()) && !MDiscountSchema.CUMULATIVELEVEL_Line.equals(sd.getCumulativeLevel())))
 			return;
 		//
-		m_discountSchema = true;		
-		m_PriceStd = sd.calculatePrice(m_Qty, m_PriceStd, m_M_Product_ID, 
-			m_M_Product_Category_ID, FlatDiscount);
+		m_discountSchema = true;
+		
+		// F3P: integrate discount schema with composite discount
+		//  m_PriceStd = sd.calculatePrice(m_Qty, m_PriceStd, m_M_Product_ID, 
+		//  m_M_Product_Category_ID, FlatDiscount);
+
+		if(m_isExtDiscount)
+		{
+			BigDecimal bdDiscount = sd.calculateDiscount(m_Qty, m_PriceStd, m_M_Product_ID, 
+																											m_M_Product_Category_ID, FlatDiscount);
+			
+			if(bdDiscount.signum() != 0)
+			{			
+				if(m_compositeDiscount == null || m_compositeDiscount.length() == 0) 
+				{
+					m_compositeDiscount = formatDiscount(bdDiscount);
+				}
+				else
+				{
+					m_compositeDiscount = m_compositeDiscount + "+" + formatDiscount(bdDiscount);
+				}
+					
+				if(m_bdStdDiscount == null || m_bdStdDiscount.signum() == 0)
+				{
+					// Same formula as composite discount
+					
+					BigDecimal multiplier = Env.ONEHUNDRED.subtract(bdDiscount);
+					m_bdStdDiscount = m_bdStdDiscount.multiply(multiplier);
+					m_bdStdDiscount = m_bdStdDiscount.divide(Env.ONEHUNDRED, 2, BigDecimal.ROUND_HALF_UP);
+				}
+				else
+				{
+					m_bdStdDiscount = bdDiscount;
+				}
+				
+				// F3P: calculate price with formula used by schema discount (copied)
+				// using parsed full discount
+				
+				BigDecimal bdParsed = CompositeDiscount.parseCompositeDiscount(m_compositeDiscount);
+							
+				BigDecimal multiplier = (Env.ONEHUNDRED).subtract(bdParsed);
+				multiplier = multiplier.divide(Env.ONEHUNDRED, 6, BigDecimal.ROUND_HALF_UP);
+				m_PriceStd = m_PriceList.multiply(multiplier);
+			}
+		}
+		else
+		{
+			m_PriceStd = sd.calculatePrice(m_Qty, m_PriceStd, m_M_Product_ID, 
+					m_M_Product_Category_ID, FlatDiscount);
+		}
+		// F3P End
 		
 	}	//	calculateDiscount
 
@@ -797,6 +909,13 @@ public class MProductPricing
 	 */
 	public BigDecimal getDiscount()
 	{
+		// F3P: if ext discount is enabled, use read value instead of calulcated one
+		if(m_isExtDiscount && m_bdStdDiscount != null && m_bdStdDiscount.signum() != 0)
+		{
+			return m_bdStdDiscount;
+		}
+		// F3P end
+				
 		BigDecimal Discount = Env.ZERO;
 		if (m_PriceList.intValue() != 0)
 			Discount = BigDecimal.valueOf((m_PriceList.doubleValue() - m_PriceStd.doubleValue())
@@ -986,4 +1105,34 @@ public class MProductPricing
 		return m_calculated;
 	}	//	isCalculated
 	
+	
+	// F3P: added to format bigdecimal for inclusion in composite
+	protected String formatDiscount(BigDecimal bdDiscount)
+	{
+		bdDiscount = bdDiscount.stripTrailingZeros();
+		return m_formatDiscount.format(bdDiscount);		
+	}
+	
+	// F3P: added to propagate composite discount
+	
+	/**
+	 *  Return the composite discount
+	 * 
+	 * @return composite discount, if populated
+	 */
+	public String getCompositeDiscount()
+	{
+		if (!m_calculated)
+			calculatePrice();
+
+		if(m_isExtDiscount)
+		{
+			return m_compositeDiscount;
+		}
+		else
+		{
+			return "";
+		}
+	}
+	//F3P end
 }	//	MProductPrice

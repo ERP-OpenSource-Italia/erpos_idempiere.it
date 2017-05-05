@@ -65,6 +65,10 @@ public class STDSysConfig
  	public static final String FA_ADDITION_ALLOW_ACCDEPR_ALWAYS = "FA_ADDITION_ALLOW_ACCDEPR_ALWAYS";
  	public static final String FA_DEPRECIATIONEXP_SKIPZEROVALUES = "FA_DEPRECIATIONEXP_SKIPZEROVALUES";
  	
+ 	public static final String PRICEVENDORBREAK_IGNORE_THRESHOLD = "F3P_PRICEVENDORBREAK_IGNORETRESHOLD";
+ 	
+ 	private static final String LIT_ADVANCEDDISCOUNT_MAN = "LIT_ADVANCEDDISCOUNT_MAN";
+ 	
  	public static String REPORT_HOME_KEY = "REPORT_HOME_PATH";
  	
  	public static String getOverrideLineNo(int AD_Client_ID,int AD_Org_ID)
@@ -358,4 +362,14 @@ public class STDSysConfig
 		return MSysConfig.getValue(REPORT_HOME_KEY, Ini.getAdempiereHome() + File.separator + "reports",AD_Client_ID,AD_Org_ID);
 	}
 	
+	
+	public static int getPriceVendorBreakIgnoreTreshold()
+	{
+		return MSysConfig.getIntValue(PRICEVENDORBREAK_IGNORE_THRESHOLD, -1);
+	}	
+	
+	public static boolean isAdvancedDiscountMan(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_ADVANCEDDISCOUNT_MAN, false, AD_Client_ID);
+	}
 }
