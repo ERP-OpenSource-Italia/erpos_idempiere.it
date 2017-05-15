@@ -36,7 +36,9 @@ Author URI: http://www.erp-opensource.it
       	<div class="col-md-5">      	
       		<div class="row">
       			<div class="col-md-12">
-      				<img name="img_idempiere" style="float:right;" src="<%=Prop.getImage("logo_idempiere.png")%>" border="0" />
+      				<a href="<%=Prop.getProperty(Prop.WEBUI_LINK)%>" target="_self">
+      					<img name="img_idempiere" style="float:right;" src="<%=Prop.getImage("logo_idempiere.png")%>" border="0" />
+      				</a>
       			</div>
       		</div>
       		<div class="row">
