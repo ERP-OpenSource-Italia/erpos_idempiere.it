@@ -126,7 +126,8 @@ public class MPaySelectionLine extends X_C_PaySelectionLine
 	 */
 	protected boolean beforeSave (boolean newRecord)
 	{
-		setDifferenceAmt(getOpenAmt().subtract(getPayAmt()).subtract(getDiscountAmt()));
+		//F3P: difference amt already calculated
+		//setDifferenceAmt(getOpenAmt().subtract(getPayAmt()).subtract(getDiscountAmt()));
 		return true;
 	}	//	beforeSave
 	

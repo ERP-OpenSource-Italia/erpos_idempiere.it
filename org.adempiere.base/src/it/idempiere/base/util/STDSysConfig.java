@@ -68,7 +68,10 @@ public class STDSysConfig
  	public static final String PRICEVENDORBREAK_IGNORE_THRESHOLD = "F3P_PRICEVENDORBREAK_IGNORETRESHOLD";
  	
  	private static final String LIT_ADVANCEDDISCOUNT_MAN = "LIT_ADVANCEDDISCOUNT_MAN";
- 	
+
+	//LS variabile per usare data diversa da data fattura per la generazione del progr. pagamenti fattura
+	public static final String LIT_PAYSCHEDULEINV_CUSTOM_DATE_FIELD = "LIT_PAYSCHEDULEINV_CUSTOM_DATE_FIELD";
+	
  	public static String REPORT_HOME_KEY = "REPORT_HOME_PATH";
  	
  	public static String getOverrideLineNo(int AD_Client_ID,int AD_Org_ID)
@@ -371,5 +374,10 @@ public class STDSysConfig
 	public static boolean isAdvancedDiscountMan(int AD_Client_ID)
 	{
 		return MSysConfig.getBooleanValue(LIT_ADVANCEDDISCOUNT_MAN, false, AD_Client_ID);
+	}
+	
+	public static String getInvoicePayScheduleCustomDateField(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getValue(LIT_PAYSCHEDULEINV_CUSTOM_DATE_FIELD, "", AD_Client_ID, AD_Org_ID);
 	}
 }

@@ -37,6 +37,9 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
+
+import it.idempiere.base.model.LITMInOut;
 
 /**
  *  Shipment Model
@@ -177,11 +180,12 @@ public class MInOut extends X_M_InOut implements DocAction
 	 * 	@param setOrder set the order link
 	 *	@return Shipment
 	 */
-	//F3P: aggiunto il parametro bReversal, funzione copiata per mantenere compatibilita'
+	//F3P: aggiunti i parametri bReversal e documentno, funzione copiata per mantenere compatibilita'
 	public static MInOut copyFrom (MInOut from, Timestamp dateDoc, Timestamp dateAcct,
 		int C_DocType_ID, boolean isSOTrx, boolean counter, String trxName, boolean setOrder)
 	{
-		return copyFrom (from, dateDoc, dateAcct, C_DocType_ID, isSOTrx, counter, trxName, setOrder,false);
+		return copyFrom (from, dateDoc, dateAcct, C_DocType_ID, isSOTrx, counter, trxName, 
+				setOrder,false, null);
 	}
 
 	/**
@@ -194,17 +198,23 @@ public class MInOut extends X_M_InOut implements DocAction
 	 * 	@param trxName trx
 	 * 	@param setOrder set the order link
 	 *  @param bReversal if the returned MInOut will be a reversal
+	 *  @param documentNo if not null, it will be used as docNo of the returned MInOut. In this way docSequence are not used and wasted
 	 *	@return Shipment
 	 */
-	//F3P: aggiunto il parametro bReversal
+	//F3P: aggiunti i parametri bReversal e documentno
 	public static MInOut copyFrom (MInOut from, Timestamp dateDoc, Timestamp dateAcct,
-		int C_DocType_ID, boolean isSOTrx, boolean counter, String trxName, boolean setOrder, boolean bReversal)
+		int C_DocType_ID, boolean isSOTrx, boolean counter, String trxName, boolean setOrder, 
+		boolean bReversal, String documentNo)
 	{
 		MInOut to = new MInOut (from.getCtx(), 0, null);
 		to.set_TrxName(trxName);
 		copyValues(from, to, from.getAD_Client_ID(), from.getAD_Org_ID());
+		to.setReversal(bReversal); //F3P: in questo modo il nuovo documento avra' questo valore settato correttamente nella BEFORE/AFTER_NEW
 		to.set_ValueNoCheck ("M_InOut_ID", I_ZERO);
-		to.set_ValueNoCheck ("DocumentNo", null);
+		// F3P: Use DocumentNo in input, if its null, result is equivalent
+		// to.set_ValueNoCheck ("DocumentNo", null);
+		to.set_ValueNoCheck ("DocumentNo", documentNo);
+		
 		//
 		to.setDocStatus (DOCSTATUS_Drafted);		//	Draft
 		to.setDocAction(DOCACTION_Complete);
@@ -773,7 +783,6 @@ public class MInOut extends X_M_InOut implements DocAction
 				if (fromLine.getC_OrderLine_ID() != 0)
 				{
 					//F3P: modify to use PO instead of new
-					//MOrderLine peer = new MOrderLine (getCtx(), fromLine.getC_OrderLine_ID(), get_TrxName());
 					MOrderLine peer = PO.get(getCtx(), MOrderLine.Table_Name, fromLine.getC_OrderLine_ID(), get_TrxName());
 					// F3P: end
 					if (peer.getRef_OrderLine_ID() != 0)
@@ -782,6 +791,7 @@ public class MInOut extends X_M_InOut implements DocAction
 				//RMALine link
 				if (fromLine.getM_RMALine_ID() != 0)
 				{	
+					//F3P: modify to use PO instead of new
 					MRMALine peer = PO.get(getCtx(), MRMALine.Table_Name, fromLine.getM_RMALine_ID(), get_TrxName());
 					if (peer.getRef_RMALine_ID() > 0)
 						line.setM_RMALine_ID(peer.getRef_RMALine_ID());
@@ -1200,6 +1210,7 @@ public class MInOut extends X_M_InOut implements DocAction
 			m_processMsg = "@NoLines@";
 			return DocAction.STATUS_Invalid;
 		}
+		/* //F3P: Peso e volume vengono ricalcolati alla modifica delle righe invece che al prepara
 		BigDecimal Volume = Env.ZERO;
 		BigDecimal Weight = Env.ZERO;
 
@@ -1232,7 +1243,7 @@ public class MInOut extends X_M_InOut implements DocAction
 		}
 		setVolume(Volume);
 		setWeight(Weight);
-
+		*/ //F3P end
 		if (!isReversal())	//	don't change reversal
 		{
 			createConfirmation();
@@ -1333,7 +1344,6 @@ public class MInOut extends X_M_InOut implements DocAction
 			if (sLine.getC_OrderLine_ID() != 0)
 			{
 				//F3P: modify to use PO instead of new
-				//oLine = new MOrderLine (getCtx(), sLine.getC_OrderLine_ID(), get_TrxName());
 				oLine = PO.get(getCtx(), MOrderLine.Table_Name, sLine.getC_OrderLine_ID(), get_TrxName());
 				// F3P:end
 				if (log.isLoggable(Level.FINE)) log.fine("OrderLine - Reserved=" + oLine.getQtyReserved()
@@ -1345,6 +1355,7 @@ public class MInOut extends X_M_InOut implements DocAction
 
             if (sLine.getM_RMALine_ID() != 0)
             {       
+            	//F3P: modify to use PO instead of new
                 rmaLine = PO.get(getCtx(), MRMALine.Table_Name, sLine.getM_RMALine_ID(), get_TrxName());
             }
 
@@ -1685,7 +1696,6 @@ public class MInOut extends X_M_InOut implements DocAction
 						
 						//	Update PO with ASI
 						//F3P: modify to use PO instead of new
-						//oLine = new MOrderLine (getCtx(), po.getC_OrderLine_ID(), get_TrxName());
 						oLine = PO.get(getCtx(), MOrderLine.Table_Name, po.getC_OrderLine_ID(), get_TrxName());
 						// F3P:end
 						if (   oLine != null && oLine.getM_AttributeSetInstance_ID() == 0
@@ -1717,6 +1727,10 @@ public class MInOut extends X_M_InOut implements DocAction
 			return DocAction.STATUS_Invalid;
 		}
 
+		// Set the definite document number after completed (if needed)
+		if(LITMInOut.isUpdateDocNo(this))//F3P: Check if we want to update docNo. This is not good in reopen process
+			setDefiniteDocumentNo();
+		
 		m_processMsg = info.toString();
 		setProcessed(true);
 		setDocAction(DOCACTION_Close);
@@ -1746,13 +1760,11 @@ public class MInOut extends X_M_InOut implements DocAction
 			return null;
 
 		//F3P: modify to use PO instead of new
-		//int linkedOrderID = new MOrder (getCtx(), getC_Order_ID(), get_TrxName()).getLink_Order_ID();
 		int linkedOrderID = ((MOrder)PO.get(getCtx(), MOrder.Table_Name, getC_Order_ID(), get_TrxName())).getLink_Order_ID();
-		//F3P:end
 		
 		if (linkedOrderID <= 0)
 			return null;
-
+		
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
 		MDocType[] shipmentTypes = MDocType.getOfDocBaseType(getCtx(), MDocType.DOCBASETYPE_MaterialDelivery);
@@ -1771,9 +1783,7 @@ public class MInOut extends X_M_InOut implements DocAction
 
 		// get invoice id from linked order
 		//F3P: modify to use PO instead of new
-		//int invID = new MOrder (getCtx(), linkedOrderID, get_TrxName()).getC_Invoice_ID();
 		int invID = ((MOrder)PO.get(getCtx(), MOrder.Table_Name, linkedOrderID, get_TrxName())).getC_Invoice_ID();
-		// F3P:end
 		if ( invID != 0 )
 			dropShipment.setC_Invoice_ID(invID);
 
@@ -1796,9 +1806,7 @@ public class MInOut extends X_M_InOut implements DocAction
 		{
 			MInOutLine dropLine = lines[i];
 			//F3P: modify to use PO instead of new
-			//MOrderLine ol = new MOrderLine(getCtx(), dropLine.getC_OrderLine_ID(), null);
 			MOrderLine ol = PO.get(getCtx(), MOrderLine.Table_Name, dropLine.getC_OrderLine_ID(), get_TrxName());
-			// F3P:end
 			if ( ol.getC_OrderLine_ID() != 0 ) {
 				dropLine.setC_OrderLine_ID(ol.getLink_OrderLine_ID());
 				dropLine.saveEx();
@@ -1823,7 +1831,8 @@ public class MInOut extends X_M_InOut implements DocAction
 	protected void setDefiniteDocumentNo() {
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		if (dt.isOverwriteDateOnComplete()) {
-			setMovementDate(new Timestamp (System.currentTimeMillis()));
+			// F3P: movement date should not have the time component
+			setMovementDate(TimeUtil.getDay(System.currentTimeMillis()));
 			if (getDateAcct().before(getMovementDate())) {
 				setDateAcct(getMovementDate());
 				MPeriod.testPeriodOpen(getCtx(), getDateAcct(), getC_DocType_ID(), getAD_Org_ID());
@@ -2236,8 +2245,11 @@ public class MInOut extends X_M_InOut implements DocAction
 
 		//	Deep Copy
 		//F3P: aggiunta la gestione del flag isReversal prima del primo salvataggio
+		// F3P: synthetic reverse doc.no
+		String documentNoReversed = getDocumentNo() + "_REV";
+				
 		MInOut reversal = copyFrom (this, reversalMovementDate, reversalDate,
-		 getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true, true);
+		 getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true, true, documentNoReversed);
 		
 		if (reversal == null)
 		{

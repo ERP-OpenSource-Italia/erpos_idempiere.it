@@ -25,6 +25,8 @@ import org.compiere.util.Env;
  *	Payment Term Schedule Model
  *	
  *  @author Jorg Janke
+ *  @author Silvano Trinchero, Freepath www.freepath.it
+ *		<li> FR [ 3432213 ]  
  *  @version $Id: MPaySchedule.java,v 1.3 2006/07/30 00:51:04 jjanke Exp $
  */
 public class MPaySchedule extends X_C_PaySchedule
@@ -99,6 +101,17 @@ public class MPaySchedule extends X_C_PaySchedule
 			log.fine("beforeSave");
 			setIsValid(false);
 		}
+		
+		// FR3432213: once a schedule is created, the PaymentTerm values should be ignored, but they still can influence paymenttermduedate, so we reset them to avoid unwanted behaviours
+		if(newRecord)
+		{
+			MPaymentTerm	mPaymentTerm = getParent();
+			mPaymentTerm.setFixMonthOffset(0);
+			mPaymentTerm.setNetDays(0);
+			
+			mPaymentTerm.saveEx(get_TrxName());
+		}
+		
 		return true;
 	}	//	beforeSave
 

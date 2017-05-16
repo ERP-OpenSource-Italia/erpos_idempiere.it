@@ -181,7 +181,8 @@ public class MPaymentTerm extends X_C_PaymentTerm
 	 */
 	public boolean apply (int C_Invoice_ID)
 	{
-		MInvoice invoice = new MInvoice (getCtx(), C_Invoice_ID, get_TrxName());
+		//F3P PO.get
+		MInvoice invoice = PO.get(getCtx(), MInvoice.Table_Name, C_Invoice_ID, get_TrxName());
 		if (invoice == null || invoice.get_ID() == 0)
 		{
 			log.log(Level.SEVERE, "apply - Not valid C_Invoice_ID=" + C_Invoice_ID);

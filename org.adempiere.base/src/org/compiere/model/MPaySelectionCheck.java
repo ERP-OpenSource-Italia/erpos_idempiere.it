@@ -77,7 +77,8 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 			rs = pstmt.executeQuery ();
 			while (rs.next ())
 			{
-				MPaySelectionCheck psc = new MPaySelectionCheck (ctx, rs, trxName);
+				//F3P po.get
+				MPaySelectionCheck psc = PO.get(ctx, MPaySelectionCheck.Table_Name, rs, trxName);
 				if (retValue == null)
 					retValue = psc;
 				else if (!retValue.isProcessed() && psc.isProcessed())
@@ -228,7 +229,7 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 			rs = pstmt.executeQuery();
 			while (rs.next())
 			{
-				MPaySelectionCheck check = new MPaySelectionCheck (Env.getCtx(), rs, trxName);
+				MPaySelectionCheck check = PO.get(Env.getCtx(), MPaySelectionCheck.Table_Name, rs, trxName);
 				list.add(check);
 			}
 		}
@@ -298,7 +299,7 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 		MPayment payment = null;
 		
 		try {
-			payment = new MPayment(check.getCtx(), check.getC_Payment_ID(), trxName);
+			payment = PO.get(check.getCtx(), MPayment.Table_Name, check.getC_Payment_ID(), trxName);
 			//	Existing Payment
 			if (check.getC_Payment_ID() != 0)
 			{
@@ -311,7 +312,7 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 			}
 			else	//	New Payment
 			{
-				payment = new MPayment(check.getCtx(), 0, trxName);
+				payment = PO.create(check.getCtx(), MPayment.Table_Name, trxName);
 				payment.setAD_Org_ID(check.getAD_Org_ID());
 				//
 				if (check.getPaymentRule().equals(PAYMENTRULE_Check))
