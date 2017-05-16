@@ -97,8 +97,10 @@ public class MRequest extends X_R_Request
 			setDueType (DUETYPE_Due);
 		//  setSalesRep_ID (0);
 		//	setDocumentNo (null);
-			setConfidentialType (CONFIDENTIALTYPE_PublicInformation);	// A
-			setConfidentialTypeEntry (CONFIDENTIALTYPEENTRY_PublicInformation);	// A
+			
+			//  F3P: setting it to null means it will not be set from request type (see beforeSave())	
+			//	setConfidentialType (CONFIDENTIALTYPE_PublicInformation);	// A
+			//	setConfidentialTypeEntry (CONFIDENTIALTYPEENTRY_PublicInformation);	// A
 			setProcessed (false);
 			setRequestAmt (Env.ZERO);
 			setPriorityUser (PRIORITY_Low);
