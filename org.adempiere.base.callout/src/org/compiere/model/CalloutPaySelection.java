@@ -139,6 +139,9 @@ public class CalloutPaySelection extends CalloutEngine
 		mTab.setValue("DiscountAmt", DiscountAmt);
 		mTab.setValue("DifferenceAmt", Env.ZERO);
 		mTab.setValue("IsSOTrx", IsSOTrx);
+		
+		mTab.setValue("OverUnderAmt", BigDecimal.ZERO);	//F3P:from genied adempiere
+		
 		return "";
 	}	//	PaySel_Invoice
 

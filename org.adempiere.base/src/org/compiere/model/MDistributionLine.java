@@ -24,6 +24,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.LITMDistributionLine;
+
 /**
  *	GL Distribution Line Model
  *	
@@ -64,6 +66,8 @@ public class MDistributionLine extends X_GL_DistributionLine
 			setOverwriteSalesRegion (false);
 			setOverwriteUser1 (false);
 			setOverwriteUser2 (false);
+			LITMDistributionLine.setOwUserElement1(this, false); //F3P
+			LITMDistributionLine.setOwUserElement2(this, false); //F3P
 			//
 			setPercent (Env.ZERO);
 		}	
@@ -118,11 +122,23 @@ public class MDistributionLine extends X_GL_DistributionLine
 		m_account = acct;
 	}	//	setAccount
 	
+	// F3P: aggiunta trx e funzione di compatibilita
 	/**
 	 * 	Get Account Combination based on Account and Overwrite
-	 *	@return account
+	 *@ deprecated use trx	
+	 *@return account
 	 */
+	@Deprecated 
 	public MAccount getAccount()
+	{
+		return getAccount(null);
+	}
+	/**
+	 * 	Get Account Combination based on Account and Overwrite
+	 *@param trxName	
+	 *@return account
+	 */
+	public MAccount getAccount(String trxName)
 	{
 		MAccount acct = MAccount.get(getCtx(), 
 			m_account.getAD_Client_ID(), 
@@ -142,9 +158,9 @@ public class MDistributionLine extends X_GL_DistributionLine
 			isOverwriteActivity() ? getC_Activity_ID() : m_account.getC_Activity_ID(),
 			isOverwriteUser1() ? getUser1_ID() : m_account.getUser1_ID(), 
 			isOverwriteUser2() ? getUser2_ID() : m_account.getUser2_ID(),
-				m_account.getUserElement1_ID(),
-				m_account.getUserElement2_ID(),
-				get_TrxName());
+			LITMDistributionLine.isOwUserElement1(this) ? LITMDistributionLine.getUserElement1_ID(this) :	m_account.getUserElement1_ID(),//F3P
+			LITMDistributionLine.isOwUserElement2(this) ? LITMDistributionLine.getUserElement2_ID(this) :	m_account.getUserElement2_ID()//F3P
+			,trxName); // F3P: transazione in input
 		return acct;
 	}	//	setAccount
 
@@ -247,7 +263,11 @@ public class MDistributionLine extends X_GL_DistributionLine
 			setUser1_ID(0);
 		if (!isOverwriteUser2() && getUser2_ID() != 0)
 			setUser2_ID(0);
-		
+		if (!LITMDistributionLine.isOwUserElement1(this) && LITMDistributionLine.getUserElement1_ID(this) != 0)
+			LITMDistributionLine.setUserElement1_ID(this, 0);
+		if (!LITMDistributionLine.isOwUserElement2(this) && LITMDistributionLine.getUserElement2_ID(this) != 0)
+			LITMDistributionLine.setUserElement2_ID(this, 0);
+
 		//	Account Overwrite cannot be 0
 		if (isOverwriteAcct() && getAccount_ID() == 0)
 		{

@@ -26,6 +26,9 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.LITMCashLine;
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *	Cash Line Model
  *	
@@ -212,13 +215,21 @@ public class MCashLine extends X_C_CashLine
 		//
 		reversal.setAmount(getAmount().negate());
 		if (getDiscountAmt() == null)
-			setDiscountAmt(Env.ZERO);
+			reversal.setDiscountAmt(Env.ZERO); //from adempiere set on reversal
 		else
 			reversal.setDiscountAmt(getDiscountAmt().negate());
 		if (getWriteOffAmt() == null)
-			setWriteOffAmt(Env.ZERO);
+			reversal.setWriteOffAmt(Env.ZERO); //from adempiere set on reversal
 		else
 			reversal.setWriteOffAmt(getWriteOffAmt().negate());
+		
+		//From adempiere set OverUnderAmt
+		BigDecimal OverUnderAmt = LITMCashLine.getOverUnderAmt(this);
+		if(OverUnderAmt == null)
+			LITMCashLine.setOverUnderAmt(reversal, Env.ZERO);
+		else
+			LITMCashLine.setOverUnderAmt(reversal, OverUnderAmt);
+		
 		reversal.addDescription("(" + getLine() + ")");
 		return reversal;
 	}	//	reverse
@@ -323,24 +334,55 @@ public class MCashLine extends X_C_CashLine
 		}
 		
 		//	Verify CashType
-		if (CASHTYPE_Invoice.equals(getCashType()) && getC_Invoice_ID() == 0)
-			setCashType(CASHTYPE_GeneralExpense);
+		//F3P
+		boolean isUseDefaultCashType = STDSysConfig.isUseDefaultCashType(getAD_Client_ID(), getAD_Org_ID());
+		
+		if (CASHTYPE_Invoice.equals(getCashType()) && getC_Invoice_ID() == 0
+				&& LITMCashLine.getC_Order_ID(this) == 0) //From adempiere
+		{
+			//F3P
+			if(isUseDefaultCashType)
+				setCashType(CASHTYPE_GeneralExpense);
+			else
+				throw new AdempiereException("Invalid cash type");
+		}
 		if (CASHTYPE_BankAccountTransfer.equals(getCashType()) && getC_BankAccount_ID() == 0)
-			setCashType(CASHTYPE_GeneralExpense);
+		{
+			//F3P
+			if(isUseDefaultCashType)
+				setCashType(CASHTYPE_GeneralExpense);
+			else
+				throw new AdempiereException("Invalid cash type");
+		}
 		if (CASHTYPE_Charge.equals(getCashType()) && getC_Charge_ID() == 0)
-			setCashType(CASHTYPE_GeneralExpense);
+		{
+			//F3P
+			if(isUseDefaultCashType)
+				setCashType(CASHTYPE_GeneralExpense);
+			else
+				throw new AdempiereException("Invalid cash type");
+		}
 
 		boolean verify = newRecord 
 			|| is_ValueChanged("CashType")
 			|| is_ValueChanged("C_Invoice_ID")
-			|| is_ValueChanged("C_BankAccount_ID");
+			|| is_ValueChanged("C_BankAccount_ID")
+			|| is_ValueChanged(LITMCashLine.COLUMNNAME_C_Order_ID); //from adempiere
 		if (verify)
 		{
 			//	Verify Currency
 			if (CASHTYPE_BankAccountTransfer.equals(getCashType())) 
 				setC_Currency_ID(getBankAccount().getC_Currency_ID());
 			else if (CASHTYPE_Invoice.equals(getCashType()))
-				setC_Currency_ID(getInvoice().getC_Currency_ID());
+			{
+				if(getC_Invoice_ID() != 0)
+					setC_Currency_ID(getInvoice().getC_Currency_ID());
+				else if(get_ValueAsInt("C_Order_ID") != 0)
+				{
+					MOrder order = PO.get(getCtx(), MOrder.Table_Name, LITMCashLine.getC_Order_ID(this), get_TrxName());
+					setC_Currency_ID(order.getC_Currency_ID());
+				}
+			}
 			else	//	Cash 
 				setC_Currency_ID(getCashBook().getC_Currency_ID());
 		
@@ -357,7 +399,9 @@ public class MCashLine extends X_C_CashLine
 		}
 		
 		// If CashType is not Bank Account Transfer, set C_BankAccount_ID to null - teo_sarca BF [ 1760240 ]
-		if (!CASHTYPE_BankAccountTransfer.equals(getCashType()))
+		if (!CASHTYPE_BankAccountTransfer.equals(getCashType())
+				&& (!CASHTYPE_Invoice.equals(getCashType()) || LITMCashLine.getC_Order_ID(this) == 0) //From adempiere
+				)
 			setC_BankAccount_ID(I_ZERO);
 
 		/**	General fix of Currency 

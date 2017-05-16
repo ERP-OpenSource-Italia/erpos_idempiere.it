@@ -84,6 +84,7 @@ public class CalloutCashJournal extends CalloutEngine
 			rs = pstmt.executeQuery();
 			if (rs.next())
 			{
+				mTab.setValue("C_BPartner_ID", new Integer(rs.getInt(1))); //F3P:from genied adempiere
 				mTab.setValue("C_Currency_ID", new Integer(rs.getInt(2)));
 				BigDecimal PayAmt = rs.getBigDecimal(3);
 				BigDecimal DiscountAmt = rs.getBigDecimal(5);
@@ -97,6 +98,7 @@ public class CalloutCashJournal extends CalloutEngine
 				mTab.setValue("Amount", PayAmt.subtract(DiscountAmt));
 				mTab.setValue("DiscountAmt", DiscountAmt);
 				mTab.setValue("WriteOffAmt", Env.ZERO);
+				mTab.setValue ("OverUnderAmt", Env.ZERO); //F3P:from genied adempiere
 				Env.setContext(ctx, WindowNo, "InvTotalAmt", PayAmt.toString());
 			}
 		}
@@ -134,15 +136,19 @@ public class CalloutCashJournal extends CalloutEngine
 		String total = Env.getContext(ctx, WindowNo, "InvTotalAmt");
 		if (total == null || total.length() == 0)
 			return "";
-		BigDecimal InvTotalAmt = new BigDecimal(total);
+		//BigDecimal InvTotalAmt = new BigDecimal(total); //F3P:from genied adempiere
 
 		BigDecimal PayAmt = (BigDecimal)mTab.getValue("Amount");
 		BigDecimal DiscountAmt = (BigDecimal)mTab.getValue("DiscountAmt");
 		BigDecimal WriteOffAmt = (BigDecimal)mTab.getValue("WriteOffAmt");
+		BigDecimal OverUnderAmt = (BigDecimal)mTab.getValue ("OverUnderAmt"); //F3P:from genied adempiere
+		BigDecimal InvoiceOpenAmt = new BigDecimal(total); //F3P:from genied adempiere
+		
 		String colName = mField.getColumnName();
-		if (log.isLoggable(Level.FINE)) log.fine(colName + " - Invoice=" + InvTotalAmt
+		if (log.isLoggable(Level.FINE)) log.fine(colName + " - Invoice/Order=" + InvoiceOpenAmt
 			+ " - Amount=" + PayAmt + ", Discount=" + DiscountAmt + ", WriteOff=" + WriteOffAmt);
 
+		/* F3P:from genied adempiere
 		//  Amount - calculate write off
 		if (colName.equals("Amount"))
 		{
@@ -154,8 +160,122 @@ public class CalloutCashJournal extends CalloutEngine
 			PayAmt = InvTotalAmt.subtract(DiscountAmt).subtract(WriteOffAmt);
 			mTab.setValue("Amount", PayAmt);
 		}
+		*/
+		
+		Integer C_Invoice_ID = mTab.getValue("C_Invoice_ID") == null ? 0 : (Integer)mTab.getValue("C_Invoice_ID");
+		Integer C_Order_ID = mTab.getValue("C_Order_ID") == null ? 0 : (Integer)mTab.getValue("C_Order_ID");
+		
+		if (C_Invoice_ID == 0 && C_Order_ID == 0)
+			   
+		{
+			if (Env.ZERO.compareTo (DiscountAmt) != 0)
+				mTab.setValue ("DiscountAmt", Env.ZERO);
+			if (Env.ZERO.compareTo (WriteOffAmt) != 0)
+				mTab.setValue ("WriteOffAmt", Env.ZERO);
+			if (Env.ZERO.compareTo (OverUnderAmt) != 0)
+				mTab.setValue ("OverUnderAmt", Env.ZERO);
+		} 
+		else 
+		{
+			boolean processed = mTab.getValueAsBoolean(MCashLine.COLUMNNAME_Processed);
+			// Always put difference to OverUnderAmt
+			if (colName.equals ("Amount")
+				&& (!processed))
+			{
+				OverUnderAmt = InvoiceOpenAmt.subtract (PayAmt).subtract (
+					DiscountAmt).subtract (WriteOffAmt);
+				mTab.setValue ("OverUnderAmt", OverUnderAmt);
+			}
+			// Added Lines By Goodwill (02-03-2006)
+			// Reason: we must make the callout is called just when docstatus is
+			// draft
+			// Old Code : else // calculate PayAmt
+			// New Code :
+			else if ((!processed)) // calculate
+			// PayAmt
+			// End By Goodwill
+			{
+				PayAmt = InvoiceOpenAmt.subtract (DiscountAmt).subtract (
+					WriteOffAmt).subtract (OverUnderAmt);
+				mTab.setValue ("Amount", PayAmt);
+			}
+		}
+		
+		//F3P:from genied adempiere end
 
 		return "";
 	}	//	amounts
+	
+	//F3P:from genied adempiere
+	/**
+	 * Payment_Order. when Waiting Payment Order selected - set C_Currency_ID -
+	 * C_BPartner_ID - DiscountAmt = C_Invoice_Discount (ID, DateTrx) - PayAmt =
+	 * invoiceOpen (ID) - Discount - WriteOffAmt = 0
+	 * @param ctx context
+	 * @param WindowNo current Window No
+	 * @param mTab Grid Tab
+	 * @param mField Grid Field
+	 * @param value New Value
+	 * @return null or error message
+	 */
+	public String order(Properties ctx, int WindowNo, GridTab mTab,
+		GridField mField, Object value)
+	{
+		Integer C_Order_ID = (Integer)value;
+		if (isCalloutActive () // assuming it is resetting value
+			|| C_Order_ID == null || C_Order_ID.intValue () == 0)
+			return "";
+		mTab.setValue ("C_Invoice_ID", null);
+		mTab.setValue ("C_Charge_ID", null);
+		mTab.setValue ("IsPrepayment", Boolean.TRUE);
+		//
+		mTab.setValue ("DiscountAmt", Env.ZERO);
+		mTab.setValue ("WriteOffAmt", Env.ZERO);
+		mTab.setValue ("IsOverUnderPayment", Boolean.FALSE);
+		mTab.setValue ("OverUnderAmt", Env.ZERO);
+		//
+		String sql = "SELECT COALESCE(Bill_BPartner_ID, C_BPartner_ID) as C_BPartner_ID "
+			+ ", C_Currency_ID "
+			+ ", GrandTotal "
+			+ ", IsSOTrx "
+			+ "FROM C_Order WHERE C_Order_ID=?"; // #1
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		try
+		{
+			pstmt = DB.prepareStatement (sql, null);
+			pstmt.setInt (1, C_Order_ID.intValue ());
+			rs = pstmt.executeQuery ();
+			if (rs.next ())
+			{
+				mTab.setValue ("C_BPartner_ID", new Integer (rs.getInt (1)));
+				int C_Currency_ID = rs.getInt (2); // Set Order Currency
+				mTab.setValue ("C_Currency_ID", new Integer (C_Currency_ID));
+				//
+				BigDecimal GrandTotal = rs.getBigDecimal (3); // Set Pay
+				// Amount
+				if (GrandTotal == null)
+					GrandTotal = Env.ZERO;
+				boolean isSOTrx = "Y".equals(rs.getString(4));
+				if (!isSOTrx)
+				{
+					GrandTotal = GrandTotal.negate();
+				}
+				mTab.setValue ("Amount", GrandTotal);
+				Env.setContext(ctx, WindowNo, "InvTotalAmt", GrandTotal.toString());
+			}
+		}
+		catch (SQLException e)
+		{
+			log.log (Level.SEVERE, sql, e);
+			return e.getLocalizedMessage ();
+		}
+		finally
+		{
+			DB.close (rs, pstmt);
+		}
+		return "";
+	} // order
+	//F3P:from genied adempiere end
 
 }	//	CalloutCashJournal
