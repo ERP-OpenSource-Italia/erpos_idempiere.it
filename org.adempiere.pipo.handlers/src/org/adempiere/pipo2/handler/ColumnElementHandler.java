@@ -342,7 +342,8 @@ public class ColumnElementHandler extends AbstractElementHandler {
 		filler.addTableReference("AD_Table_ID", "AD_Table", new AttributesImpl());
 		filler.addTableReference("AD_Reference_Value_ID", "AD_Reference", new AttributesImpl());
 
-		excludes.add("IsSyncDatabase");
+		// F3P: enabled export of IsSyncDatabase
+		// excludes.add("IsSyncDatabase");
 		excludes.add("AD_Table_ID");
 		excludes.add("AD_Reference_Value_ID");
 
