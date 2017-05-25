@@ -24,10 +24,13 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.logging.Level;
 
+import org.adempiere.model.ImportValidator;
+import org.adempiere.process.ImportProcess;
 import org.compiere.model.MAccount;
 import org.compiere.model.MJournal;
 import org.compiere.model.MJournalBatch;
 import org.compiere.model.MJournalLine;
+import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.X_I_GLJournal;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
@@ -39,7 +42,7 @@ import org.compiere.util.TimeUtil;
  * 	@author 	Jorg Janke
  * 	@version 	$Id: ImportGLJournal.java,v 1.2 2006/07/30 00:51:02 jjanke Exp $
  */
-public class ImportGLJournal extends SvrProcess
+public class ImportGLJournal extends SvrProcess implements ImportProcess
 {
 	/**	Client to be imported to		*/
 	private int 			m_AD_Client_ID = 0;
@@ -125,6 +128,9 @@ public class ImportGLJournal extends SvrProcess
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info ("Reset=" + no);
 
+		//F3P add fire validator
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_BEFORE_VALIDATE);
+		
 		//	Set Client from Name
 		sql = new StringBuilder ("UPDATE I_GLJournal i ")
 			.append("SET AD_Client_ID=(SELECT c.AD_Client_ID FROM AD_Client c WHERE c.Value=i.ClientValue) ")
@@ -620,6 +626,9 @@ public class ImportGLJournal extends SvrProcess
 			rs = null;
 			pstmt = null;
 		}
+		
+		//F3P add fire validator
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);
 
 		// globalqss (moved the commit here to save the error messages)
 		commitEx();
@@ -665,10 +674,11 @@ public class ImportGLJournal extends SvrProcess
 		{
 			pstmt = DB.prepareStatement (sql.toString (), get_TrxName());
 			rs = pstmt.executeQuery ();
+			X_I_GLJournal imp = null;
 			//
 			while (rs.next())
 			{
-				X_I_GLJournal imp = new X_I_GLJournal (getCtx (), rs, get_TrxName());
+				imp = new X_I_GLJournal (getCtx (), rs, get_TrxName());
 				//	New Batch if Batch Document No changes
 				String impBatchDocumentNo = imp.getBatchDocumentNo();
 				if (impBatchDocumentNo == null)
@@ -733,6 +743,10 @@ public class ImportGLJournal extends SvrProcess
 					|| !impDateAcct.equals(DateAcct)
 				)
 				{
+					//F3P fire validator
+					if(journal != null)
+						ModelValidationEngine.get().fireImportValidate(this, imp, journal, ImportValidator.TIMING_AFTER_IMPORT);
+					
 					JournalDocumentNo = impJournalDocumentNo;	//	cannot compare real DocumentNo
 					DateAcct = impDateAcct;
 					journal = new MJournal (getCtx(), 0, get_TrxName());
@@ -758,6 +772,9 @@ public class ImportGLJournal extends SvrProcess
 					journal.setC_Period_ID(imp.getC_Period_ID());
 					journal.setDateAcct(imp.getDateAcct());		//	sets Period if not defined
 					journal.setDateDoc (imp.getDateAcct());
+					
+					//F3P add fire validator
+					ModelValidationEngine.get().fireImportValidate(this, imp, journal, ImportValidator.TIMING_BEFORE_IMPORT);
 					//
 					if (!journal.save())
 					{
@@ -770,6 +787,7 @@ public class ImportGLJournal extends SvrProcess
 						}
 						break;
 					}
+					
 					noInsertJournal++;
 				}
 
@@ -814,6 +832,8 @@ public class ImportGLJournal extends SvrProcess
 				//
 				line.setC_UOM_ID(imp.getC_UOM_ID());
 				line.setQty(imp.getQty());
+				//F3P add fireImportValidate
+				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_BEFORE_IMPORT);
 				//
 				if (line.save())
 				{
@@ -826,7 +846,15 @@ public class ImportGLJournal extends SvrProcess
 					if (imp.save())
 						noInsertLine++;
 				}
+				
+				//F3P add fireImportValidate
+				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_AFTER_IMPORT);
 			}	//	while records
+			
+			//F3P fire validator
+			if(imp!= null && journal != null)
+				ModelValidationEngine.get().fireImportValidate(this, imp, journal, ImportValidator.TIMING_AFTER_IMPORT);
+			
 		}
 		catch (Exception e)
 		{
@@ -853,4 +881,17 @@ public class ImportGLJournal extends SvrProcess
 		return "";
 	}	//	doIt
 
+//F3P
+	@Override
+	public String getImportTableName() {
+		return X_I_GLJournal.Table_Name;
+	}
+
+
+	@Override
+	public String getWhereClause() {
+		StringBuilder msgreturn = new StringBuilder(" AND AD_Client_ID=").append(m_AD_Client_ID);
+		return msgreturn.toString();
+	}
+//F3P end
 }	//	ImportGLJournal

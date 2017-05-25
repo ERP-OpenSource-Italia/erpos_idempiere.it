@@ -72,7 +72,16 @@ public class STDSysConfig
 	//LS variabile per usare data diversa da data fattura per la generazione del progr. pagamenti fattura
 	public static final String LIT_PAYSCHEDULEINV_CUSTOM_DATE_FIELD = "LIT_PAYSCHEDULEINV_CUSTOM_DATE_FIELD";
 	
+	public static final String	FACTACCT_HASCURRENCYRATE = "LIT_FACTACCT_HASCURRENCYRATE";
+	
  	public static String REPORT_HOME_KEY = "REPORT_HOME_PATH";
+ 	
+ 	public static final String LIT_WEB_SERVICE_COMPATIBILITY_MODE = "LIT_WEB_SERVICE_COMPATIBILITY_MODE";
+
+ 	public static Boolean getWebServiceCompatibilityMode(int AD_Client_ID,int AD_Org_ID)
+ 	{
+ 		return MSysConfig.getBooleanValue(LIT_WEB_SERVICE_COMPATIBILITY_MODE, false, AD_Client_ID, AD_Org_ID);
+ 	}
  	
  	public static String getOverrideLineNo(int AD_Client_ID,int AD_Org_ID)
  	{
@@ -379,5 +388,10 @@ public class STDSysConfig
 	public static String getInvoicePayScheduleCustomDateField(int AD_Client_ID, int AD_Org_ID)
 	{
 		return MSysConfig.getValue(LIT_PAYSCHEDULEINV_CUSTOM_DATE_FIELD, "", AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static final boolean hasFactAcctCurrencyRate(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(FACTACCT_HASCURRENCYRATE, false, AD_Client_ID);
 	}
 }

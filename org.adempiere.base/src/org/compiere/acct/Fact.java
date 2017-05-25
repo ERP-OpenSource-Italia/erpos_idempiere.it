@@ -32,6 +32,9 @@ import org.compiere.model.MFactAcct;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 
+import it.idempiere.base.model.LITMDistribution;
+import it.idempiere.base.model.LITMDistributionLine;
+
 /**
  *  Accounting Fact
  *
@@ -725,7 +728,8 @@ public final class Fact
 					dLine.getM_Product_ID(), dLine.getC_BPartner_ID(), dLine.getC_Project_ID(),
 					dLine.getC_Campaign_ID(), dLine.getC_Activity_ID(), dLine.getAD_OrgTrx_ID(),
 					dLine.getC_SalesRegion_ID(), dLine.getC_LocTo_ID(), dLine.getC_LocFrom_ID(),
-					dLine.getUser1_ID(), dLine.getUser2_ID());
+					dLine.getUser1_ID(), dLine.getUser2_ID(),
+					dLine.getUserElement1_ID(), dLine.getUserElement2_ID());//F3P: added UserElement1_ID and UserElement2_ID
 				if (distributions == null || distributions.length == 0)
 					continue;
 			}
@@ -748,7 +752,8 @@ public final class Fact
 			}
 
 			//	Prepare
-			distribution.distribute(dLine.getAccount(), dLine.getSourceBalance(), dLine.getQty(), dLine.getC_Currency_ID());
+			distribution.distribute(dLine.getAccount(), dLine.getSourceBalance(), dLine.getQty(), 
+					dLine.getC_Currency_ID(), m_trxName);//F3P add trx
 			MDistributionLine[] lines = distribution.getLines(false);
 			for (int j = 0; j < lines.length; j++)
 			{
@@ -759,7 +764,7 @@ public final class Fact
 					m_doc.get_ID(), dLine.getLine_ID(), m_trxName);
 				//  Set Info & Account
 				factLine.setDocumentInfo(m_doc, dLine.getDocLine());
-				factLine.setAccount(m_acctSchema, dl.getAccount());
+				factLine.setAccount(m_acctSchema, dl.getAccount(m_trxName));//F3P add trx
 				factLine.setPostingType(m_postingType);
 				if (dl.isOverwriteOrg())	//	set Org explicitly
 					factLine.setAD_Org_ID(dl.getOrg_ID());
@@ -787,7 +792,12 @@ public final class Fact
 				if(dl.isOverwriteUser1())				
 					factLine.setUser1_ID(dl.getUser1_ID());
 				if(dl.isOverwriteUser2())				
-					factLine.setUser2_ID(dl.getUser2_ID());					
+					factLine.setUser2_ID(dl.getUser2_ID());	
+					//F3P: added UserElement1_ID and UserElement2_ID 
+				if(LITMDistributionLine.isOwUserElement1(dl))				
+					factLine.setUserElement1_ID(LITMDistributionLine.getUserElement1_ID(dl));	
+				if(LITMDistributionLine.isOwUserElement2(dl))				
+					factLine.setUserElement2_ID(LITMDistributionLine.getUserElement2_ID(dl));
 				// F3P end
 				//
 				if (dl.getAmt().signum() < 0)

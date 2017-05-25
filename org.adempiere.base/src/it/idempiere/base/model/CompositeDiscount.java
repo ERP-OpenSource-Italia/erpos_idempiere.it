@@ -1,6 +1,8 @@
 package it.idempiere.base.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,6 +10,8 @@ import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MDiscountSchemaLine;
 import org.compiere.model.MInvoiceLine;
 import org.compiere.model.MOrderLine;
+import org.compiere.model.MPriceList;
+import org.compiere.model.MPriceListVersion;
 import org.compiere.model.MProductPrice;
 import org.compiere.model.PO;
 import org.compiere.model.X_M_ProductPriceVendorBreak;
@@ -20,6 +24,14 @@ import it.idempiere.base.util.STDUtils;
 
 public class CompositeDiscount
 {
+	private static final DecimalFormat COMPOSITE_DSC_FORMAT = new DecimalFormat();
+	static
+	{
+		COMPOSITE_DSC_FORMAT.setMaximumFractionDigits(CompositeDiscount.DISCOUNT_PRECISION);
+		COMPOSITE_DSC_FORMAT.setMinimumFractionDigits(0);
+		COMPOSITE_DSC_FORMAT.setGroupingUsed(false);
+	}
+	
 	public static final int DISCOUNT_PRECISION = 4;
 
 	private static final Map<String,Map<String,String>> MAP_TABLES = new HashMap<String, Map<String,String>>();
@@ -312,5 +324,117 @@ public class CompositeDiscount
 	public static void setLIT_LimitCompositeDisc(PO model,String sCompositeDisc) {
 		model.set_ValueOfColumn(CompositeDiscount.COLUMNNAME_LIT_LimitCompositeDisc, sCompositeDisc);
 	}
+	public static final void validateDiscounts(PO model)
+	{
+		MPriceListVersion mPriceListVersion=null;
+				
+		if(model instanceof MProductPrice)
+		{
+			MProductPrice mProductPrice=(MProductPrice)model;
+			mPriceListVersion=(MPriceListVersion) mProductPrice.getM_PriceList_Version();
+		}
+		else if(model instanceof X_M_ProductPriceVendorBreak)
+		{
+			X_M_ProductPriceVendorBreak m_ProductPriceVendorBreak=(X_M_ProductPriceVendorBreak) model;
+			mPriceListVersion=(MPriceListVersion)m_ProductPriceVendorBreak.getM_PriceList_Version();
+		}
+		
+		int M_PriceList_ID = mPriceListVersion.getM_PriceList_ID();
+		int pricePrecision = MPriceList.getPricePrecision(model.getCtx(), M_PriceList_ID);
+		
+		//sconto standard
+		BigDecimal	priceList=CompositeDiscount.getPriceList(model);
+		BigDecimal	stdDiscount=CompositeDiscount.getLIT_StdDiscount(model);
+		String			stdCompositeDiscountText = CompositeDiscount.getLIT_StdCompositeDisc(model);
+				
+		// if discount is zero, but we have a composite discount, use the composite as discount
+		
+		if(stdDiscount.signum() == 0 && Util.isEmpty(stdCompositeDiscountText, true) == false)
+		{
+				stdDiscount = CompositeDiscount.parseCompositeDiscount(stdCompositeDiscountText);
+				CompositeDiscount.setLIT_StdDiscount(model,stdDiscount);
+		}
+		
+		BigDecimal discountMult = Env.ONEHUNDRED.subtract(stdDiscount).divide(Env.ONEHUNDRED);
+		BigDecimal discountedVal = priceList.multiply(discountMult);		
+				
+		discountedVal=discountedVal.setScale(pricePrecision, BigDecimal.ROUND_HALF_UP);
+		
+		if(discountedVal.compareTo(CompositeDiscount.getPriceStd(model))!=0)
+		{
+			BigDecimal priceStd= CompositeDiscount.getPriceStd(model);
+			
+			if(priceList.signum() != 0)
+			{
+				stdDiscount = (priceList.subtract(priceStd)).multiply(Env.ONEHUNDRED).divide(priceList,CompositeDiscount.DISCOUNT_PRECISION,RoundingMode.HALF_UP); //F3P: problema di arrotondamento derivante d
+			}
+			else
+			{
+				stdDiscount = Env.ZERO;
+			}
+			
+			// if (stdDiscount.scale () > CompositeDiscount.DISCOUNT_PRECISION)
+			//	stdDiscount = stdDiscount.setScale (CompositeDiscount.DISCOUNT_PRECISION, BigDecimal.ROUND_HALF_UP);
 
+			CompositeDiscount.setLIT_StdDiscount(model,stdDiscount);
+		}
+		
+		BigDecimal stdCompositeDiscount =CompositeDiscount.parseCompositeDiscount(stdCompositeDiscountText);
+		
+		if(stdCompositeDiscount.compareTo(stdDiscount)!=0)
+		{
+			if (stdDiscount.scale () > CompositeDiscount.DISCOUNT_PRECISION)
+				stdDiscount = stdDiscount.setScale (CompositeDiscount.DISCOUNT_PRECISION, BigDecimal.ROUND_HALF_UP);
+			
+			CompositeDiscount.setLIT_StdCompositeDisc(model, COMPOSITE_DSC_FORMAT.format(stdDiscount));
+		}
+			
+		//sconto limite
+		BigDecimal	limitDiscount=CompositeDiscount.getLIT_LimitDiscount(model);
+		String			limitCompositeDiscountText = CompositeDiscount.getLIT_LimitCompositeDisc(model);
+		
+		// if discount is zero, but we have a composite discount, use the composite as discount
+		
+		if(limitDiscount.signum() == 0 && Util.isEmpty(limitCompositeDiscountText, true) == false)
+		{
+				limitDiscount = CompositeDiscount.parseCompositeDiscount(limitCompositeDiscountText);
+				CompositeDiscount.setLIT_LimitDiscount(model,limitDiscount);
+		}		
+		
+		discountMult = Env.ONEHUNDRED.subtract(limitDiscount).divide(Env.ONEHUNDRED);
+		discountedVal = priceList.multiply(discountMult);
+		
+		discountedVal=discountedVal.setScale(pricePrecision, BigDecimal.ROUND_HALF_UP);
+		
+		if(discountedVal.compareTo(CompositeDiscount.getPriceLimit(model))!=0)
+		{
+			BigDecimal priceLimit= CompositeDiscount.getPriceLimit(model);
+			
+			if(priceList.signum() != 0)
+			{
+				limitDiscount = (priceList.subtract(priceLimit)).multiply(Env.ONEHUNDRED).divide(priceList,CompositeDiscount.DISCOUNT_PRECISION,RoundingMode.HALF_UP);
+			}
+			else
+			{
+				limitDiscount = Env.ZERO;
+			}
+			
+			// if (limitDiscount.scale () > CompositeDiscount.DISCOUNT_PRECISION)
+			//	limitDiscount = limitDiscount.setScale (CompositeDiscount.DISCOUNT_PRECISION, BigDecimal.ROUND_HALF_UP);
+			
+			CompositeDiscount.setLIT_LimitDiscount(model,limitDiscount);
+		}
+		
+		BigDecimal limitCompositeDiscount =CompositeDiscount.parseCompositeDiscount(limitCompositeDiscountText);
+
+		if(limitCompositeDiscount.compareTo(limitDiscount)!=0)
+		{
+			if (limitDiscount.scale () > CompositeDiscount.DISCOUNT_PRECISION)
+				limitDiscount = limitDiscount.setScale (CompositeDiscount.DISCOUNT_PRECISION, BigDecimal.ROUND_HALF_UP);
+			
+			CompositeDiscount.setLIT_LimitCompositeDisc(model, COMPOSITE_DSC_FORMAT.format(limitDiscount));
+		}
+	}
+
+	
 }

@@ -38,13 +38,6 @@ public class RifDoc
 			return descrizione;
 	}
 	
-	public String getDescrizioneNotFixedLength() {
-		if(descrizione == null)
-			return getNumeroDocumento() + new SimpleDateFormat("ddMMyy").format(getDataDocumento());
-		else
-			return descrizione;
-	}
-	
 	public void setDescrizione(String sDescrizione) {
 		this.descrizione = sDescrizione;
 	}
