@@ -77,7 +77,11 @@ public class STDSysConfig
  	public static String REPORT_HOME_KEY = "REPORT_HOME_PATH";
  	
  	public static final String LIT_WEB_SERVICE_COMPATIBILITY_MODE = "LIT_WEB_SERVICE_COMPATIBILITY_MODE";
+<<<<<<< working copy
 
+=======
+ 	 
+>>>>>>> merge rev
  	public static Boolean getWebServiceCompatibilityMode(int AD_Client_ID,int AD_Org_ID)
  	{
  		return MSysConfig.getBooleanValue(LIT_WEB_SERVICE_COMPATIBILITY_MODE, false, AD_Client_ID, AD_Org_ID);
