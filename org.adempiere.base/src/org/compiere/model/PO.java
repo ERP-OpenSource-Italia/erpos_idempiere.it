@@ -139,10 +139,24 @@ public abstract class PO
 	 * @param trxName transaction
 	 * @return  the new model, or null if the table does not exists
 	 */
-	@SuppressWarnings("unchecked")
 	public static <T extends PO> T get(Properties ctx,String tableName,int ID,String trxName)
 	{
-		if(ID > 0)
+		return get(ctx, tableName, ID, trxName, true);
+	}
+	
+	/** Get a model from database, by primary key
+	 * 
+	 * @param ctx	context of the new object
+	 * @param tableName tablename of the model to be created
+	 * @param ID primary key value
+	 * @param trxName transaction
+	 * @param readWrite if true PO is reload with the trx
+	 * @return  the new model, or null if the table does not exists
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T extends PO> T get(Properties ctx,String tableName,int ID,String trxName, boolean readWrite)
+	{
+		if(ID > 0 && readWrite == false)
 		{
 			String key = getCacheKey(tableName, ID);
 			
