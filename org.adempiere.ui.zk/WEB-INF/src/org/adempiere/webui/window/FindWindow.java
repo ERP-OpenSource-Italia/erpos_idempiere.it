@@ -1605,7 +1605,8 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
         		if(filteredValue.toString().endsWith("%") == false)
         			filteredValue.append("%");
         		
-        		parsedValue = filteredValue.toString();
+        		//F3P escape @
+        		parsedValue = filteredValue.toString().replaceAll("@", "%");
         		
         		m_query.addRestriction(function, Operator, parsedValue,
         				infoName, infoDisplay, and, openBrackets);
@@ -1773,7 +1774,7 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
                         if (!valueStr.toString().endsWith("%"))
                             valueStr.append("%");
                         //
-                        value = valueStr.toString();
+                        value = valueStr.toString().replaceAll("@", "%");//F3P escape @
                     }
                     //
                     if (value.toString().indexOf('%') != -1) {

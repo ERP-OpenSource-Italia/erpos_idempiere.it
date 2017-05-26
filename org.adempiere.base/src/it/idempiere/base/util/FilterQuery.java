@@ -4,8 +4,8 @@ import org.compiere.util.Env;
 
 public class FilterQuery
 {
-	public static final String SPECIAL_CHAR_FUNCTION = "upper(replace(translate(?,'[@.-+_,:''\"]', ' '), ' ',''))";
-	public static final String REGEX = "[@\\.\\-\\+_,:'\"]";
+	public static final String SPECIAL_CHAR_FUNCTION = "upper(replace(translate(?,'[.-+_,:''\"]', ' '), ' ',''))";
+	public static final String REGEX = "[\\.\\-\\+_,:'\"]";
 
 	protected static final String SPECIAL_LETTERS_FROM = "ÀÁÂÃÄÅĀĂĄǍǞǠǺȀȂȦȺɃƁƄÇĆĈĊČȻÐĎĐÈÉÊËĒĔĖĘĚȄȆȨɆĜĞĠĢǤǦǴĤĦȞÌÍÎÏĨĪĬĮİȈȊǏĴǰɈĶĸǨĹĻĽĿŁȽÑŃŅŇŉŊǸÒÓÔÕÖØŌŎŐǑǾȌȎȪȬȮȰŔŖŘȐȒɌßŚŜŞŠȘȿŢŤŦȚȾÙÚÛÜŨŪŬŮŰŲǓǕǗǙǛȔȖɄŴŹŻŽÝŸŶȲɎ";
 	
