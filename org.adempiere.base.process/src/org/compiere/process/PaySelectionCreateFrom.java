@@ -120,10 +120,14 @@ public class PaySelectionCreateFrom extends SvrProcess
 		StringBuilder sql = new StringBuilder("SELECT C_Invoice_ID,")
 			//	Open
 			.append(" currencyConvert(invoiceOpen(i.C_Invoice_ID, i.C_InvoicePaySchedule_ID)")
-				.append(",i.C_Currency_ID, ?,?, i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS PayAmt,")	//	##1/2 Currency_To,PayDate
-			//	Discount
-			.append(" currencyConvert(invoiceDiscount(i.C_Invoice_ID,?,i.C_InvoicePaySchedule_ID)")	//	##3 PayDate
-				.append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS DiscountAmt,")	//	##4/5 Currency_To,PayDate
+				.append(",i.C_Currency_ID, ?,?, i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS OpenAmt,")	//	##1/2 Currency_To,PayDate
+		//F3P pay amt
+			.append(" currencyConvert(invoiceOpenNetAmt(i.C_Invoice_ID,i.C_InvoicePaySchedule_ID)-")
+				.append("invoiceDiscount(i.C_Invoice_ID,?,i.C_InvoicePaySchedule_ID)")
+				.append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID, i.AD_Client_ID,i.AD_Org_ID) AS PayAmt, ") //F3P: ##3/4/5 PayDate, Currency_To, PayDate 
+				//	Discount
+			.append(" currencyConvert(invoiceDiscount(i.C_Invoice_ID,?,i.C_InvoicePaySchedule_ID)")	//	##6 PayDate
+				.append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS DiscountAmt,")	//	##7/8 Currency_To,PayDate
 			.append(" PaymentRule, IsSOTrx ")		//	4..6
 			.append("FROM C_Invoice_v i WHERE ");
 		if (X_C_Order.PAYMENTRULE_DirectDebit.equals(p_PaymentRule))
@@ -203,6 +207,11 @@ public class PaySelectionCreateFrom extends SvrProcess
 			pstmt.setInt (index++, C_CurrencyTo_ID);
 			pstmt.setTimestamp(index++, psel.getPayDate());
 			//
+			//F3P: added select
+			pstmt.setTimestamp(index++, psel.getPayDate());
+			pstmt.setInt (index++, C_CurrencyTo_ID);
+			pstmt.setTimestamp(index++, psel.getPayDate());
+			//F3P end
 			pstmt.setTimestamp(index++, psel.getPayDate());
 			pstmt.setInt (index++, C_CurrencyTo_ID);
 			pstmt.setTimestamp(index++, psel.getPayDate());
@@ -224,17 +233,21 @@ public class PaySelectionCreateFrom extends SvrProcess
 			while (rs.next ())
 			{
 				int C_Invoice_ID = rs.getInt(1);
-				BigDecimal PayAmt = rs.getBigDecimal(2);
-				if (C_Invoice_ID == 0 || Env.ZERO.compareTo(PayAmt) == 0)
+				BigDecimal openAmt = rs.getBigDecimal(2);
+				if (C_Invoice_ID == 0 || Env.ZERO.compareTo(openAmt) == 0)
 					continue;
-				BigDecimal DiscountAmt = rs.getBigDecimal(3);
-				String PaymentRule  = rs.getString(4);
-				boolean isSOTrx = "Y".equals(rs.getString(5));
+				//F3P
+				BigDecimal payAmt = rs.getBigDecimal(3);
+				if (C_Invoice_ID == 0 || Env.ZERO.compareTo(payAmt) == 0)
+					continue;
+				BigDecimal DiscountAmt = rs.getBigDecimal(4);
+				String PaymentRule  = rs.getString(5);
+				boolean isSOTrx = "Y".equals(rs.getString(6));
 				//
 				lines++;
 				MPaySelectionLine pselLine = new MPaySelectionLine (psel, lines*10, PaymentRule);
 				pselLine.setInvoice (C_Invoice_ID, isSOTrx,
-					PayAmt, PayAmt.subtract(DiscountAmt), DiscountAmt);
+						openAmt, payAmt, DiscountAmt); //F3P set payamt from query
 				if (!pselLine.save())
 				{
 					throw new IllegalStateException ("Cannot save MPaySelectionLine");
