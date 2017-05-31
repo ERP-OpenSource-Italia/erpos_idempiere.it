@@ -18,6 +18,8 @@ import org.compiere.util.CLogger;
 import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
  
  
  /**
@@ -421,4 +423,11 @@ public class UseLifeImpl
 		}
 		*/ // end commented by @win
 	} //	class Callout
+
+
+
+	@Override
+	public boolean hasColumn(String sColumnName) {
+		throw new NotImplementedException();
+	}
  }

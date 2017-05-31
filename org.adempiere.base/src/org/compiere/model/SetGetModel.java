@@ -17,4 +17,6 @@ public interface SetGetModel
 	public boolean set_AttrValue(String name, Object value);
 	public Object get_AttrValue(String name);
 	public boolean is_AttrValueChanged(String ColumnName);
+	
+	public boolean hasColumn(String sColumnName);
 }

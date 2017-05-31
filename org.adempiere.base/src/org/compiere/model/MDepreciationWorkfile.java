@@ -17,6 +17,8 @@ import org.compiere.util.TimeUtil;
 import org.idempiere.fa.feature.UseLife;
 import org.idempiere.fa.feature.UseLifeImpl;
 
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
 
 /**
  *  Depreciation Workfile Model
@@ -785,5 +787,10 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 		if (index < 0)
 			return false;
 		return is_ValueChanged(index);
+	}
+
+	@Override
+	public boolean hasColumn(String sColumnName) {
+		throw new NotImplementedException();
 	}
 }	//	MDepreciationWorkfile

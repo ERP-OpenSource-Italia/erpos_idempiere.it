@@ -9,6 +9,8 @@ import org.compiere.model.Query;
 import org.idempiere.fa.feature.UseLife;
 import org.idempiere.fa.feature.UseLifeImpl;
 
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
 /**
  * Asset Group Accounting Model
  * @author Teo Sarca, SC ARHIPAC SERVICE SRL
@@ -137,5 +139,10 @@ public class MAssetGroupAcct extends X_A_Asset_Group_Acct
 		if (index < 0)
 			return false;
 		return is_ValueChanged(index);
+	}
+
+	@Override
+	public boolean hasColumn(String sColumnName) {
+		throw new NotImplementedException();
 	}
 }	//	MAssetGroupAcct
