@@ -243,7 +243,7 @@ public class MWFNextCondition extends X_AD_WF_NextCondition
 		else if (OPERATION_LeEq.equals(op))
 			return valueObjS.compareTo(value1S) <= 0;
 		else if (OPERATION_Like.equals(op))
-			return valueObjS.compareTo(value1S) == 0;
+			return valueObjS.indexOf(value1S) >= 0; // F3P: not exactly a like, but better then strict equals
 		else if (OPERATION_NotEq.equals(op))
 			return valueObjS.compareTo(value1S) != 0;
 		//
