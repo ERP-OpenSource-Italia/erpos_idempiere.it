@@ -37,7 +37,6 @@ import java.util.logging.Level;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
-
 import org.adempiere.base.ILookupFactory;
 import org.adempiere.base.Service;
 import org.adempiere.base.UIBehaviour;
@@ -356,13 +355,19 @@ public class GridField
 //	  Do we have a mandatory rule
 		if (checkContext && m_vo.MandatoryLogic.length() > 0)
 		{
-			// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
-			if(m_vo.MandatoryLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+			boolean retValue  = false;
+			if (m_vo.MandatoryLogic != null && m_vo.MandatoryLogic.startsWith("@SQL=")) {
+				retValue = mandatorySqlStatement();
+			}
+		// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+			else if (m_vo.MandatoryLogic != null && m_vo.MandatoryLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
 			{
-				return evaluateScript(m_vo.MandatoryLogic);
+				retValue = evaluateScript(m_vo.MandatoryLogic);	
+			} else{
+				
+				retValue= Evaluator.evaluateLogic(this, m_vo.MandatoryLogic);
 			}
 			
-			boolean retValue = Evaluator.evaluateLogic(this, m_vo.MandatoryLogic);
 			if (log.isLoggable(Level.FINEST)) log.finest(m_vo.ColumnName + " Mandatory(" + m_vo.MandatoryLogic + ") => Mandatory-" + retValue);
 			if (retValue)
 				return true;
@@ -388,6 +393,32 @@ public class GridField
 		return isDisplayed (checkContext);
 	}	//	isMandatory
 
+	private boolean mandatorySqlStatement() {
+		String sql = m_vo.MandatoryLogic.substring(5); // w/o tag
+		sql = Env.parseContext(m_vo.ctx, m_vo.WindowNo, sql, false, false); // replace
+
+		// variables
+		if (sql.equals("")) {
+			log.log(Level.WARNING,"(" + m_vo.ColumnName + ") - Mandatory SQL variable parse failed: " + m_vo.MandatoryLogic);
+		} else {
+			PreparedStatement stmt = null;
+			ResultSet rs = null;
+			try {
+				stmt = DB.prepareStatement(sql, null);
+				rs = stmt.executeQuery();
+				if (rs.next())
+					return true;
+			} catch (SQLException e) {
+				log.log(Level.WARNING, "(" + m_vo.ColumnName + ") " + sql, e);
+			} finally {
+				DB.close(rs, stmt);
+				rs = null;
+				stmt = null;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 *	Is parameter Editable - checks if parameter is Read Only
 	 *  @param checkContext if true checks Context
@@ -401,7 +432,6 @@ public class GridField
 			{
 				return evaluateScript(m_vo.ReadOnlyLogic);
 			}
-			
 			boolean retValue = !Evaluator.evaluateLogic(this, m_vo.ReadOnlyLogic);
 			if (log.isLoggable(Level.FINEST)) log.finest(m_vo.ColumnName + " R/O(" + m_vo.ReadOnlyLogic + ") => R/W-" + retValue);
 			if (!retValue)
@@ -446,7 +476,6 @@ public class GridField
 		
 		if(UIBehaviour.isEditable(ctx, this, checkContext, isGrid) == false)
 			return false;		
-		
 		//  Fields always enabled (are usually not updateable)
 		if (m_vo.ColumnName.equals("Posted")
 			|| (m_vo.ColumnName.equals("Record_ID") && m_vo.displayType == DisplayType.Button))	//  Zoom
@@ -516,7 +545,6 @@ public class GridField
 			{
 				return evaluateScript(m_vo.ReadOnlyLogic);
 			}
-			
 			boolean retValue = !Evaluator.evaluateLogic(this, m_vo.ReadOnlyLogic);
 			if (log.isLoggable(Level.FINEST)) log.finest(m_vo.ColumnName + " R/O(" + m_vo.ReadOnlyLogic + ") => R/W-" + retValue);
 			if (!retValue)
@@ -820,7 +848,7 @@ public class GridField
 				if (defStr.equals("@SysDate@"))				//	System Time
 					return new Timestamp (System.currentTimeMillis());
 				else if (defStr.indexOf('@') != -1)			//	it is a variable
-					defStr = Env.getContext(m_vo.ctx, m_vo.WindowNo, defStr.replace('@',' ').trim());
+					defStr = Env.parseContext(m_vo.ctx, m_vo.WindowNo, defStr.trim(), false, false);
 				else if (defStr.indexOf("'") != -1)			//	it is a 'String'
 					defStr = defStr.replace('\'', ' ').trim();
 
@@ -1192,7 +1220,6 @@ public class GridField
 		{
 			return evaluateScript(m_vo.DisplayLogic);
 		}
-		
 		//  ** dynamic content **
 		if (checkContext)
 		{
@@ -1279,7 +1306,6 @@ public class GridField
 		return false;
 	}
 	//Angelo Dabala' (genied) end 
-	
 	/**
 	 * 	Get Variable Value (Evaluatee)
 	 *	@param variableName name
@@ -2458,7 +2484,7 @@ public class GridField
 			{
 				tableName = rs1.getString(1);
 				columnName = rs1.getString(2);
-			}
+							}
 			
 			if (tableName != null && columnName != null) {
 				sql = "SELECT DISTINCT "  + columnName + " FROM " + tableName + " WHERE AD_Client_ID=? "
@@ -2566,13 +2592,6 @@ public class GridField
 		return m_vo.NumLines;
 	}
 	
-	/* F3P: added to get seqNo */
-	
-	public int getSeqNo()
-	{
-		return m_vo.SeqNo;
-	}
-	 
 	public boolean isToolbarButton()
 	{
 		return m_vo.displayType == DisplayType.Button &&
@@ -2615,11 +2634,16 @@ public class GridField
 		return m_lookupEditorSettingValue;
 	}
 	
-	//F3P
+	/* F3P: new accesors functions */
+	
+	public int getSeqNo()
+	{
+		return m_vo.SeqNo;
+	}
+
 	public boolean getInserting()
 	{
 		return m_inserting;
 	}
 	//F3P end
-
 }   //  GridField

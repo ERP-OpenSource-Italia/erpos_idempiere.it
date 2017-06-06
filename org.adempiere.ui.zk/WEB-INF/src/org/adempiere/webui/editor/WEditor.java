@@ -172,9 +172,9 @@ public abstract class WEditor implements EventListener<Event>, PropertyChangeLis
         	comp.setClientAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, gridField.getGridTab().getTableName()+"0"+gridField.getColumnName());
         	this.gridTab = gridField.getGridTab();
         } else {
-        	comp.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, gridField.getColumnName());
+        	comp.setClientAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, gridField.getColumnName());
         }
-        this.setMandatory(gridField.isMandatory(false));
+        this.setMandatory(gridField.isMandatory(true));
         this.readOnly = gridField.isReadOnly();
         this.description = gridField.getDescription();
         this.updateable = gridField.isUpdateable();
@@ -380,29 +380,19 @@ public abstract class WEditor implements EventListener<Event>, PropertyChangeLis
      */
     public void propertyChange(final PropertyChangeEvent evt)
     {
-    	Object	oldValue = evt.getOldValue(),
-				newValue = evt.getNewValue();
-
-		if( (oldValue == null || newValue == null) ||
-				(oldValue.equals(newValue) == false))
-		{
-	        if (evt.getPropertyName().equals(org.compiere.model.GridField.PROPERTY))
-	        {
-	        	ValueChangeEvent changeEvent = new ValueChangeEvent(this, this.getColumnName(), evt.getOldValue(), evt.getNewValue());
-    			fireValueChange(changeEvent);
-	        	
-	        	if (Executions.getCurrent() == null) {
-	        		Executions.schedule(this.getComponent().getDesktop(), new EventListener<Event>() {
-						@Override
-						public void onEvent(Event event) throws Exception {
-							setValue((evt.getNewValue()));
-						}
-					}, new Event("onPropertyChange"));
-	        	} else {
-	        		setValue((evt.getNewValue()));
-	        	}
-	        }
-		}
+        if (evt.getPropertyName().equals(org.compiere.model.GridField.PROPERTY))
+        {
+        	if (Executions.getCurrent() == null) {
+        		Executions.schedule(this.getComponent().getDesktop(), new EventListener<Event>() {
+					@Override
+					public void onEvent(Event event) throws Exception {
+						setValue((evt.getNewValue()));
+					}
+				}, new Event("onPropertyChange"));
+        	} else {
+        		setValue((evt.getNewValue()));
+        	}
+        }
     }
 
     /**
@@ -836,5 +826,4 @@ public abstract class WEditor implements EventListener<Event>, PropertyChangeLis
 		}
 		
 	}
-	
 }

@@ -56,7 +56,6 @@ import org.compiere.util.Evaluator;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
-
 import it.idempiere.base.util.BaseEnvHelper;
 import it.idempiere.base.util.STDSysConfig;
 
@@ -110,15 +109,13 @@ import it.idempiere.base.util.STDSysConfig;
  *  @see  https://sourceforge.net/tracker/?func=detail&atid=879335&aid=2870645&group_id=176962
  *  @author Paul Bowden, phib BF 2900767 Zoom to child tab - inefficient queries
  *  @see https://sourceforge.net/tracker/?func=detail&aid=2900767&group_id=176962&atid=879332
- *  
- *  @author Silvano Trinchero, www.freepath.it: SQL Callouts
  */
 public class GridTab implements DataStatusListener, Evaluatee, Serializable
 {
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 5446672147679386907L;
+	private static final long serialVersionUID = -2946624717834888117L;
 
 	public static final String DEFAULT_STATUS_MESSAGE = "NavigateOrUpdate";
 	
@@ -164,10 +161,6 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 
 	// The window of this tab
 	private GridWindow			m_window;
-
-	public GridWindow getGridWindow() {
-		return m_window;
-	}
 
 	/** The Table Model for Query   */
 	private GridTable          	m_mTable = null;
@@ -659,11 +652,6 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			String lc = getLinkColumnName();
 			if (lc.equals("")) {
 				log.warning ("No link column");
-				
-				//F3P: bug-fix
-				if(where.length() > 0)
-					where.append(" AND ");
-				//F3P:end
 				where.append (" 2=3");
 			}
 			else
@@ -700,21 +688,14 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				}
 				else
 				{
-					if (!m_query.isActive()) //F3P: porting adempiere
-					{ // create a where criteria - otherwise, use the query.
-						//	we have column and value
-						if (where.length() != 0)
-							where.append(" AND ");
-						where.append(getTableName()).append(".").append(lc).append("=");
-						if (lc.endsWith("_ID"))
-							where.append(DB.TO_NUMBER(new BigDecimal(value), DisplayType.ID));
-						else
-							where.append(DB.TO_STRING(value));
-					}
-					else //F3P: bug-fix: update variable 'where' or the next search action will search on all records, not filtered on parent tab
-					{
-						where.append(m_query.getWhereClause());
-					}
+					//	we have column and value
+					if (where.length() != 0)
+						where.append(" AND ");
+					where.append(getTableName()).append(".").append(lc).append("=");
+					if (lc.endsWith("_ID"))
+						where.append(DB.TO_NUMBER(new BigDecimal(value), DisplayType.ID));
+					else
+						where.append(DB.TO_STRING(value));
 				}
 			}
 		}	//	isDetail
@@ -1024,12 +1005,8 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		try
 		{
 			if (hasChangedCurrentTabAndParents())
-			{
-				// Fail only if it's a true change - teo_sarca [ 3017560 ]
-				if (manualCmd || m_mTable.hasChanged(m_currentRow))
-					return false;
-			}
-			
+				return false;
+
 			boolean retValue = (m_mTable.dataSave(manualCmd) == GridTable.SAVE_OK);
 			if (manualCmd)
 			{
@@ -1312,6 +1289,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	{
 		return m_keyColumnName;
 	}	//	getKeyColumnName
+	
 
 	/**
 	 * Set Name of the Key Column
@@ -1346,6 +1324,8 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			m_parentColumnName = DB.getSQLValueString(null, sql, m_vo.Parent_Column_ID );
 		if ( m_parentColumnName == null )
 			m_parentColumnName = "";
+
+
 
 		if (linkColumnName != null)
 			m_linkColumnName = linkColumnName;
@@ -1614,6 +1594,17 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			return false;
 		return m_vo.IsInsertRecord;
 	}	//	isInsertRecord
+
+	/**
+	 *	Can we Delete Records?
+	 *  @return true not read only and allowed
+	 */
+	public boolean isDeleteRecord()
+	{
+		if (isReadOnly())
+			return false;
+		return m_vo.IsDeleteable;
+	}	//	isDeleteRecord
 
 	/**
 	 *	Is the Tab Visible.
@@ -2649,9 +2640,8 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			{
 				Object value = m_mTable.getValueAt(m_currentRow, i);
 				mField.setValue(value, m_mTable.isInserting());
-				// Angelo Dabala' (genied) wait until lookups are refreshed
-				//if (m_mTable.isInserting())		//	set invalid values to null
-				//	mField.validateValue();
+				if (m_mTable.isInserting())		//	set invalid values to null
+					mField.validateValue();
 				if (mField.isKey())
 					keyCalloutDelayed = mField;
 			}
@@ -3475,6 +3465,16 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	{
 		selection.clear();
 	}
+
+	public GridWindow getGridWindow()
+	{
+		return this.m_window;
+	}
+	
+	public GridTabVO getVO() 
+	{
+		return m_vo;
+	}
 	
 	// Angelo Dabala' (genied)
 	/**
@@ -3538,12 +3538,5 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		return false;
 	}
 	//Angelo Dabala' (genied) end
-	
-	//LS added to be able to refresh properly included and parent tabs from ADTabPanel,
-	//need to retreive current params 'onlyCurrentRows' and 'onlyCurrentDays' without override them
-	//to not change current selections
-	public GridTabVO getGridTabVO(){
-		return m_vo;
-	}
 	
 }	//	GridTab
