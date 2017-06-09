@@ -1821,28 +1821,6 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		{
 			MInvoiceLine line = lines[i];
 
-			//	Matching - Inv-Shipment
-			if (!isSOTrx()
-				&& line.getM_InOutLine_ID() != 0
-				&& line.getM_Product_ID() != 0
-				&& !isReversal())
-			{
-				MInOutLine receiptLine = new MInOutLine (getCtx(),line.getM_InOutLine_ID(), get_TrxName());
-				BigDecimal matchQty = line.getQtyInvoiced();
-
-				if (receiptLine.getMovementQty().compareTo(matchQty) < 0)
-					matchQty = receiptLine.getMovementQty();
-
-				MMatchInv inv = new MMatchInv(line, getDateInvoiced(), matchQty);
-				if (!inv.save(get_TrxName()))
-				{
-					m_processMsg = CLogger.retrieveErrorString("Could not create Invoice Matching");
-					return DocAction.STATUS_Invalid;
-				}
-				matchInv++;
-				addDocsPostProcess(inv);
-			}
-					
 			//	Update Order Line
 			MOrderLine ol = null;
 			if (line.getC_OrderLine_ID() != 0)
@@ -1909,6 +1887,29 @@ public class MInvoice extends X_C_Invoice implements DocAction
 				}
 			}
 			//			
+			
+//			Matching - Inv-Shipment
+			if (!isSOTrx()
+				&& line.getM_InOutLine_ID() != 0
+				&& line.getM_Product_ID() != 0
+				&& !isReversal())
+			{
+				MInOutLine receiptLine = new MInOutLine (getCtx(),line.getM_InOutLine_ID(), get_TrxName());
+				BigDecimal matchQty = line.getQtyInvoiced();
+
+				if (receiptLine.getMovementQty().compareTo(matchQty) < 0)
+					matchQty = receiptLine.getMovementQty();
+
+				MMatchInv inv = new MMatchInv(line, getDateInvoiced(), matchQty);
+				if (!inv.save(get_TrxName()))
+				{
+					m_processMsg = CLogger.retrieveErrorString("Could not create Invoice Matching");
+					return DocAction.STATUS_Invalid;
+				}
+				matchInv++;
+				addDocsPostProcess(inv);
+			}
+			
 		}	//	for all lines
 		if (matchInv > 0)
 			info.append(" @M_MatchInv_ID@#").append(matchInv).append(" ");

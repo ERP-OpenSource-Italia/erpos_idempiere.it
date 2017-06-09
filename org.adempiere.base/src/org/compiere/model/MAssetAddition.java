@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -20,6 +21,7 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
 import org.compiere.util.Trx;
 import org.idempiere.fa.exceptions.AssetAlreadyDepreciatedException;
 import org.idempiere.fa.exceptions.AssetException;
@@ -924,7 +926,7 @@ public class MAssetAddition extends X_A_Asset_Addition
 			assetwk.saveEx();
 		}
 		//
-		
+		/*
 		if (isA_Accumulated_Depr_Adjust())
 		{
 			if (isA_CreateAsset() && isA_Accumulated_Depr_Adjust())
@@ -935,11 +937,20 @@ public class MAssetAddition extends X_A_Asset_Addition
 				assetwk.saveEx();
 			}
 		}
-		
+		*/
 		// Accumulated depreciation (if any):
-		/*
 		if (isA_Accumulated_Depr_Adjust())
 		{
+			// F3P: need to obtain data for description
+			
+			MAssetAcct										assetAcct = assetwk.getA_AssetAcct(getDateAcct(), assetwk.get_TrxName());
+			MDepreciation depreciation = null; 
+			
+			if(assetAcct != null)
+			{
+				depreciation = MDepreciation.get(getCtx(), assetAcct.getA_Depreciation_ID());
+			}
+			
 			Collection<MDepreciationExp> expenses = MDepreciationExp.createDepreciation(assetwk,
 														1, // PeriodNo
 														getDateAcct(),
@@ -947,7 +958,8 @@ public class MAssetAddition extends X_A_Asset_Addition
 														null,	// Accum Amt
 														null,	// Accum Amt (F)
 														null,	// Help
-														null);
+														depreciation,
+														get_TrxName());
 			for (MDepreciationExp exp : expenses)
 			{
 				exp.setA_Asset_Addition_ID(getA_Asset_Addition_ID());
@@ -957,10 +969,13 @@ public class MAssetAddition extends X_A_Asset_Addition
 			if (isA_CreateAsset() && isA_Accumulated_Depr_Adjust())
 			{
 				assetwk.setA_Current_Period(getA_Period_Start());
+				
+				// F3P: sum 1 month to the acctdate to avoid re-creating the same date				
+				assetwk.setDateAcct(TimeUtil.addMonths(getDateAcct(), 1));
+				
 				assetwk.saveEx();
 			}
 		}
-		*/
 		
 		// Rebuild depreciation:
 		assetwk.buildDepreciation();
