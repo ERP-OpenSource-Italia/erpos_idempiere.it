@@ -224,7 +224,7 @@ public class WCreateFromWindow extends Window implements EventListener<Event>, W
 			if (type != WTableModelEvent.CONTENTS_CHANGED)
 				return;
 
-			if (checkAllSelected && e.getColumn() == 0) {
+			if (checkAllSelected && e.getColumn() == 0 && !bMasterDetailStyle) {
 				ListModelTable model = dataTable.getModel();
 				boolean rowUnSelected = false;
 				for (int i = 0; i < model.getRowCount(); i++) {

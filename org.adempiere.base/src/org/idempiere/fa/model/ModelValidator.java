@@ -191,10 +191,11 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 				
 			m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_CreateAsset, isAsset);
 			if (isAsset) {
-				m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_Asset_Group_ID, assetGroup_ID);
-				/* comment by @win
-				m.set_AttrValue(MInvoiceLine.COLUMNNAME_IsFixedAssetInvoice, isFixedAsset);
-				*/
+				if(!isSOTrx)	// F3P: Not needed for SOTrx invoices
+				{
+					m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_Asset_Group_ID, assetGroup_ID);
+					m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_CapvsExp, MInvoiceLine.A_CAPVSEXP_Capital);
+				}
 				m.set_AttrValue("IsFixedAssetInvoice", isAsset);
 				m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_CreateAsset, "Y");
 				
