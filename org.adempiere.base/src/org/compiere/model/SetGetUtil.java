@@ -805,6 +805,18 @@ public class SetGetUtil
 			}
 			return true;
 		}
+		
+		public boolean hasColumn(String sColumnName)
+		{
+			boolean bExists = false;
+			
+			GridField field = tab.getField(sColumnName);
+			
+			if(field != null)
+				bExists = true;
+			
+			return bExists;
+		}
 		//F3P start
 		/**
 		 * @param	sColumnName	

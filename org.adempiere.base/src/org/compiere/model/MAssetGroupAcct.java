@@ -5,7 +5,6 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Properties;
 
-import org.compiere.model.Query;
 import org.idempiere.fa.feature.UseLife;
 import org.idempiere.fa.feature.UseLifeImpl;
 
@@ -138,7 +137,7 @@ public class MAssetGroupAcct extends X_A_Asset_Group_Acct
 			return false;
 		return is_ValueChanged(index);
 	}
-	
+
 	//F3P:Start
 	@Override
 	public boolean hasColumn(String sColumnName)
