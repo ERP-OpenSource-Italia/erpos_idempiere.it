@@ -36,6 +36,7 @@ when detect side effect, fix to only apply for parameter window*/
 	overflow: auto;
 	padding-bottom: 5px; 
 	margin: 10px;
+	line-height: 18px;	
 }
 
 .option-input-parameter{
