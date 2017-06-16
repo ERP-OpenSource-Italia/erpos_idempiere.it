@@ -72,6 +72,8 @@ import org.compiere.model.PO;
 import org.compiere.model.Query;
 import org.compiere.model.X_AD_ReportView;
 import org.compiere.print.MPrintFormat;
+import org.compiere.print.ReportCtl;
+import org.compiere.print.ReportEngine;
 import org.compiere.process.ProcessInfo;
 import org.compiere.process.ProcessInfoUtil;
 import org.compiere.process.ServerProcessCtl;
@@ -1215,5 +1217,10 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 				AEnv.zoom(query);
 			}
 		});
+	}
+
+	@Override
+	public void previewReport(ReportEngine re) {
+		ReportCtl.preview(re);		
 	}
 }

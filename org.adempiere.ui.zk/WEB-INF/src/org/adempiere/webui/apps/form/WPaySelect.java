@@ -60,6 +60,8 @@ import org.compiere.model.MQuery;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.PO;
 import org.compiere.model.X_C_PaySelection;
+import org.compiere.print.ReportCtl;
+import org.compiere.print.ReportEngine;
 import org.compiere.process.ProcessInfo;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
@@ -540,5 +542,10 @@ public class WPaySelect extends PaySelect
 	@Override
 	public void zoom(MQuery query) {
 		AEnv.zoom(query);		
+	}
+
+	@Override
+	public void previewReport(ReportEngine re) {
+		ReportCtl.preview(re);		
 	}	
 }   //  VPaySelect
