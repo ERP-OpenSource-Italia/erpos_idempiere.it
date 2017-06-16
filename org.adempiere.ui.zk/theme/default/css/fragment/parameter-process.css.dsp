@@ -28,8 +28,13 @@ when detect side effect, fix to only apply for parameter window*/
 }
 
 .message-paramenter{
-	max-height: 150pt; 
-	overflow: hidden; 
+	/* F3P: process with too big output become hidden 
+	max-height: 150pt;  
+	overflow: hidden; 	
+	*/
+	max-height: 400pt;  
+	overflow: auto;
+	padding-bottom: 5px; 
 	margin: 10px;
 }
 
