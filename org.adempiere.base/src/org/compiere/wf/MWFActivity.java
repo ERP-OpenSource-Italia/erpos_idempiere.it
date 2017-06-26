@@ -28,6 +28,7 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -1349,6 +1350,16 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 			dbValue = new Boolean("Y".equals(value));
 		else if (DisplayType.isNumeric(displayType))
 			dbValue = new BigDecimal (value);
+		//
+		else if (DisplayType.isID(displayType))
+			dbValue = new Integer(value);
+		else if (DisplayType.isDate(displayType)) {
+			SimpleDateFormat dateFormat = DisplayType.getDateFormat(
+					displayType, Env.getLanguage(getCtx()));
+			Date parsedDate = dateFormat.parse(value);
+			dbValue = new Timestamp(parsedDate.getTime());
+		}
+		//
 		else
 			dbValue = value;
 		m_po.set_ValueOfColumn(getNode().getAD_Column_ID(), dbValue);
