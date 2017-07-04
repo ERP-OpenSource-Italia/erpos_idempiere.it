@@ -105,6 +105,7 @@ public class ModelValidatorElementHandler extends AbstractElementHandler{
 		createADModelValidatorBinding(ctx, document, validator);
 
 		PackOut packOut = ctx.packOut;
+		packOut.getCtx().ctx.put("Table_Name",X_AD_ModelValidator.Table_Name);
 		try{
 			new CommonTranslationHandler().packOut(packOut,document,null,validator.get_ID());
 		}
