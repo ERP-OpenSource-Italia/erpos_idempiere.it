@@ -26,6 +26,7 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 
 import org.adempiere.base.Core;
+import org.adempiere.base.UIBehaviour;
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.webui.AdempiereIdGenerator;
 import org.adempiere.webui.AdempiereWebUI;
@@ -49,6 +50,8 @@ import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.editor.WEditorPopupMenu;
 import org.adempiere.webui.editor.WImageEditor;
 import org.adempiere.webui.editor.WPaymentEditor;
+import org.adempiere.webui.editor.WSearchEditor;
+import org.adempiere.webui.editor.WTableDirEditor;
 import org.adempiere.webui.editor.WebEditorFactory;
 import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.panel.HelpController;
@@ -64,6 +67,7 @@ import org.compiere.model.GridTab;
 import org.compiere.model.GridTable;
 import org.compiere.model.GridWindow;
 import org.compiere.model.I_AD_Preference;
+import org.compiere.model.Lookup;
 import org.compiere.model.MLookup;
 import org.compiere.model.MPreference;
 import org.compiere.model.MRole;
@@ -719,6 +723,27 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 				for (WEditor comp : editors)
 				{
 					comp.updateStyle();
+					
+					// F3P: integrated ui behaviour and refresh if not cacheable
+					
+					if(comp instanceof WTableDirEditor && comp.getGridField() != null)
+					{
+						Lookup lk = comp.getGridField().getLookup();
+						if(lk != null && UIBehaviour.isLookupCacheable(lk, null) == false)
+							((WTableDirEditor)comp).actionRefresh();
+					}
+					else if(comp instanceof WSearchEditor && comp.getGridField() != null)
+					{
+						Lookup lk = comp.getGridField().getLookup();
+						if(lk != null && UIBehaviour.isLookupCacheable(lk, null) == false)
+						{
+  						WSearchEditor se = (WSearchEditor)comp;	              						
+  						se.setValue(se.getValue()); // Equivalente a actionRefreh()
+						}
+					}
+					
+					// F3P end
+					
 				}
                 return;
             }
@@ -744,6 +769,26 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
                     }
                     else
                     {
+            					// F3P: integrated ui behaviour and refresh if not cacheable
+            					
+            					if(comp instanceof WTableDirEditor)
+            					{
+            						Lookup lk = comp.getGridField().getLookup();
+            						if(lk != null && UIBehaviour.isLookupCacheable(lk, null) == false)
+            							((WTableDirEditor)comp).actionRefresh();
+            					}
+            					else if(comp instanceof WSearchEditor)
+            					{
+            						Lookup lk = comp.getGridField().getLookup();
+            						if(lk != null && UIBehaviour.isLookupCacheable(lk, null) == false)
+            						{
+              						WSearchEditor se = (WSearchEditor)comp;	              						
+              						se.setValue(se.getValue()); // Equivalente a actionRefreh()
+            						}
+            					}
+            					
+            					// F3P end
+            					                    	
                     	comp.dynamicDisplay();
                         boolean rw = mField.isEditable(true);   //  r/w - check Context
                         comp.setReadWrite(rw);
