@@ -239,7 +239,7 @@ public class DocumentEngine implements DocAction
 				String docStatusOriginal = (String) docPO.get_ValueOld("DocStatus");
 				String statusSql = "SELECT DocStatus FROM " + docPO.get_TableName() + " WHERE " + docPO.get_KeyColumns()[0] + " = ? ";
 				String currentStatus = DB.getSQLValueString((String)null, statusSql, docPO.get_ID());
-				if (!docStatusOriginal.equals(currentStatus) && currentStatus != null) {
+				if (currentStatus != null && !docStatusOriginal.equals(currentStatus)) {
 					currentStatus = DB.getSQLValueString(docPO.get_TrxName(), statusSql, docPO.get_ID());
 					if (!docStatusOriginal.equals(currentStatus)) {
 						throw new IllegalStateException(Msg.getMsg(docPO.getCtx(), "DocStatusChanged") + " " + docPO.toString());

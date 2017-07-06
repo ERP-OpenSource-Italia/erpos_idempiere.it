@@ -103,17 +103,18 @@ public abstract class CreateFromInvoice extends CreateFrom
 				sql.append(" LEFT OUTER JOIN M_MatchInv mi ON (sl.M_InOutLine_ID=mi.M_InOutLine_ID) ")
 					.append(" JOIN M_InOut s2 ON (sl.M_InOut_ID=s2.M_InOut_ID) ")
 					.append(" WHERE s2.C_BPartner_ID=? AND s2.IsSOTrx=? AND s2.DocStatus IN ('CL','CO') ")
-					.append(" GROUP BY sl.M_InOut_ID,sl.MovementQty,mi.M_InOutLine_ID")
-					.append(" HAVING (sl.MovementQty<>COALESCE(SUM(CASE WHEN sl.M_Product_ID IS NOT NULL THEN COALESCE(mi.Qty,0) ")
-					.append(" WHEN sl.C_Charge_ID IS NOT NULL THEN ")
-						.append(" (SELECT SUM(cil.QtyInvoiced) FROM C_InvoiceLine cil ")
-						.append(" INNER JOIN C_Invoice ci ON (ci.C_Invoice_ID = cil.C_Invoice_ID) ")
-						.append(" WHERE cil.M_InOutLine_ID = sl.M_InOutLine_ID AND ci.DocStatus IN ('CO','CL'))")
-					.append("ELSE 0 END),0))").append(" OR mi.M_InOutLine_ID IS NOT NULL ");
+					.append(" AND (sl.m_product_id IS NOT NULL OR sl.c_charge_id IS NOT NULL) ")
+					.append(" GROUP BY sl.M_InOut_ID,mi.M_InOutLine_ID,sl.MovementQty ")
+					.append(" HAVING (sl.MovementQty<>COALESCE( SUM(CASE WHEN sl.M_Product_ID IS NOT NULL THEN COALESCE(mi.Qty,0) WHEN sl.C_Charge_ID IS NOT NULL THEN")
+					.append("(SELECT SUM(cil.QtyInvoiced) FROM C_InvoiceLine cil INNER JOIN C_Invoice ci ON (ci.C_Invoice_ID = cil.C_Invoice_ID)") 
+					.append(" WHERE cil.M_InOutLine_ID = sl.M_InOutLine_ID AND ci.DocStatus IN ('CO','CL')) ELSE 0 END),")
+					.append(" 0))");
+			//removed for visualize inoutline not description .append(" OR mi.M_InOutLine_ID IS NOT NULL ");
 			else
 				sql.append(" INNER JOIN M_InOut s2 ON (sl.M_InOut_ID=s2.M_InOut_ID)")
 					.append(" LEFT JOIN C_InvoiceLine il ON sl.M_InOutLine_ID = il.M_InOutLine_ID")
 					.append(" WHERE s2.C_BPartner_ID=? AND s2.IsSOTrx=? AND s2.DocStatus IN ('CL','CO')")
+					.append(" AND (sl.m_product_id IS NOT NULL OR sl.c_charge_id IS NOT NULL) ")
 					.append(" GROUP BY sl.M_InOutLine_ID")
 					.append(" HAVING sl.MovementQty - sum(COALESCE(il.QtyInvoiced,0)) > 0");
 			sql.append(") ORDER BY s.MovementDate");
@@ -153,8 +154,9 @@ public abstract class CreateFromInvoice extends CreateFrom
 	protected ArrayList<KeyNamePair> loadRMAData(int C_BPartner_ID) {
 		ArrayList<KeyNamePair> list = new ArrayList<KeyNamePair>();
 
+		String isSOTrxParam = isSOTrx ? "Y":"N";
 		String sqlStmt = "SELECT r.M_RMA_ID, r.DocumentNo || '-' || r.Amt from M_RMA r "
-				+ "WHERE ISSOTRX='N' AND r.DocStatus in ('CO', 'CL') "
+				+ "WHERE ISSOTRX='"+isSOTrxParam+"' AND r.DocStatus in ('CO', 'CL') "
 				+ "AND r.C_BPartner_ID=? "
 				+ "AND NOT EXISTS (SELECT * FROM C_Invoice inv "
 				+ "WHERE inv.M_RMA_ID=r.M_RMA_ID AND inv.DocStatus IN ('CO', 'CL'))";
