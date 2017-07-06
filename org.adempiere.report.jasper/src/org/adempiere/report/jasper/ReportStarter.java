@@ -627,6 +627,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
         	params.put("AD_CLIENT_ID", new Integer( Env.getAD_Client_ID(Env.getCtx())));
         	params.put("AD_ROLE_ID", new Integer( Env.getAD_Role_ID(Env.getCtx())));
         	params.put("AD_USER_ID", new Integer( Env.getAD_User_ID(Env.getCtx())));
+        	params.put("AD_ORG_ID", new Integer( Env.getAD_Org_ID(Env.getCtx()))); // F3P: compatibilita con adempiere italia
 
         	/*
              * Angelo Dabala'(genied) nectosoft
