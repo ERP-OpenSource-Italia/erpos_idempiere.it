@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.compiere.util.CCache;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -255,6 +256,17 @@ public class MDocType extends X_C_DocType
 	{
 		/*if (getAD_Org_ID() != 0)
 			setAD_Org_ID(0);*/
+		
+		// F3P: improve readability of duplicate name error
+		
+		if(newRecord)
+		{
+			int no = DB.getSQLValue(get_TrxName(), "SELECT count('ok') FROM C_DocType WHERE AD_Client_ID = ? and Name = ?", getAD_Client_ID(), getName());
+			
+			if(no > 0)
+				throw new AdempiereException("@AlreadyExists@: " + getName());			
+		}
+		
 		return true;
 	}	//	beforeSave
 	
@@ -275,14 +287,13 @@ public class MDocType extends X_C_DocType
 				.append("(SELECT ")
 				.append(getAD_Client_ID()).append(",0,'Y', SysDate,") 
 				.append(getUpdatedBy()).append(", SysDate,").append(getUpdatedBy()) 
-				.append(", doctype.C_DocType_ID, action.AD_Ref_List_ID, rol.AD_Role_ID ")
+				.append(", doctype.C_DocType_ID, 135 as AD_Ref_List_ID, rol.AD_Role_ID ")
 				.append("FROM AD_Client client ")
 				.append("INNER JOIN C_DocType doctype ON (doctype.AD_Client_ID=client.AD_Client_ID) ")
-				.append("INNER JOIN AD_Ref_List action ON (action.AD_Reference_ID=135) ")
 				.append("INNER JOIN AD_Role rol ON (rol.AD_Client_ID=client.AD_Client_ID) ")
 				.append("WHERE client.AD_Client_ID=").append(getAD_Client_ID()) 
 				.append(" AND doctype.C_DocType_ID=").append(get_ID())
-				.append(" AND rol.IsManual='N' OR ? ='Y'") //F3P: Manage AutoUpdateDocActionAccess variable
+				.append(" AND (rol.IsManual='N' OR ? ='Y')") //F3P: Manage AutoUpdateDocActionAccess variable
 				.append(")");
 			
 			//F3P: Manage AutoUpdateDocActionAccess variable
