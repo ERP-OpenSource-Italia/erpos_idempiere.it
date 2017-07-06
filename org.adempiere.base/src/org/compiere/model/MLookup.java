@@ -576,7 +576,10 @@ public final class MLookup extends Lookup implements Serializable
 			}
 			else
 			{
-				m_directNullKey = key;
+				// F3P: cache 'null' key only if the lookup is cacheable
+				// m_directNullKey = key;
+				if(UIBehaviour.isLookupCacheable(this, getLookupInfo()))
+					m_directNullKey = key;
 				directValue = null;
 			}
 
