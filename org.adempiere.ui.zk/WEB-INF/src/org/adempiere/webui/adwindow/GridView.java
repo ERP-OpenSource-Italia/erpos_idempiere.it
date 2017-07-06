@@ -23,6 +23,7 @@ import java.util.Properties;
 import javax.swing.table.AbstractTableModel;
 
 import org.adempiere.base.Core;
+import org.adempiere.base.UIBehaviour;
 import org.adempiere.model.MTabCustomization;
 import org.adempiere.util.GridRowCtx;
 import org.adempiere.webui.apps.AEnv;
@@ -33,11 +34,13 @@ import org.adempiere.webui.component.Grid;
 import org.adempiere.webui.component.NumberBox;
 import org.adempiere.webui.component.Rows;
 import org.adempiere.webui.editor.WEditor;
+import org.adempiere.webui.editor.WSearchEditor;
 import org.adempiere.webui.util.SortComparator;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.model.GridTable;
+import org.compiere.model.Lookup;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.StateChangeEvent;
 import org.compiere.model.StateChangeListener;
@@ -996,6 +999,20 @@ public class GridView extends Vbox implements EventListener<Event>, IdSpace, IFi
                 }
                 else
                 {
+                	// 	F3P: refresh non-cacheable search editors
+                	
+                	if(comp instanceof WSearchEditor)
+        					{
+        						Lookup lk = mField.getLookup();
+        						if(lk != null && UIBehaviour.isLookupCacheable(lk, null) == false)
+        						{
+          						WSearchEditor se = (WSearchEditor)comp;	              						
+          						se.setValue(se.getValue()); // Equivalent to actionRefreh()
+        						}
+        					}
+                	
+                	// F3P end
+                	
                 	comp.dynamicDisplay();
                     boolean rw = mField.isEditableGrid(true);   //  r/w - check Context
                     comp.setReadWrite(rw);
