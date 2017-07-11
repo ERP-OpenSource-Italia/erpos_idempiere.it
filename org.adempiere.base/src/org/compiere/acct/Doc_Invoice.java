@@ -404,7 +404,7 @@ public class Doc_Invoice extends Doc
 				amt = m_taxes[i].getAmount();
 				if (amt != null && amt.signum() != 0)
 				{
-					FactLine tl = fact.createLine(null, m_taxes[i].getAccount(DocTax.ACCTTYPE_TaxDue, as),
+					FactLine tl = fact.createLine(null, m_taxes[i].getAccount(DocTax.ACCTTYPE_TaxDue, as, getTrxName()),
 						getC_Currency_ID(), null, amt);
 					if (tl != null)
 						tl.setC_Tax_ID(m_taxes[i].getC_Tax_ID());
@@ -462,10 +462,10 @@ public class Doc_Invoice extends Doc
 				grossAmt = Env.ZERO;
 			}
 			if (grossAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), receivables_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), receivables_ID),
 					getC_Currency_ID(), grossAmt, null);
 			if (serviceAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), receivablesServices_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), receivablesServices_ID),
 					getC_Currency_ID(), serviceAmt, null);
 		}
 		//  ARC
@@ -485,7 +485,7 @@ public class Doc_Invoice extends Doc
 				amt = m_taxes[i].getAmount();
 				if (amt != null && amt.signum() != 0)
 				{
-					FactLine tl = fact.createLine(null, m_taxes[i].getAccount(DocTax.ACCTTYPE_TaxDue, as),
+					FactLine tl = fact.createLine(null, m_taxes[i].getAccount(DocTax.ACCTTYPE_TaxDue, as, getTrxName()),
 						getC_Currency_ID(), amt, null);
 					if (tl != null)
 						tl.setC_Tax_ID(m_taxes[i].getC_Tax_ID());
@@ -542,10 +542,10 @@ public class Doc_Invoice extends Doc
 				grossAmt = Env.ZERO;
 			}
 			if (grossAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), receivables_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), receivables_ID),
 					getC_Currency_ID(), null, grossAmt);
 			if (serviceAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), receivablesServices_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), receivablesServices_ID),
 					getC_Currency_ID(), null, serviceAmt);
 		}
 
@@ -561,7 +561,7 @@ public class Doc_Invoice extends Doc
 			//  TaxCredit       DR
 			for (int i = 0; i < m_taxes.length; i++)
 			{
-				FactLine tl = fact.createLine(null, m_taxes[i].getAccount(m_taxes[i].getAPTaxType(), as),
+				FactLine tl = fact.createLine(null, m_taxes[i].getAccount(m_taxes[i].getAPTaxType(), as, getTrxName()),
 					getC_Currency_ID(), m_taxes[i].getAmount(), null);
 				if (tl != null)
 					tl.setC_Tax_ID(m_taxes[i].getC_Tax_ID());
@@ -647,10 +647,10 @@ public class Doc_Invoice extends Doc
 				grossAmt = Env.ZERO;
 			}
 			if (grossAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), payables_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), payables_ID),
 					getC_Currency_ID(), null, grossAmt);
 			if (serviceAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), payablesServices_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), payablesServices_ID),
 					getC_Currency_ID(), null, serviceAmt);
 			//
 			updateProductPO(as);	//	Only API
@@ -666,7 +666,7 @@ public class Doc_Invoice extends Doc
 			//  TaxCredit               CR
 			for (int i = 0; i < m_taxes.length; i++)
 			{
-				FactLine tl = fact.createLine (null, m_taxes[i].getAccount(m_taxes[i].getAPTaxType(), as),
+				FactLine tl = fact.createLine (null, m_taxes[i].getAccount(m_taxes[i].getAPTaxType(), as, getTrxName()),
 					getC_Currency_ID(), null, m_taxes[i].getAmount());
 				if (tl != null)
 					tl.setC_Tax_ID(m_taxes[i].getC_Tax_ID());
@@ -751,10 +751,10 @@ public class Doc_Invoice extends Doc
 				grossAmt = Env.ZERO;
 			}
 			if (grossAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), payables_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), payables_ID),
 					getC_Currency_ID(), grossAmt, null);
 			if (serviceAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), payablesServices_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), payablesServices_ID),
 					getC_Currency_ID(), serviceAmt, null);
 		}
 		else
@@ -843,10 +843,10 @@ public class Doc_Invoice extends Doc
 			}
 			FactLine tl = null;
 			if (payables)
-				tl = fact.createLine (null, m_taxes[i].getAccount(m_taxes[i].getAPTaxType(), as),
+				tl = fact.createLine (null, m_taxes[i].getAccount(m_taxes[i].getAPTaxType(), as, getTrxName()),
 					getC_Currency_ID(), amt, amt2);
 			else
-				tl = fact.createLine (null, m_taxes[i].getAccount(DocTax.ACCTTYPE_TaxDue, as),
+				tl = fact.createLine (null, m_taxes[i].getAccount(DocTax.ACCTTYPE_TaxDue, as, getTrxName()),
 					getC_Currency_ID(), amt2, amt);
 			if (tl != null)
 				tl.setC_Tax_ID(m_taxes[i].getC_Tax_ID());

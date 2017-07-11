@@ -838,8 +838,8 @@ public class Doc_AllocationHdr extends Doc
 			return null;
 		}
 
-		MAccount gain = MAccount.get (as.getCtx(), as.getAcctSchemaDefault().getRealizedGain_Acct());
-		MAccount loss = MAccount.get (as.getCtx(), as.getAcctSchemaDefault().getRealizedLoss_Acct());
+		MAccount gain = MAccount.get (as.getCtx(), getTrxName(), as.getAcctSchemaDefault().getRealizedGain_Acct());
+		MAccount loss = MAccount.get (as.getCtx(), getTrxName(), as.getAcctSchemaDefault().getRealizedLoss_Acct());
 		//
 		if (invoice.isSOTrx())
 		{

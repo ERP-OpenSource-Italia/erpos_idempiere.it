@@ -67,8 +67,8 @@ public class Doc_AssetTransfer extends Doc
 		// Change Asset Account
 		if (assetTr.getA_Asset_New_Acct() != assetTr.getA_Asset_Acct())
 		{
-			MAccount dr = MAccount.get(getCtx(), assetTr.getA_Asset_New_Acct());  
-			MAccount cr = MAccount.get(getCtx(), assetTr.getA_Asset_Acct());
+			MAccount dr = MAccount.get(getCtx(), getTrxName(), assetTr.getA_Asset_New_Acct());  
+			MAccount cr = MAccount.get(getCtx(), getTrxName(), assetTr.getA_Asset_Acct());
 			FactLine[] lines = FactUtil.createSimpleOperation(fact, null, dr, cr, as.getC_Currency_ID(),
 					wk.getA_Asset_Cost(), false);
 			
@@ -81,16 +81,16 @@ public class Doc_AssetTransfer extends Doc
 		// Change Asset Accum. Depr. Account
 		if (assetTr.getA_Accumdepreciation_New_Acct() != assetTr.getA_Accumdepreciation_Acct())
 		{
-			MAccount cr = MAccount.get(getCtx(), assetTr.getA_Accumdepreciation_New_Acct());  
-			MAccount dr = MAccount.get(getCtx(), assetTr.getA_Accumdepreciation_Acct());
+			MAccount cr = MAccount.get(getCtx(), getTrxName(), assetTr.getA_Accumdepreciation_New_Acct());  
+			MAccount dr = MAccount.get(getCtx(), getTrxName(), assetTr.getA_Accumdepreciation_Acct());
 			FactLine[] lines = FactUtil.createSimpleOperation(fact, null, dr, cr, as.getC_Currency_ID(),
 					wk.getA_Accumulated_Depr(), false);
 			        //exp.getA_Accumulated_Depr(), false);
 			
-			// F3P: added dimensions to created lines
+			// F3P: added dimensions to created lines 
 			AssetFactUtil.setFactLineDimensions(lines[0], asset);
 			AssetFactUtil.setFactLineDimensions(lines[1], asset);
-			//F3P: end
+			//F3P: end 
 		}
 		//
 		return facts;

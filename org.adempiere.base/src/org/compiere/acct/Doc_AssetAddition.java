@@ -204,7 +204,7 @@ public class Doc_AssetAddition extends Doc
 		else if (MAssetAddition.A_SOURCETYPE_Manual.equals(assetAdd.getA_SourceType())
 				&& getC_Charge_ID() > 0) // backward compatibility: only if charge defined; if not fallback to product account 
 		{	
-			pAssetAcct = MCharge.getAccount(getC_Charge_ID(), as);
+			pAssetAcct = MCharge.getAccount(getC_Charge_ID(), as, getTrxName());
 			return pAssetAcct;
 		}	
 		else if (MAssetAddition.A_SOURCETYPE_Invoice.equals(assetAdd.getA_SourceType())
@@ -243,7 +243,7 @@ public class Doc_AssetAddition extends Doc
 						+" AND "+I_C_Project_Acct.COLUMNNAME_C_AcctSchema_ID+"=?"
 						;
 		int acct_id = DB.getSQLValueEx(getTrxName(), sql, prj.getC_Project_ID(), as.get_ID());	
-		return MAccount.get(getCtx(), acct_id);
+		return MAccount.get(getCtx(), getTrxName(), acct_id);
 	}
 
 	private MAccount getA_Asset_Acct()
@@ -252,7 +252,7 @@ public class Doc_AssetAddition extends Doc
 		int acct_id = MAssetAcct
 				.forA_Asset_ID(getCtx(), assetAdd.getA_Asset_ID(), assetAdd.getPostingType(), assetAdd.getDateAcct(), getTrxName())	// Angelo Dabala' (genied) set transaction
 				.getA_Asset_Acct();
-		return MAccount.get(getCtx(), acct_id);
+		return MAccount.get(getCtx(), getTrxName(), acct_id);
 	}
 	
 	// F3P: added to check if asset belongs to the project asset

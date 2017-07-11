@@ -38,8 +38,8 @@ public class Doc_AssetReval extends Doc
 		
 		setC_Currency_ID(as.getC_Currency_ID());//F3P: from adempiere
 		
-		MAccount dr = MAccount.get(getCtx(), assetAcct.getA_Asset_Acct());  
-		MAccount cr = MAccount.get(getCtx(), assetAcct.getA_Reval_Cost_Offset_Acct());
+		MAccount dr = MAccount.get(getCtx(), getTrxName(), assetAcct.getA_Asset_Acct());  
+		MAccount cr = MAccount.get(getCtx(), getTrxName(), assetAcct.getA_Reval_Cost_Offset_Acct());
 		
 		// F3P: added dimensions to facts line generate
 		I_A_Asset	asset = assetRe.getA_Asset();
@@ -51,8 +51,8 @@ public class Doc_AssetReval extends Doc
 		AssetFactUtil.setFactLineDimensions(fctLines[1], asset);
 		//F3P: end
 			
-		MAccount drd = MAccount.get(getCtx(), assetAcct.getA_Reval_Cost_Offset_Acct());  
-		MAccount crd = MAccount.get(getCtx(), assetAcct.getA_Accumdepreciation_Acct());
+		MAccount drd = MAccount.get(getCtx(), getTrxName(), assetAcct.getA_Reval_Cost_Offset_Acct());  
+		MAccount crd = MAccount.get(getCtx(), getTrxName(), assetAcct.getA_Accumdepreciation_Acct());
 		FactLine[] fctLines2 = FactUtil.createSimpleOperation(fact, null, drd, crd, as.getC_Currency_ID(),
 				assetRe.getA_Change_Acumulated_Depr().subtract(assetRe.getA_Accumulated_Depr()), false);
 		

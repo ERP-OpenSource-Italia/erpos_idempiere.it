@@ -83,8 +83,8 @@ public class Doc_DepreciationEntry extends Doc
 			DocLine line = createLine(depexp);
 			BigDecimal expenseAmt = depexp.getExpense();
 			//
-			MAccount dr_acct = MAccount.get(getCtx(), depexp.getDR_Account_ID());
-			MAccount cr_acct = MAccount.get(getCtx(), depexp.getCR_Account_ID());
+			MAccount dr_acct = MAccount.get(getCtx(), getTrxName(), depexp.getDR_Account_ID());
+			MAccount cr_acct = MAccount.get(getCtx(), getTrxName(), depexp.getCR_Account_ID());
 			// F3P: added dimensions to create fact lines
 			I_A_Asset asset = depexp.getA_Asset();
 			

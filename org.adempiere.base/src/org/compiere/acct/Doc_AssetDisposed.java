@@ -130,7 +130,7 @@ public class Doc_AssetDisposed extends Doc
 		MAssetDisposed assetDisp = (MAssetDisposed)getPO();
 		MAssetAcct assetAcct = MAssetAcct.forA_Asset_ID(getCtx(), assetDisp.getA_Asset_ID(), assetDisp.getPostingType(), assetDisp.getDateAcct(),null);
 		int account_id = (Integer)assetAcct.get_Value(accountName);
-		return MAccount.get(getCtx(), account_id);
+		return MAccount.get(getCtx(), getTrxName(), account_id);
 	}
 
 }

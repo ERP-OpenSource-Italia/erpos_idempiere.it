@@ -594,7 +594,7 @@ public abstract class Doc
 			// F3P: end
 			Text.append(" - ").append(cn.substring(cn.lastIndexOf('.')))
 				.append(" (").append(getDocumentType())
-				.append(" - DocumentNo=").append(getDocumentNo())
+				.append(" - DocumentNo=").append(sDocNo)
 				.append(", DateAcct=").append(getDateAcct().toString().substring(0,10))
 				.append(", Amount=").append(getAmount())
 				.append(", Sta=").append(p_Status)
@@ -1513,7 +1513,7 @@ public abstract class Doc
 		if (C_ValidCombination_ID == 0)
 			return null;
 		//	Return Account
-		MAccount acct = MAccount.get (as.getCtx(), C_ValidCombination_ID);
+		MAccount acct = MAccount.get (as.getCtx(), getTrxName(), C_ValidCombination_ID);
 		return acct;
 	}	//	getAccount
 
