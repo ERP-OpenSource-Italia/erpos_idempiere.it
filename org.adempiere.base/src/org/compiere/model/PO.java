@@ -1333,7 +1333,7 @@ public abstract class PO
 	{
 		if (s_log.isLoggable(Level.FINE)) s_log.fine("From ID=" + from.get_ID() + " - To ID=" + to.get_ID());
 		//	Different Classes
-		if (from.getClass() != to.getClass())
+		if (from.get_TableName().equals(to.get_TableName())==false)
 		{
 			for (int i1 = 0; i1 < from.m_oldValues.length; i1++)
 			{
