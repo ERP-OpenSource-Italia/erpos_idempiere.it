@@ -495,13 +495,13 @@ public interface I_PP_Order_BOMLine
 	public BigDecimal getQtyReject();
 
     /** Column name QtyRequiered */
-    public static final String COLUMNNAME_QtyRequiered = "QtyRequiered";
+    public static final String COLUMNNAME_QtyRequired = "QtyRequired";
 
 	/** Set Qty Requiered	  */
-	public void setQtyRequiered (BigDecimal QtyRequiered);
+	public void setQtyRequired (BigDecimal QtyRequiered);
 
 	/** Get Qty Requiered	  */
-	public BigDecimal getQtyRequiered();
+	public BigDecimal getQtyRequired();
 
     /** Column name QtyReserved */
     public static final String COLUMNNAME_QtyReserved = "QtyReserved";
