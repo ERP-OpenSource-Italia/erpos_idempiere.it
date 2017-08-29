@@ -183,7 +183,8 @@ public class WStringEditor extends WEditor implements ContextMenuListener
 	        	combo.setButtonVisible(false);
 	        	List<String> items = gridField.getEntries();
 	        	for(String s : items) {
-	        		combo.appendItem(s);
+	        		if(s != null) // F3P: added check for null values
+	        			combo.appendItem(s);
 	        	}
 	        }
 		}
@@ -321,7 +322,8 @@ public class WStringEditor extends WEditor implements ContextMenuListener
         	{
         		combo.removeAllItems();
         		for(String s : items) {
-            		combo.appendItem(s);
+        				if(s != null)	// F3P: added check for null values
+        					combo.appendItem(s);
             	}
         	}
         }
