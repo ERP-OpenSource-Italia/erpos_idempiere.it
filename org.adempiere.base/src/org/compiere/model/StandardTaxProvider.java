@@ -216,11 +216,26 @@ public class StandardTaxProvider implements ITaxProvider {
 			MTax tax = iTax.getTax();
 			if (tax.isSummary())
 			{
+				// F3P bug fix: rouding error, last child calculate by
+				// subtraction
+				BigDecimal prevTaxTotal = iTax.getTaxAmt(), newTaxTotal = BigDecimal.ZERO;
+				
 				MTax[] cTaxes = tax.getChildTaxes(false);	//	Multiple taxes
 				for (int j = 0; j < cTaxes.length; j++)
 				{
 					MTax cTax = cTaxes[j];
-					BigDecimal taxAmt = cTax.calculateTax(iTax.getTaxBaseAmt(), false, invoice.getPrecision());
+					
+					// F3P bug fix: rouding error, last child calculate by
+					// BigDecimal taxAmt = cTax.calculateTax(iTax.getTaxBaseAmt(), false, invoice.getPrecision());
+					BigDecimal taxAmt;
+					
+					if (j == cTaxes.length - 1) {
+						taxAmt = prevTaxTotal.subtract(newTaxTotal);
+					} else {
+						taxAmt = cTax.calculateTax(iTax.getTaxBaseAmt(), false, invoice.getPrecision());
+						newTaxTotal = newTaxTotal.add(taxAmt);
+					}
+					// F3P end					
 					//
 					MInvoiceTax newITax = new MInvoiceTax(invoice.getCtx(), 0, invoice.get_TrxName());
 					newITax.setClientOrg(invoice);
