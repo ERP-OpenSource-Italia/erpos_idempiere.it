@@ -117,7 +117,7 @@ public final class DocTax
 		}
 		if (validCombination_ID == 0)
 			return null;
-		return MAccount.get(as.getCtx(), validCombination_ID, trxName);
+		return MAccount.get(as.getCtx(), trxName, validCombination_ID); // F3P: added trx
 	}   //  getAccount
 	
 	@Deprecated

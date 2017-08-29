@@ -144,7 +144,7 @@ public class Doc_AssetAddition extends Doc
 					BigDecimal	bdRate = rs.getBigDecimal("rate"),					
 								bdValue = bdEnteredAmt.multiply(bdRate).divide(Env.ONEHUNDRED);
 					
-					MAccount accountTax = MAccount.get(getCtx(),C_ValidCombination_ID, getTrxName());
+					MAccount accountTax = MAccount.get(getCtx(),getTrxName(), C_ValidCombination_ID);  // F3P: added trx
 					
 					FactLine[] taxFls =  FactUtil.createSimpleOperation(fact, null,
 													getA_Asset_Acct(), accountTax,
