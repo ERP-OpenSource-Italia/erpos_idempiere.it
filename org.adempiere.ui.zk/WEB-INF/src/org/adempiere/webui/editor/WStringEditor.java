@@ -160,7 +160,8 @@ public class WStringEditor extends WEditor implements ContextMenuListener
 	        }
 	        else
 	            getComponent().setMultiline(false);
-	        getComponent().setRows(gridField.getNumLines() <= 0 || tableEditor ? 1 : gridField.getNumLines());	        
+	        if (! gridField.isAutocomplete()) // avoid -> Combobox doesn't support multiple rows
+	        	getComponent().setRows(gridField.getNumLines() <= 0 || tableEditor ? 1 : gridField.getNumLines());        
 	        if (getComponent().getRows() > 1)
 	        	ZKUpdateUtil.setHeight(getComponent(), "100%");
 
@@ -169,7 +170,7 @@ public class WStringEditor extends WEditor implements ContextMenuListener
 
 
 	        if(!(this instanceof WPasswordEditor)){ // check password field
-	        	popupMenu = new WEditorPopupMenu(false, false, isShowPreference());
+	        	popupMenu = new WEditorPopupMenu(false, gridField.isAutocomplete(), isShowPreference());
 	        	addTextEditorMenu(popupMenu);
 	        	addChangeLogMenu(popupMenu);
 	        }
@@ -307,27 +308,30 @@ public class WStringEditor extends WEditor implements ContextMenuListener
 		{
 			WFieldRecordInfo.start(gridField);
 		}
+		else if (WEditorPopupMenu.REQUERY_EVENT.equals(evt.getContextEvent()))
+		{
+			actionRefresh();
+		}		
 	}
 
-	@Override
-	public void dynamicDisplay() {
-		super.dynamicDisplay();
-		//referesh auto complete list
-		//F3P
-		//if (gridField.isAutocomplete()) {
-			if (isEffectiveAutocomplete(gridField)) { //F3P: Used to avoid problem with autocomplete flag and text field drawn as combobox instead of textbox.
-        	Combobox combo = (Combobox)getComponent();
-        	List<String> items = gridField.getEntries();
-        	if (items.size() != combo.getItemCount())
-        	{
-        		combo.removeAllItems();
-        		for(String s : items) {
-        				if(s != null)	// F3P: added check for null values
-        					combo.appendItem(s);
-            	}
-        	}
-        }
-	}
+    @Override
+  	public void dynamicDisplay() {
+  		super.dynamicDisplay();
+  		actionRefresh();
+  	}
+
+  	public void actionRefresh() {
+  		//refresh auto complete list
+  		if (gridField.isAutocomplete()) {
+  			Combobox combo = (Combobox)getComponent();
+  			List<String> items = gridField.getEntries();
+  			combo.removeAllItems();
+  			for(String s : items) {
+  				combo.appendItem(s);
+  			}
+  		}
+  	}
+
 
 	private AbstractADWindowContent findADWindowContent() {
 		Component parent = getComponent().getParent();
