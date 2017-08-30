@@ -80,6 +80,8 @@ public class OSGiScriptEngineManager extends ScriptEngineManager{
 	private Map <ScriptEngineManager, ClassLoader> classLoaders;
 	private BundleContext context;
 	
+	private static Map<String,OSGiScriptEngine> cacheEngines = new HashMap<>();
+	
 	public OSGiScriptEngineManager(BundleContext context){
 		this.context=context;
 		bindings=new SimpleBindings();
@@ -142,6 +144,12 @@ public class OSGiScriptEngineManager extends ScriptEngineManager{
 	}
 
 	public ScriptEngine getEngineByName(String shortName) {
+		
+		OSGiScriptEngine scriptEngine = null;
+		
+		if(cacheEngines.containsKey(shortName))
+			return cacheEngines.get(shortName);
+		
 		//TODO this is a hack to deal with context class loader issues
 		for(ScriptEngineManager manager: classLoaders.keySet()){
 			ClassLoader old=Thread.currentThread().getContextClassLoader();
@@ -149,10 +157,15 @@ public class OSGiScriptEngineManager extends ScriptEngineManager{
 			ScriptEngine engine=manager.getEngineByName(shortName);
 			Thread.currentThread().setContextClassLoader(old);
 			if (engine!=null){
-				return new OSGiScriptEngine(engine, new OSGiScriptEngineFactory(engine.getFactory(), classLoaders.get(manager)));
+				scriptEngine = new OSGiScriptEngine(engine, new OSGiScriptEngineFactory(engine.getFactory(), classLoaders.get(manager)));
+				break;
 			}
 		}
-		return null;
+		
+		if(scriptEngine != null)
+			cacheEngines.put(shortName, scriptEngine);
+		
+		return scriptEngine;
 	}
 	public List<ScriptEngineFactory> getEngineFactories() {
 		List<ScriptEngineFactory> osgiFactories=new ArrayList<ScriptEngineFactory>();
