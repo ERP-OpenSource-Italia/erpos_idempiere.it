@@ -2021,31 +2021,13 @@ public final class MRole extends X_AD_Role
 
 		//	Use First Table
 		String tableName = "";
-		// nectosoft (genied): look for match in every TableInfo
-//		if (ti.length > 0)
-//		{
-//			tableName = ti[0].getSynonym();
-//			if (tableName.length() == 0)
-//				tableName = ti[0].getTableName();
-//		}
-
-		if (TableNameIn != null )
+		if (ti.length > 0)
 		{
-			for (int i=0 ; i<ti.length ; i++)
-			{
-				if(TableNameIn.equalsIgnoreCase(ti[i].getTableName()) || TableNameIn.equalsIgnoreCase(ti[i].getSynonym()))
-				{
-					tableName = ti[i].getSynonym();
-					if (tableName.length() == 0)
-						tableName = ti[i].getTableName();
-					break;
-				}
-			}
-			
+			tableName = ti[0].getSynonym();
+			if (tableName.length() == 0)
+				tableName = ti[0].getTableName();
 		}
-		
-		//if (TableNameIn != null && !tableName.equals(TableNameIn))
-		if (TableNameIn != null && tableName.length() == 0)
+		if (TableNameIn != null && !tableName.equals(TableNameIn))
 		{
 			String msg = "TableName not correctly parsed - TableNameIn=" 
 				+ TableNameIn + " - " + asp;
