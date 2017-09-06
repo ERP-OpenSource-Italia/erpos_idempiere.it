@@ -317,9 +317,8 @@ public class MUserDefField extends X_AD_UserDef_Field
 				{
 					int AD_Reference_ID = rs.getInt(COLUMNNAME_AD_Reference_ID),
 						AD_ReferenceValue_ID = rs.getInt(COLUMNNAME_AD_Reference_Value_ID),
-						AD_ValRule_ID = rs.getInt(COLUMNNAME_AD_Val_Rule_ID),
-						seqNoSelection = rs.getInt(COLUMNNAME_SeqNoSelection);
-										
+						AD_ValRule_ID = rs.getInt(COLUMNNAME_AD_Val_Rule_ID);
+																
 					String isUpdateable = rs.getString(COLUMNNAME_IsUpdateable),
 						   isAlwaysUpdateable = rs.getString(COLUMNNAME_IsAlwaysUpdateable),
 						   isMandatory = rs.getString(COLUMNNAME_IsMandatory),
@@ -336,12 +335,15 @@ public class MUserDefField extends X_AD_UserDef_Field
 						fakeField.setAD_Reference_ID(AD_Reference_ID);
 					
 					if(AD_ReferenceValue_ID > 0)
-						fakeField.setAD_Reference_ID(AD_ReferenceValue_ID);
+						fakeField.setAD_Reference_Value_ID(AD_ReferenceValue_ID);
 					
 					if(AD_ValRule_ID > 0)
 						fakeField.setAD_Val_Rule_ID(AD_ValRule_ID);
+										
+					int seqNoSelection = rs.getInt(COLUMNNAME_SeqNoSelection);
 					
-					fakeField.setSeqNoSelection(seqNoSelection);
+					if(rs.wasNull() == false)					
+						fakeField.setSeqNoSelection(seqNoSelection);
 					
 					if(isUpdateable != null)
 						fakeField.setIsUpdateable(isUpdateable);

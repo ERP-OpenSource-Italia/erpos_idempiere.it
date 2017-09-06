@@ -232,10 +232,10 @@ public class MUserDefTab extends X_AD_UserDef_Tab
 						fakeTab.setDisplayLogic(displayLogic);
 					
 					if(whereClause != null)
-						fakeTab.setDisplayLogic(whereClause);
+						fakeTab.setWhereClause(whereClause);
 					
 					if(orderByClause != null)
-						fakeTab.setDisplayLogic(orderByClause);
+						fakeTab.setOrderByClause(orderByClause);
 					
 					if(commitWarning != null)
 						fakeTab.setCommitWarning(commitWarning);

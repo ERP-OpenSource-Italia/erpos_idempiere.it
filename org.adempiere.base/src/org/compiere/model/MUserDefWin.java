@@ -299,7 +299,7 @@ public class MUserDefWin extends X_AD_UserDef_Win
 					fakeWin.setIsReadOnly(isReadOnly);
 				
 				if(isUserUpdateable != null)
-					fakeWin.setIsReadOnly(isUserUpdateable);
+					fakeWin.setIsUserUpdateable(isUserUpdateable);
 			}
 			
 			s_cacheAggregated.put(key, fakeWin);
