@@ -67,3 +67,17 @@ when detect side effect, fix to only apply for parameter window*/
 .popup-dialog .input-paramenter-layout{
 	width: 90%;
 }
+
+/* F3P: process log table */
+
+table#logrecords {
+	border-collapse:collapse;	
+}
+
+table#logrecords th {
+	padding: 4px;	
+}
+
+table#logrecords td {
+	padding: 4px;	
+}
