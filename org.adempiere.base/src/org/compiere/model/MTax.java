@@ -171,6 +171,7 @@ public class MTax extends X_C_Tax
 		List<MTax> list = new Query(getCtx(), I_C_Tax.Table_Name, whereClause,  get_TrxName())
 			.setParameters(getC_Tax_ID())
 			.setOnlyActiveRecords(true)
+			.setOrderBy("Rate") // F3P: sort by ascending rate, to have a guarantee order compatible with rounding by delta
 			.list();	
 		//red1 - end -
 	 
