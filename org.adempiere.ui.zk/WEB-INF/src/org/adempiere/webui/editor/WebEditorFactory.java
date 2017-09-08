@@ -18,9 +18,11 @@
 package org.adempiere.webui.editor;
 
 import java.util.List;
+import java.util.Properties;
 
 import org.adempiere.base.Service;
 import org.adempiere.webui.factory.IEditorFactory;
+import org.adempiere.webui.factory.IEditorFactory2;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.util.CLogger;
@@ -32,6 +34,7 @@ import org.compiere.util.CLogger;
  * @version $Revision: 0.10 $
  *
  * @author Low Heng Sin
+ * @author strinchero, www.freepath.it: manage editor for info window
  * @date 	July 14 2008
  */
 public class WebEditorFactory
@@ -47,16 +50,33 @@ public class WebEditorFactory
 
     public static WEditor getEditor(GridField gridField, boolean tableEditor)
     {
-    	return getEditor(gridField.getGridTab(), gridField, tableEditor);
+    	return getEditor(gridField.getGridTab(), gridField, tableEditor, false, null, 0);
+    }
+    
+    public static WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor)
+    {
+    	return getEditor(gridTab, gridField, tableEditor, false, null, 0);
+    }
+    
+    public static WEditor getEditor(GridField gridField, boolean tableEditor, boolean infoEditor, Properties ctx, int WindowNo)
+    {
+    	return getEditor(gridField.getGridTab(), gridField, tableEditor, infoEditor, ctx, WindowNo);
     }
 
-    public static WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor)
+    public static WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor, boolean infoEditor, Properties ctx, int WindowNo)
     {
         WEditor editor = null;
         List<IEditorFactory> factoryList = Service.locator().list(IEditorFactory.class).getServices();
         for(IEditorFactory factory : factoryList)
         {
-        	editor = factory.getEditor(gridTab, gridField, tableEditor);
+        	if(factory instanceof IEditorFactory2)
+        	{
+        		IEditorFactory2 factory2 = (IEditorFactory2)factory;
+        		editor = factory2.getEditor(gridTab, gridField, tableEditor, infoEditor, WindowNo, ctx);
+        	}
+        	else
+        		editor = factory.getEditor(gridTab, gridField, tableEditor);
+        	
         	if (editor != null)
         		break;
         }

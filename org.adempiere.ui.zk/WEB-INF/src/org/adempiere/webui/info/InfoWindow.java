@@ -1353,7 +1353,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
         WEditor editor = null;
         if (mField.getDisplayType() == DisplayType.PAttribute) 
         {
-        	editor = new WInfoPAttributeEditor(infoContext, p_WindowNo, mField);
+        	editor =  WebEditorFactory.getEditor(mField, false, true, infoContext, p_WindowNo);
 	        editor.setReadWrite(true);
         }
         else 

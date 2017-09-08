@@ -13,6 +13,8 @@
  *****************************************************************************/
 package org.adempiere.webui.factory;
 
+import java.util.Properties;
+
 import org.adempiere.webui.editor.WAccountEditor;
 import org.adempiere.webui.editor.WAssignmentEditor;
 import org.adempiere.webui.editor.WBinaryEditor;
@@ -37,6 +39,7 @@ import org.adempiere.webui.editor.WTimeEditor;
 import org.adempiere.webui.editor.WUnknownEditor;
 import org.adempiere.webui.editor.WUrlEditor;
 import org.adempiere.webui.editor.WYesNoEditor;
+import org.adempiere.webui.info.WInfoPAttributeEditor;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.util.DisplayType;
@@ -44,13 +47,20 @@ import org.compiere.util.DisplayType;
 /**
  *
  * @author hengsin
+ * @author strinchero, www.freepath.it: manage editor for info window
  *
  */
-public class DefaultEditorFactory implements IEditorFactory {
-
+public class DefaultEditorFactory implements IEditorFactory2 {
+	
 	@Override
 	public WEditor getEditor(GridTab gridTab, GridField gridField,
 			boolean tableEditor) {
+		return getEditor(gridTab, gridField, tableEditor, false, 0, null);
+	}
+
+	@Override
+	public WEditor getEditor(GridTab gridTab, GridField gridField,
+			boolean tableEditor, boolean infoEditor, int WindowNo, Properties ctx) {
 		if (gridField == null)
         {
             return null;
@@ -176,7 +186,10 @@ public class DefaultEditorFactory implements IEditorFactory {
         }
         else if (displayType == DisplayType.PAttribute)
         {
-        	editor = new WPAttributeEditor(gridTab, gridField);
+        	if(infoEditor && ctx != null)
+        		editor = new WInfoPAttributeEditor(ctx, WindowNo, gridField);
+        	else
+        		editor = new WPAttributeEditor(gridTab, gridField);
         }
         else if (displayType == DisplayType.Assignment)
         {
