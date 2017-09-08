@@ -124,6 +124,7 @@ public class WTabEditor extends TabEditor implements IFormController, EventListe
 	Grid form;
 	Vlayout centerVLayout;
 	Vlayout westVLayout ;
+	Button customizeBtn = null;
 
 	private static final int POSSEQMULTIPLIER = 10000000;
 	
@@ -173,11 +174,14 @@ public class WTabEditor extends TabEditor implements IFormController, EventListe
 	 */
 	private void createUI() {
 		
-		if(isUserDefTab())
+		if(isUserDefTab() && customizeBtn == null)
 		{
-			Button customizeBtn = confirmPanel.createButton(ConfirmPanel.A_CUSTOMIZE);
+			customizeBtn = confirmPanel.createButton(ConfirmPanel.A_CUSTOMIZE);
+			customizeBtn.setTooltiptext(Msg.getMsg(Env.getCtx(),TTIP_UPDATEALLFIELDS));
 			customizeBtn.addEventListener(Events.ON_CLICK, this);
 			confirmPanel.addComponentsLeft(customizeBtn);
+			
+			confirmPanel.getButton(ConfirmPanel.A_OK).setTooltiptext(Msg.getMsg(Env.getCtx(),TTIP_UPDATEAONLYCHANGEDFIELDS));
 		}
 					
 		mapCellField.clear();

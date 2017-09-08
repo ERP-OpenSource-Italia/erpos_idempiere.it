@@ -45,6 +45,8 @@ import org.compiere.util.Util;
  */
 public class TabEditor
 {
+	public static final String TTIP_UPDATEAONLYCHANGEDFIELDS = "UpdateOnlyChangedFields";
+	public static final String TTIP_UPDATEALLFIELDS = "UpdateAllFields";
 
 	public MTab m_tab;
 
@@ -166,7 +168,7 @@ public class TabEditor
 			
 			for(MField field: fields)
 			{
-				boolean		changed = saveAllCustom;
+				boolean		changed = false;
 				MUserDefField userDef = userDefTab.getUserDefField(field.getAD_Field_ID());
 				GridField	gf = mapIdToField.get(field.getAD_Field_ID());
 				
@@ -177,60 +179,57 @@ public class TabEditor
 					userDef.setAD_Field_ID(field.getAD_Field_ID());
 				}
 				
-				if(changed == false)
-				{				
-					// Check field (new value) versus computed value (gridField)
-					
-					if(gf.getSeqNo() != field.getSeqNo())
-					{
-						userDef.setSeqNo(field.getSeqNo());
-						changed = true;
-					}
-					
-					if(gf.isDisplayed() != field.isDisplayed())
-					{
-						userDef.setIsDisplayed(Util.asString(field.isDisplayed()));
-						changed = true;
-					}
-					
-					if(gf.getXPosition() != field.getXPosition())
-					{
-						userDef.setXPosition(field.getXPosition());
-						changed = true;
-					}
-					
-					if(gf.getNumLines() != field.getNumLines())
-					{
-						userDef.setNumLines(field.getNumLines());
-						changed = true;
-					}
-					
-					if(gf.getColumnSpan() != field.getColumnSpan())
-					{
-						userDef.setColumnSpan(field.getColumnSpan());
-						changed = true;
-					}
-					
-					String fieldGroupName = "";
-					
-					if(field.getAD_FieldGroup_ID() > 0)
-					{
-						I_AD_FieldGroup fieldGroup = field.getAD_FieldGroup();
-						
-						if(Env.isBaseLanguage(overriddenCtx, MTab.Table_Name))
-							fieldGroupName = fieldGroup.getName();
-						else
-							fieldGroupName = ((PO)fieldGroup).get_Translation(X_AD_FieldGroup.COLUMNNAME_Name, Env.getAD_Language(overriddenCtx)); 
-					}
-					
-					if(gf.getFieldGroup().equals(fieldGroupName) == false)
-					{
-						userDef.setAD_FieldGroup_ID(field.getAD_FieldGroup_ID());
-						changed = true;
-					}
+				// Check field (new value) versus computed value (gridField)
+				
+				if(saveAllCustom || gf.getSeqNo() != field.getSeqNo())
+				{
+					userDef.setSeqNo(field.getSeqNo());
+					changed = true;
 				}
 				
-				if(changed)
+				if(saveAllCustom || gf.isDisplayed() != field.isDisplayed())
+				{
+					userDef.setIsDisplayed(Util.asString(field.isDisplayed()));
+					changed = true;
+				}
+				
+				if(saveAllCustom || gf.getXPosition() != field.getXPosition())
+				{
+					userDef.setXPosition(field.getXPosition());
+					changed = true;
+				}
+				
+				if(saveAllCustom || gf.getNumLines() != field.getNumLines())
+				{
+					userDef.setNumLines(field.getNumLines());
+					changed = true;
+				}
+				
+				if(saveAllCustom || gf.getColumnSpan() != field.getColumnSpan())
+				{
+					userDef.setColumnSpan(field.getColumnSpan());
+					changed = true;
+				}
+				
+				String fieldGroupName = "";
+				
+				if(field.getAD_FieldGroup_ID() > 0)
+				{
+					I_AD_FieldGroup fieldGroup = field.getAD_FieldGroup();
+					
+					if(Env.isBaseLanguage(overriddenCtx, MTab.Table_Name))
+						fieldGroupName = fieldGroup.getName();
+					else
+						fieldGroupName = ((PO)fieldGroup).get_Translation(X_AD_FieldGroup.COLUMNNAME_Name, Env.getAD_Language(overriddenCtx)); 
+				}
+				
+				if(saveAllCustom || gf.getFieldGroup().equals(fieldGroupName) == false)
+				{
+					userDef.setAD_FieldGroup_ID(field.getAD_FieldGroup_ID());
+					changed = true;
+				}				
+				
+				if(changed || saveAllCustom)
 				{
 					userDef.setIsViewEnable(true);
 					userDef.saveEx();
