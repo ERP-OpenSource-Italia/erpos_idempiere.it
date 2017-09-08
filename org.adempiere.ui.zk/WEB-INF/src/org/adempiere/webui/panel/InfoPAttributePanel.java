@@ -227,7 +227,7 @@ public class InfoPAttributePanel extends Window implements EventListener<Event>
 	 * 	Add Attributes
 	 *	@return rows
 	 */
-	private int addAttributes()
+	protected int addAttributes() // F3P: to protected to allow ovverriding
 	{
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;

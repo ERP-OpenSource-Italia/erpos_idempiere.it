@@ -152,25 +152,25 @@ public class WPAttributeDialog extends Window implements EventListener<Event>
 		AEnv.showCenterScreen(this);
 	}	//	VPAttributeDialog
 
-	private int						m_WindowNo;
-	private MAttributeSetInstance	m_masi;
-	private int 					m_M_AttributeSetInstance_ID;
+	protected int						m_WindowNo; // F3P: from private to protected to allow overriding
+	protected MAttributeSetInstance	m_masi; // F3P: from private to protected to allow overriding
+	protected int 				m_M_AttributeSetInstance_ID; // F3P: from private to protected to allow overriding
 	private int 					m_M_Locator_ID;
-	private String					m_M_AttributeSetInstanceName;
+	protected String			m_M_AttributeSetInstanceName; // F3P: from private to protected to allow overriding
 	private int 					m_M_Product_ID;
 	private int						m_C_BPartner_ID;
 	private int						m_AD_Column_ID;
 	private int						m_WindowNoParent;
 	/**	Enter Product Attributes		*/
-	private boolean					m_productWindow = false;
+	protected boolean					m_productWindow = false; // F3P: from private to protected to allow overriding
 	/**	Change							*/
-	private boolean					m_changed = false;
+	protected boolean					m_changed = false; // F3P: from private to protected to allow overriding
 	
-	private CLogger					log = CLogger.getCLogger(getClass());
+	protected CLogger					log = CLogger.getCLogger(getClass());	// F3P: from private to protected to allow overriding
 	/** Row Counter					*/
-	private int						m_row = 0;
+	protected int						m_row = 0;	// F3P: from private to protected to allow overriding
 	/** List of Editors				*/
-	private ArrayList<HtmlBasedComponent>		m_editors = new ArrayList<HtmlBasedComponent>();
+	protected ArrayList<HtmlBasedComponent>		m_editors = new ArrayList<HtmlBasedComponent>();
 	/** Length of Instance value (40)	*/
 	//private static final int		INSTANCE_VALUE_LENGTH = 40;
 
@@ -180,17 +180,17 @@ public class WPAttributeDialog extends Window implements EventListener<Event>
 	private Button		bSelect = new Button(); 
 	//	Lot
 //	private VString fieldLotString = new VString ("Lot", false, false, true, 20, 20, null, null);
-	private Textbox fieldLotString = new Textbox();
+	protected Textbox fieldLotString = new Textbox();  // F3P: from private to protected to allow overriding
 	private Listbox fieldLot = new Listbox();
 	private Button bLot = new Button(Msg.getMsg (Env.getCtx(), "New"));
 	//	Lot Popup
 	Menupopup 					popupMenu = new Menupopup();
 	private Menuitem 			mZoom;
 	//	Ser No
-	private Textbox fieldSerNo = new Textbox();
+	protected Textbox fieldSerNo = new Textbox(); // F3P: from private to protected to allow overriding
 	private Button bSerNo = new Button(Msg.getMsg (Env.getCtx(), "New"));
 	//	Date
-	private Datebox fieldGuaranteeDate = new Datebox();
+	protected Datebox fieldGuaranteeDate = new Datebox(); // F3P: from private to protected to allow overriding
 	//
 	private Textbox fieldDescription = new Textbox(); //TODO: set length to 20
 	//
@@ -526,7 +526,10 @@ public class WPAttributeDialog extends Window implements EventListener<Event>
 	 * 	@param product product level attribute
 	 * 	@param readOnly value is read only
 	 */
-	private void addAttributeLine (Rows rows, MAttribute attribute, boolean product, boolean readOnly)
+	
+	// F3P: from private to protected to support overriding
+	
+	protected void addAttributeLine (Rows rows, MAttribute attribute, boolean product, boolean readOnly)
 	{
 		if (log.isLoggable(Level.FINE)) log.fine(attribute + ", Product=" + product + ", R/O=" + readOnly);
 		
@@ -603,21 +606,27 @@ public class WPAttributeDialog extends Window implements EventListener<Event>
 		}
 	}
 	
-	private void setStringAttribute(MAttribute attribute, Textbox editor) {
+	// F3P: from private to protected to allow overriding
+	
+	protected void setStringAttribute(MAttribute attribute, Textbox editor) {
 		MAttributeInstance instance = attribute.getMAttributeInstance (m_M_AttributeSetInstance_ID);
 		if (instance != null)
 			editor.setText(instance.getValue());
 	}
+	
+	//F3P: from private to protected to allow overriding
 
-	private void setNumberAttribute(MAttribute attribute, NumberBox editor) {
+	protected void setNumberAttribute(MAttribute attribute, NumberBox editor) {
 		MAttributeInstance instance = attribute.getMAttributeInstance (m_M_AttributeSetInstance_ID);
 		if (instance != null)
 			editor.setValue(instance.getValueNumber());
 		else
 			editor.setValue(Env.ZERO);		
 	}
+	
+	//F3P: from private to protected to allow overriding
 
-	private void setListAttribute(MAttribute attribute, Listbox editor) {
+	protected void setListAttribute(MAttribute attribute, Listbox editor) {
 		boolean found = false;
 		MAttributeInstance instance = attribute.getMAttributeInstance (m_M_AttributeSetInstance_ID);
 		MAttributeValue[] values = attribute.getMAttributeValues();	//	optional = null
@@ -937,7 +946,7 @@ public class WPAttributeDialog extends Window implements EventListener<Event>
 	 *	Save Selection
 	 *	@return true if saved
 	 */
-	private boolean saveSelection()
+	protected boolean saveSelection() // F3P: from private to protected to allow overriding
 	{
 		log.info("");
 		MAttributeSet as = m_masi.getMAttributeSet();
