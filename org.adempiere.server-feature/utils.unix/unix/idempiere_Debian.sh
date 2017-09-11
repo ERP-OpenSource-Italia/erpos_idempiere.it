@@ -20,10 +20,6 @@
 # adjust these variables to your environment
 IDEMPIERE_HOME=/opt/idempiere-server
 IDEMPIEREUSER=idempiere
-# Instead of using ENVFILE you can set JAVA_HOME, IDEMPIERE_HOME and add JAVA_HOME/bin to PATH
-# in this case you can comment the source lines for ENVFILE below
-# detected some problems with Hardy Heron ubuntu using the bash source command
-ENVFILE=$IDEMPIERE_HOME/utils/myEnvironment.sh
 
 . /lib/lsb/init-functions
  
@@ -44,8 +40,7 @@ start () {
         return 1
     fi
     echo -n "Starting iDempiere ERP: "
-    cd $IDEMPIERE_HOME/utils
-    . $ENVFILE 
+    cd $IDEMPIERE_HOME
     export LOGFILE=$IDEMPIERE_HOME/log/idempiere_`date +%Y%m%d%H%M%S`.log
     su $IDEMPIEREUSER -c "mkdir -p $IDEMPIERE_HOME/log"
     su $IDEMPIEREUSER -c "cd $IDEMPIERE_HOME;$IDEMPIERE_HOME/idempiere-server.sh &> $LOGFILE &"
@@ -86,8 +81,7 @@ stop () {
 	  return 1
     fi
     echo -n "Stopping iDempiere ERP: "
-    cd $IDEMPIERE_HOME/utils
-    . $ENVFILE
+    cd $IDEMPIERE_HOME
     # try shutdown from OSGi console, then direct kill with signal 15, then signal 9
     log_warning_msg "Trying shutdown from OSGi console"
     ( echo exit; echo y; sleep 5 ) | telnet localhost 12612 > /dev/null 2>&1

@@ -18,7 +18,6 @@
 # initialization
 # adjust these variables to your environment
 IDEMPIERE_HOME=/opt/idempiere-server
-ENVFILE=$IDEMPIERE_HOME/utils/myEnvironment.sh
 IDEMPIEREUSER=idempiere
 
 . /etc/rc.d/init.d/functions
@@ -40,8 +39,7 @@ start () {
 	  return 1
     fi
     echo -n "Starting iDempiere ERP: "
-    cd $IDEMPIERE_HOME/utils
-    source $ENVFILE 
+    cd $IDEMPIERE_HOME
     export LOGFILE=$IDEMPIERE_HOME/log/idempiere_`date +%Y%m%d%H%M%S`.log
     su $IDEMPIEREUSER -c "mkdir -p $IDEMPIERE_HOME/log"
     su $IDEMPIEREUSER -c "cd $IDEMPIERE_HOME;$IDEMPIERE_HOME/idempiere-server.sh &> $LOGFILE &"
@@ -82,8 +80,7 @@ stop () {
 	  return 1
     fi
     echo -n "Stopping iDempiere ERP: "
-    cd $IDEMPIERE_HOME/utils
-    source $ENVFILE
+    cd $IDEMPIERE_HOME
     # try shutdown from OSGi console, then direct kill with signal 15, then signal 9
     echo "Trying shutdown from OSGi console"
     ( echo exit; echo y; sleep 5 ) | telnet localhost 12612 > /dev/null 2>&1

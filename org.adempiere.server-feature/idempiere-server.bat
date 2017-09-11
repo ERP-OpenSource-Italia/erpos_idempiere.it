@@ -1,10 +1,7 @@
 @Echo off
 
-set "BASE=%cd%"
-if exist "%BASE%\idempiere-env.bat" (
-	echo Reading env from idempiere-env.bat
-	call "%BASE%\idempiere-env.bat"
-)
+@if (%IDEMPIERE_HOME%) == () (@Set ENVIRONMENTS=utils\myEnvironment.bat) else (@Set ENVIRONMENTS=%IDEMPIERE_HOME%\utils\myEnvironment.bat)
+@call %ENVIRONMENTS% Server
 
 @if not "%JAVA_HOME%" == "" goto JAVA_HOME_OK
 @Set JAVA=java
@@ -16,14 +13,32 @@ goto START
 :JAVA_HOME_OK
 @Set JAVA=%JAVA_HOME%\bin\java
 
+if ["%1"] == ["debug"] (
+  @Set DEBUG="-Xdebug -Xnoagent -Xrunjdwp:transport=dt_socket,address=4554,server=y,suspend=n"
+  @Echo Debug Enabled
+)
 
 :START
-
 @Echo =======================================
 @Echo Starting iDempiere Server ...
-@echo "Using JAVA: %JAVA%"
-@echo "Using IDEMPIERE_OPTS: %IDEMPIERE_OPTS%"
 @Echo =======================================
 
+@echo File: %ENVIRONMENTS%
+@echo Done.
+
 FOR %%c in (plugins\org.eclipse.equinox.launcher_1.*.jar) DO set JARFILE=%%c
-@"%JAVA%" %DEBUG% %IDEMPIERE_OPTS% -Dosgi.console=localhost:12612 -Djetty.home=jettyhome -Djetty.etc.config.urls=etc/jetty.xml,etc/jetty-selector.xml,etc/jetty-ssl.xml,etc/jetty-https.xml,etc/jetty-deployer.xml -XX:MaxPermSize=192m -Dmail.mime.encodefilename=true -Dmail.mime.decodefilename=true -Dmail.mime.encodeparameters=true -Dmail.mime.decodeparameters=true -jar %JARFILE% -application org.adempiere.server.application
+
+@Set VMOPTS=-Xbootclasspath/p:alpn-boot.jar
+@Set VMOPTS=%VMOPTS% -Xbootclasspath/p:alpn-boot.jar
+@Set VMOPTS=%VMOPTS% -Dorg.osgi.framework.bootdelegation=sun.security.ssl,org.eclipse.jetty.alpn
+@Set VMOPTS=%VMOPTS% -Dosgi.compatibility.bootdelegation=true
+@Set VMOPTS=%VMOPTS% -Djetty.home=jettyhome
+@Set VMOPTS=%VMOPTS% -Djetty.base=jettyhome
+@Set VMOPTS=%VMOPTS% -Djetty.etc.config.urls=etc/jetty.xml,etc/jetty-deployer.xml,etc/jetty-ssl.xml,etc/jetty-ssl-context.xml,etc/jetty-http.xml,etc/jetty-alpn.xml,etc/jetty-http2.xml,etc/jetty-https.xml
+@Set VMOPTS=%VMOPTS% -Dosgi.console=localhost:12612
+@Set VMOPTS=%VMOPTS% -Dmail.mime.encodefilename=true
+@Set VMOPTS=%VMOPTS% -Dmail.mime.decodefilename=true
+@Set VMOPTS=%VMOPTS% -Dmail.mime.encodeparameters=true
+@Set VMOPTS=%VMOPTS% -Dmail.mime.decodeparameters=true
+
+@"%JAVA%" %IDEMPIERE_JAVA_OPTIONS% %VMOPTS% -jar %JARFILE% -application org.adempiere.server.application
