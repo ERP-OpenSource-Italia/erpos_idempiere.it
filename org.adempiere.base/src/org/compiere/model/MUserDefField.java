@@ -391,10 +391,13 @@ public class MUserDefField extends X_AD_UserDef_Field
 							
 							StringBuilder cbCallout = new StringBuilder(currentCallout);
 							
-							if(cbCallout.length() > 0 && callout.startsWith(CALLOUT_SEP) == false)
+							if(cbCallout.length() > 0 && callout.endsWith(CALLOUT_SEP) == false)
 							{
-								cbCallout.append(';');
+								cbCallout.append(CALLOUT_SEP);
 							}
+							
+							while(callout.startsWith(CALLOUT_SEP))
+								callout = callout.substring(CALLOUT_SEP.length());
 							
 							cbCallout.append(callout);
 							fakeField.setCallout(cbCallout.toString());
