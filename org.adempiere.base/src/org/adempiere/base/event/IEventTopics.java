@@ -72,6 +72,8 @@ public interface IEventTopics {
 	public static final String DOC_BEFORE_POST = DOC_EVENT_PREFIX+"beforePost";
 	/** Called after document is posted */
 	public static final String DOC_AFTER_POST = DOC_EVENT_PREFIX+"afterPost";
+	/** Called before document is reposted */
+	public static final String DOC_BEFORE_REPOST = DOC_EVENT_PREFIX+"beforeRePost";
 	public static final String DOC_ALL = DOC_EVENT_PREFIX+"*";
 
 	public static final String AFTER_LOGIN = "adempiere/afterLogin";

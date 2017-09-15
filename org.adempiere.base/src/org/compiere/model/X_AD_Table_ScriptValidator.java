@@ -30,7 +30,7 @@ public class X_AD_Table_ScriptValidator extends PO implements I_AD_Table_ScriptV
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20170915L;
 
     /** Standard Constructor */
     public X_AD_Table_ScriptValidator (Properties ctx, int AD_Table_ScriptValidator_ID, String trxName)
@@ -214,6 +214,8 @@ public class X_AD_Table_ScriptValidator extends PO implements I_AD_Table_ScriptV
 	public static final String EVENTMODELVALIDATOR_TableAfterChangeReplication = "TACR";
 	/** Table Before Delete Replication = TBDR */
 	public static final String EVENTMODELVALIDATOR_TableBeforeDeleteReplication = "TBDR";
+	/** Document Before Repost = DBRP */
+	public static final String EVENTMODELVALIDATOR_DocumentBeforeRepost = "DBRP";
 	/** Set Event Model Validator.
 		@param EventModelValidator Event Model Validator	  */
 	public void setEventModelValidator (String EventModelValidator)
