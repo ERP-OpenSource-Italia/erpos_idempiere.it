@@ -343,10 +343,10 @@ public class DocManager {
 				if (trx != null)
 					trx.rollback();
 			}
-			if (e instanceof RuntimeException)
+			if (error == null && e instanceof RuntimeException)
 				throw (RuntimeException) e;
 			else
-				throw new AdempiereException(e);
+				throw new AdempiereException(error,e);
 		}
 		finally
 		{

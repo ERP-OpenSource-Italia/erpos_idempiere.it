@@ -491,6 +491,17 @@ public abstract class Doc
 				trx.commit(); trx.close();
 				return "PeriodClosed";
 			}
+			
+			String validatorMsg = null;
+			// Call validator on before repost
+			validatorMsg = ModelValidationEngine.get().fireDocValidate(getPO(), ModelValidator.TIMING_BEFORE_REPOST);
+			if (validatorMsg != null) {
+				log.log(Level.SEVERE, toString() + " - " + validatorMsg);
+				unlock();
+				trx.commit(); trx.close();
+				return validatorMsg;
+			}
+			
 			//	delete it
 			deleteAcct();
 		}
