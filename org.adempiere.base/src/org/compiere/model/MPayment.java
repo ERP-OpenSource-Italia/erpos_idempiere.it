@@ -202,7 +202,7 @@ public class MPayment extends X_C_Payment
 	 */
 	public boolean isCashTrx()
 	{
-		return "X".equals(getTenderType());
+		return TRXTYPE_X.equals(getTenderType());
 	}	//	isCashTrx
 	
 	/**
@@ -1218,7 +1218,7 @@ public class MPayment extends X_C_Payment
 	private void setDocumentNo()
 	{
 		//	Cash Transfer
-		if ("X".equals(getTenderType()))
+		if (TRXTYPE_X.equals(getTenderType()))
 			return;
 		//	Current Document No
 		String documentNo = getDocumentNo();
