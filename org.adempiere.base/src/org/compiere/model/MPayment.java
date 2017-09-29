@@ -2059,6 +2059,8 @@ public class MPayment extends X_C_Payment
 		}
 		// End Trifon - CashPayments
 		
+		// F3P: disabled set because of issues with inv. reactivation and it has no useful meaning
+		/*
 		//	update C_Invoice.C_Payment_ID and C_Order.C_Payment_ID reference
 		if (getC_Invoice_ID() != 0)
 		{
@@ -2068,7 +2070,8 @@ public class MPayment extends X_C_Payment
 				inv.setC_Payment_ID(getC_Payment_ID());
 				inv.saveEx();
 			}
-		}		
+		}	
+		*/	
 		if (getC_Order_ID() != 0)
 		{
 			MOrder ord = new MOrder(getCtx(), getC_Order_ID(), get_TrxName());

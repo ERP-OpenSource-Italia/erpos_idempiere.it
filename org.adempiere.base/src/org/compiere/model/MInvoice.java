@@ -47,6 +47,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 
+import it.idempiere.base.model.FreeOfCharge;
 import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
 
@@ -909,6 +910,16 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 		//	Add up due amounts
 		BigDecimal total = Env.ZERO;
+		
+		// F3P: add the free of charge amount
+		BigDecimal bdFreeOfCharge = FreeOfCharge.getFreeOfChargeAmt(this);		
+		
+		if(bdFreeOfCharge.signum() != 0)
+		{
+			total = total.add(bdFreeOfCharge);
+		}
+		// end
+		
 		for (int i = 0; i < schedule.length; i++)
 		{
 			schedule[i].setParent(this);

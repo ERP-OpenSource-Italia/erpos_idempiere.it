@@ -32,6 +32,7 @@ import org.compiere.util.Env;
 import org.compiere.util.TimeUtil;
 import org.compiere.util.Util;
 
+import it.idempiere.base.model.FreeOfCharge;
 import it.idempiere.base.model.LITMPaySchedule;
 import it.idempiere.base.util.STDSysConfig;
 
@@ -152,6 +153,18 @@ public class MInvoicePaySchedule extends X_C_InvoicePaySchedule
 		//	Amounts
 		int scale = MCurrency.getStdPrecision(getCtx(), invoice.getC_Currency_ID());
 		BigDecimal due = invoice.getGrandTotal();
+		
+		// F3P: manage free of charge
+		
+		BigDecimal bdFreeOfCharge = FreeOfCharge.getFreeOfChargeAmt(invoice);
+		
+		if(bdFreeOfCharge.signum() != 0)
+		{
+			due = due.subtract(bdFreeOfCharge);
+		}
+		
+		// F3P: end
+		
 		if (due.compareTo(Env.ZERO) == 0)
 		{
 			setDueAmt (Env.ZERO);

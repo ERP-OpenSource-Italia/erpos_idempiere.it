@@ -29,6 +29,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.FreeOfCharge;
+
 
 /**
  *	Payment Term Model
@@ -246,6 +248,19 @@ public class MPaymentTerm extends X_C_PaymentTerm
 		//	Create Schedule
 		MInvoicePaySchedule ips = null;
 		BigDecimal remainder = invoice.getGrandTotal();
+		
+		// F3P: free of charge
+		
+		BigDecimal bdFreeOfCharge = FreeOfCharge.getFreeOfChargeAmt(invoice);		
+		
+		if(bdFreeOfCharge.signum() != 0)
+		{
+			remainder = remainder.subtract(bdFreeOfCharge);
+		}
+		
+		// F3P end
+		
+		
 		for (int i = 0; i < m_schedule.length; i++)
 		{
 			ips = new MInvoicePaySchedule (invoice, m_schedule[i]);
