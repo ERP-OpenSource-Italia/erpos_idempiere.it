@@ -45,8 +45,8 @@ import org.compiere.util.Util;
  */
 public class TabEditor
 {
-	public static final String TTIP_UPDATEAONLYCHANGEDFIELDS = "UpdateOnlyChangedFields";
-	public static final String TTIP_UPDATEALLFIELDS = "UpdateAllFields";
+	public static final String TTIP_UPDATEAONLYCHANGEDFIELDS = "UpdateOnlyChangedFieldsUserDefTab";
+	public static final String TTIP_UPDATEALLFIELDS = "UpdateAllFieldsUserDefTab";
 
 	public MTab m_tab;
 
