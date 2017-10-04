@@ -59,7 +59,8 @@ import org.osgi.framework.FrameworkUtil;
  * @author hengsin
  * @author Silvano Trinchero, www.freepath.it
  *  		<li>IDEMPIERE-3209 added process-aware resultset-based constructor
- *  		<li>IDEMPIERE-3243 added getScriptEngine to manage both registered engines and engines provided by osgi bundles 
+ *  		<li>IDEMPIERE-3243 added getScriptEngine to manage both registered engines and engines provided by osgi bundles
+ * @author Davide Ruggeri, Gruppo Finmatica
  */
 
 public class Core {
@@ -439,17 +440,22 @@ public class Core {
 				//	Responsible Role
 				+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r INNER JOIN AD_User_Roles ur ON (r.AD_Role_ID=ur.AD_Role_ID)"
 				+ " WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID AND r.ResponsibleType='R' AND ur.AD_User_ID=?)"	//	#4
+				// FIN: new clause for current role
+				+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r "
+                + "WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID AND r.ResponsibleType='L' AND a.AD_Role_ID=?)" // #5 
 				//
-				+ ") AND a.AD_Client_ID=?";	//	#5
+				+ ") AND a.AD_Client_ID=?";	//	#6
 		
 		int AD_User_ID = Env.getAD_User_ID(env);
 		int AD_Client_ID = Env.getAD_Client_ID(env);
+		int AD_Role_ID = Env.getAD_Role_ID(env);
 		
 		List<Object> params = new ArrayList<Object>();
 		params.add(AD_User_ID);
 		params.add(AD_User_ID);
 		params.add(AD_User_ID);
 		params.add(AD_User_ID);
+		params.add(AD_Role_ID);
 		params.add(AD_Client_ID);
 		
 		WhereClauseAndParams cap = new WhereClauseAndParams(where,params);
