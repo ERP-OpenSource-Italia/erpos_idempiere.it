@@ -44,6 +44,7 @@ public class STDSysConfig
 	public static final String F3P_CREATE_REVERSE_ORDER = "F3P_CREATE_REVERSE_ORDER";
 	//LS variabile per gestire i termini pag fatture prima del completa
 	public static final String LIT_PAYSCHEDULEINV_BEFORE_COMPLETE = "LIT_PAYSCHEDULEINV_BEFORE_COMPLETE";
+	public static final String LIT_PAYSCHEDULEORD_BEFORE_COMPLETE = "LIT_PAYSCHEDULEORD_BEFORE_COMPLETE";
 	// Angelo Dabala' (genied) add support for Desktop Mail Client
 	private static final String LIT_USE_DESKTOP_EMAIL = "LIT_USE_DESKTOP_EMAIL"; 
 	//F3P: default doc action
@@ -77,7 +78,14 @@ public class STDSysConfig
  	public static String REPORT_HOME_KEY = "REPORT_HOME_PATH";
  	
  	public static final String LIT_WEB_SERVICE_COMPATIBILITY_MODE = "LIT_WEB_SERVICE_COMPATIBILITY_MODE";
-
+ 	
+ 	public static final String F3P_ALLOW_SINGLE_SCHEDULE = "F3P_ALLOW_SINGLE_SCHEDULE";
+ 	
+ 	public static Boolean getAllowSingleSchedule(int AD_Client_ID,int AD_Org_ID)
+ 	{
+ 		return MSysConfig.getBooleanValue(F3P_ALLOW_SINGLE_SCHEDULE, false, AD_Client_ID, AD_Org_ID);
+ 	}
+ 	
  	public static Boolean getWebServiceCompatibilityMode(int AD_Client_ID,int AD_Org_ID)
  	{
  		return MSysConfig.getBooleanValue(LIT_WEB_SERVICE_COMPATIBILITY_MODE, false, AD_Client_ID, AD_Org_ID);
@@ -321,6 +329,11 @@ public class STDSysConfig
 	public static final boolean isPayScheduleInvBeforeComplete(int AD_Client_ID,int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(LIT_PAYSCHEDULEINV_BEFORE_COMPLETE, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static final boolean isPayScheduleOrdBeforeComplete(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_PAYSCHEDULEORD_BEFORE_COMPLETE, false, AD_Client_ID, AD_Org_ID);
 	}
 	
 	/** Check this variable before create the reverse for onCreditOrder,warehouseOrder or POSOrder

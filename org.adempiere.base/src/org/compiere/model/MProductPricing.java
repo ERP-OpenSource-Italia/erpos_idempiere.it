@@ -114,6 +114,13 @@ public class MProductPricing
 	private boolean			m_isExtDiscount = false;
 	private DecimalFormat	m_formatDiscount;
 	
+	private int 	m_C_BPartner_Location_ID = 0;
+	private String 	m_locationType1 = null; 
+	private String 	m_locationType2 = null;
+	private String 	m_locationType3 = null;
+
+	private Timestamp m_dateOrder = null;
+	
 	private static final String FORMAT_DISCOUNT = "##.##";
 	
 	// F3P end
@@ -491,18 +498,70 @@ public class MProductPricing
 			+ " AND p.M_Product_ID=?"				//	#1
 			+ " AND pv.M_PriceList_Version_ID=?"	//	#2
 			+ " AND (pp.C_BPartner_ID=? OR pp.C_BPartner_ID is NULL)"				//	#3
-			+ " AND ?>=pp.BreakValue"				//  #4
-			+ " ORDER BY  pp.C_BPartner_ID, BreakValue DESC";
+			+ " AND ?>=pp.BreakValue"	;			//  #4
+			
+			
+				
+		if(m_C_BPartner_Location_ID > 0)
+			sql = sql + " AND (pp.C_BPartner_Location_ID = ? OR pp.C_BPartner_Location_ID is null) ";
+		
+		if(m_locationType1 != null || m_locationType2 != null || m_locationType3 != null)
+		{	
+			sql = sql + " AND ( (pp.locationtype1 is null and pp.locationtype2 is null and pp.locationtype3 is null) or (";
+		
+			if(m_locationType1 != null)
+				sql = sql + " pp.LocationType1 = ? OR ";
+			if(m_locationType2 != null)
+				sql = sql + " pp.LocationType2 = ? OR ";
+			if(m_locationType3 != null)
+				sql = sql + " pp.LocationType3 = ? OR ";
+			
+			sql = sql.substring(0, sql.length()-3)+" )) ";
+		}
+		else
+		{
+			sql = sql + " AND pp.locationtype1 is null and pp.locationtype2 is null and pp.locationtype3 is null ";
+		}
+		
+		if(m_dateOrder != null)
+			sql = sql + " AND ? BETWEEN coalesce(pp.ValidFrom,pv.ValidFrom) AND coalesce(pp.ValidTo,DATE'3000-12-31') "; 
+		
+		sql = sql+ " ORDER BY  pp.C_BPartner_ID, BreakValue DESC";
+		
+		
+		if(m_C_BPartner_Location_ID > 0)
+			sql = sql + " ,C_BPartner_Location_ID NULLS LAST";
+		if(m_locationType1 != null)
+			sql = sql + " ,LocationType1 NULLS LAST";
+		if(m_locationType2 != null)
+			sql = sql + " ,LocationType2 NULLS LAST";
+		if(m_locationType3 != null)
+			sql = sql + " ,LocationType3 NULLS LAST";
+			
+			
 		m_calculated = false;
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
 		{
+			int i = 1;
 			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setInt(1, m_M_Product_ID);
-			pstmt.setInt(2, m_M_PriceList_Version_ID);
-			pstmt.setInt(3, m_C_BPartner_ID);
-			pstmt.setBigDecimal(4, m_Qty);
+			pstmt.setInt(i++, m_M_Product_ID);
+			pstmt.setInt(i++, m_M_PriceList_Version_ID);
+			pstmt.setInt(i++, m_C_BPartner_ID);
+			pstmt.setBigDecimal(i++, m_Qty);
+			
+			if(m_C_BPartner_Location_ID > 0)
+				pstmt.setInt(i++, m_C_BPartner_Location_ID);
+			if(m_locationType1 != null)
+				pstmt.setString(i++, m_locationType1);
+			if(m_locationType2 != null)
+				pstmt.setString(i++, m_locationType2);
+			if(m_locationType3 != null)
+				pstmt.setString(i++, m_locationType3);
+			if(m_dateOrder != null)
+				pstmt.setTimestamp(i++, m_dateOrder);
+			
 			rs = pstmt.executeQuery();
 			if (rs.next())
 			{
@@ -617,8 +676,45 @@ public class MProductPricing
 			+ " AND p.M_Product_ID=?"				//	#1
 			+ " AND pv.M_PriceList_ID=?"			//	#2
 			+ " AND (pp.C_BPartner_ID=? OR pp.C_BPartner_ID is NULL)"				//	#3
-			+ " AND ?>=pp.BreakValue"				//  #4
-			+ " ORDER BY pp.C_BPartner_ID, pv.ValidFrom DESC, BreakValue DESC";
+			+ " AND ?>=pp.BreakValue";				//  #4
+			
+		
+		if(m_C_BPartner_Location_ID > 0)
+			sql = sql + " AND (pp.C_BPartner_Location_ID = ? OR pp.C_BPartner_Location_ID is null)";
+		
+		if(m_locationType1 != null || m_locationType2 != null || m_locationType3 != null)
+		{	
+			sql = sql + " AND ( (pp.locationtype1 is null and pp.locationtype2 is null and pp.locationtype3 is null) or (";
+		
+			if(m_locationType1 != null)
+				sql = sql + " pp.LocationType1 = ? OR ";
+			if(m_locationType2 != null)
+				sql = sql + " pp.LocationType2 = ? OR ";
+			if(m_locationType3 != null)
+				sql = sql + " pp.LocationType3 = ? OR ";
+			
+			sql = sql.substring(0, sql.length()-3)+" )) ";
+		}
+		else
+		{
+			sql = sql + " AND pp.locationtype1 is null and pp.locationtype2 is null and pp.locationtype3 is null ";
+		}
+		
+		if(m_dateOrder != null)
+			sql = sql + " AND ? BETWEEN coalesce(pp.ValidFrom,pv.ValidFrom) AND coalesce(pp.ValidTo,DATE'3000-12-31') "; 
+		
+		sql = sql+ " ORDER BY pp.C_BPartner_ID, pv.ValidFrom DESC, BreakValue DESC";
+		
+		if(m_C_BPartner_Location_ID > 0)
+			sql = sql + " ,C_BPartner_Location_ID NULLS LAST";
+		if(m_locationType1 != null)
+			sql = sql + " ,LocationType1 NULLS LAST";
+		if(m_locationType2 != null)
+			sql = sql + " ,LocationType2 NULLS LAST";
+		if(m_locationType3 != null)
+			sql = sql + " ,LocationType3 NULLS LAST";
+		
+		
 		m_calculated = false;
 		if (m_PriceDate == null)
 			m_PriceDate = new Timestamp (System.currentTimeMillis());
@@ -627,10 +723,24 @@ public class MProductPricing
 		try
 		{
 			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setInt(1, m_M_Product_ID);
-			pstmt.setInt(2, m_M_PriceList_ID);
-			pstmt.setInt(3, m_C_BPartner_ID);
-			pstmt.setBigDecimal(4, m_Qty);
+			
+			int i = 1;
+			pstmt.setInt(i++, m_M_Product_ID);
+			pstmt.setInt(i++, m_M_PriceList_ID);
+			pstmt.setInt(i++, m_C_BPartner_ID);
+			pstmt.setBigDecimal(i++, m_Qty);
+			
+			if(m_C_BPartner_Location_ID > 0)
+				pstmt.setInt(i++, m_C_BPartner_Location_ID);
+			if(m_locationType1 != null)
+				pstmt.setString(i++, m_locationType1);
+			if(m_locationType2 != null)
+				pstmt.setString(i++, m_locationType2);
+			if(m_locationType3 != null)
+				pstmt.setString(i++, m_locationType3);
+			if(m_dateOrder != null)
+				pstmt.setTimestamp(i++, m_dateOrder);
+			
 			rs = pstmt.executeQuery();
 			while (!m_calculated && rs.next())
 			{
@@ -707,8 +817,44 @@ public class MProductPricing
 			+ " AND p.M_Product_ID=?"				//	#1
 			+ " AND pl.M_PriceList_ID=?"			//	#2
 			+ " AND (pp.C_BPartner_ID=? OR pp.C_BPartner_ID is NULL)"				//	#3
-			+ " AND ?>=pp.BreakValue"				//  #4
-			+ " ORDER BY pp.C_BPartner_ID, pv.ValidFrom DESC, BreakValue DESC";
+			+ " AND ?>=pp.BreakValue";//  #4;
+			
+		
+		if(m_C_BPartner_Location_ID > 0)
+			sql = sql + " AND (pp.C_BPartner_Location_ID = ? OR pp.C_BPartner_Location_ID is null)";
+		
+		if(m_locationType1 != null || m_locationType2 != null || m_locationType3 != null)
+		{	
+			sql = sql + " AND ( (pp.locationtype1 is null and pp.locationtype2 is null and pp.locationtype3 is null) or (";
+		
+			if(m_locationType1 != null)
+				sql = sql + " pp.LocationType1 = ? OR ";
+			if(m_locationType2 != null)
+				sql = sql + " pp.LocationType2 = ? OR ";
+			if(m_locationType3 != null)
+				sql = sql + " pp.LocationType3 = ? OR ";
+			
+			sql = sql.substring(0, sql.length()-3)+" )) ";
+		}
+		else
+		{
+			sql = sql + " AND pp.locationtype1 is null and pp.locationtype2 is null and pp.locationtype3 is null ";
+		}
+		
+		if(m_dateOrder != null)
+			sql = sql + " AND ? BETWEEN coalesce(pp.ValidFrom,pv.ValidFrom) AND coalesce(pp.ValidTo,DATE'3000-12-31') "; 
+		
+		sql = sql+ " ORDER BY pp.C_BPartner_ID, pv.ValidFrom DESC, BreakValue DESC";
+		
+		if(m_C_BPartner_Location_ID > 0)
+			sql = sql + " ,C_BPartner_Location_ID NULLS LAST";
+		if(m_locationType1 != null)
+			sql = sql + " ,LocationType1 NULLS LAST";
+		if(m_locationType2 != null)
+			sql = sql + " ,LocationType2 NULLS LAST";
+		if(m_locationType3 != null)
+			sql = sql + " ,LocationType3 NULLS LAST";
+		
 		m_calculated = false;
 		if (m_PriceDate == null)
 			m_PriceDate = new Timestamp (System.currentTimeMillis());
@@ -716,11 +862,25 @@ public class MProductPricing
 		ResultSet rs = null;
 		try
 		{
+			
+			int i = 1;
 			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setInt(1, m_M_Product_ID);
-			pstmt.setInt(2, m_M_PriceList_ID);
-			pstmt.setInt(3, m_C_BPartner_ID);
-			pstmt.setBigDecimal(4, m_Qty);
+			pstmt.setInt(i++, m_M_Product_ID);
+			pstmt.setInt(i++, m_M_PriceList_ID);
+			pstmt.setInt(i++, m_C_BPartner_ID);
+			pstmt.setBigDecimal(i++, m_Qty);
+			
+			if(m_C_BPartner_Location_ID > 0)
+				pstmt.setInt(i++, m_C_BPartner_Location_ID);
+			if(m_locationType1 != null)
+				pstmt.setString(i++, m_locationType1);
+			if(m_locationType2 != null)
+				pstmt.setString(i++, m_locationType2);
+			if(m_locationType3 != null)
+				pstmt.setString(i++, m_locationType3);
+			if(m_dateOrder != null)
+				pstmt.setTimestamp(i++, m_dateOrder);
+			
 			rs = pstmt.executeQuery();
 			while (!m_calculated && rs.next())
 			{
@@ -1135,4 +1295,34 @@ public class MProductPricing
 		}
 	}
 	//F3P end
+
+	public void setLocationAndLocationTypes(int C_BPartnerLocation_ID,String locationType1,String locationType2,String locationType3 )
+	{
+		m_C_BPartner_Location_ID = C_BPartnerLocation_ID;
+		m_locationType1 = locationType1; 
+		m_locationType2 = locationType2;
+		m_locationType3 = locationType3;
+
+		m_calculated = false;
+		m_useVendorBreak = true;
+	}
+	
+	public void setLocationTypes(String locationType1,String locationType2,String locationType3 )
+	{
+		m_locationType1 = locationType1; 
+		m_locationType2 = locationType2;
+		m_locationType3 = locationType3;
+
+		m_calculated = false;
+		m_useVendorBreak = true;
+	}
+	
+	public void setDatePPVB(Timestamp dateOrder)
+	{
+		m_dateOrder = dateOrder;
+		
+		m_calculated = false;
+		m_useVendorBreak = true;
+	}
+	
 }	//	MProductPrice
