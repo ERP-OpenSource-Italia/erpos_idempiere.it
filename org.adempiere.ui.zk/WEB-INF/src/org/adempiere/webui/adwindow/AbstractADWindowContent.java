@@ -707,8 +707,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
         {
         	m_findCancelled = false;
         	m_findCreateNew = false;
-        	// F3P: dont pass the tab field, but a copy, since FindWindow may change them
-    		GridField[] findFields = GridField.createFields(ctx, curWindowNo, 0,mTab.getAD_Tab_ID());
+            GridField[] findFields = mTab.getFields();
             findWindow = new FindWindow(curWindowNo,
                     mTab.getName(), mTab.getAD_Table_ID(), mTab.getTableName(),
                     where.toString(), findFields, 10, mTab.getAD_Tab_ID()); // no query below 10
@@ -1302,15 +1301,15 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 
 		toolbar.enablePrint(adTabbox.getSelectedGridTab().isPrinted() && !adTabbox.getSelectedGridTab().isNew());
 
+        boolean isNewRow = adTabbox.getSelectedGridTab().getRowCount() == 0 || adTabbox.getSelectedGridTab().isNew();
         //Deepak-Enabling customize button IDEMPIERE-364
-        if(!(adTabbox.getSelectedTabpanel() instanceof ADSortTab))
-        {
-        	toolbar.enableCustomize(((ADTabpanel)adTabbox.getSelectedTabpanel()).isGridView());
-        }
-        else 
-        {
+        if(adTabbox.getSelectedTabpanel() instanceof ADSortTab){//consistent with dataStatusChanged
+        	toolbar.enableProcessButton (false);
         	toolbar.enableCustomize(false);
-        	toolbar.enableProcessButton(false);
+        }else{
+        	ADTabpanel adtab = (ADTabpanel) adTabbox.getSelectedTabpanel();
+            toolbar.enableProcessButton(!isNewRow && adtab != null && adtab.getToolbarButtons().size() > 0);
+            toolbar.enableCustomize(adtab.isGridView());
         }
 
 	}
@@ -1533,6 +1532,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
         boolean readOnly = adTabbox.getSelectedGridTab().isReadOnly();
         boolean processed = adTabbox.getSelectedGridTab().isProcessed();
         boolean insertRecord = !readOnly;
+        boolean deleteRecord = !readOnly;
         if (!detailTab)
         {
 	        //  update Change
@@ -1545,7 +1545,11 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 	        toolbar.enableNew(!changed && insertRecord && !tabPanel.getGridTab().isSortTab());
 	        toolbar.enableCopy(!changed && insertRecord && !tabPanel.getGridTab().isSortTab() && adTabbox.getSelectedGridTab().getRowCount()>0);
 	        toolbar.enableRefresh(!changed);
-	        toolbar.enableDelete(!changed && !readOnly && !tabPanel.getGridTab().isSortTab() && !processed);
+	        if (deleteRecord)
+	        {
+	        	deleteRecord = tabPanel.getGridTab().isDeleteRecord();
+	        }
+	        toolbar.enableDelete(!changed && deleteRecord && !tabPanel.getGridTab().isSortTab() && !processed);
 	        //
 	        if (readOnly && adTabbox.getSelectedGridTab().isAlwaysUpdateField())
 	        {
@@ -1665,7 +1669,6 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
         }
 
         boolean isNewRow = adTabbox.getSelectedGridTab().getRowCount() == 0 || adTabbox.getSelectedGridTab().isNew();
-        toolbar.enableProcessButton(!isNewRow);
         toolbar.enableArchive(!isNewRow);
         toolbar.enableZoomAcross(!isNewRow);
         toolbar.enableActiveWorkflows(!isNewRow);
@@ -1680,8 +1683,14 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
         toolbar.enableTabNavigation(breadCrumb.hasParentLink(), adTabbox.getSelectedDetailADTabpanel() != null);
         
         //Deepak-Enabling customize button IDEMPIERE-364
-        if(!(adTabbox.getSelectedTabpanel() instanceof ADSortTab))
-        	toolbar.enableCustomize(((ADTabpanel)adTabbox.getSelectedTabpanel()).isGridView());
+        if(adTabbox.getSelectedTabpanel() instanceof ADSortTab){//consistent with updateToolbar
+        	toolbar.enableProcessButton (false);
+        	toolbar.enableCustomize(false);
+        }else{
+        	ADTabpanel adtab = (ADTabpanel) adTabbox.getSelectedTabpanel();
+            toolbar.enableProcessButton(!isNewRow && adtab != null && adtab.getToolbarButtons().size() > 0);
+            toolbar.enableCustomize(adtab.isGridView());
+        }
     }
 
     /**
@@ -1759,6 +1768,10 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
     	if (sortColumn != null)
     	{
     		sortColumn.setSortDirection("natural");
+    	}
+    	if (gridTab.isSortTab()) { // refresh is not refreshing sort tabs
+    		IADTabpanel tabPanel = adTabbox.getSelectedTabpanel();
+    		tabPanel.query(false, 0, 0);
     	}
     }
 

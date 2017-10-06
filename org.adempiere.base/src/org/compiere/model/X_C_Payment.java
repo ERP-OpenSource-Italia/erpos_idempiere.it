@@ -1978,6 +1978,9 @@ public class X_C_Payment extends PO implements I_C_Payment, I_Persistent
 	public static final String TRXTYPE_Authorization = "A";
 	/** Void = V */
 	public static final String TRXTYPE_Void = "V";
+	/** X */
+	public static final String TRXTYPE_X = "X";
+	
 	/** Set Transaction Type.
 		@param TrxType 
 		Type of credit card transaction

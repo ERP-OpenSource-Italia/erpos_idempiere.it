@@ -13,13 +13,24 @@
  *****************************************************************************/
 package org.adempiere.webui.adwindow;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.logging.Level;
+
 import org.adempiere.base.IServiceHolder;
 import org.adempiere.webui.action.Actions;
 import org.adempiere.webui.action.IAction;
 import org.compiere.model.MToolBarButton;
+import org.compiere.util.CLogger;
+import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Evaluatee;
 import org.compiere.util.Evaluator;
+import org.compiere.util.Util;
+
+
+import org.adempiere.webui.action.IAction2;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
@@ -27,6 +38,8 @@ import org.zkoss.zul.Toolbarbutton;
 
 public class ToolbarCustomButton implements EventListener<Event>, Evaluatee { 
 
+	/**	Logger						*/
+	protected CLogger	log = CLogger.getCLogger(getClass());								
 	private Toolbarbutton toolbarButton;
 	private String actionId;
 	private int windowNo;
@@ -43,13 +56,22 @@ public class ToolbarCustomButton implements EventListener<Event>, Evaluatee {
 	
 	@Override
 	public void onEvent(Event event) throws Exception {
+		IAction action = getAction();
+		
+		if (action != null)
+			action.execute(ADWindow.get(windowNo));
+	}
+	
+	private IAction getAction()
+	{
+		IAction action = null;
+		
 		IServiceHolder<IAction> serviceHolder = Actions.getAction(actionId);
 		if (serviceHolder != null) {
-			IAction action = serviceHolder.getService();
-			if (action != null) {
-				action.execute(ADWindow.get(windowNo));
-			}
+			action = serviceHolder.getService();
 		}
+			
+		return action;
 	}
 
 	@Override
@@ -69,7 +91,7 @@ public class ToolbarCustomButton implements EventListener<Event>, Evaluatee {
 	    	return Env.getContext (Env.getCtx(), windowNo, tabNo, variableName, false, true);
 	}
 	
-	public void dynamicDisplay() {
+	public void dynamicDisplay(int tabNo) {
 		if (toolbarButton.getParent() == null)
 			return;
 		
@@ -77,10 +99,68 @@ public class ToolbarCustomButton implements EventListener<Event>, Evaluatee {
 		if (displayLogic == null || displayLogic.trim().length() == 0)
 			return;
 		
-		boolean visible = Evaluator.evaluateLogic(this, displayLogic);
+		boolean visible = false;
+		//F3P Aggiunta variante per logica di visibilita' tramite sql 
+		if(displayLogic.toLowerCase().startsWith("@sql="))
+		{
+			if(tabNo == -1)
+				return;
+			
+			String	defStr = "";
+			String sql = displayLogic.substring(5);	//	w/o tag
+			//sql = Env.parseContext(m_vo.ctx, m_vo.WindowNo, sql, false, true);	//	replace variables
+			//hengsin, capture unparseable error to avoid subsequent sql exception
+			sql = Env.parseContext(Env.getCtx(),windowNo, tabNo, sql, false, false);	//	replace variables
+			if (sql.equals(""))
+				log.log(Level.WARNING, " Default SQL variable parse failed");
+			else {
+				PreparedStatement stmt = null;
+				ResultSet rs = null;
+				try {
+					stmt = DB.prepareStatement(sql, null);
+					rs = stmt.executeQuery();
+					if (rs.next())
+						defStr = rs.getString(1);
+					else {
+						if (log.isLoggable(Level.INFO))
+							log.log(Level.INFO, " no Result: " + sql);
+					}
+				}
+				catch (SQLException e) {
+					log.log(Level.WARNING, sql, e);
+				}
+				finally{
+					DB.close(rs, stmt);
+					rs = null;
+					stmt = null;
+				}
+			}
+			if (!Util.isEmpty(defStr))
+				visible = Util.asBoolean(defStr);
+		}//F3P End
+		else
+		{
+			visible = Evaluator.evaluateLogic(this, displayLogic);
+		}
+		
+		if(visible)
+		{
+			IAction action = getAction();
+			
+			if(action instanceof IAction2)
+			{
+				IAction2 act2 = (IAction2)action;
+				visible = act2.isVisible(ADWindow.get(windowNo));
+			}
+		}
+		
 		toolbarButton.setVisible(visible);
 	}
 	
+	public void dynamicDisplay() 
+	{
+		dynamicDisplay(-1);
+	}
 	public Toolbarbutton getToolbarbutton() {
 		return toolbarButton;
 	}

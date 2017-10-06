@@ -460,7 +460,9 @@ public class MCash extends X_C_Cash implements DocAction
 		//
 		if (log.isLoggable(Level.INFO)) log.info(toString());
 		
-		MCashLine[] lines = getLines(false);
+		//F3P spostato in localizzazione italiana - CashValidator 
+		/*
+		 * MCashLine[] lines = getLines(false);
 		for (int i = 0; i < lines.length; i++)
 		{
 			MCashLine line = lines[i];
@@ -604,6 +606,7 @@ public class MCash extends X_C_Cash implements DocAction
 				}
 			}
 		}
+		 */
 		
 		//	User Validation
 		String valid = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_AFTER_COMPLETE);

@@ -13,6 +13,9 @@ public class LITMCashLine
     /** Column name C_Order_ID */
     public static final String COLUMNNAME_C_Order_ID = "C_Order_ID";
     
+    /** Column name C_BPartner_ID */
+    public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
+    
     /** Column name OverUnderAmt */
     public static final String COLUMNNAME_OverUnderAmt = "OverUnderAmt";
 
@@ -41,6 +44,31 @@ public class LITMCashLine
 		}
 		return false;
 	}    
+	
+	/** Set BPartner.
+		@param cashLine
+		@param C_BPartner_ID 
+		BPartner
+	 */
+	public static void setC_BPartner_ID (X_C_CashLine cashLine, int C_BPartner_ID)
+	{
+		if (C_BPartner_ID < 1) 
+			cashLine.set_ValueOfColumn(COLUMNNAME_C_BPartner_ID, null);
+		else 
+			cashLine.set_ValueOfColumn(COLUMNNAME_C_BPartner_ID, Integer.valueOf(C_BPartner_ID));
+	}
+	
+	/** Get BPartner.
+		@param cashLine
+		@return BPartner
+	  */
+	public static int getC_BPartner_ID (X_C_CashLine cashLine) 
+	{
+		Integer ii = (Integer)cashLine.get_Value(COLUMNNAME_C_BPartner_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
 	
 	/** Set Order.
 		@param cashLine
