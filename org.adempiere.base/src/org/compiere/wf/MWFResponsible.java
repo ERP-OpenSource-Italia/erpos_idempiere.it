@@ -109,6 +109,7 @@ public class MWFResponsible extends X_AD_WF_Responsible
 	 * 	Is Role Responsible
 	 *	@return true if role
 	 */
+	//DRUGGERI
 	public boolean isRole()
 	{
 		return RESPONSIBLETYPE_Role.equals(getResponsibleType()) 

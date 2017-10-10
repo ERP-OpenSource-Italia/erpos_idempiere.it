@@ -238,6 +238,9 @@ public class X_AD_WF_Responsible extends PO implements I_AD_WF_Responsible, I_Pe
 	public static final String RESPONSIBLETYPE_Human = "H";
 	/** Role = R */
 	public static final String RESPONSIBLETYPE_Role = "R";
+	/** Role Rule */
+	//FIN: DRuggeri
+	public static final String RESPONSIBLETYPE_RoleRule = "L";
 	/** System Resource = S */
 	public static final String RESPONSIBLETYPE_SystemResource = "S";
 	/** Set Responsible Type.

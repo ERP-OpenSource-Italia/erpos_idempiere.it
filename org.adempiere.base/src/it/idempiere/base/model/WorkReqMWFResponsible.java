@@ -25,6 +25,7 @@ import java.util.logging.Level;
 import javax.script.ScriptEngine;
 
 import org.compiere.model.MRule;
+import org.compiere.model.PO;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -35,14 +36,14 @@ import org.compiere.wf.MWFProcess;
 import org.compiere.wf.MWFResponsible;
 import org.compiere.wf.MWorkflow;
 
-import it.idempiere.base.util.BaseEnvHelper;
 import it.idempiere.base.util.BaseMessages;
 
 public class WorkReqMWFResponsible extends MWFResponsible
 {
 	private static final long serialVersionUID = 1L;	
 	private static CLogger log = CLogger.getCLogger(WorkReqMWFResponsible.class);
-	public static final String RESPONSIBLETYPE_Rule = "D";
+	public static final String RESPONSIBLETYPE_RuleUser = "D";
+	public static final String RESPONSIBLETYPE_RuleRole = "L";
 	
 	public static final int FAKE_WIN_TAB_NO = -1;
 	
@@ -59,15 +60,17 @@ public class WorkReqMWFResponsible extends MWFResponsible
 	{
 		super(ctx, rs, trxName);
 	}
-	
+	//DRUGGERI aggiungo anche il caso in cui sia una regola per il ruolo
 	public static boolean isRule(MWFResponsible resp)
 	{
-		return RESPONSIBLETYPE_Rule.equals(resp.getResponsibleType());
+		return RESPONSIBLETYPE_RuleUser.equals(resp.getResponsibleType())
+				|| RESPONSIBLETYPE_RuleRole.equals(resp.getResponsibleType());
 	}
 	
 	public boolean isRule()
 	{
-		return RESPONSIBLETYPE_Rule.equals(getResponsibleType());
+		return RESPONSIBLETYPE_RuleUser.equals(getResponsibleType())
+				|| RESPONSIBLETYPE_RuleRole.equals(getResponsibleType());
 	}
 	
 	/**
@@ -90,7 +93,7 @@ public class WorkReqMWFResponsible extends MWFResponsible
 	 * @param nRuleId
 	 * @return AD_User_ID or 0 if the rule is invalid.
 	 */
-	public static int evaluateRuleResp(MWFProcess process, MWFActivity activity, MWorkflow wf, MWFNode node, Properties ctx, int nRuleId)
+	public static int evaluateRuleResp(MWFProcess process, MWFActivity activity, MWorkflow wf, MWFNode node, Properties ctx, int nRuleId,PO po)
 	{		
 		int nUserId = 0;
 		MRule rule = MRule.get(ctx,nRuleId);
@@ -153,9 +156,14 @@ public class WorkReqMWFResponsible extends MWFResponsible
 							MWFActivity.COLUMNNAME_Record_ID, activity.getRecord_ID());
 					sTrx = activity.get_TrxName();
 				}
-		
-				String sSQL = BaseEnvHelper.parseStringWithEnv(ctxCloned, rule.getScript(), FAKE_WIN_TAB_NO, FAKE_WIN_TAB_NO);
-				PreparedStatement pstmt = DB.prepareStatement(sSQL, sTrx);
+				//DRuggeri inserire il controllo prendendo le variabili dalla PO
+				
+				String sSqlNoCtx = rule.getScript();
+			//	if(sSqlNoCtx.contains("@#Table))
+				
+				String sSqlComplete = Env.parseVariable(sSqlNoCtx, po, "", false);//.parseStringWithPo(ctxCloned,sSqlNoCtx,po);
+				
+				PreparedStatement pstmt = DB.prepareStatement(sSqlComplete, sTrx);
 				ResultSet rs = null;
 				
 				try

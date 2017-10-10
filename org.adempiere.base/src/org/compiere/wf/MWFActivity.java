@@ -80,6 +80,7 @@ import it.idempiere.base.util.StateTerminatedException;
  *  @author Jorg Janke
  *  @author Silvano Trinchero, www.freepath.it
  *  		<li>IDEMPIERE-3209 added process-aware resultset-based constructor
+ *  @author Davide Ruggeri, Gruppo Finmatica. Added role rule management
  *  @version $Id: MWFActivity.java,v 1.4 2006/07/30 00:51:05 jjanke Exp $
  */
 public class MWFActivity extends X_AD_WF_Activity implements Runnable
@@ -420,6 +421,7 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		return po.get_ValueOfColumn(AD_Column_ID);
 	}	//	getAttributeValue
 
+
 	/**
 	 * 	Is SO Trx
 	 *	@return SO Trx or of not found true
@@ -626,18 +628,28 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		setAD_WF_Responsible_ID (AD_WF_Responsible_ID);
 		MWFResponsible resp = getResponsible();
 
+		PO po = getPO();
 		//	User - Directly responsible
 		int AD_User_ID = resp.getAD_User_ID();
 		//	Invoker - get Sales Rep or last updater of document
 		if (AD_User_ID == 0 && resp.isInvoker())
 			AD_User_ID = process.getAD_User_ID();
-		//		
+		// DRUGGERI 		
 		if(WorkReqMWFResponsible.isRule(resp))
 		{
 			int nRuleId = WorkReqMWFResponsible.getAD_Rule_ID(resp);
-			AD_User_ID = WorkReqMWFResponsible.evaluateRuleResp(process, this, process.getWorkflow(), m_node, getCtx(), nRuleId);
+			if(resp.getResponsibleType().equals(WorkReqMWFResponsible.RESPONSIBLETYPE_RuleUser)){
+				AD_User_ID = WorkReqMWFResponsible.evaluateRuleResp(process, this, process.getWorkflow(), m_node, getCtx(), nRuleId,po);
+			}
+
+		else{
+			int AD_Role_ID = WorkReqMWFResponsible.evaluateRuleResp(null, this, process.getWorkflow(), m_node, getCtx(),nRuleId,po);
+
+			if(AD_Role_ID > 0){
+				set_ValueOfColumn("AD_Role_ID", AD_Role_ID);
+			}
 		}
-		//
+		}
 		
 		setAD_User_ID(AD_User_ID);
 	}	//	setResponsible
@@ -1821,8 +1833,27 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 			else if(WorkReqMWFResponsible.isRule(resp))
 			{
 				int nRuleId = WorkReqMWFResponsible.getAD_Rule_ID(resp);
-				int AD_User_ID = WorkReqMWFResponsible.evaluateRuleResp(m_process, this, m_process.getWorkflow(), m_node, m_po.getCtx(), nRuleId);				
-				sendEMail(client, AD_User_ID, null, subject, message, pdf, text.isHtml());
+				
+				if(resp.getResponsibleType().equals(WorkReqMWFResponsible.RESPONSIBLETYPE_RuleUser))
+				{
+					int AD_User_ID = WorkReqMWFResponsible.evaluateRuleResp(m_process, this, m_process.getWorkflow(), m_node, m_po.getCtx(), nRuleId,m_po);				
+					sendEMail(client, AD_User_ID, null, subject, message, pdf, text.isHtml());
+				}
+				else
+				{
+					int AD_Role_ID = WorkReqMWFResponsible.evaluateRuleResp(m_process, this, m_process.getWorkflow(), m_node, m_po.getCtx(),nRuleId,m_po);
+
+					if(AD_Role_ID > 0)
+					{
+						MRole role = MRole.get(m_po.getCtx(), AD_Role_ID);
+						if (role != null)
+						{
+							MUser[] users = MUser.getWithRole(role);
+							for (int i = 0; i < users.length; i++)
+								sendEMail(client, users[i].getAD_User_ID(), null, subject, message, pdf, text.isHtml());
+						}
+					}					
+				}
 			}
 			// F3P: if not, send to pre-determined activity responsible
 			else
