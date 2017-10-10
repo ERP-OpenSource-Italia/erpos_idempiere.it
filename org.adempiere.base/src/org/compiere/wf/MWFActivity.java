@@ -34,9 +34,7 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 
-import org.adempiere.base.Core;
 import org.adempiere.exceptions.AdempiereException;
-import org.compiere.model.MActivity;
 import org.compiere.model.MAttachment;
 import org.compiere.model.MBPartner;
 import org.compiere.model.MClient;
@@ -70,7 +68,6 @@ import org.compiere.util.Trace;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
-import org.compiere.util.WFUtil;
 
 import it.idempiere.base.model.WorkReqMWFResponsible;
 import it.idempiere.base.util.StateTerminatedException;
@@ -413,15 +410,9 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 	public Object getAttributeValue()
 	{
 		MWFNode node = getNode();
-		int AD_Column_ID;
 		if (node == null)
 			return null;
-		if (getAD_Workflow().getAD_Table_ID() != getAD_Table_ID()){
-			Integer tableID = getAD_Table_ID();
-			 AD_Column_ID = WFUtil.getColumnID(getCtx(), node.getAD_Column_ID(), tableID);
-		} else {	
-		 AD_Column_ID = node.getAD_Column_ID();
-		}
+		int AD_Column_ID = node.getAD_Column_ID();
 		if (AD_Column_ID == 0)
 			return null;
 		PO po = getPO();
@@ -429,6 +420,7 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 			return null;
 		return po.get_ValueOfColumn(AD_Column_ID);
 	}	//	getAttributeValue
+
 
 	/**
 	 * 	Is SO Trx
@@ -1382,19 +1374,9 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		//
 		else
 			dbValue = value;
-		//FIN: DRuggeri 01/06/2017
-		Integer columnID;
-		if (getAD_Workflow().getAD_Table_ID() != getAD_Table_ID()){
-		 columnID = WFUtil.getColumnID(getCtx(), getNode().getAD_Column_ID(), getAD_Table_ID());
-		m_po.set_ValueOfColumn(columnID, dbValue);
-		m_po.saveEx();
-		}
-		else {
-		columnID = getNode().getAD_Column_ID();
 		m_po.set_ValueOfColumn(getNode().getAD_Column_ID(), dbValue);
 		m_po.saveEx();
-		}
-		if (dbValue != null && !dbValue.equals(m_po.get_ValueOfColumn(columnID)))
+		if (dbValue != null && !dbValue.equals(m_po.get_ValueOfColumn(getNode().getAD_Column_ID())))
 			throw new Exception("Persistent Object not updated - AD_Table_ID="
 				+ getAD_Table_ID() + ", Record_ID=" + getRecord_ID()
 				+ " - Should=" + value + ", Is=" + m_po.get_ValueOfColumn(m_node.getAD_Column_ID()));
@@ -1851,8 +1833,27 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 			else if(WorkReqMWFResponsible.isRule(resp))
 			{
 				int nRuleId = WorkReqMWFResponsible.getAD_Rule_ID(resp);
-				int AD_User_ID = WorkReqMWFResponsible.evaluateRuleResp(m_process, this, m_process.getWorkflow(), m_node, m_po.getCtx(), nRuleId,null);				
-				sendEMail(client, AD_User_ID, null, subject, message, pdf, text.isHtml());
+				
+				if(resp.getResponsibleType().equals(WorkReqMWFResponsible.RESPONSIBLETYPE_RuleUser))
+				{
+					int AD_User_ID = WorkReqMWFResponsible.evaluateRuleResp(m_process, this, m_process.getWorkflow(), m_node, m_po.getCtx(), nRuleId,m_po);				
+					sendEMail(client, AD_User_ID, null, subject, message, pdf, text.isHtml());
+				}
+				else
+				{
+					int AD_Role_ID = WorkReqMWFResponsible.evaluateRuleResp(m_process, this, m_process.getWorkflow(), m_node, m_po.getCtx(),nRuleId,m_po);
+
+					if(AD_Role_ID > 0)
+					{
+						MRole role = MRole.get(m_po.getCtx(), AD_Role_ID);
+						if (role != null)
+						{
+							MUser[] users = MUser.getWithRole(role);
+							for (int i = 0; i < users.length; i++)
+								sendEMail(client, users[i].getAD_User_ID(), null, subject, message, pdf, text.isHtml());
+						}
+					}					
+				}
 			}
 			// F3P: if not, send to pre-determined activity responsible
 			else
