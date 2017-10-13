@@ -1821,5 +1821,19 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 		}
 		super.onPageDetached(page);
 	}
+	
+	// F3P: method to minimize detail tab
+	public void minimizeTabDetail()
+	{
+		onSouthEvent(SouthEvent.CLOSE);
+		formContainer.getSouth().setOpen(false);
+	}
+	
+	// F3P: method to maximize detail tab
+	public void maximizeTabDetail()
+	{		
+		onSouthEvent(SouthEvent.OPEN);
+		formContainer.getSouth().setOpen(true);
+	}
 
 }
