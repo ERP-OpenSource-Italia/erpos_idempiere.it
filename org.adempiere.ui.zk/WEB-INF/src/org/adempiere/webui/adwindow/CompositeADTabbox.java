@@ -457,10 +457,13 @@ public class CompositeADTabbox extends AbstractADTabbox
     			}
     		}
     		int selected = headerTab.getDetailPane().getSelectedIndex();
+    		//F3P: variable for visible logic of detail tab 
+    		boolean isVisibleDetailTab = headerTab.getDetailPane().isTabVisible(selected);
     		if (headerTab.getDetailPane().getADTabpanel(selected) == null || !headerTab.getDetailPane().isTabVisible(selected)) {
     			for(int i = 0; i < headerTab.getDetailPane().getTabcount(); i++) {
     				if (selected == i) continue;
     				if (headerTab.getDetailPane().isTabVisible(i)) {
+    					isVisibleDetailTab = true;
     					headerTab.getDetailPane().setSelectedIndex(i);
     					if (headerTab instanceof ADTabpanel) {
     						((ADTabpanel) headerTab).activateDetailIfVisible();
@@ -470,6 +473,19 @@ public class CompositeADTabbox extends AbstractADTabbox
     			}
     			hasChanges = true;
     		}
+    		
+    		// F3P: if one detail tab is visible maximize detail tab else minimize detail tab
+    		if(isVisibleDetailTab)
+    		{
+    			((ADTabpanel)headerTab).maximizeTabDetail();
+    			// F3P: refresh detail tab if is visible
+    			activateDetailIfVisible();
+    		}
+    		else
+    		{
+    			((ADTabpanel)headerTab).minimizeTabDetail();
+    		}
+    		
     		if (hasChanges)
     			headerTab.getDetailPane().invalidate();
     	}
