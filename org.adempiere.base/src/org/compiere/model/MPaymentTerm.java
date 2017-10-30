@@ -207,8 +207,9 @@ public class MPaymentTerm extends X_C_PaymentTerm
 		}
 
 		// do not apply payment term if the invoice is not on credit or if total is zero
-		if ( (! (MInvoice.PAYMENTRULE_OnCredit.equals(invoice.getPaymentRule()) || MInvoice.PAYMENTRULE_DirectDebit.equals(invoice.getPaymentRule())))
-			|| invoice.getGrandTotal().signum() == 0)
+		//if ( (! (MInvoice.PAYMENTRULE_OnCredit.equals(invoice.getPaymentRule()) || MInvoice.PAYMENTRULE_DirectDebit.equals(invoice.getPaymentRule())))
+		//	|| 
+		if(invoice.getGrandTotal().signum() == 0)
 			return false;
 			
 		if (!isValid())

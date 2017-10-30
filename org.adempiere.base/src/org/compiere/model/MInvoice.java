@@ -1478,8 +1478,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			return DocAction.STATUS_Invalid;
 		}
 
-		if (   getGrandTotal().signum() != 0
-			&& (PAYMENTRULE_OnCredit.equals(getPaymentRule()) || PAYMENTRULE_DirectDebit.equals(getPaymentRule())))
+		if (   getGrandTotal().signum() != 0)
+		//	&& (PAYMENTRULE_OnCredit.equals(getPaymentRule()) || PAYMENTRULE_DirectDebit.equals(getPaymentRule()))) F3P: removed filter that not generate payschedule
 		{
 			if (!createPaySchedule())
 			{
