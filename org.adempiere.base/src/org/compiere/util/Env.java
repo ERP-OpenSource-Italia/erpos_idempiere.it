@@ -1735,7 +1735,11 @@ public final class Env
 					}
 					
 					MColumn colToken = MColumn.get(ctx, po.get_TableName(), token);
-					String foreignTable = colToken.getReferenceTableName();
+					//LS Fix, avoid null pointer exception, if column is missing
+					String foreignTable = null;
+					if (colToken != null)
+						foreignTable = colToken.getReferenceTableName();
+					//LS end
 					if (v != null) {
 						if (format != null && format.length() > 0) {
 							if (v instanceof Integer && (Integer) v > 0 && !Util.isEmpty(foreignTable)) {
