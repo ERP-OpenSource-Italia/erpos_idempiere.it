@@ -91,7 +91,6 @@ public class FDialog
 	 *	@param	windowNo	Number of Window
 	 *	@param	adMessage	Message to be translated
 	 *	@param	message		Additional message
-	 *	@param	title		If none then one will be generated
 	 *
 	 * @see #warn(int, String)
 	 * @see #warn(int, String, String)
@@ -102,6 +101,24 @@ public class FDialog
     {
     	warn(windowNo, comp, adMessage, message, null);
     }
+    
+  	/**
+  	 *	Display warning with warning icon
+  	 *	@param	windowNo	Number of Window
+  	 *	@param	adMessage	Message to be translated
+  	 *	@param	message		Additional message
+  	 *	@param	title		If none then one will be generated
+  	 *
+  	 *
+  	 * @see #warn(int, String)
+  	 * @see #warn(int, String, String)
+  	 * @see #warn(int, Component, String, String, String)
+  	 */
+    
+    public static void warn(int windowNo, Component comp, String adMessage, String message, String title)
+    {
+    	warn(windowNo, comp,adMessage, message, title, null);
+    }
 
 	/**
 	 *	Display warning with warning icon
@@ -109,13 +126,14 @@ public class FDialog
 	 *	@param	adMessage	Message to be translated
 	 *	@param	message		Additional message
 	 *	@param	title		If none then one will be generated
+	 *  @param  callback to be invoked with 
 	 *
 	 * @see #warn(int, String)
 	 * @see #warn(int, String, String)
 	 * @see #warn(int, Component, String, String)
 	 */
     
-    public static void warn(int windowNo, Component comp, String adMessage, String message, String title)
+    public static void warn(int windowNo, Component comp, String adMessage, String message, String title,Callback<Integer> callback)
     {
     	Properties ctx = Env.getCtx();
     	StringBuffer out = null;
@@ -135,10 +153,10 @@ public class FDialog
     		newTitle = title;
     	}
     	
-		String s = out.toString().replace("\n", "<br>");
-		Messagebox.showDialog(s, newTitle, Messagebox.OK, Messagebox.EXCLAMATION);
+			String s = out.toString().replace("\n", "<br>");
+			Messagebox.showDialog(s, newTitle, Messagebox.OK, Messagebox.EXCLAMATION,callback);
 
-		return;
+			return;
     }
 
 	/**

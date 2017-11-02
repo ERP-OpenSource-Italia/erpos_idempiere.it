@@ -23,16 +23,21 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 
+import org.adempiere.base.event.IEventTopics;
 import org.adempiere.util.Callback;
+import org.adempiere.util.FeedbackContainer;
 import org.adempiere.webui.component.ADTabListModel;
 import org.adempiere.webui.component.ADTabListModel.ADTabLabel;
+import org.adempiere.webui.util.UIFeedbackNotifier;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
 import org.compiere.model.DataStatusEvent;
 import org.compiere.model.DataStatusListener;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
+import org.compiere.model.GridTable;
 import org.compiere.model.MTab;
+import org.compiere.model.PO;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.Evaluator;
@@ -147,14 +152,64 @@ public class CompositeADTabbox extends AbstractADTabbox
 					if (headerTab.getGridTab().isNew()) return;
 					
 					final IADTabpanel tabPanel = getSelectedDetailADTabpanel();
-					if (!tabPanel.getGridTab().dataSave(true)) {
-						showLastError();
-					} 
-					tabPanel.getGridTab().dataRefreshAll(true, true);
+					
+					// F3P: inserted in-between call to feedback notifier, calling save0 as last thing
+					
+					String gatherFor = IEventTopics.PO_BEFORE_CHANGE;
+	  			GridTab gridTab = tabPanel.getGridTab();;
+	  			GridTable mTable = gridTab.getMTable();
+	  			boolean isFeedbackManaged = false;
+	  			
+	  			int Record_ID = 0;
+	  			PO po = null;
+	  			
+	  			if(mTable.isInserting() == false)
+	  				Record_ID = mTable.getKeyID(mTable.getRowChanged());
+	  			
+	  			try
+	  			{
+		  			po = mTable.buildSavePO(Record_ID, false);
+	  			}
+	  			catch(Throwable t)
+	  			{
+	  				// Skip reporting, will be reported by save
+	  				po = null;
+	  			}
+					
+	  			if(po != null)
+	  			{
+						if(tabPanel.getGridTab().isNew())
+							gatherFor = IEventTopics.PO_BEFORE_NEW;
+				  	
+			  		FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);
+			  		UIFeedbackNotifier notifier = new UIFeedbackNotifier(tabPanel.getGridTab().getWindowNo(), getComponent(), container, new Callback<Integer>()
+			  		{
+			  			public void onCallback(Integer result) {
+			  				onDetailSaveEvent(tabPanel);
+			  			};
+			  		});
+			  		
+			  		notifier.processFeedback();
+			  		isFeedbackManaged = true;
+	  			}
+		  			  			
+	  			if(isFeedbackManaged == false)
+	  				onActivateDetail(tabPanel);
+		  		// F3P: end
 				}
 				else if (DetailPane.ON_DELETE_EVENT.equals(event.getName())) {
 					onDelete();
 				}
+			}
+			
+			// F3P: extracted from onEvent
+			
+			private void onDetailSaveEvent(final IADTabpanel tabPanel)
+			{
+				if (!tabPanel.getGridTab().dataSave(true)) {
+					showLastError();
+				} 
+				tabPanel.getGridTab().dataRefreshAll(true, true);				
 			}
 
 			private void onDelete() {
