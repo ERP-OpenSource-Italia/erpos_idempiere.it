@@ -27,6 +27,7 @@ import java.util.logging.Level;
 
 import org.adempiere.util.Callback;
 import org.adempiere.util.ContextRunnable;
+import org.adempiere.util.FeedbackContainer;
 import org.adempiere.util.IProcessUI2;
 import org.adempiere.util.ServerContext;
 import org.adempiere.webui.component.Button;
@@ -135,10 +136,14 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 	private Future<?> future;
 	private List<File> downloadFiles;
 	private boolean m_locked = false;
+	
+	// F3p: keep and propagate feedback container
+	private FeedbackContainer feedbackContainer;
 		
 	protected AbstractProcessDialog()
 	{
 		super();		
+		feedbackContainer = FeedbackContainer.getCurrent();
 	}
 	
 	/**
@@ -1062,12 +1067,14 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			try {
 				if (log.isLoggable(Level.INFO))
 					log.log(Level.INFO, "Process Info=" + m_pi + " AD_Client_ID="+ Env.getAD_Client_ID(Env.getCtx()));
+				FeedbackContainer.setCurrent(feedbackContainer); // F3P: set feedback container before invoking process (need for document events)
 				WProcessCtl.process(AbstractProcessDialog.this, getWindowNo(), getParameterPanel(), m_pi, m_trx);
 			} catch (Exception ex) {
 				m_pi.setError(true);
 				m_pi.setSummary(ex.getLocalizedMessage());
 				log.log(Level.SEVERE, ex.getLocalizedMessage(), ex);
 			} finally {
+				FeedbackContainer.setCurrent(null);
 				Executions.schedule(getDesktop(), AbstractProcessDialog.this, new Event(ON_COMPLETE, AbstractProcessDialog.this, null));
 			}		
 		}
