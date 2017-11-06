@@ -1276,7 +1276,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	 *	Return Table Model
 	 *  @return MTable
 	 */
-	protected GridTable getMTable()
+	public GridTable getMTable() // F3P: changed to public
 	{
 		return m_mTable;
 	}	//	getMTable
