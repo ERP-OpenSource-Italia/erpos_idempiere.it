@@ -232,4 +232,31 @@ public class MPInstancePara extends X_AD_PInstance_Para
 		}
 		return -1;
 	}
+	
+	public void setParameter (String parameterName, Object objParameter)
+	{
+		if(objParameter instanceof String)
+		{
+			setParameter(parameterName, (String)objParameter);
+		}
+		else if(objParameter instanceof BigDecimal)
+		{
+			setParameter(parameterName, (BigDecimal)objParameter);
+		} 
+		else if(objParameter instanceof Timestamp)
+		{
+			setParameter(parameterName, (Timestamp)objParameter);
+		} 
+		else if(objParameter instanceof Boolean)
+		{
+			Boolean booleanParameter = (Boolean) objParameter; 
+			setParameter(parameterName, booleanParameter ? "Y" : "N");
+		}
+		else if(objParameter instanceof Integer)
+		{
+			Integer integerParameter = (Integer) objParameter;
+			setParameter(parameterName, new BigDecimal(integerParameter));
+		}
+		
+	}	//	setParameter
 }	//	MPInstance_Para

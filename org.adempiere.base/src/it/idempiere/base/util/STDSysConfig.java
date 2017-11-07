@@ -81,6 +81,13 @@ public class STDSysConfig
  	
  	public static final String F3P_ALLOW_SINGLE_SCHEDULE = "F3P_ALLOW_SINGLE_SCHEDULE";
  	
+ 	public static final String  LIT_COMMISSION_RULE_MINOR_SEQUENCE = "LIT_COMMISSION_RULE_MINOR_SEQUENCE";
+	
+	public static boolean isCommissionRuleMinorSequence(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_COMMISSION_RULE_MINOR_SEQUENCE , false,AD_Client_ID,AD_Org_ID);
+	}
+ 	
  	public static Boolean getAllowSingleSchedule(int AD_Client_ID,int AD_Org_ID)
  	{
  		return MSysConfig.getBooleanValue(F3P_ALLOW_SINGLE_SCHEDULE, false, AD_Client_ID, AD_Org_ID);
