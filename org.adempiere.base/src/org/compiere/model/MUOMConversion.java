@@ -955,6 +955,15 @@ public class MUOMConversion extends X_C_UOM_Conversion
 			}
 		}
 		
+		// F3P: clear product conversion cache(s)		
+		s_conversionProduct.remove(getM_Product_ID());
+		
+		if(s_conversions != null)
+		{
+			Point p = new Point(getC_UOM_ID(), getC_UOM_To_ID());
+			s_conversions.remove(p);
+		}
+
 		return true;
 	}	//	beforeSave
 	
