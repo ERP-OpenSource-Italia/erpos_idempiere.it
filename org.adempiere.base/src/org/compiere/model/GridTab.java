@@ -154,7 +154,6 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		m_mTable.setDeleteable(m_vo.IsDeleteable);
 		
 		selection = new ArrayList<Integer>();
-		
 	}	//	GridTab
 	
 	/** Value Object                    */
@@ -374,7 +373,6 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			if (voF != null)
 			{
 				GridField field = new GridField (voF);
-				
 				field.setGridTab(this);
 				String columnName = field.getColumnName();
 				//FR [ 1757088 ] - this create Bug [ 1866793 ]
@@ -422,7 +420,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				if (columnName.equals("IsActive")
 					|| columnName.equals("Processed")
 					|| columnName.equals("Processing"))
-					m_depOnField.put(columnName, null);				
+					m_depOnField.put(columnName, null);
 			}
 		}   //  for all fields
 
@@ -1008,27 +1006,8 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		{
 			if (hasChangedCurrentTabAndParents())
 				return false;
-			
-			// F3P: if a model validator changes a record on the hierarchy (the parent usually) we need to refresh it
-			boolean retValue = false;
-			try
-			{
-				s_hierarchyNeeedsRefresh.set(null);
-				
-				retValue = (m_mTable.dataSave(manualCmd) == GridTable.SAVE_OK);
-				
-				// F3P: refresh parent if needed
-				
-				if(isHierarchyNeeedsRefresh() && getParentTab() != null)
-				{
-					refreshParentTabs(true);
-				}
-			}
-			finally // F3P: clean up
-			{
-				s_hierarchyNeeedsRefresh.set(null);
-			}
-			
+
+			boolean retValue = (m_mTable.dataSave(manualCmd) == GridTable.SAVE_OK);
 			if (manualCmd)
 			{
 				setCurrentRow(m_currentRow, false);
@@ -1040,9 +1019,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				}
 			}
 			fireStateChangeEvent(new StateChangeEvent(this, StateChangeEvent.DATA_SAVE));
-			// F3P: if update parent tab updated from child tab refresh parent tab 
-			refreshParentTabs(true);
-			
+
 			return retValue;
 		}
 		catch (Exception e)
@@ -1095,13 +1072,6 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	 * refresh current row of parent tabs
 	 */
 	public void refreshParentTabs() {
-		refreshParentTabs(false);
-	}
-	
-	/**
-	 * refresh current row of parent tabs
-	 */
-	public void refreshParentTabs(boolean activeFireEvent) {
 		if (isDetail()) {
 			// get parent tab
 			// the parent tab is the first tab above with level = this_tab_level-1
@@ -1110,7 +1080,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				GridTab parentTab = m_window.getTab(i);
 				if (parentTab.m_vo.TabLevel == level-1) {
 					// this is parent tab
-					parentTab.dataRefresh(activeFireEvent);
+					parentTab.dataRefresh(false);
 					// search for the next parent
 					if (parentTab.isDetail()) {
 						level = parentTab.m_vo.TabLevel;
@@ -1236,41 +1206,23 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	 */
 	public boolean dataDelete()
 	{
-		boolean retValue;
-		try
+		if (log.isLoggable(Level.FINE)) log.fine("#" + m_vo.TabNo + " - row=" + m_currentRow);
+		boolean retValue = m_mTable.dataDelete(m_currentRow);
+		setCurrentRow(m_currentRow, true);
+		if (!selection.isEmpty()) 
 		{
-			s_hierarchyNeeedsRefresh.set(null);
-			if (log.isLoggable(Level.FINE)) log.fine("#" + m_vo.TabNo + " - row=" + m_currentRow);
-				retValue = m_mTable.dataDelete(m_currentRow);
-			setCurrentRow(m_currentRow, true);
-			if (!selection.isEmpty()) 
+			List<Integer> tmp = new ArrayList<Integer>();
+			for(Integer i : selection)
 			{
-				List<Integer> tmp = new ArrayList<Integer>();
-				for(Integer i : selection)
-				{
-					if (i.intValue() == m_currentRow)
-						continue;
-					else if (i.intValue() > m_currentRow)
-						tmp.add(i.intValue()-1);
-					else
-						tmp.add(i);
-				}
-			}
-			
-			fireStateChangeEvent(new StateChangeEvent(this, StateChangeEvent.DATA_DELETE));
-		
-			if(isHierarchyNeeedsRefresh() && getParentTab() != null)
-			{
-				refreshParentTabs(true);
+				if (i.intValue() == m_currentRow)
+					continue;
+				else if (i.intValue() > m_currentRow)
+					tmp.add(i.intValue()-1);
+				else
+					tmp.add(i);
 			}
 		}
-		finally
-		{
-			s_hierarchyNeeedsRefresh.set(null);
-		}
-		// F3P: if update parent tab updated from child tab refresh parent tab 
-		refreshParentTabs(true);
-		
+		fireStateChangeEvent(new StateChangeEvent(this, StateChangeEvent.DATA_DELETE));
 		return retValue;
 	}   //  dataDelete
 
@@ -1596,7 +1548,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		//hengsin, make detail readonly when parent is empty
 		if (m_parentNeedSave) return true;
 		
-		// FIN: (st) IDEMPIERE-3308, check ui behaviour
+		// FIN (st): IDEMPIERE-3308, check ui behaviour
 		
 		if(UIBehaviour.isEditable(m_vo.ctx,this) == false)
 			return true;
@@ -2589,26 +2541,10 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		//  Row range check
 		int newRow = verifyRow(targetRow);
 
-		try
-		{
-			s_hierarchyNeeedsRefresh.set(null);
-			//  Check, if we have old uncommitted data
-			if (m_mTable.dataSave(newRow, false) == false)
-				return m_currentRow;
-			
-			// F3P: refresh parent if needed
-			
-			if(isHierarchyNeeedsRefresh() && getParentTab() != null)
-			{
-				refreshParentTabs(true);
-			}
-		}
-		finally
-		{
-			s_hierarchyNeeedsRefresh.set(null);
-		}
-		
-		
+		//  Check, if we have old uncommitted data
+		if (m_mTable.dataSave(newRow, false) == false)
+			return m_currentRow;
+
 		//remove/ignore new and unchange row
 		if (m_mTable.isInserting())
 		{
@@ -2616,9 +2552,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				newRow--;
 			dataIgnore();
 		}
-		// F3P: if update parent tab updated from child tab refresh parent tab 
-		refreshParentTabs(true);		
-		
+
 		//  new position
 		return setCurrentRow(newRow, true);
 	}   //  navigate
@@ -2694,7 +2628,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		int oldCurrentRow = m_currentRow;
 		m_currentRow = verifyRow (newCurrentRow);
 		if (log.isLoggable(Level.FINE)) log.fine("Row=" + m_currentRow + " - fire=" + fireEvents);
-		
+
 		//  Update Field Values
 		int size = m_mTable.getColumnCount();
 		GridField keyCalloutDelayed = null;
@@ -2728,7 +2662,6 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 					mField.setValue();
 			}
 		}
-		
 		if (changingRow && keyCalloutDelayed != null)
 			processCallout(keyCalloutDelayed);
 		loadDependentInfo();
@@ -3353,23 +3286,9 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			log.finest("Row range check - return");
 			return;
 		}
-		
-		try
-		{
-			s_hierarchyNeeedsRefresh.set(null);
-			// Check, if we have old uncommitted data
-			m_mTable.dataSave(to, false);
-			// F3P: refresh parent if needed
-			
-			if(isHierarchyNeeedsRefresh() && getParentTab() != null)
-			{
-				refreshParentTabs(true);
-			}
-		}
-		finally
-		{
-			s_hierarchyNeeedsRefresh.set(null);
-		}
+
+		// Check, if we have old uncommitted data
+		m_mTable.dataSave(to, false);
 
 		//find the line column
 		int lineCol = m_mTable.findColumn("Line");
@@ -3403,42 +3322,19 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		}
 		// switch the line numbers and save new values
 
-		// F3P: if a model validator changes a record on the hierarchy (the parent usually) we need to refresh it
-		
-		try
-		{
-			s_hierarchyNeeedsRefresh.set(null);
-			
-			m_mTable.setValueAt(lineNoCurrentRow, to, lineCol);
-			setCurrentRow(to, false);
-			m_mTable.dataSave(true);
-			m_mTable.setValueAt(lineNoNextRow, from, lineCol);
-			setCurrentRow(from, false);
-			m_mTable.dataSave(true);
-			
-			// F3P: refresh parent if needed
-			
-			if(isHierarchyNeeedsRefresh() && getParentTab() != null)
-			{
-				refreshParentTabs(true);
-			}
-		}
-		finally //  F3P: clean up
-		{
-			s_hierarchyNeeedsRefresh.set(null);
-		}
-				
+		m_mTable.setValueAt(lineNoCurrentRow, to, lineCol);
+		setCurrentRow(to, false);
+		m_mTable.dataSave(true);
+		m_mTable.setValueAt(lineNoNextRow, from, lineCol);
+		setCurrentRow(from, false);
+		m_mTable.dataSave(true);
 		//resort
-			
 		if(sortColumn != -1) {
 			m_mTable.sort(sortColumn, ascending);
 		} else {
 			m_mTable.sort(lineCol, true);
 		}
 		navigate(to);
-		
-		// F3P: if update parent tab updated from child tab refresh parent tab 
-		refreshParentTabs();
 	}
 
 	private void fireStateChangeEvent(StateChangeEvent e)
@@ -3642,47 +3538,5 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		return false;
 	}
 	//Angelo Dabala' (genied) end
-	
-	// F3P: if model validator updates a record on the hierarchy, we must update the whole window
-	
-	private static final ThreadLocal<Boolean> s_hierarchyNeeedsRefresh = new ThreadLocal<Boolean>();
-	
-	public static boolean isHierarchyNeeedsRefresh()
-	{
-		Boolean needRefresh = s_hierarchyNeeedsRefresh.get();
-		
-		if(needRefresh == null || needRefresh.booleanValue() == true)
-			return true;
-		
-		return false;
-	}
-	
-	public static void setHierarchyNeeedsRefresh(boolean needsRefresh)
-	{
-		s_hierarchyNeeedsRefresh.set(needsRefresh);
-	}
-				
-	
-	/* removed because refresh ever 
-	 * public void isParentTabUpdated()
-	{
-		int level = m_vo.TabLevel;
-		
-		for (int i = m_window.getTabIndex(this) - 1; i >= 0; i--) 
-		{
-			GridTab parentTab = m_window.getTab(i);
-			if (parentTab.m_vo.TabLevel == level-1) 
-			{
-				Timestamp updatedParentTab = (Timestamp) parentTab.getValue("Updated");
-				Timestamp updatedTab = (Timestamp) this.getValue("Updated");
-				
-				if(updatedParentTab.after(updatedTab))
-				{
-					refreshParentTabs();
-					break;
-				}
-			}
-		}
-	}*/
 	
 }	//	GridTab
