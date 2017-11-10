@@ -40,6 +40,8 @@ import it.idempiere.base.util.STDSysConfig;
  */
 public class MProductPricing
 {
+	private static final String UOM_ORDERBY_CLAUSE = "CASE pp.C_Uom_ID WHEN ? THEN 1 WHEN p.C_Uom_ID THEN 2 ELSE 3 END";
+	private static final String COL_PPVB_UOM_ID = "ppvbC_UOM_ID";
 
 	/**
 	 * 	Constructor
@@ -118,6 +120,11 @@ public class MProductPricing
 	private String 	m_locationType1 = null; 
 	private String 	m_locationType2 = null;
 	private String 	m_locationType3 = null;
+	
+	// F3P: aggiunti filtri per uom
+	
+	private int m_lineC_UOM_ID = -1;
+	private int m_vendorBreakC_UOM_ID = -1; 
 
 	private Timestamp m_dateOrder = null;
 	
@@ -489,6 +496,7 @@ public class MProductPricing
 			+ " p.C_UOM_ID,pv.ValidFrom,pl.C_Currency_ID,p.M_Product_Category_ID,"	//	4..7
 			+ " pl.EnforcePriceLimit, pl.IsTaxIncluded "	// 8..9
 			+ " ,pp.LIT_StdCompositeDisc, pp.LIT_StdDiscount " // 10..11 F3P: added composite discount
+			+ ", pp.C_Uom_ID ppvbC_UOM_ID " // F3P: 12 uom on product price vb
 			+ "FROM M_Product p"
 			+ " INNER JOIN M_ProductPriceVendorBreak pp ON (p.M_Product_ID=pp.M_Product_ID)"
 			+ " INNER JOIN  M_PriceList_Version pv ON (pp.M_PriceList_Version_ID=pv.M_PriceList_Version_ID)"
@@ -498,9 +506,8 @@ public class MProductPricing
 			+ " AND p.M_Product_ID=?"				//	#1
 			+ " AND pv.M_PriceList_Version_ID=?"	//	#2
 			+ " AND (pp.C_BPartner_ID=? OR pp.C_BPartner_ID is NULL)"				//	#3
-			+ " AND ?>=pp.BreakValue"	;			//  #4
-			
-			
+			+ " AND ?>=pp.BreakValue"			//  #4
+			+ " AND (pp.C_Uom_ID = ? OR pp.C_Uom_ID= p.C_Uom_ID OR pp.C_Uom_ID IS NULL)"; // # 5 F3P: uom filter 
 				
 		if(m_C_BPartner_Location_ID > 0)
 			sql = sql + " AND (pp.C_BPartner_Location_ID = ? OR pp.C_BPartner_Location_ID is null) ";
@@ -526,8 +533,7 @@ public class MProductPricing
 		if(m_dateOrder != null)
 			sql = sql + " AND ? BETWEEN coalesce(pp.ValidFrom,pv.ValidFrom) AND coalesce(pp.ValidTo,DATE'3000-12-31') "; 
 		
-		sql = sql+ " ORDER BY  pp.C_BPartner_ID, BreakValue DESC";
-		
+		sql = sql+ " ORDER BY  pp.C_BPartner_ID, " + UOM_ORDERBY_CLAUSE + ", BreakValue DESC";
 		
 		if(m_C_BPartner_Location_ID > 0)
 			sql = sql + " ,C_BPartner_Location_ID NULLS LAST";
@@ -550,6 +556,7 @@ public class MProductPricing
 			pstmt.setInt(i++, m_M_PriceList_Version_ID);
 			pstmt.setInt(i++, m_C_BPartner_ID);
 			pstmt.setBigDecimal(i++, m_Qty);
+			pstmt.setInt(i++, m_lineC_UOM_ID); // F3P: uom param
 			
 			if(m_C_BPartner_Location_ID > 0)
 				pstmt.setInt(i++, m_C_BPartner_Location_ID);
@@ -561,6 +568,8 @@ public class MProductPricing
 				pstmt.setString(i++, m_locationType3);
 			if(m_dateOrder != null)
 				pstmt.setTimestamp(i++, m_dateOrder);
+			
+			pstmt.setInt(i++, m_lineC_UOM_ID); // F3P: uom param (order by)
 			
 			rs = pstmt.executeQuery();
 			if (rs.next())
@@ -584,6 +593,7 @@ public class MProductPricing
 				// F3P: discount from query
 				m_compositeDiscount = rs.getString(CompositeDiscount.COLUMNNAME_LIT_StdCompositeDisc);
 				m_bdStdDiscount = rs.getBigDecimal(CompositeDiscount.COLUMNNAME_LIT_StdDiscount);
+				m_vendorBreakC_UOM_ID = rs.getInt(COL_PPVB_UOM_ID);
 				// F3P end
 				//
 				if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_Version_ID=" + m_M_PriceList_Version_ID + " - " + m_PriceStd);
@@ -667,6 +677,7 @@ public class MProductPricing
 			+ " pp.PriceLimit,"	//	3
 			+ " p.C_UOM_ID,pv.ValidFrom,pl.C_Currency_ID,p.M_Product_Category_ID,pl.EnforcePriceLimit "	// 4..8
 			+ " ,pp.LIT_StdCompositeDisc, pp.LIT_StdDiscount " // 9..10 F3P: added composite discount
+			+ ", pp.C_Uom_ID ppvbC_UOM_ID " // F3P: 11 uom on product price vb
 			+ "FROM M_Product p"
 			+ " INNER JOIN M_ProductPriceVendorBreak pp ON (p.M_Product_ID=pp.M_Product_ID)"
 			+ " INNER JOIN  M_PriceList_Version pv ON (pp.M_PriceList_Version_ID=pv.M_PriceList_Version_ID)"
@@ -676,7 +687,8 @@ public class MProductPricing
 			+ " AND p.M_Product_ID=?"				//	#1
 			+ " AND pv.M_PriceList_ID=?"			//	#2
 			+ " AND (pp.C_BPartner_ID=? OR pp.C_BPartner_ID is NULL)"				//	#3
-			+ " AND ?>=pp.BreakValue";				//  #4
+			+ " AND ?>=pp.BreakValue"				//  #4
+		  + " AND (pp.C_Uom_ID = ? OR pp.C_Uom_ID= p.C_Uom_ID OR pp.C_Uom_ID IS NULL)"; // #5 F3P: uom filter
 			
 		
 		if(m_C_BPartner_Location_ID > 0)
@@ -703,7 +715,7 @@ public class MProductPricing
 		if(m_dateOrder != null)
 			sql = sql + " AND ? BETWEEN coalesce(pp.ValidFrom,pv.ValidFrom) AND coalesce(pp.ValidTo,DATE'3000-12-31') "; 
 		
-		sql = sql+ " ORDER BY pp.C_BPartner_ID, pv.ValidFrom DESC, BreakValue DESC";
+		sql = sql+ " ORDER BY pp.C_BPartner_ID, " + UOM_ORDERBY_CLAUSE + ", BreakValue DESC";
 		
 		if(m_C_BPartner_Location_ID > 0)
 			sql = sql + " ,C_BPartner_Location_ID NULLS LAST";
@@ -729,6 +741,7 @@ public class MProductPricing
 			pstmt.setInt(i++, m_M_PriceList_ID);
 			pstmt.setInt(i++, m_C_BPartner_ID);
 			pstmt.setBigDecimal(i++, m_Qty);
+			pstmt.setInt(i++, m_lineC_UOM_ID); // F3P: uom param
 			
 			if(m_C_BPartner_Location_ID > 0)
 				pstmt.setInt(i++, m_C_BPartner_Location_ID);
@@ -740,6 +753,8 @@ public class MProductPricing
 				pstmt.setString(i++, m_locationType3);
 			if(m_dateOrder != null)
 				pstmt.setTimestamp(i++, m_dateOrder);
+			
+			pstmt.setInt(i++, m_lineC_UOM_ID); // F3P: uom param (order by)
 			
 			rs = pstmt.executeQuery();
 			while (!m_calculated && rs.next())
@@ -767,6 +782,7 @@ public class MProductPricing
 					// F3P: discount from querys
 					m_compositeDiscount = rs.getString(CompositeDiscount.COLUMNNAME_LIT_StdCompositeDisc);
 					m_bdStdDiscount = rs.getBigDecimal(CompositeDiscount.COLUMNNAME_LIT_StdDiscount);
+					m_vendorBreakC_UOM_ID = rs.getInt(COL_PPVB_UOM_ID);
 					// F3P end	
 					//
 					if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_ID=" + m_M_PriceList_ID 
@@ -807,6 +823,7 @@ public class MProductPricing
 			+ " p.C_UOM_ID,pv.ValidFrom,pl.C_Currency_ID,p.M_Product_Category_ID,"	//	4..7
 			+ " pl.EnforcePriceLimit, pl.IsTaxIncluded "	// 8..9
 			+ " ,pp.LIT_StdCompositeDisc, pp.LIT_StdDiscount " // 10..11 F3P: added composite discount
+			+ ", pp.C_Uom_ID ppvbC_UOM_ID " // F3P: 12 uom on product price vb
 			+ "FROM M_Product p"
 			+ " INNER JOIN M_ProductPriceVendorBreak pp ON (p.M_Product_ID=pp.M_Product_ID)"
 			+ " INNER JOIN  M_PriceList_Version pv ON (pp.M_PriceList_Version_ID=pv.M_PriceList_Version_ID)"
@@ -817,7 +834,8 @@ public class MProductPricing
 			+ " AND p.M_Product_ID=?"				//	#1
 			+ " AND pl.M_PriceList_ID=?"			//	#2
 			+ " AND (pp.C_BPartner_ID=? OR pp.C_BPartner_ID is NULL)"				//	#3
-			+ " AND ?>=pp.BreakValue";//  #4;
+			+ " AND ?>=pp.BreakValue" //  #4;
+		  + " AND (pp.C_Uom_ID = ? OR pp.C_Uom_ID= p.C_Uom_ID OR pp.C_Uom_ID IS NULL)"; // #5 F3P: uom filter
 			
 		
 		if(m_C_BPartner_Location_ID > 0)
@@ -844,7 +862,7 @@ public class MProductPricing
 		if(m_dateOrder != null)
 			sql = sql + " AND ? BETWEEN coalesce(pp.ValidFrom,pv.ValidFrom) AND coalesce(pp.ValidTo,DATE'3000-12-31') "; 
 		
-		sql = sql+ " ORDER BY pp.C_BPartner_ID, pv.ValidFrom DESC, BreakValue DESC";
+		sql = sql+ " ORDER BY pp.C_BPartner_ID, " + UOM_ORDERBY_CLAUSE + ", pv.ValidFrom DESC, BreakValue DESC";
 		
 		if(m_C_BPartner_Location_ID > 0)
 			sql = sql + " ,C_BPartner_Location_ID NULLS LAST";
@@ -869,6 +887,7 @@ public class MProductPricing
 			pstmt.setInt(i++, m_M_PriceList_ID);
 			pstmt.setInt(i++, m_C_BPartner_ID);
 			pstmt.setBigDecimal(i++, m_Qty);
+			pstmt.setInt(i++, m_lineC_UOM_ID); // F3P: uom param
 			
 			if(m_C_BPartner_Location_ID > 0)
 				pstmt.setInt(i++, m_C_BPartner_Location_ID);
@@ -880,6 +899,7 @@ public class MProductPricing
 				pstmt.setString(i++, m_locationType3);
 			if(m_dateOrder != null)
 				pstmt.setTimestamp(i++, m_dateOrder);
+			pstmt.setInt(i++, m_lineC_UOM_ID); // F3P: uom param (order by)
 			
 			rs = pstmt.executeQuery();
 			while (!m_calculated && rs.next())
@@ -908,6 +928,7 @@ public class MProductPricing
 					// F3P: discount from querys
 					m_compositeDiscount = rs.getString(CompositeDiscount.COLUMNNAME_LIT_StdCompositeDisc);
 					m_bdStdDiscount = rs.getBigDecimal(CompositeDiscount.COLUMNNAME_LIT_StdDiscount);
+					m_vendorBreakC_UOM_ID = rs.getInt(COL_PPVB_UOM_ID);
 					// F3P end	
 					//
 					if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_ID=" + m_M_PriceList_ID 
@@ -1323,6 +1344,26 @@ public class MProductPricing
 		
 		m_calculated = false;
 		m_useVendorBreak = true;
+	}
+
+	public int getLineC_UOM_ID()
+	{
+		return m_lineC_UOM_ID;
+	}
+
+	public void setLineC_UOM_ID(int filterC_UOM_ID)
+	{
+		this.m_lineC_UOM_ID = filterC_UOM_ID;
+	}
+
+	public int getVendorBreakC_UOM_ID()
+	{
+		return m_vendorBreakC_UOM_ID;
+	}
+
+	public void setVendorBreakC_UOM_ID(int vendorBreakC_UOM_ID)
+	{
+		this.m_vendorBreakC_UOM_ID = vendorBreakC_UOM_ID;
 	}
 	
 }	//	MProductPrice
