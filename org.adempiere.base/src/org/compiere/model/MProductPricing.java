@@ -24,6 +24,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -80,6 +81,10 @@ public class MProductPricing
 		
 		DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Env.getLanguage(Env.getCtx()).getLocale()); 
 		m_formatDiscount = new DecimalFormat(FORMAT_DISCOUNT,symbols);
+		
+		// F3P: change product price det. seq
+		productPriceDetSeq = STDSysConfig.getPriceListDetSequence(Env.getAD_Client_ID(Env.getCtx()));
+		
 	}	//	MProductPricing
 
 	private int 		m_M_Product_ID;
@@ -127,6 +132,7 @@ public class MProductPricing
 	private int m_vendorBreakC_UOM_ID = -1; 
 
 	private Timestamp m_dateOrder = null;
+	private String		productPriceDetSeq;
 	
 	private static final String FORMAT_DISCOUNT = "##.##";
 	
@@ -146,36 +152,79 @@ public class MProductPricing
 			|| (m_found != null && !m_found.booleanValue()))	//	previously not found
 			return false;
 		
-		if (m_useVendorBreak) {
-			//	Price List Version known - vendor break
-			if (!m_calculated) {
-				m_calculated = calculatePLV_VB ();
-				if (m_calculated)
-					m_vendorbreak = true;
+		if(productPriceDetSeq.equals(STDSysConfig.LIT_PRICELIST_DET_SEQUENCE_Adempiere)) // F3P: implement sequence based on sysconfig varbiable, default is adempiere/idempiere behaviour
+		{
+			if (m_useVendorBreak) {
+				//	Price List Version known - vendor break
+				if (!m_calculated) {
+					m_calculated = calculatePLV_VB ();
+					if (m_calculated)
+						m_vendorbreak = true;
+				}
+				//	Price List known - vendor break
+				if (!m_calculated) {
+					m_calculated = calculatePL_VB();
+					if (m_calculated)
+						m_vendorbreak = true;
+				}
+				//	Base Price List used - vendor break
+				if (!m_calculated) {
+					m_calculated = calculateBPL_VB();
+					if (m_calculated)
+						m_vendorbreak = true;
+				}
 			}
-			//	Price List known - vendor break
-			if (!m_calculated) {
-				m_calculated = calculatePL_VB();
+			
+			//	Price List Version known
+			if (!m_calculated)
+				m_calculated = calculatePLV ();
+			//	Price List known
+			if (!m_calculated)
+				m_calculated = calculatePL();
+			//	Base Price List used
+			if (!m_calculated)
+				m_calculated = calculateBPL();
+		}
+		else if(productPriceDetSeq.equals(STDSysConfig.LIT_PRICELIST_DET_SEQUENCE_Lit))
+		{
+			if (!m_calculated) 
+			{
+				if(m_useVendorBreak)				
+					m_calculated = calculatePLV_VB ();
+								
 				if (m_calculated)
 					m_vendorbreak = true;
+				else
+					m_calculated = calculatePLV ();
 			}
-			//	Base Price List used - vendor break
-			if (!m_calculated) {
-				m_calculated = calculateBPL_VB();
+			
+			if (!m_calculated) 
+			{
+				if(m_useVendorBreak)				
+					m_calculated = calculatePL_VB ();
+				
 				if (m_calculated)
 					m_vendorbreak = true;
+				else
+					m_calculated = calculatePL ();
+			}
+
+			if (!m_calculated) 
+			{
+				if(m_useVendorBreak)				
+					m_calculated = calculateBPL_VB ();
+				
+				if (m_calculated)
+					m_vendorbreak = true;
+				else
+					m_calculated = calculateBPL ();
 			}
 		}
+		else
+		{
+			throw new AdempiereException("Invalid value for LIT_PRICELIST_DET_SEQUENCE: " + productPriceDetSeq + ", must be A or L");
+		}
 		
-		//	Price List Version known
-		if (!m_calculated)
-			m_calculated = calculatePLV ();
-		//	Price List known
-		if (!m_calculated)
-			m_calculated = calculatePL();
-		//	Base Price List used
-		if (!m_calculated)
-			m_calculated = calculateBPL();
 		//	Set UOM, Prod.Category
 		if (!m_calculated)
 			setBaseInfo();
