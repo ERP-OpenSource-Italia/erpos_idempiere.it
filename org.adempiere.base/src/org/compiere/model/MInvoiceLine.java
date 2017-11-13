@@ -403,6 +403,11 @@ public class MInvoiceLine extends X_C_InvoiceLine
 			C_BPartner_ID, getQtyInvoiced(), m_IsSOTrx);
 		m_productPricing.setM_PriceList_ID(M_PriceList_ID);
 		m_productPricing.setPriceDate(m_DateInvoiced);
+		
+		// F3P: integrated line uom and date fpr ppvb
+		m_productPricing.setDatePPVB(m_DateInvoiced); 
+		m_productPricing.setLineC_UOM_ID(getC_UOM_ID());
+		
 		//
 		setPriceActual (m_productPricing.getPriceStd());
 		setPriceList (m_productPricing.getPriceList());

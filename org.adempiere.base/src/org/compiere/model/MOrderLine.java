@@ -334,6 +334,11 @@ public class MOrderLine extends X_C_OrderLine
 			getC_BPartner_ID(), getQtyOrdered(), m_IsSOTrx);
 		m_productPrice.setM_PriceList_ID(M_PriceList_ID);
 		m_productPrice.setPriceDate(getDateOrdered());
+		
+		// F3P: integrated line uom and date fpr ppvb
+		m_productPrice.setDatePPVB(getDateOrdered()); 
+		m_productPrice.setLineC_UOM_ID(getC_UOM_ID());
+		
 		//
 		m_productPrice.calculatePrice();
 		return m_productPrice;
@@ -783,17 +788,24 @@ public class MOrderLine extends X_C_OrderLine
 		// Example: 0,0242 40% discount, will be calculated as 40,08% discount, but the resulting actual price is the same.
 		// This need to be avoided
 		
+		
 		BigDecimal bdCurrentDiscount = getDiscount();
 		
 		if(bdCurrentDiscount.signum() > 0)
 		{
-			BigDecimal	bdPriceActual =  getPriceActual();
+			BigDecimal	bdPrice =  getPriceActual();
+			
+			if(m_productPrice != null && m_productPrice.getVendorBreakC_UOM_ID() == getC_UOM_ID())
+			{
+				bdPrice = getPriceEntered(); // Stessa unita di misura, usiamo entered per evitare il calcolo errato dello sconto (entered e' in uom del prodotto)
+			}
+			
 			int				 	iPriceScale = getParent().getM_PriceList().getPricePrecision(); // bdPriceActual.scale();
 						
 			BigDecimal	bdRecalcPrice = Env.ONEHUNDRED.subtract(bdCurrentDiscount).divide(Env.ONEHUNDRED,10,RoundingMode.HALF_UP).
 																	multiply(list).setScale(iPriceScale,RoundingMode.HALF_UP);
 			
-			if(bdRecalcPrice.compareTo(bdPriceActual) == 0)
+			if(bdRecalcPrice.compareTo(bdPrice) == 0)
 			{
 				discount = bdCurrentDiscount;
 			}

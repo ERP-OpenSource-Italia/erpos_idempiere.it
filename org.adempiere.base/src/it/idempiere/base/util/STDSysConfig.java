@@ -82,7 +82,7 @@ public class STDSysConfig
  	public static final String F3P_ALLOW_SINGLE_SCHEDULE = "F3P_ALLOW_SINGLE_SCHEDULE";
  	
  	public static final String  LIT_COMMISSION_RULE_MINOR_SEQUENCE = "LIT_COMMISSION_RULE_MINOR_SEQUENCE";
-	
+ 		
 	public static boolean isCommissionRuleMinorSequence(int AD_Client_ID,int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(LIT_COMMISSION_RULE_MINOR_SEQUENCE , false,AD_Client_ID,AD_Org_ID);
@@ -393,8 +393,7 @@ public class STDSysConfig
 	{
 		return MSysConfig.getValue(REPORT_HOME_KEY, Ini.getAdempiereHome() + File.separator + "reports",AD_Client_ID,AD_Org_ID);
 	}
-	
-	
+		
 	public static int getPriceVendorBreakIgnoreTreshold()
 	{
 		return MSysConfig.getIntValue(PRICEVENDORBREAK_IGNORE_THRESHOLD, -1);
@@ -414,4 +413,18 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(FACTACCT_HASCURRENCYRATE, false, AD_Client_ID);
 	}
+	
+ 	// Cambia la sequenza di determinazione dei prezzi dal listino e vendor break (usata da MProductPrice)
+ 	// A: (default) standard adempiere/idempiere, se richiesto l'uso dei vb, questi hanno priorita sui product price
+ 	// L: default 'localizzazione italiana': se richiesto il pv, la priorita' e' per versione (vendor break, poi product, se non c'e scalo sul listino)
+ 	
+ 	public static final String LIT_PRICELIST_DET_SEQUENCE = "LIT_PRICELIST_DET_SEQUENCE";
+ 	public static final String LIT_PRICELIST_DET_SEQUENCE_Adempiere = "A";
+ 	public static final String LIT_PRICELIST_DET_SEQUENCE_Lit = "L";
+
+	public static final String getPriceListDetSequence(int AD_Client_ID)
+	{
+		return MSysConfig.getValue(LIT_PRICELIST_DET_SEQUENCE, LIT_PRICELIST_DET_SEQUENCE_Adempiere, AD_Client_ID);
+	}
+ 	
 }
