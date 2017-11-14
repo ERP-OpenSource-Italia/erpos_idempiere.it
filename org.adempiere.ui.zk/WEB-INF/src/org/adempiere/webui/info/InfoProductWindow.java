@@ -476,7 +476,7 @@ public class InfoProductWindow extends InfoWindow {
 	@Override
 	protected void initParameters() {
 		int M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_Warehouse_ID");
-		int M_PriceList_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_PriceList_ID");
+		int M_PriceList_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_PriceList_ID", true); // F3P: evitiamo che scali sul contesto e quindi forzi una selezione su maschere che non hanno listino
 		
 		int M_PriceList_Version_ID = findPLV (M_PriceList_ID);
 		//	Set Warehouse
