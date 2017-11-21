@@ -971,7 +971,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 				  .append("WHERE I_Order_ID =?");
 				  			
 				// Object params[] = {e.getMessage(), };
-				DB.executeUpdate(sql.toString(), potentialErrorImp.getI_Order_ID(), false, null);
+				DB.executeUpdate(sql.toString(), potentialErrorImp.getI_Order_ID(), false, get_TrxName());
 			}
 			//F3P end
 		}
