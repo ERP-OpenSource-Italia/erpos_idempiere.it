@@ -100,6 +100,52 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 		//
 		return retValue;
 	}	//	get
+	
+	public static MAttributeSetInstance get (Properties ctx, 
+			int M_AttributeSetInstance_ID, int M_Product_ID,String trxName)
+		{
+			MAttributeSetInstance retValue = null;
+			//	Load Instance if not 0
+			if (M_AttributeSetInstance_ID != 0)
+			{
+				if (s_log.isLoggable(Level.FINE)) s_log.fine("From M_AttributeSetInstance_ID=" + M_AttributeSetInstance_ID);
+				return new MAttributeSetInstance (ctx, M_AttributeSetInstance_ID, trxName);
+			}
+			//	Get new from Product
+			if (s_log.isLoggable(Level.FINE)) s_log.fine("From M_Product_ID=" + M_Product_ID);
+			if (M_Product_ID == 0)
+				return null;
+			String sql = "SELECT M_AttributeSet_ID, M_AttributeSetInstance_ID "
+				+ "FROM M_Product "
+				+ "WHERE M_Product_ID=?";
+			PreparedStatement pstmt = null;
+			ResultSet rs = null;
+			try
+			{
+				pstmt = DB.prepareStatement(sql, trxName);
+				pstmt.setInt(1, M_Product_ID);
+				rs = pstmt.executeQuery();
+				if (rs.next())
+				{
+					int M_AttributeSet_ID = rs.getInt(1);
+				//	M_AttributeSetInstance_ID = rs.getInt(2);	//	needed ?
+					//
+					retValue = new MAttributeSetInstance (ctx, 0, M_AttributeSet_ID, trxName);
+				}
+			}
+			catch (SQLException ex)
+			{
+				s_log.log(Level.SEVERE, sql, ex);
+				retValue = null;
+			}
+			finally
+			{
+				DB.close(rs, pstmt);
+				rs = null; pstmt = null;
+			}
+			//
+			return retValue;
+		}	//	get
 
 	private static CLogger		s_log = CLogger.getCLogger (MAttributeSetInstance.class);
 
