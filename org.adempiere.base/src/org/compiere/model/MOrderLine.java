@@ -810,6 +810,10 @@ public class MOrderLine extends X_C_OrderLine
 				discount = bdCurrentDiscount;
 			}
 		}
+		else
+		{
+			discount = bdCurrentDiscount;
+		}
 		
 		// F3P end
 		
