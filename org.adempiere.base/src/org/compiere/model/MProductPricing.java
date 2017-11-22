@@ -20,8 +20,12 @@ import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.text.SimpleDateFormat;
+import java.util.List;
+import java.util.Properties;
 import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
@@ -31,6 +35,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Trace;
 
 import it.idempiere.base.model.CompositeDiscount;
+import it.idempiere.base.model.LITMProdPricingRule;
 import it.idempiere.base.util.STDSysConfig;
 
 /**
@@ -43,7 +48,8 @@ public class MProductPricing
 {
 	private static final String UOM_ORDERBY_CLAUSE = "CASE pp.C_Uom_ID WHEN ? THEN 1 WHEN p.C_Uom_ID THEN 2 ELSE 3 END";
 	private static final String COL_PPVB_UOM_ID = "ppvbC_UOM_ID";
-
+	private static final DateFormat	TIMESTAMP_DAY_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+	
 	/**
 	 * 	Constructor
 	 * 	@param M_Product_ID product
@@ -151,6 +157,21 @@ public class MProductPricing
 		if (m_M_Product_ID == 0 
 			|| (m_found != null && !m_found.booleanValue()))	//	previously not found
 			return false;
+		
+		// F3P: regole custom che sovrascrivono il calcolo del prezzo
+		
+		if(!m_calculated)
+		{
+			calculateProductPriceRule();
+			
+			if(m_calculated) // Non applichiamo null'altro
+			{
+				setPrecision();		//	from Price List
+				//
+				m_found = new Boolean (m_calculated);
+				return m_calculated;
+			}				
+		}
 		
 		if(productPriceDetSeq.equals(STDSysConfig.LIT_PRICELIST_DET_SEQUENCE_Adempiere)) // F3P: implement sequence based on sysconfig varbiable, default is adempiere/idempiere behaviour
 		{
@@ -1409,10 +1430,100 @@ public class MProductPricing
 	{
 		return m_vendorBreakC_UOM_ID;
 	}
-
-	public void setVendorBreakC_UOM_ID(int vendorBreakC_UOM_ID)
+	
+	private boolean calculateProductPriceRule()
 	{
-		this.m_vendorBreakC_UOM_ID = vendorBreakC_UOM_ID;
+		boolean calculated = false;
+		
+		List<MRule> rules = LITMProdPricingRule.getRules(Env.getCtx(), null);
+		
+		if(rules != null && rules.size() > 0)
+		{
+			Properties ruleCtx = new Properties(Env.getCtx());
+			
+			Env.setContext(ruleCtx, 0, "M_Product_ID", m_M_Product_ID);
+			Env.setContext(ruleCtx, 0, "Qty", m_Qty.toString());
+			Env.setContext(ruleCtx, 0, "C_BPartner_ID", m_C_BPartner_ID);
+			Env.setContext(ruleCtx, 0, "IsSOTrx", m_isSOTrx?"Y":"N");
+			Env.setContext(ruleCtx, 0, "C_BPartnerLocation_ID", m_C_BPartner_Location_ID);
+			Env.setContext(ruleCtx, 0, "LineC_UOM_ID", m_lineC_UOM_ID);
+			Env.setContext(ruleCtx, 0, "M_PriceList_ID", m_M_PriceList_ID);
+			Env.setContext(ruleCtx, 0, "M_PriceList_Version_ID", m_M_PriceList_Version_ID);
+			
+			if(m_locationType1 != null)
+				Env.setContext(ruleCtx, 0, "LocationType1", m_locationType1);
+			else
+				Env.setContext(ruleCtx, 0, "LocationType1", "");
+			
+			if(m_locationType2 != null)
+				Env.setContext(ruleCtx, 0, "LocationType2", m_locationType2);
+			else
+				Env.setContext(ruleCtx, 0, "LocationType2", "");
+
+			if(m_locationType3 != null)
+				Env.setContext(ruleCtx, 0, "LocationType3", m_locationType3);
+			else
+				Env.setContext(ruleCtx, 0, "LocationType3", "");
+			
+			if(m_dateOrder != null)
+				Env.setContext(ruleCtx, 0, "ReferenceDate", TIMESTAMP_DAY_FORMAT.format(m_dateOrder));
+			
+			for(MRule rule:rules)
+			{
+				String sql = rule.getScript();
+				sql = Env.parseContext(ruleCtx, 0, sql, false);
+				
+				PreparedStatement pstmt = DB.prepareStatement(sql, null);
+				ResultSet rs = null;
+				
+				try
+				{
+					rs = pstmt.executeQuery();
+					
+					if(rs.next())
+					{
+						m_PriceStd = rs.getBigDecimal("PriceStd");
+						if (rs.wasNull())
+							m_PriceStd = Env.ZERO;
+						m_PriceList = rs.getBigDecimal("PriceList");
+						if (rs.wasNull())
+							m_PriceList = Env.ZERO;
+						m_PriceLimit = rs.getBigDecimal("PriceLimit");
+						if (rs.wasNull())
+							m_PriceLimit = Env.ZERO;
+						//
+						m_C_UOM_ID = rs.getInt("C_UOM_ID");
+						m_C_Currency_ID = rs.getInt("C_Currency_ID");
+						m_M_Product_Category_ID = rs.getInt("M_Product_Category_ID");
+						m_enforcePriceLimit = "Y".equals(rs.getString("enforcePriceLimit"));
+						m_isTaxIncluded = "Y".equals(rs.getString("IsTaxIncluded"));
+						// F3P: discount from query
+						m_compositeDiscount = rs.getString("CompositeDiscount");
+						m_bdStdDiscount = rs.getBigDecimal("StdDiscount");
+						//
+						m_vendorBreakC_UOM_ID = rs.getInt("VendorBreakC_UOM_ID");
+						if (log.isLoggable(Level.FINE))
+							log.fine("M_PriceList_Version_ID=" + m_M_PriceList_Version_ID + " - " + m_PriceStd);
+						
+						m_calculated = true;
+						calculated = true;
+					}
+				}
+				catch(Exception e)
+				{
+					throw new AdempiereException(e);
+				}
+				finally
+				{
+					DB.close(rs, pstmt);
+				}
+				
+				if(calculated)
+					break;
+			}
+		}
+		
+		return calculated;
 	}
 	
 }	//	MProductPrice
