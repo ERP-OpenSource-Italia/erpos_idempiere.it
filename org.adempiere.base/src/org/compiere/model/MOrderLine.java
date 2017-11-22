@@ -779,9 +779,18 @@ public class MOrderLine extends X_C_OrderLine
 		//	No List Price
 		if (Env.ZERO.compareTo(list) == 0)
 			return;
-		BigDecimal discount = list.subtract(getPriceActual())
+		
+		int				 iPriceScale = getParent().getM_PriceList().getPricePrecision(); // bdPriceActual.scale();
+		BigDecimal bdPrice = getPriceActual();
+		
+		if(m_productPrice != null && m_productPrice.getVendorBreakC_UOM_ID() == getC_UOM_ID())
+		{
+			bdPrice = getPriceEntered(); // Stessa unita di misura, usiamo entered per evitare il calcolo errato dello sconto (entered e' in uom del prodotto)
+		}
+		
+		BigDecimal discount = list.subtract(bdPrice)
 			.multiply(Env.ONEHUNDRED)
-			.divide(list, getPrecision(), BigDecimal.ROUND_HALF_UP);
+			.divide(list, iPriceScale, BigDecimal.ROUND_HALF_UP);
 		
 		// F3P: due to rounding, calculated discount may be different from the current one
 		//	but producing the same result:
@@ -793,15 +802,6 @@ public class MOrderLine extends X_C_OrderLine
 		
 		if(bdCurrentDiscount.signum() > 0)
 		{
-			BigDecimal	bdPrice =  getPriceActual();
-			
-			if(m_productPrice != null && m_productPrice.getVendorBreakC_UOM_ID() == getC_UOM_ID())
-			{
-				bdPrice = getPriceEntered(); // Stessa unita di misura, usiamo entered per evitare il calcolo errato dello sconto (entered e' in uom del prodotto)
-			}
-			
-			int				 	iPriceScale = getParent().getM_PriceList().getPricePrecision(); // bdPriceActual.scale();
-						
 			BigDecimal	bdRecalcPrice = Env.ONEHUNDRED.subtract(bdCurrentDiscount).divide(Env.ONEHUNDRED,10,RoundingMode.HALF_UP).
 																	multiply(list).setScale(iPriceScale,RoundingMode.HALF_UP);
 			
