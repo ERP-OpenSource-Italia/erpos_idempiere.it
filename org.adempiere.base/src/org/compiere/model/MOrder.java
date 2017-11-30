@@ -606,8 +606,30 @@ public class MOrder extends X_C_Order implements DocAction
 			//
 			line.setOrder(this);
 			line.set_ValueNoCheck ("C_OrderLine_ID", I_ZERO);	//	new
+			
 			// F3P: ri-calcoliamo qty ordered, altrimenti la copia da ordine chiuso e' errata
-			line.setQty(line.getQtyEntered());
+			if(counter == false)
+			{
+				if(line.getM_Product_ID() > 0)
+				{					
+					MProduct mProduct = MProduct.get(line.getCtx(), line.getM_Product_ID()); 
+					
+					if(line.getC_UOM_ID() != mProduct.getC_UOM_ID())
+					{						
+						BigDecimal qtyOrdered = MUOMConversion.convertProductFrom (getCtx(), line.getM_Product_ID(),
+								line.getC_UOM_ID(), line.getQtyEntered());
+						
+						line.setQtyOrdered(qtyOrdered);
+					}
+					else
+						line.setQtyOrdered(line.getQtyEntered());
+				}
+				else
+				{
+					line.setQtyOrdered(line.getQtyEntered());
+				}
+			}
+				
 			//	References
 			if (!copyASI)
 			{
