@@ -783,7 +783,7 @@ public class MOrderLine extends X_C_OrderLine
 		int				 iPriceScale = getParent().getM_PriceList().getPricePrecision(); // bdPriceActual.scale();
 		BigDecimal bdPrice = getPriceActual();
 		
-		if(m_productPrice != null && m_productPrice.getVendorBreakC_UOM_ID() == getC_UOM_ID())
+		if(m_productPrice != null && m_productPrice.isSelectedPriceUOM(getC_UOM_ID()))
 		{
 			bdPrice = getPriceEntered(); // Stessa unita di misura, usiamo entered per evitare il calcolo errato dello sconto (entered e' in uom del prodotto)
 		}

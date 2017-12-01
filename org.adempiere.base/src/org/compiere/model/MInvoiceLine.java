@@ -412,7 +412,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		setPriceList (m_productPricing.getPriceList());
 		setPriceLimit (m_productPricing.getPriceLimit());
 
-		if(getC_UOM_ID() != m_productPricing.getVendorBreakC_UOM_ID())
+		if(m_productPricing.isSelectedPriceUOM(getC_UOM_ID()) == false)
 		{
 			//
 			setPriceActual (m_productPricing.getPriceStd());

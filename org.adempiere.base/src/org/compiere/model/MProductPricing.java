@@ -83,6 +83,14 @@ public class MProductPricing
 		int AD_Client_ID = Env.getAD_Client_ID(Env.getCtx());
 		m_isExtDiscount = STDSysConfig.isAdvancedDiscountMan(AD_Client_ID);
 		
+		// UOM of product
+		
+		if(M_Product_ID > 0)
+		{
+			String uomSql = "SELECT C_UOM_ID FROM M_Product WHERE M_Product_ID=?";
+			m_productC_UOM_ID = DB.getSQLValue(null, uomSql,m_M_Product_ID);			
+		}
+		
 		// F3P: init formatter
 		
 		DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Env.getLanguage(Env.getCtx()).getLocale()); 
@@ -132,10 +140,11 @@ public class MProductPricing
 	private String 	m_locationType2 = null;
 	private String 	m_locationType3 = null;
 	
-	// F3P: aggiunti filtri per uom
+	// F3P: aggiunti filtri e campi gestione prezzi per uom
 	
 	private int m_lineC_UOM_ID = -1;
-	private int m_vendorBreakC_UOM_ID = -1; 
+	private int m_vendorBreakC_UOM_ID = -1;
+	private int m_productC_UOM_ID = -1;
 
 	private Timestamp m_dateOrder = null;
 	private String		productPriceDetSeq;
@@ -1429,6 +1438,14 @@ public class MProductPricing
 	public int getVendorBreakC_UOM_ID()
 	{
 		return m_vendorBreakC_UOM_ID;
+	}
+	
+	public boolean isSelectedPriceUOM(int C_UOM_ID)
+	{
+		if(m_vendorBreakC_UOM_ID > 0)
+			return C_UOM_ID == getVendorBreakC_UOM_ID();
+		
+		return C_UOM_ID == m_productC_UOM_ID;
 	}
 	
 	private boolean calculateProductPriceRule()
