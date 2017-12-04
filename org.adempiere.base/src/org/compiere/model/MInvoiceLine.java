@@ -431,8 +431,17 @@ public class MInvoiceLine extends X_C_InvoiceLine
 			if (getQtyEntered().compareTo(getQtyInvoiced()) == 0)
 				setPriceActual(getPriceEntered());
 			else
-				setPriceActual(getPriceEntered().multiply(getQtyEntered()
-					.divide(getQtyInvoiced(), 20, BigDecimal.ROUND_HALF_UP)));	//	precision	
+			{
+				if(getQtyInvoiced().signum() != 0)
+				{
+					setPriceActual(getPriceEntered().multiply(getQtyEntered()
+							.divide(getQtyInvoiced(), 20, BigDecimal.ROUND_HALF_UP)));	//	precision
+				}
+				else
+				{
+					setPriceActual(getPriceEntered());
+				}
+			}
 		}
 		
 		//
