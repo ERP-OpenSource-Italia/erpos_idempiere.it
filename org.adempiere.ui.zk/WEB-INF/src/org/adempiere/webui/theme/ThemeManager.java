@@ -16,6 +16,7 @@ package org.adempiere.webui.theme;
 import java.io.IOException;
 
 import org.adempiere.webui.apps.AEnv;
+import org.compiere.Adempiere;
 import org.compiere.model.MClientInfo;
 import org.compiere.model.MImage;
 import org.compiere.model.MSysConfig;
@@ -36,6 +37,15 @@ public final class ThemeManager {
 	public static String getLargeLogo() {
 		String theme = getTheme();
 		String def = ITheme.THEME_PATH_PREFIX+theme+ITheme.LOGIN_LOGO_IMAGE;
+		
+		if(Adempiere.isTestInstallation()) // F3P: search for specific test installation logo
+		{
+			String largeLogo = MSysConfig.getValue(MSysConfig.ZK_LOGO_LARGE_TESTINST, null);
+			
+			if(largeLogo != null)
+				return largeLogo;
+		}
+		
 		return MSysConfig.getValue(MSysConfig.ZK_LOGO_LARGE, def);
 	}
 
@@ -44,8 +54,19 @@ public final class ThemeManager {
 	 */
 	public static String getSmallLogo() {
 		String theme = getTheme();
+		
 		String def = ITheme.THEME_PATH_PREFIX+theme+ITheme.HEADER_LOGO_IMAGE;
-		String url = MSysConfig.getValue(MSysConfig.ZK_LOGO_SMALL, null);
+		String url = null;
+		
+		if(Adempiere.isTestInstallation())
+		{
+			def = ITheme.THEME_PATH_PREFIX+theme+ITheme.HEADER_LOGO_TESTINSTALLATION_IMAGE;
+			url = MSysConfig.getValue(MSysConfig.ZK_LOGO_SMALL_TESTINST, null);
+		}
+		
+		if(url == null)
+			url = MSysConfig.getValue(MSysConfig.ZK_LOGO_SMALL, null);
+		
 		if (url == null)
 			url = MSysConfig.getValue(MSysConfig.WEBUI_LOGOURL, def);
 		return url;
