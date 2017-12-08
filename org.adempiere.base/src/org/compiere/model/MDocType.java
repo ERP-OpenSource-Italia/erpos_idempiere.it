@@ -287,15 +287,16 @@ public class MDocType extends X_C_DocType
 				.append("(SELECT ")
 				.append(getAD_Client_ID()).append(",0,'Y', SysDate,") 
 				.append(getUpdatedBy()).append(", SysDate,").append(getUpdatedBy()) 
-				.append(", doctype.C_DocType_ID, 135 as AD_Ref_List_ID, rol.AD_Role_ID ")
+				.append(", doctype.C_DocType_ID, action.AD_Ref_List_ID, rol.AD_Role_ID ")
 				.append("FROM AD_Client client ")
 				.append("INNER JOIN C_DocType doctype ON (doctype.AD_Client_ID=client.AD_Client_ID) ")
+				.append("INNER JOIN AD_Ref_List action ON (action.AD_Reference_ID=135) ")
 				.append("INNER JOIN AD_Role rol ON (rol.AD_Client_ID=client.AD_Client_ID) ")
 				.append("WHERE client.AD_Client_ID=").append(getAD_Client_ID()) 
 				.append(" AND doctype.C_DocType_ID=").append(get_ID())
 				.append(" AND (rol.IsManual='N' OR ? ='Y')") //F3P: Manage AutoUpdateDocActionAccess variable
-				.append(")");
-			
+				.append(")");			
+						
 			//F3P: Manage AutoUpdateDocActionAccess variable
 			Object[] oParams = new Object[1];
 			oParams[0] = STDSysConfig.isRoleAutoUpdateDocActionAccessAsString(getAD_Client_ID(), getAD_Org_ID());
