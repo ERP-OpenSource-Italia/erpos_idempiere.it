@@ -1210,7 +1210,7 @@ public class MInOut extends X_M_InOut implements DocAction
 			m_processMsg = "@NoLines@";
 			return DocAction.STATUS_Invalid;
 		}
-		/* //F3P: Peso e volume vengono ricalcolati alla modifica delle righe invece che al prepara
+		
 		BigDecimal Volume = Env.ZERO;
 		BigDecimal Weight = Env.ZERO;
 
@@ -1241,9 +1241,12 @@ public class MInOut extends X_M_InOut implements DocAction
 				}
 			}
 		}
+		
+		/* //F3P: Peso e volume vengono ricalcolati alla modifica delle righe invece che al prepara
 		setVolume(Volume);
-		setWeight(Weight);
-		*/ //F3P end
+		setWeight(Weight);		
+		*/
+		
 		if (!isReversal())	//	don't change reversal
 		{
 			createConfirmation();
