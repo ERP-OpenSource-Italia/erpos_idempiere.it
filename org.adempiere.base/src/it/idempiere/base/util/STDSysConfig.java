@@ -82,6 +82,8 @@ public class STDSysConfig
  	public static final String F3P_ALLOW_SINGLE_SCHEDULE = "F3P_ALLOW_SINGLE_SCHEDULE";
  	
  	public static final String  LIT_COMMISSION_RULE_MINOR_SEQUENCE = "LIT_COMMISSION_RULE_MINOR_SEQUENCE";
+ 	
+ 	public static final String  LIT_COST_ENABLESEED = "LIT_COST_ENABLESEED";
  		
 	public static boolean isCommissionRuleMinorSequence(int AD_Client_ID,int AD_Org_ID)
 	{
@@ -425,6 +427,11 @@ public class STDSysConfig
 	public static final String getPriceListDetSequence(int AD_Client_ID)
 	{
 		return MSysConfig.getValue(LIT_PRICELIST_DET_SEQUENCE, LIT_PRICELIST_DET_SEQUENCE_Adempiere, AD_Client_ID);
+	}
+	
+	public static boolean isCostSeedEnabled(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_COST_ENABLESEED, false, AD_Client_ID, AD_Org_ID);
 	}
  	
 }

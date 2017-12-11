@@ -38,6 +38,8 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  * 	Product Cost Model
  *
@@ -212,6 +214,14 @@ public class MCost extends X_M_Cost
 		{
 			if (zeroCostsOK)
 				return Env.ZERO;
+			
+			// F3P: re-enabled seed cost
+			
+			if(STDSysConfig.isCostSeedEnabled(as.getAD_Client_ID(), Org_ID))
+			{
+				materialCostEach = getSeedCosts(product, M_ASI_ID,
+						as, Org_ID, costingMethod, C_OrderLine_ID);
+			}			
 		}
 
 		//	Material Costs
