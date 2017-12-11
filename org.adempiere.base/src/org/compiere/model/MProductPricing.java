@@ -1448,6 +1448,12 @@ public class MProductPricing
 		return C_UOM_ID == m_productC_UOM_ID;
 	}
 	
+	public int getProductC_UOM_ID()
+	{
+		return m_productC_UOM_ID;
+	}
+
+	
 	private boolean calculateProductPriceRule()
 	{
 		boolean calculated = false;
