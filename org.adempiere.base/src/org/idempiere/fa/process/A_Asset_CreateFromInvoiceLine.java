@@ -223,6 +223,11 @@ public class A_Asset_CreateFromInvoiceLine extends SvrProcess {
 		invLine.setA_CapvsExp(pA_CapvsExp);
 		invLine.setA_CreateAsset(true);
 		invLine.saveEx();		
+		
+		// F3P: if we have no product, re-set it for the creation because it will be reset at save
+		
+		if(invLine.getA_Asset_Group_ID() <= 0)			
+				invLine.setA_Asset_Group_ID(pA_Asset_Group_ID);
 	}
 	
 	protected void createAsset()

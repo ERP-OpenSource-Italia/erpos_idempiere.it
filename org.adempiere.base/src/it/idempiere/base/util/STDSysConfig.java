@@ -84,7 +84,7 @@ public class STDSysConfig
  	public static final String  LIT_COMMISSION_RULE_MINOR_SEQUENCE = "LIT_COMMISSION_RULE_MINOR_SEQUENCE";
  	
  	public static final String  LIT_COST_ENABLESEED = "LIT_COST_ENABLESEED";
- 		
+ 	 		
 	public static boolean isCommissionRuleMinorSequence(int AD_Client_ID,int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(LIT_COMMISSION_RULE_MINOR_SEQUENCE , false,AD_Client_ID,AD_Org_ID);
