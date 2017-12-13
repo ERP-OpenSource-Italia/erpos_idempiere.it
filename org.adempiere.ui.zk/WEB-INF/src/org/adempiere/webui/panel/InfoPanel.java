@@ -1025,8 +1025,16 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         else
         	sql.append(m_sqlOrder);
         dataSql = Msg.parseTranslation(Env.getCtx(), sql.toString());    //  Variables
+        
+    		// FIN: (st) read column from field
+    		
+    		int AD_Column_ID = -1;
+    		
+    		if(m_gridfield != null)
+    			AD_Column_ID = m_gridfield.getAD_Column_ID();
+    		
         dataSql = MRole.getDefault().addAccessSQL(dataSql, getTableName(),
-            MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO);
+            MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO, AD_Column_ID);
         if (end > start && m_useDatabasePaging && DB.getDatabase().isPagingSupported())
         {
         	dataSql = DB.getDatabase().addPagingSQL(dataSql, getCacheStart(), cacheEnd);
@@ -1076,8 +1084,16 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			countSql = countSql.trim();
 			countSql = countSql.substring(0, countSql.length() - 5);
 		}
+		
+		// FIN: (st) read column from field
+		
+		int AD_Column_ID = -1;
+		
+		if(m_gridfield != null)
+			AD_Column_ID = m_gridfield.getAD_Column_ID();
+		
 		countSql = MRole.getDefault().addAccessSQL	(countSql, getTableName(),
-													MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO);
+													MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO, AD_Column_ID);
 		if (log.isLoggable(Level.FINER))
 			log.finer(countSql);
 		m_count = -1;
