@@ -215,6 +215,15 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 				lookup, 0);
 	}
 	
+	// FIN: st (13/12/17) added grid field to costructor and compatibility one
+	
+	protected InfoPanel (int WindowNo,
+			String tableName, String keyColumn,boolean multipleSelection,
+			 String whereClause, boolean lookup, int ADInfoWindowID)
+	{
+		this(WindowNo,tableName,keyColumn,multipleSelection,whereClause,lookup,ADInfoWindowID,null);
+	}
+	
 	/**************************************************
      *  Detail Constructor
      * @param WindowNo  WindowNo
@@ -224,8 +233,10 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	protected InfoPanel (int WindowNo,
 		String tableName, String keyColumn,boolean multipleSelection,
-		 String whereClause, boolean lookup, int ADInfoWindowID)
+		 String whereClause, boolean lookup, int ADInfoWindowID,GridField gridField)
 	{		
+		setGridfield(gridField); // FIN: st (13/12/17) propagate gridfield
+		
 		if (WindowNo <= 0) {
 			p_WindowNo = SessionManager.getAppDesktop().registerWindow(this);
 		} else {

@@ -46,10 +46,17 @@ import org.compiere.util.Env;
  */
 @SuppressWarnings("deprecation")
 public class DefaultInfoFactory implements IInfoFactory {
-
+	
+	// FIN: st (13/12/17) compatibility function 
+	
 	@Override
 	public InfoPanel create(int WindowNo, String tableName, String keyColumn,
 			String value, boolean multiSelection, String whereClause, int AD_InfoWindow_ID, boolean lookup) {
+		return create(WindowNo,tableName, keyColumn, value, multiSelection, whereClause, AD_InfoWindow_ID, lookup, null);
+	}
+
+	public InfoPanel create(int WindowNo, String tableName, String keyColumn,
+			String value, boolean multiSelection, String whereClause, int AD_InfoWindow_ID, boolean lookup, GridField gridField) {
 		InfoPanel info = null;
 		setSOTrxBasedOnDocType(WindowNo);
 
@@ -110,7 +117,7 @@ public class DefaultInfoFactory implements IInfoFactory {
         	if (!info.loadedOK()) {
 	            info = new InfoGeneralPanel (value, WindowNo,
 	                tableName, keyColumn,
-	                multiSelection, whereClause, lookup);
+	                multiSelection, whereClause, lookup, gridField);
 	        	if (!info.loadedOK()) {
 	        		info.dispose(false);
 	        		info = null;
@@ -169,7 +176,7 @@ public class DefaultInfoFactory implements IInfoFactory {
 		}
 		else	//	General Info
 		{
-			info = create(lookup.getWindowNo(), tableName, keyColumn, queryValue, false, whereClause, AD_InfoWindow_ID, true);
+			info = create(lookup.getWindowNo(), tableName, keyColumn, queryValue, false, whereClause, AD_InfoWindow_ID, true, field); // FIN: (st) 13/12/17 propagate field
 		}
 		return info;
 	}
