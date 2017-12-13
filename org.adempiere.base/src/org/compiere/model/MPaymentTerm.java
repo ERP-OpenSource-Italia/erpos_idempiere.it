@@ -314,9 +314,10 @@ public class MPaymentTerm extends X_C_PaymentTerm
 			return false;
 		}
 		
-		// do not apply payment term if the order is not on credit or if total is zero
-		if ( (! (MOrder.PAYMENTRULE_OnCredit.equals(order.getPaymentRule()) || MOrder.PAYMENTRULE_DirectDebit.equals(order.getPaymentRule())) )
-			|| order.getGrandTotal().signum() == 0)
+		// F3P: (rportato da applyOrder) do not apply payment term if the invoice is not on credit or if total is zero
+		//if ( (! (MInvoice.PAYMENTRULE_OnCredit.equals(invoice.getPaymentRule()) || MInvoice.PAYMENTRULE_DirectDebit.equals(invoice.getPaymentRule())))
+		//	|| 
+		if(order.getGrandTotal().signum() == 0)
 			return false;
 			
 		if (!isValid())
