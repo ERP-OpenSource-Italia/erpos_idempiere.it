@@ -1740,7 +1740,9 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 
 		// Set the definite document number after completed (if needed)
-		setDefiniteDocumentNo();
+		// Set the definite document number after completed (if needed)
+		if (isUpdateDocNo()) // F3P: Check if we want to update docNo. This is not good in reopen invoice process
+			setDefiniteDocumentNo();
 
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_BEFORE_COMPLETE);
 		if (m_processMsg != null)
