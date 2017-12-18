@@ -26,6 +26,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.adempiere.base.Core;
+import org.adempiere.base.IProductPricing;
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.model.ITaxProvider;
 import org.compiere.util.CLogger;
@@ -179,7 +180,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	/** Cached Precision			*/
 	private Integer		m_precision = null;
 	/** Product Pricing				*/
-	private MProductPricing	m_productPricing = null;
+	private IProductPricing	m_productPricing = null;
 	/** Parent						*/
 	private MInvoice	m_parent = null;
 	
@@ -410,10 +411,9 @@ public class MInvoiceLine extends X_C_InvoiceLine
 			return;
 		//
 		if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_ID=" + M_PriceList_ID);
-		m_productPricing = new MProductPricing (getM_Product_ID(),
-			C_BPartner_ID, getQtyInvoiced(), m_IsSOTrx, get_TrxName());
+		m_productPricing = Core.getProductPricing();
+		m_productPricing.setInvoiceLine(this, get_TrxName());
 		m_productPricing.setM_PriceList_ID(M_PriceList_ID);
-		m_productPricing.setPriceDate(m_DateInvoiced);
 		
 		// F3P: integrated line uom and date fpr ppvb
 		m_productPricing.setDatePPVB(m_DateInvoiced); 

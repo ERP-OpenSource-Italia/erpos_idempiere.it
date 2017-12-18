@@ -24,6 +24,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.adempiere.base.Core;
+import org.adempiere.base.IProductPricing;
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.ProductNotOnPriceListException;
 import org.adempiere.model.ITaxProvider;
@@ -199,7 +200,7 @@ public class MOrderLine extends X_C_OrderLine
 	//
 	protected boolean			m_IsSOTrx = true;
 	//	Product Pricing
-	protected MProductPricing	m_productPrice = null;
+	protected IProductPricing	m_productPrice = null;
 
 	/** Tax							*/
 	protected MTax 		m_tax = null;
@@ -355,12 +356,11 @@ public class MOrderLine extends X_C_OrderLine
 	 *	@param M_PriceList_ID id
 	 *	@return product pricing
 	 */
-	protected MProductPricing getProductPricing (int M_PriceList_ID)
+	protected IProductPricing getProductPricing (int M_PriceList_ID)
 	{
-		m_productPrice = new MProductPricing (getM_Product_ID(), 
-			getC_BPartner_ID(), getQtyOrdered(), m_IsSOTrx, get_TrxName());
+		m_productPrice = Core.getProductPricing();
+		m_productPrice.setOrderLine(this, get_TrxName());
 		m_productPrice.setM_PriceList_ID(M_PriceList_ID);
-		m_productPrice.setPriceDate(getDateOrdered());
 		
 		// F3P: integrated line uom and date fpr ppvb
 		m_productPrice.setDatePPVB(getDateOrdered()); 
