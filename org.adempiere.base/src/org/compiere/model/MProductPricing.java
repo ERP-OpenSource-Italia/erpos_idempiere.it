@@ -142,9 +142,9 @@ public class MProductPricing
 	
 	// F3P: aggiunti filtri e campi gestione prezzi per uom
 	
-	private int m_lineC_UOM_ID = -1;
-	private int m_vendorBreakC_UOM_ID = -1;
-	private int m_productC_UOM_ID = -1;
+	private int m_lineC_UOM_ID = 0;
+	private int m_vendorBreakC_UOM_ID = 0;
+	private int m_productC_UOM_ID = 0;
 
 	private Timestamp m_dateOrder = null;
 	private String		productPriceDetSeq;
