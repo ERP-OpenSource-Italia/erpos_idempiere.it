@@ -703,14 +703,15 @@ public class MUOMConversion extends X_C_UOM_Conversion
 		BigDecimal retValue = getProductRateFrom (ctx, M_Product_ID, C_UOM_To_ID);
 		
 		//F3P: if there is no specific rate, check for generic
+		int productC_UOM_ID  =  -1;
 		
 		if(retValue == null)
 		{
 			MProduct product = MProduct.get(ctx, M_Product_ID);
 			
-			int C_UOM_ID = product.getC_UOM_ID();
+			productC_UOM_ID = product.getC_UOM_ID();
 			
-			retValue = getRate(C_UOM_To_ID, C_UOM_ID);
+			retValue = getRate(C_UOM_To_ID, productC_UOM_ID);
 		}
 		
 		if (retValue != null)
@@ -725,10 +726,16 @@ public class MUOMConversion extends X_C_UOM_Conversion
 				
 				if(round)
 				{
-					MUOM uom = MUOM.get (ctx, C_UOM_To_ID);
+					if(productC_UOM_ID < 0)
+					{
+						MProduct product = MProduct.get(ctx, M_Product_ID);						
+						productC_UOM_ID = product.getC_UOM_ID();						
+					}
+					
+					MUOM uom = MUOM.get (ctx, productC_UOM_ID);
 					if (uom != null)
 					{
-						uom.round(retValue, true);
+						retValue = uom.round(retValue, true);
 					}
 				}
 			}
