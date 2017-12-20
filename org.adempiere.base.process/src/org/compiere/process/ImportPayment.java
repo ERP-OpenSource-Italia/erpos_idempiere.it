@@ -22,9 +22,11 @@ import java.sql.ResultSet;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.model.ImportValidator;
 import org.adempiere.process.ImportProcess;
 import org.compiere.model.MBankAccount;
 import org.compiere.model.MPayment;
+import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.X_I_Payment;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
@@ -135,6 +137,9 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 			  .append("WHERE I_IsImported<>'Y' OR I_IsImported IS NULL OR AD_Client_ID IS NULL OR AD_Org_ID IS NULL OR AD_Client_ID=0 OR AD_Org_ID=0");
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info ("Reset=" + no);
+		
+		// F3P: added validate event
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_BEFORE_VALIDATE);
 
 		sql = new StringBuilder ("UPDATE I_Payment o ")
 			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Org, '")
@@ -300,7 +305,7 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 		// F3P: added check for ispaid and ad_org_id
 		sql = new StringBuilder ("UPDATE I_Payment i ")
 			  .append("SET C_Invoice_ID=(SELECT MAX(C_Invoice_ID) FROM C_Invoice ii")
-			  .append(" WHERE i.InvoiceDocumentNo=ii.DocumentNo AND i.AD_Client_ID=ii.AD_Client_ID ")
+			  .append(" WHERE i.InvoiceDocumentNo=ii.DocumentNo AND i.InvoiceDateInvoiced=ii.DateInvoiced AND i.AD_Client_ID=ii.AD_Client_ID ") // F3P: aggiunto date invoiced
 			  .append(" AND i.C_BPartner_ID = ii.C_BPartner_ID AND ii.ispaid = 'N' AND ii.AD_Org_ID = ")
 			  .append(p_AD_Org_ID).append(") ")
 			  .append("WHERE C_Invoice_ID IS NULL AND InvoiceDocumentNo IS NOT NULL")
@@ -309,7 +314,14 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 		if (no != 0)
 			if (log.isLoggable(Level.FINE)) log.fine("Set Invoice from DocumentNo=" + no);
 		
-
+		//	Check invoice
+		sql = new StringBuilder("UPDATE I_Payment ")
+			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'Err=No Invoice, ' ")
+			.append("WHERE InvoiceDocumentNo IS NOT null and C_Invoice_ID IS NULL AND I_IsImported<>'Y'")
+			.append(getWhereClause());
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (no != 0)
+			if (log.isLoggable(Level.INFO)) log.info("No invoice=" + no);				
 		
 		sql = new StringBuilder ("UPDATE I_Payment i ")
 			  .append("SET C_BPartner_ID=(SELECT MAX(C_BPartner_ID) FROM C_Invoice ii")
@@ -430,6 +442,9 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("No DocType=" + no);
+		
+		// F3P: added validate event
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);
 
 		commitEx();
 		
