@@ -53,7 +53,7 @@ public class MDocType extends X_C_DocType
 	 */
 	static public int getDocType(String DocBaseType)
 	{
-		MDocType[] doc = MDocType.getOfDocBaseType(Env.getCtx(), DocBaseType);
+		MDocType[] doc = MDocType.getOfDocBaseType(Env.getCtx(), DocBaseType,Env.getAD_Org_ID(Env.getCtx()));
 		return doc.length > 0 ? doc[0].get_ID() : 0;
 	}
 	
@@ -61,13 +61,14 @@ public class MDocType extends X_C_DocType
 	 * 	Get Client Document Type with DocBaseType
 	 *	@param ctx context
 	 *	@param DocBaseType base document type
+	 *  @param AD_Org_ID
 	 *	@return array of doc types
 	 */
-	static public MDocType[] getOfDocBaseType (Properties ctx, String DocBaseType)
+	static public MDocType[] getOfDocBaseType (Properties ctx, String DocBaseType,int AD_Org_ID)
 	{
-		final String whereClause  = "AD_Client_ID=? AND DocBaseType=?";
+		final String whereClause  = "AD_Client_ID=? AND DocBaseType=? AND AD_Org_ID in (0,?)";
 		List<MDocType> list = new Query(ctx, Table_Name, whereClause, null)
-									.setParameters(Env.getAD_Client_ID(ctx), DocBaseType)
+									.setParameters(Env.getAD_Client_ID(ctx), DocBaseType,AD_Org_ID)
 									.setOnlyActiveRecords(true)
 									.setOrderBy("IsDefault DESC, C_DocType_ID")
 									.list();

@@ -1770,7 +1770,7 @@ public class MInOut extends X_M_InOut implements DocAction
 		
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
-		MDocType[] shipmentTypes = MDocType.getOfDocBaseType(getCtx(), MDocType.DOCBASETYPE_MaterialDelivery);
+		MDocType[] shipmentTypes = MDocType.getOfDocBaseType(getCtx(), MDocType.DOCBASETYPE_MaterialDelivery,getAD_Org_ID());
 
 		for (int i = 0; i < shipmentTypes.length; i++ )
 		{
@@ -2038,7 +2038,7 @@ public class MInOut extends X_M_InOut implements DocAction
 		}
 		else	//	indirect
 		{
-			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID());
+			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID);
 			if (log.isLoggable(Level.FINE)) log.fine("Indirect C_DocTypeTarget_ID=" + C_DocTypeTarget_ID);
 			if (C_DocTypeTarget_ID <= 0)
 				return null;
@@ -2064,6 +2064,11 @@ public class MInOut extends X_M_InOut implements DocAction
 
 		//	Refernces (Should not be required
 		counter.setSalesRep_ID(getSalesRep_ID());
+		if(isSOTrx() && counter.isSOTrx()==false)
+		{
+			counter.setDocumentNo(getDocumentNo());
+		}
+		
 		counter.saveEx(get_TrxName());
 
 		String MovementType = counter.getMovementType();
@@ -2081,7 +2086,7 @@ public class MInOut extends X_M_InOut implements DocAction
 			//
 			counterLine.saveEx(get_TrxName());
 		}
-
+		
 		if (log.isLoggable(Level.FINE)) log.fine(counter.toString());
 
 		//	Document Action
