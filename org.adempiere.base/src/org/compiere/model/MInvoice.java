@@ -1781,7 +1781,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			else
 				docBaseType=MDocType.DOCBASETYPE_APPayment;
 			
-			MDocType[] doctypes = MDocType.getOfDocBaseType(getCtx(), docBaseType);
+			MDocType[] doctypes = MDocType.getOfDocBaseType(getCtx(), docBaseType,getAD_Org_ID());
 			if (doctypes == null || doctypes.length == 0) {
 				m_processMsg = "No document type ";
 				return DocAction.STATUS_Invalid;
@@ -2237,7 +2237,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 		else	//	indirect
 		{
-			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID());
+			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID);
 			if (log.isLoggable(Level.FINE)) log.fine("Indirect C_DocTypeTarget_ID=" + C_DocTypeTarget_ID);
 			if (C_DocTypeTarget_ID <= 0)
 				return null;

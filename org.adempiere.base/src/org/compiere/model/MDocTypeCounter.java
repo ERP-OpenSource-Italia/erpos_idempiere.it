@@ -39,14 +39,14 @@ public class MDocTypeCounter extends X_C_DocTypeCounter
 	 */
 	private static final long serialVersionUID = 3469046560457430527L;
 
-
 	/**
 	 * 	Get Counter document for document type
 	 *	@param ctx context
 	 *	@param C_DocType_ID base document
+	 *	@param AD_Org_ID
 	 *	@return counter document C_DocType_ID or 0 or -1 if no counter doc
 	 */
-	public static int getCounterDocType_ID (Properties ctx, int C_DocType_ID)
+	public static int getCounterDocType_ID (Properties ctx, int C_DocType_ID,int AD_Org_ID)
 	{
 		//	Direct Relationship
 		MDocTypeCounter dtCounter = getCounterDocType (ctx, C_DocType_ID);
@@ -65,7 +65,7 @@ public class MDocTypeCounter extends X_C_DocTypeCounter
 		String cDocBaseType = getCounterDocBaseType(dt.getDocBaseType());
 		if (cDocBaseType == null)
 			return 0;
-		MDocType[] counters = MDocType.getOfDocBaseType(ctx, cDocBaseType);
+		MDocType[] counters = MDocType.getOfDocBaseType(ctx, cDocBaseType,AD_Org_ID);
 		for (int i = 0; i < counters.length; i++)
 		{
 			MDocType counter = counters[i];
