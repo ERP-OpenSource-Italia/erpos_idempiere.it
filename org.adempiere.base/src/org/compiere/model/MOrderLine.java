@@ -309,12 +309,39 @@ public class MOrderLine extends X_C_OrderLine
 		setPriceList (m_productPrice.getPriceList());
 		setPriceLimit (m_productPrice.getPriceLimit());
 		//
-		if (getQtyEntered().compareTo(getQtyOrdered()) == 0)
-			setPriceEntered(getPriceActual());
-		else
-			setPriceEntered(getPriceActual().multiply(getQtyOrdered()
-				.divide(getQtyEntered(), 12, BigDecimal.ROUND_HALF_UP)));	//	precision
 		
+		if(m_productPrice.isSelectedPriceUOM(getC_UOM_ID()) == false)
+		{
+			//
+			setPriceActual (m_productPrice.getPriceStd());
+			//
+			if (getQtyEntered().compareTo(getQtyOrdered()) == 0)
+				setPriceEntered(getPriceActual());
+			else
+				setPriceEntered(getPriceActual().multiply(getQtyOrdered()
+					.divide(getQtyEntered(), 20, BigDecimal.ROUND_HALF_UP)));	//	precision	
+		}
+		else // F3P: new behaviour triggered by selection of price in same uom then line
+		{
+			setPriceEntered(m_productPrice.getPriceStd());
+			
+			//
+			if (getQtyEntered().compareTo(getQtyOrdered()) == 0)
+				setPriceActual(getPriceEntered());
+			else
+			{
+				if(getQtyOrdered().signum() != 0)
+				{
+					setPriceActual(getPriceEntered().multiply(getQtyEntered()
+							.divide(getQtyOrdered(), 20, BigDecimal.ROUND_HALF_UP)));	//	precision
+				}
+				else
+				{
+					setPriceActual(getPriceEntered());
+				}
+			}
+		}
+				
 		//	Calculate Discount
 		setDiscount(m_productPrice.getDiscount());
 		//	Set UOM
