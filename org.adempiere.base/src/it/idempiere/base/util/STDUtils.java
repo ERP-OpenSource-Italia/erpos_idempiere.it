@@ -461,4 +461,17 @@ public class STDUtils {
 		return false;
 	}	
 	
+	/** Return error message, considering null pointer exception null message
+	 * 
+	 * @param t
+	 * @return error
+	 */
+	public static String getThrowableMessage(Throwable t)
+	{
+		if(t instanceof NullPointerException)
+			return t.getClass().getName();
+		
+		return t.getMessage();
+	}
+	
 }
