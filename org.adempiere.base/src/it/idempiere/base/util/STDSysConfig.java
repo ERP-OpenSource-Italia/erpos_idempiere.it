@@ -440,14 +440,7 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(DISPLAY_QTY_WARNING_ON_MAT_MOVEMENT, true, AD_Client_ID, AD_Org_ID);
 	}
-	
-	public static final String COMPLETE_COUNTER_ORDER = "COMPLETE_COUNTER_ORDER";
-	
-	public static boolean isCompleteCounterOrder(int AD_Client_ID, int AD_Org_ID)
-	{
-		return MSysConfig.getBooleanValue(COMPLETE_COUNTER_ORDER, false, AD_Client_ID, AD_Org_ID);
-	}
-	
+		
 	public static final String LIT_CREATE_COUNTER_FOR_REVERSAL= "LIT_CREATE_COUNTER_FOR_REVERSAL";
 	
 	public static boolean isCreateCounterForReversal(int AD_Client_ID, int AD_Org_ID)

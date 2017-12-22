@@ -2488,6 +2488,10 @@ public class MOrder extends X_C_Order implements DocAction
 		//
 		counter.setAD_Org_ID(counterAD_Org_ID);
 		counter.setM_Warehouse_ID(counterOrgInfo.getM_Warehouse_ID());
+		
+		// F3P: set as reference
+		counter.setPOReference(getDocumentNo());
+		
 		//
 //		counter.setBPartner(counterBP); // was set on copyFrom
 		counter.setDatePromised(getDatePromised());		// default is date ordered 
@@ -2507,15 +2511,7 @@ public class MOrder extends X_C_Order implements DocAction
 			counterLine.saveEx(get_TrxName());
 		}
 		if (log.isLoggable(Level.FINE)) log.fine(counter.toString());
-		
-		// F3P: added auto-close of order
-		
-		if(STDSysConfig.isCompleteCounterOrder(Env.getAD_Client_ID(getCtx()),counterAD_Org_ID))
-		{
-			if (!counter.processIt(MOrder.DOCACTION_Complete))
-				throw new AdempiereException("Failed when complete document - " + counter.getProcessMsg());
-		}
-		
+				
 		//	Document Action
 		if (counterDT != null)
 		{
