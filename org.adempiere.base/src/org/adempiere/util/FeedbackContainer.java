@@ -17,6 +17,7 @@ import org.osgi.service.event.Event;
 
 public class FeedbackContainer implements Serializable
 {
+	public static final String INFO_SEPARATOR = " - ";
 	
 	/**
 	 * 
@@ -71,6 +72,40 @@ public class FeedbackContainer implements Serializable
 		}
 		
 		return listByType;
+	}
+	
+	public String getInfoFeedback()
+	{
+		StringBuilder sbInfo = new StringBuilder();
+		List<FeedbackRequest> infoReqs = getByType(FeedbackRequest.TYPE_INFO);
+		
+		for(FeedbackRequest info:infoReqs)
+		{
+			if(sbInfo.length() > 0)
+			{
+				sbInfo.append(INFO_SEPARATOR);
+			}
+			
+			sbInfo.append(info.getMessage());
+		}
+		
+		if(sbInfo.length() == 0)
+			return null;
+				
+		return sbInfo.toString();
+	}
+	
+	public void appendInfoFeedback(StringBuilder sbInfo)
+	{
+		String additionalInfo = getInfoFeedback();
+		
+		if(additionalInfo != null)
+		{
+			if(sbInfo.length() > 0)
+				sbInfo.append(INFO_SEPARATOR);
+			
+			sbInfo.append(additionalInfo);
+		}		
 	}
 	
 	public static String getEventTopicForDocEent(String docStatus)

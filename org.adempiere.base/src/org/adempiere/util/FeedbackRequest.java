@@ -10,7 +10,8 @@ public class FeedbackRequest implements Serializable
 	private static final long serialVersionUID = 5379698791233271051L;
 
 	public static final int TYPE_WARNING = 1,
-													TYPE_ASK = 2;
+													TYPE_ASK = 2,
+													TYPE_INFO = 3;
 	
 	private final int			type;
 	private final String	id;
