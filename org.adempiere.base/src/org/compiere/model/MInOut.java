@@ -2063,7 +2063,7 @@ public class MInOut extends X_M_InOut implements DocAction
 
 		//	Deep Copy
 		MInOut counter = copyFrom(this, getMovementDate(), getDateAcct(),
-			C_DocTypeTarget_ID, !isSOTrx(), true, get_TrxName(), true);
+			C_DocTypeTarget_ID, !isSOTrx(), true, get_TrxName(), true, false, getDocumentNo()); // F3P: keep doc noO
 
 		//
 		counter.setAD_Org_ID(counterAD_Org_ID);
