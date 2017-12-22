@@ -98,5 +98,7 @@ public interface IEventTopics {
 	public static final String BROADCAST_MESSAGE = "idempiere/broadcastMsg";
 	
 	public static final String REQUEST_SEND_EMAIL = "idempiere/requestSendEMail";
+		
+	public static final String GATHER_FEEDBACK= "idempiere/gatherFeedback";
 }
 

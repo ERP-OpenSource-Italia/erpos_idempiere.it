@@ -167,6 +167,9 @@ public class MSysConfig extends X_AD_SysConfig
     public static final String ZK_SEQ_DEFAULT_VALUE_PANEL = "ZK_SEQ_DEFAULT_VALUE_PANEL";
 	public static final String ZK_SESSION_TIMEOUT_IN_SECONDS = "ZK_SESSION_TIMEOUT_IN_SECONDS";
     public static final String ZK_THEME = "ZK_THEME";
+    public static final String ZK_LOGO_LARGE_TESTINST = "ZK_LOGO_LARGE_TESTINST"; // F3P: logos for test installation
+    public static final String ZK_LOGO_SMALL_TESTINST = "ZK_LOGO_SMALL_TESTINST";    
+
 
 	/**
 	 * 	Standard Constructor

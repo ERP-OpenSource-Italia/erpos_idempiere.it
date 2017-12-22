@@ -46,6 +46,9 @@ import org.compiere.util.Msg;
  */
 public class MLanguage extends X_AD_Language
 {
+	private static final String AD_USER_DEF_WIN_TRL = "AD_UserDef_Win_Trl";
+	private static final String AD_USER_DEF_TAB_TRL = "AD_UserDef_Tab_Trl";
+	private static final String AD_USER_DEF_FIELD_TRL = "AD_UserDef_Field_Trl";
 	/**
 	 * 
 	 */
@@ -440,7 +443,11 @@ public class MLanguage extends X_AD_Language
 		// IDEMPIERE-99 Language Maintenance does not create UUIDs
 		MTable table = MTable.get(getCtx(), tableName);
 		MColumn column = table.getColumn(PO.getUUIDColumnName(tableName));
-		if (column != null)
+
+		if (column != null 
+				&& tableName.equals(AD_USER_DEF_FIELD_TRL) == false 
+				&& tableName.equals(AD_USER_DEF_TAB_TRL)  == false 
+				&& tableName.equals(AD_USER_DEF_WIN_TRL)  == false)
 			UUIDGenerator.updateUUID(column, get_TrxName());
 		//
 		StringBuilder msglog = new StringBuilder().append(tableName).append(" #").append(no);

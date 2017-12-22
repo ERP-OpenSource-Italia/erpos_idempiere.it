@@ -25,11 +25,11 @@ import org.compiere.apps.IStatusBar;
 import org.compiere.minigrid.IMiniTable;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
+import org.compiere.model.MLookupFactory;
 import org.compiere.model.MOrder;
 import org.compiere.model.MRMA;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
-import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 
@@ -92,20 +92,29 @@ public abstract class CreateFrom implements ICreateFrom
 	protected ArrayList<KeyNamePair> loadOrderData (int C_BPartner_ID, boolean forInvoice, boolean sameWarehouseOnly)
 	{
 		ArrayList<KeyNamePair> list = new ArrayList<KeyNamePair>();
-
+		
 		String isSOTrxParam = isSOTrx ? "Y":"N";
+		
+   	// F3P: integrated display based on selection columns		
+		/*
 		//	Display
 		StringBuffer display = new StringBuffer("o.DocumentNo||' - ' ||")
 			.append(DB.TO_CHAR("o.DateOrdered", DisplayType.Date, Env.getAD_Language(Env.getCtx())))
 			.append("||' - '||")
 			.append(DB.TO_CHAR("o.GrandTotal", DisplayType.Amount, Env.getAD_Language(Env.getCtx())));
+		*/
 		//
 		String column = "ol.QtyDelivered";
 		if (forInvoice)
 			column = "ol.QtyInvoiced";
-		StringBuffer sql = new StringBuffer("SELECT o.C_Order_ID,").append(display)
-			.append(" FROM C_Order o "
-			+ "WHERE o.C_BPartner_ID=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO')"
+		// StringBuffer sql = new StringBuffer("SELECT o.C_Order_ID,").append(display)
+		// 	.append(" FROM C_Order o "
+		
+		// F3P: integrated display based on selection columns		
+		String display = MLookupFactory.getDisplayBaseQuery(Env.getLanguage(Env.getCtx()), "C_Order_ID", "C_Order","o","o.C_Order_ID", null);
+		
+		StringBuilder sql = new StringBuilder(display)
+			.append("WHERE o.C_BPartner_ID=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO')"
 			+ " AND o.C_Order_ID IN "
 				  + "(SELECT ol.C_Order_ID FROM C_OrderLine ol"
 				  + " LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID" //F3P: added product link

@@ -403,16 +403,47 @@ public class MInvoiceLine extends X_C_InvoiceLine
 			C_BPartner_ID, getQtyInvoiced(), m_IsSOTrx);
 		m_productPricing.setM_PriceList_ID(M_PriceList_ID);
 		m_productPricing.setPriceDate(m_DateInvoiced);
-		//
-		setPriceActual (m_productPricing.getPriceStd());
+		
+		// F3P: integrated line uom and date fpr ppvb
+		m_productPricing.setDatePPVB(m_DateInvoiced); 
+		m_productPricing.setLineC_UOM_ID(getC_UOM_ID());
+		
+		m_productPricing.calculatePrice();
 		setPriceList (m_productPricing.getPriceList());
 		setPriceLimit (m_productPricing.getPriceLimit());
-		//
-		if (getQtyEntered().compareTo(getQtyInvoiced()) == 0)
-			setPriceEntered(getPriceActual());
-		else
-			setPriceEntered(getPriceActual().multiply(getQtyInvoiced()
-				.divide(getQtyEntered(), 6, BigDecimal.ROUND_HALF_UP)));	//	precision
+
+		if(m_productPricing.isSelectedPriceUOM(getC_UOM_ID()) == false)
+		{
+			//
+			setPriceActual (m_productPricing.getPriceStd());
+			//
+			if (getQtyEntered().compareTo(getQtyInvoiced()) == 0)
+				setPriceEntered(getPriceActual());
+			else
+				setPriceEntered(getPriceActual().multiply(getQtyInvoiced()
+					.divide(getQtyEntered(), 20, BigDecimal.ROUND_HALF_UP)));	//	precision	
+		}
+		else // F3P: new behaviour triggered by selection of price in same uom then line
+		{
+			setPriceEntered(m_productPricing.getPriceStd());
+			
+			//
+			if (getQtyEntered().compareTo(getQtyInvoiced()) == 0)
+				setPriceActual(getPriceEntered());
+			else
+			{
+				if(getQtyInvoiced().signum() != 0)
+				{
+					setPriceActual(getPriceEntered().multiply(getQtyEntered()
+							.divide(getQtyInvoiced(), 20, BigDecimal.ROUND_HALF_UP)));	//	precision
+				}
+				else
+				{
+					setPriceActual(getPriceEntered());
+				}
+			}
+		}
+		
 		//
 		if (getC_UOM_ID() == 0)
 			setC_UOM_ID(m_productPricing.getC_UOM_ID());

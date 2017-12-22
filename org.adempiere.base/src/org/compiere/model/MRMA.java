@@ -513,7 +513,7 @@ public class MRMA extends X_M_RMA implements DocAction
 
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
-		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID());
+		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID(), counterAD_Org_ID); // F3P: added counter org for doc type
 		if (counterDT != null)
 		{
 			if (log.isLoggable(Level.FINE)) log.fine(counterDT.toString());
@@ -523,7 +523,7 @@ public class MRMA extends X_M_RMA implements DocAction
 		}
 		else	//	indirect
 		{
-			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID());
+			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID); // F3P: added counter org for doc type
 			if (log.isLoggable(Level.FINE)) log.fine("Indirect C_DocTypeTarget_ID=" + C_DocTypeTarget_ID);
 			if (C_DocTypeTarget_ID <= 0)
 				return null;

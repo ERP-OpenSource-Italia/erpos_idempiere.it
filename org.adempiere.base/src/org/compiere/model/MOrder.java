@@ -33,6 +33,7 @@ import org.adempiere.exceptions.BPartnerNoShipToAddressException;
 import org.adempiere.exceptions.FillMandatoryException;
 import org.adempiere.model.ITaxProvider;
 import org.adempiere.process.SalesOrderRateInquiryProcess;
+import org.adempiere.util.FeedbackContainer;
 import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.DocAction;
@@ -606,8 +607,30 @@ public class MOrder extends X_C_Order implements DocAction
 			//
 			line.setOrder(this);
 			line.set_ValueNoCheck ("C_OrderLine_ID", I_ZERO);	//	new
+			
 			// F3P: ri-calcoliamo qty ordered, altrimenti la copia da ordine chiuso e' errata
-			line.setQty(line.getQtyEntered());
+			if(counter == false)
+			{
+				if(line.getM_Product_ID() > 0)
+				{					
+					MProduct mProduct = MProduct.get(line.getCtx(), line.getM_Product_ID()); 
+					
+					if(line.getC_UOM_ID() != mProduct.getC_UOM_ID())
+					{						
+						BigDecimal qtyOrdered = MUOMConversion.convertProductFrom (getCtx(), line.getM_Product_ID(),
+								line.getC_UOM_ID(), line.getQtyEntered());
+						
+						line.setQtyOrdered(qtyOrdered);
+					}
+					else
+						line.setQtyOrdered(line.getQtyEntered());
+				}
+				else
+				{
+					line.setQtyOrdered(line.getQtyEntered());
+				}
+			}
+				
 			//	References
 			if (!copyASI)
 			{
@@ -2003,6 +2026,16 @@ public class MOrder extends X_C_Order implements DocAction
 		if (log.isLoggable(Level.INFO)) log.info(toString());
 		StringBuilder info = new StringBuilder();
 		
+		//	Counter Documents
+		MOrder counter = createCounterDoc();
+		if (counter != null)
+		{
+			info.append(" - @CounterDoc@: @Order@=").append(counter.getDocumentNo());
+		
+			setRef_Order_ID(counter.getC_Order_ID());
+			saveEx(get_TrxName());
+		}
+		
 		boolean realTimePOS = MSysConfig.getBooleanValue(MSysConfig.REAL_TIME_POS, false , getAD_Client_ID());
 		
 		//F3P: Check this variable before create the reverse for onCreditOrder,warehouseOrder or POSOrder
@@ -2060,10 +2093,6 @@ public class MOrder extends X_C_Order implements DocAction
 			return DocAction.STATUS_Invalid;
 		}
 
-		//	Counter Documents
-		MOrder counter = createCounterDoc();
-		if (counter != null)
-			info.append(" - @CounterDoc@: @Order@=").append(counter.getDocumentNo());
 		//	User Validation
 		String valid = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_AFTER_COMPLETE);
 		if (valid != null)
@@ -2084,6 +2113,13 @@ public class MOrder extends X_C_Order implements DocAction
 				m_processMsg = error;
 				return DocAction.STATUS_Invalid;
 			}
+		}
+		
+		// F3P: check gathered feedback
+		
+		if(FeedbackContainer.getCurrent() != null)
+		{
+			FeedbackContainer.getCurrent().appendInfoFeedback(info);
 		}
 
 		setProcessed(true);	
@@ -2142,7 +2178,7 @@ public class MOrder extends X_C_Order implements DocAction
 		if (ba == null)
 			return "@NoAccountOrgCurrency@";
 		
-		MDocType[] doctypes = MDocType.getOfDocBaseType(this.getCtx(), MDocType.DOCBASETYPE_ARReceipt);
+		MDocType[] doctypes = MDocType.getOfDocBaseType(this.getCtx(), MDocType.DOCBASETYPE_ARReceipt,getAD_Org_ID());
 		if (doctypes == null || doctypes.length == 0)
 			return "No document type for AR Receipt";
 		MDocType doctype = null;
@@ -2431,7 +2467,7 @@ public class MOrder extends X_C_Order implements DocAction
 
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
-		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID());
+		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID(), counterAD_Org_ID);  // F3P: added counter org for doc type
 		if (counterDT != null)
 		{
 			if (log.isLoggable(Level.FINE)) log.fine(counterDT.toString());
@@ -2441,7 +2477,7 @@ public class MOrder extends X_C_Order implements DocAction
 		}
 		else	//	indirect
 		{
-			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID());
+			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID);  // F3P: added counter org for doc type
 			if (log.isLoggable(Level.FINE)) log.fine("Indirect C_DocTypeTarget_ID=" + C_DocTypeTarget_ID);
 			if (C_DocTypeTarget_ID <= 0)
 				return null;
@@ -2452,6 +2488,10 @@ public class MOrder extends X_C_Order implements DocAction
 		//
 		counter.setAD_Org_ID(counterAD_Org_ID);
 		counter.setM_Warehouse_ID(counterOrgInfo.getM_Warehouse_ID());
+		
+		// F3P: set as reference
+		counter.setPOReference(getDocumentNo());
+		
 		//
 //		counter.setBPartner(counterBP); // was set on copyFrom
 		counter.setDatePromised(getDatePromised());		// default is date ordered 
@@ -2466,11 +2506,12 @@ public class MOrder extends X_C_Order implements DocAction
 			MOrderLine counterLine = counterLines[i];
 			counterLine.setOrder(counter);	//	copies header values (BP, etc.)
 			counterLine.setPrice();
+			counterLine.setAD_Org_ID(counterAD_Org_ID);
 			counterLine.setTax();
 			counterLine.saveEx(get_TrxName());
 		}
 		if (log.isLoggable(Level.FINE)) log.fine(counter.toString());
-		
+				
 		//	Document Action
 		if (counterDT != null)
 		{

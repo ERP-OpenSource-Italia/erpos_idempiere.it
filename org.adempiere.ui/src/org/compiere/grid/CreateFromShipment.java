@@ -30,6 +30,7 @@ import org.compiere.model.MInOutLine;
 import org.compiere.model.MInvoice;
 import org.compiere.model.MInvoiceLine;
 import org.compiere.model.MLocator;
+import org.compiere.model.MLookupFactory;
 import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
 import org.compiere.model.MRMA;
@@ -127,13 +128,21 @@ public abstract class CreateFromShipment extends CreateFrom
 	{
 		ArrayList<KeyNamePair> list = new ArrayList<KeyNamePair>();
 		
+		/*
 		StringBuffer display = new StringBuffer("i.DocumentNo||' - '||")
 		.append(DB.TO_CHAR("DateInvoiced", DisplayType.Date, Env.getAD_Language(Env.getCtx())))
 		.append("|| ' - ' ||")
 		.append(DB.TO_CHAR("GrandTotal", DisplayType.Amount, Env.getAD_Language(Env.getCtx())));
+		*/
+
+		// F3P: integrated display based on selection columns		
+		
+		String display = MLookupFactory.getDisplayBaseQuery(Env.getLanguage(Env.getCtx()), "C_Invoice_ID", "C_Invoice","i","i.C_Invoice_ID", null);
+				
 		//
-		StringBuffer sql = new StringBuffer("SELECT i.C_Invoice_ID,").append(display)
-			.append(" FROM C_Invoice i ")
+		//StringBuffer sql = new StringBuffer("SELECT i.C_Invoice_ID,").append(display)
+		//	.append(" FROM C_Invoice i ")
+		StringBuffer sql = new StringBuffer(display)
 			.append( "WHERE i.C_BPartner_ID=? AND i.IsSOTrx='N' AND i.DocStatus IN ('CL','CO')")
 			.append( " AND i.C_Invoice_ID IN ")
 			.append( "(SELECT il.C_Invoice_ID FROM C_InvoiceLine il")

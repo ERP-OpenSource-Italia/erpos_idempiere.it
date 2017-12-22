@@ -1,3 +1,4 @@
+
 /******************************************************************************
  * Product: Adempiere ERP & CRM Smart Business Solution                        *
  * Copyright (C) 1999-2006 ComPiere, Inc. All Rights Reserved.                *
@@ -1062,5 +1063,15 @@ public class TimeUtil
 		return DB.getSQLValue(null, sql, MUOM.X12_HOUR);
 	}	//	getMinute_UOM_ID
 	//Nectosoft end
+	
+	public static boolean isDateSuperimposed(Timestamp dateFrom1,Timestamp dateTo1,
+			Timestamp dateFrom2,Timestamp dateTo2)
+	{
+		if((dateFrom1.before(dateTo2) || dateFrom1.equals(dateTo2))
+				&& (dateTo1.after(dateFrom2) ||  dateTo1.equals(dateFrom2)))
+			return true;
+		else
+			return false;
+	}
 
 }	//	TimeUtil

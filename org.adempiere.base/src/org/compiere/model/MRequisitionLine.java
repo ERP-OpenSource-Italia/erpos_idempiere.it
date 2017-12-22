@@ -235,8 +235,12 @@ public class MRequisitionLine extends X_M_RequisitionLine
 		boolean isSOTrx = false;
 		MProductPricing pp = new MProductPricing (getM_Product_ID(), 
 			getC_BPartner_ID(), getQty(), isSOTrx);
-		pp.setM_PriceList_ID(M_PriceList_ID);
+		pp.setM_PriceList_ID(M_PriceList_ID);		
 	//	pp.setPriceDate(getDateOrdered());
+		// F3P: integrated line uom and date fpr ppvb
+		// m_productPricing.setDatePPVB(m_DateInvoiced); 
+		pp.setLineC_UOM_ID(getC_UOM_ID());
+		
 		//
 		setPriceActual (pp.getPriceStd());
 	}	//	setPrice

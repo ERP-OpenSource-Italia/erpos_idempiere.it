@@ -22,6 +22,8 @@ import java.util.Properties;
 
 import org.compiere.util.Env;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *	Inventory Movement Callouts
  *	
@@ -110,8 +112,11 @@ public class CalloutMovement extends CalloutEngine
 	 * @param MovementQty movement qty (if null will be get from context "MovementQty")
 	 */
 	private void checkQtyAvailable(Properties ctx, GridTab mTab, int WindowNo, int M_Product_ID, BigDecimal MovementQty) {
+		
 		// Begin Armen 2006/10/01
-		if (M_Product_ID != 0) {
+		if (M_Product_ID != 0 
+				&& STDSysConfig.isDisplayQtyWarningOnMatMovement(Env.getAD_Client_ID(ctx), Env.getAD_Org_ID(ctx))) 
+		{
 			MProduct product = MProduct.get(ctx, M_Product_ID);
 			if (product.isStocked()) {
 				if (MovementQty == null)

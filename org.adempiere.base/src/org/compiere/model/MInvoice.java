@@ -47,6 +47,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 
+import it.idempiere.base.model.FreeOfCharge;
 import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
 
@@ -909,6 +910,16 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 		//	Add up due amounts
 		BigDecimal total = Env.ZERO;
+		
+		// F3P: add the free of charge amount
+		BigDecimal bdFreeOfCharge = FreeOfCharge.getFreeOfChargeAmt(this);		
+		
+		if(bdFreeOfCharge.signum() != 0)
+		{
+			total = total.add(bdFreeOfCharge);
+		}
+		// end
+		
 		for (int i = 0; i < schedule.length; i++)
 		{
 			schedule[i].setParent(this);
@@ -1729,7 +1740,9 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 
 		// Set the definite document number after completed (if needed)
-		setDefiniteDocumentNo();
+		// Set the definite document number after completed (if needed)
+		if (isUpdateDocNo()) // F3P: Check if we want to update docNo. This is not good in reopen invoice process
+			setDefiniteDocumentNo();
 
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_BEFORE_COMPLETE);
 		if (m_processMsg != null)
@@ -1768,7 +1781,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			else
 				docBaseType=MDocType.DOCBASETYPE_APPayment;
 			
-			MDocType[] doctypes = MDocType.getOfDocBaseType(getCtx(), docBaseType);
+			MDocType[] doctypes = MDocType.getOfDocBaseType(getCtx(), docBaseType,getAD_Org_ID());
 			if (doctypes == null || doctypes.length == 0) {
 				m_processMsg = "No document type ";
 				return DocAction.STATUS_Invalid;
@@ -2196,6 +2209,14 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		//	Is this a counter doc ?
 		if (getRef_Invoice_ID() != 0)
 			return null;
+		
+		// F3P: check if is allowed to create counter doc for reversal, needed for compatibility with reeopn
+		
+		if(getReversal_ID() > 0 && 
+				STDSysConfig.isCreateCounterForReversal(getAD_Client_ID(), getAD_Org_ID()) == false)
+		{
+			return null;
+		}		
 
 		//	Org Must be linked to BPartner
 		MOrg org = MOrg.get(getCtx(), getAD_Org_ID());
@@ -2214,7 +2235,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
-		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID());
+		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID(), counterAD_Org_ID); // F3P: added counter org for doc type
 		if (counterDT != null)
 		{
 			if (log.isLoggable(Level.FINE)) log.fine(counterDT.toString());
@@ -2224,7 +2245,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 		else	//	indirect
 		{
-			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID());
+			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID); // F3P: added counter org for doc type
 			if (log.isLoggable(Level.FINE)) log.fine("Indirect C_DocTypeTarget_ID=" + C_DocTypeTarget_ID);
 			if (C_DocTypeTarget_ID <= 0)
 				return null;
@@ -2232,7 +2253,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 		//	Deep Copy
 		MInvoice counter = copyFrom(this, getDateInvoiced(), getDateAcct(),
-			C_DocTypeTarget_ID, !isSOTrx(), true, get_TrxName(), true);
+			C_DocTypeTarget_ID, !isSOTrx(), true, get_TrxName(), true, getDocumentNo()); // F3P: Keep doc no
 		//
 		counter.setAD_Org_ID(counterAD_Org_ID);
 	//	counter.setM_Warehouse_ID(counterOrgInfo.getM_Warehouse_ID());

@@ -32,6 +32,7 @@ import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.minigrid.ColumnInfo;
 import org.compiere.model.MDocType;
+import org.compiere.model.MPriceListVersion;
 import org.compiere.model.MRole;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -237,11 +238,17 @@ public class InfoProductWindow extends InfoWindow {
         list.toArray(s_layoutProductPrice);
         s_sqlFrom = "M_ProductPrice pp INNER JOIN M_PriceList_Version plv ON (pp.M_PriceList_Version_ID = plv.M_PriceList_Version_ID)";
         s_sqlWhere = "pp.M_Product_ID = ? AND plv.IsActive = 'Y' AND pp.IsActive = 'Y'";
-        productpriceTbl = ListboxFactory.newDataTableAutoSize();
-        m_sqlProductprice = productpriceTbl.prepareTable(s_layoutProductPrice, s_sqlFrom, s_sqlWhere, false, "pp") + " ORDER BY plv.ValidFrom DESC";
-        productpriceTbl.setMultiSelection(false);
-        productpriceTbl.autoSize();
-//        productpriceTbl.getModel().addTableModelListener(this);
+        
+        if(isPricelistVersionVisible()) // F3P: added to manage price visibility based on price list version visibility
+        {
+	        productpriceTbl = ListboxFactory.newDataTableAutoSize();
+	        m_sqlProductprice = productpriceTbl.prepareTable(s_layoutProductPrice, s_sqlFrom, s_sqlWhere, false, "pp") + " ORDER BY plv.ValidFrom DESC";
+	        productpriceTbl.setMultiSelection(false);
+	        productpriceTbl.autoSize();
+	//        productpriceTbl.getModel().addTableModelListener(this);
+        }
+        else
+        	productpriceTbl = null;
         
         tabbedPane = new Tabbox();
         ZKUpdateUtil.setHeight(tabbedPane, "100%");
@@ -307,11 +314,16 @@ public class InfoProductWindow extends InfoWindow {
 		desktopTabPanel.appendChild(chbShowDetailAtp);
 		tabPanels.appendChild(desktopTabPanel);
 		
-		tab = new Tab(Msg.translate(Env.getCtx(), "Price"));
-		tabs.appendChild(tab);
-		desktopTabPanel = new Tabpanel();
-		ZKUpdateUtil.setHeight(desktopTabPanel, "100%");
-		desktopTabPanel.appendChild(productpriceTbl);
+		if(productpriceTbl != null)	// F3P: added to manage price visibility based on price list version visibility
+		{
+			tab = new Tab(Msg.translate(Env.getCtx(), "Price"));
+			tabs.appendChild(tab);
+			desktopTabPanel = new Tabpanel();
+			ZKUpdateUtil.setHeight(desktopTabPanel, "100%");
+				
+			desktopTabPanel.appendChild(productpriceTbl);
+		}
+		
 		tabPanels.appendChild(desktopTabPanel);
 		//
 		//Angelo Dabala' (genied): added tab to show availability by Locator
@@ -476,7 +488,7 @@ public class InfoProductWindow extends InfoWindow {
 	@Override
 	protected void initParameters() {
 		int M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_Warehouse_ID");
-		int M_PriceList_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_PriceList_ID");
+		int M_PriceList_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_PriceList_ID", true); // F3P: evitiamo che scali sul contesto e quindi forzi una selezione su maschere che non hanno listino
 		
 		int M_PriceList_Version_ID = findPLV (M_PriceList_ID);
 		//	Set Warehouse
@@ -651,21 +663,24 @@ public class InfoProductWindow extends InfoWindow {
 		}
 		initAtpTab(M_Warehouse_ID, m_M_Product_ID);
 		
-		//IDEMPIERE-337
-		sql = m_sqlProductprice;
-		if (log.isLoggable(Level.FINEST)) log.finest(sql);
-		try {
-			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setInt(1, m_M_Product_ID);
-			rs = pstmt.executeQuery();
-			productpriceTbl.loadTable(rs);
-		} catch (Exception e) {
-			log.log(Level.WARNING, sql, e);
-		}
-		finally
+		if(productpriceTbl != null) // F3P: added to manage show/hide logic
 		{
-			DB.close(rs, pstmt);
-			rs = null; pstmt = null;
+			//IDEMPIERE-337
+			sql = m_sqlProductprice;
+			if (log.isLoggable(Level.FINEST)) log.finest(sql);
+			try {
+				pstmt = DB.prepareStatement(sql, null);
+				pstmt.setInt(1, m_M_Product_ID);
+				rs = pstmt.executeQuery();
+				productpriceTbl.loadTable(rs);
+			} catch (Exception e) {
+				log.log(Level.WARNING, sql, e);
+			}
+			finally
+			{
+				DB.close(rs, pstmt);
+				rs = null; pstmt = null;
+			}
 		}
 		
 		//Angelo Dabala' (genied): added tab to show availability by Locator
@@ -982,7 +997,7 @@ public class InfoProductWindow extends InfoWindow {
 			M_AttributeSetInstance_ID = 0;
 		//
 		InvoiceHistory ih = new InvoiceHistory (this, 0,
-			M_Product_ID.intValue(), M_Warehouse_ID, M_AttributeSetInstance_ID);
+			M_Product_ID.intValue(), M_Warehouse_ID, M_AttributeSetInstance_ID, isPricelistVersionVisible()); // F3P: added to manage price visibility based on price list version visibility
 		ih.setVisible(true);
 		ih = null;
 	}
@@ -1062,5 +1077,23 @@ public class InfoProductWindow extends InfoWindow {
 				locatorTbl.getModel().clear();
 		}
 		
+	}
+	
+	// F3P: added to manage price visibility based on price list version visibility
+	
+	protected boolean isPricelistVersionVisible()
+	{
+		boolean bVisibile = false;
+		
+		for(WEditor editor:editors)
+		{
+			if(editor.getColumnName().equals(MPriceListVersion.COLUMNNAME_M_PriceList_Version_ID))
+			{
+				bVisibile = editor.isVisible();
+				break;
+			}
+		}
+		
+		return bVisibile;
 	}
 }

@@ -24,6 +24,8 @@ import org.compiere.model.MInvoicePaySchedule;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.FreeOfCharge;
+
 /**
  *	Validate Invoice Payment Schedule
  *	
@@ -66,6 +68,16 @@ public class InvoicePayScheduleValidate extends SvrProcess
 			throw new IllegalArgumentException("InvoicePayScheduleValidate - No Invoice");
 		//
 		BigDecimal total = Env.ZERO;
+		
+		// F3P: add the free of charge amount
+		BigDecimal bdFreeOfCharge = FreeOfCharge.getFreeOfChargeAmt(invoice);		
+		
+		if(bdFreeOfCharge.signum() != 0)
+		{
+			total = total.add(bdFreeOfCharge);
+		}
+		// end
+		
 		for (int i = 0; i < schedule.length; i++)
 		{
 			BigDecimal due = schedule[i].getDueAmt();

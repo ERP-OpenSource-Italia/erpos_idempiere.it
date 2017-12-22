@@ -31,7 +31,9 @@ import java.util.Properties;
 import java.util.TreeMap;
 import java.util.logging.Level;
 
+import org.adempiere.base.event.IEventTopics;
 import org.adempiere.util.Callback;
+import org.adempiere.util.FeedbackContainer;
 import org.adempiere.webui.AdempiereIdGenerator;
 import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.LayoutUtils;
@@ -70,6 +72,7 @@ import org.adempiere.webui.panel.action.ReportAction;
 import org.adempiere.webui.part.AbstractUIPart;
 import org.adempiere.webui.part.ITabOnSelectHandler;
 import org.adempiere.webui.session.SessionManager;
+import org.adempiere.webui.util.UIFeedbackNotifier;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.CustomizeGridViewDialog;
 import org.adempiere.webui.window.FDialog;
@@ -2196,8 +2199,69 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 			onSave0(onSaveEvent, onNavigationEvent, newRecord, wasChanged, callback);
 		}
     }
+    
+  	private void onSave0(boolean onSaveEvent, boolean navigationEvent,
+  			boolean newRecord, boolean wasChanged, Callback<Boolean> callback)
+  	{
+  		// F3P: notify and gather feedback only if there is a change
+  		
+  		IADTabpanel dirtyTabpanel = adTabbox.getDirtyADTabpanel();
+  		boolean isFeedbackManaged = false;
+  		  		
+  		if(dirtyTabpanel != null || newRecord)
+			{  			
+	  		// F3P: inserted in-between call to feedback notifier, calling save0 as last thing
+  			GridTab gridTab = null;
+  			
+  			if(dirtyTabpanel != null)
+  				gridTab = dirtyTabpanel.getGridTab();
+  			else
+  				gridTab = getActiveGridTab();
+  			  			
+  			GridTable mTable = gridTab.getMTable();
+  			int Record_ID = 0;
+  			PO po = null;
+  			
+  			if(mTable.isInserting() == false)
+  				Record_ID = mTable.getKeyID(mTable.getRowChanged());
 
-	private void onSave0(boolean onSaveEvent, boolean navigationEvent,
+  			try
+  			{
+	  			po = mTable.buildSavePO(Record_ID, false);
+  			}
+  			catch(Throwable t)
+  			{
+  				// Skip reporting, will be reported by save
+  				po = null;
+  			}
+	  			
+  			if(po != null) // If null we have an error, skip gathering feedbacks
+  			{  				
+	  			String gatherFor = IEventTopics.PO_BEFORE_CHANGE;
+	  			
+	  			if(newRecord)
+	  				gatherFor = IEventTopics.PO_BEFORE_NEW;
+		  	
+		  		FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);
+		  		UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getComponent(), container, new Callback<Integer>()
+		  		{
+		  			public void onCallback(Integer result) {
+		  				onSave1(onSaveEvent, navigationEvent, newRecord, wasChanged, callback);
+		  			};
+		  		});
+		  		
+		  		notifier.processFeedback();
+		  		isFeedbackManaged = true;
+  			}
+	  		
+	  		// F3P: end
+			}
+			
+  		if(isFeedbackManaged == false)
+				onSave1(onSaveEvent, navigationEvent, newRecord, wasChanged, callback); // F3P: if no need to save still call original function
+  	}
+
+	private void onSave1(boolean onSaveEvent, boolean navigationEvent,
 			boolean newRecord, boolean wasChanged, Callback<Boolean> callback) {
 		IADTabpanel dirtyTabpanel = adTabbox.getDirtyADTabpanel();
 		boolean retValue = adTabbox.dataSave(onSaveEvent);
@@ -2776,7 +2840,46 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 						}
 						boolean startWOasking = true;
 						boolean isProcessMandatory = true;
-						executeButtonProcess(wButton, startWOasking, table_ID, recordIdParam, isProcessMandatory);
+						
+						// F3P: add feedback management
+						
+						PO po = null;
+						GridTab gTab = adtabPanel.getGridTab();
+						boolean isFeedbackManaged = false;
+						
+		  			try
+		  			{
+			  			po = PO.get(Env.getCtx(), adtabPanel.getGridTab().getTableName(), recordIdParam, null);
+		  			}
+		  			catch(Throwable t)
+		  			{
+		  				logger.log(Level.SEVERE, "Error getting PO from griTable", t);
+		  				po = null;
+		  			}
+		  			
+		  			if(po != null)
+		  			{
+							String docAction = (String)gTab.getValue("DocAction");
+							String gatherFor = FeedbackContainer.getEventTopicForDocEent(docAction);
+							
+							if(gatherFor != null)
+							{
+								FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);
+								UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getComponent(), container, new Callback<Integer>()
+								{
+					  			public void onCallback(Integer result) {
+					  				executeButtonProcess(wButton, startWOasking, table_ID, recordIdParam, isProcessMandatory);
+					  			};
+								});
+								notifier.processFeedback();
+								isFeedbackManaged = true;
+							}
+		  			}
+						
+						if(isFeedbackManaged == false)
+							executeButtonProcess(wButton, startWOasking, table_ID, recordIdParam, isProcessMandatory);
+						
+						// F3P: end						
 					}
 				});				
 				getComponent().getParent().appendChild(win);

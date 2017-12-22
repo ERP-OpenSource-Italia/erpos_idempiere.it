@@ -26,6 +26,9 @@ import org.compiere.model.GridTable;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.Trx;
+import org.compiere.util.ValueNamePair;
+
+import it.idempiere.base.util.STDUtils;
 
 /**
  * Transfer data from editor to GridTab
@@ -159,8 +162,18 @@ public class GridTabDataBinder implements ValueChangeListener {
 				catch(Exception ex)
 				{
 					trx.rollback();
-					logger.severe(ex.getMessage());
-					throw new AdempiereException("SaveError");
+					
+					// F3P: improved error display, to improve error detection
+					
+					String sError = STDUtils.getThrowableMessage(ex);
+					
+					ValueNamePair lastError = CLogger.retrieveError();
+					if (lastError != null)
+						sError += " " + lastError.getValue();
+					
+					logger.severe(sError);
+										
+					throw new AdempiereException("@SaveError@: " + sError);
 				}
 				finally
 				{

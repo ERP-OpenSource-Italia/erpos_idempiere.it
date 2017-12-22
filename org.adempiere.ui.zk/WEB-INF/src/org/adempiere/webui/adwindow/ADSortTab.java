@@ -47,6 +47,7 @@ import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
 import org.compiere.util.NamePair;
+import org.compiere.util.Util;
 import org.zkoss.zk.au.out.AuFocus;
 import org.zkoss.zk.ui.event.DropEvent;
 import org.zkoss.zk.ui.event.Event;
@@ -55,6 +56,8 @@ import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Hlayout;
 import org.zkoss.zul.event.ListDataEvent;
+
+import com.itextpdf.xmp.impl.Utils;
 
 /**
  *	Tab to maintain Order/Sequence
@@ -373,7 +376,7 @@ public class ADSortTab extends Panel implements IADTabpanel
 	{
 		yesModel.removeAllElements();
 		noModel.removeAllElements();
-
+		
 		boolean isReadWrite = true;
 		//	SELECT t.AD_Field_ID,t.Name,t.SeqNo,t.IsDisplayed FROM AD_Field t WHERE t.AD_Tab_ID=? ORDER BY 4 DESC,3,2
 		//	SELECT t.AD_PrintFormatItem_ID,t.Name,t.SeqNo,t.IsPrinted FROM AD_PrintFormatItem t WHERE t.AD_PrintFormat_ID=? ORDER BY 4 DESC,3,2
@@ -400,6 +403,17 @@ public class ADSortTab extends Panel implements IADTabpanel
 		{
 			sql.append(" WHERE 1=?");
 		}
+		
+		// F3P: use sql where
+		String tabWhereClause = gridTab.getWhereClause(); 
+		
+		if(Util.isEmpty(tabWhereClause) == false)
+		{
+			tabWhereClause = Env.parseContext(Env.getCtx(), m_WindowNo, gridTab.getTabNo(), tabWhereClause, false);
+			sql.append(" AND ").append(tabWhereClause);
+		}
+		
+		// F3P end
 
 		int reportView_ID = Env.getContextAsInt(Env.getCtx(), m_WindowNo, "AD_ReportView_ID");
 		if ("AD_PrintFormatItem".equals(m_TableName) && reportView_ID > 0) {

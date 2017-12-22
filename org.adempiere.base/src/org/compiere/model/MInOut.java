@@ -27,6 +27,7 @@ import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.PeriodClosedException;
+import org.adempiere.util.FeedbackContainer;
 import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.DocAction;
@@ -40,6 +41,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 
 import it.idempiere.base.model.LITMInOut;
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *  Shipment Model
@@ -1210,7 +1212,7 @@ public class MInOut extends X_M_InOut implements DocAction
 			m_processMsg = "@NoLines@";
 			return DocAction.STATUS_Invalid;
 		}
-		/* //F3P: Peso e volume vengono ricalcolati alla modifica delle righe invece che al prepara
+		
 		BigDecimal Volume = Env.ZERO;
 		BigDecimal Weight = Env.ZERO;
 
@@ -1241,9 +1243,12 @@ public class MInOut extends X_M_InOut implements DocAction
 				}
 			}
 		}
+		
+		/* //F3P: Peso e volume vengono ricalcolati alla modifica delle righe invece che al prepara
 		setVolume(Volume);
-		setWeight(Weight);
-		*/ //F3P end
+		setWeight(Weight);		
+		*/
+		
 		if (!isReversal())	//	don't change reversal
 		{
 			createConfirmation();
@@ -1731,6 +1736,13 @@ public class MInOut extends X_M_InOut implements DocAction
 		if(LITMInOut.isUpdateDocNo(this))//F3P: Check if we want to update docNo. This is not good in reopen process
 			setDefiniteDocumentNo();
 		
+		// F3P: check gathered feedback
+		
+		if(FeedbackContainer.getCurrent() != null)
+		{
+			FeedbackContainer.getCurrent().appendInfoFeedback(info);
+		}
+		
 		m_processMsg = info.toString();
 		setProcessed(true);
 		setDocAction(DOCACTION_Close);
@@ -1767,7 +1779,7 @@ public class MInOut extends X_M_InOut implements DocAction
 		
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
-		MDocType[] shipmentTypes = MDocType.getOfDocBaseType(getCtx(), MDocType.DOCBASETYPE_MaterialDelivery);
+		MDocType[] shipmentTypes = MDocType.getOfDocBaseType(getCtx(), MDocType.DOCBASETYPE_MaterialDelivery,getAD_Org_ID());
 
 		for (int i = 0; i < shipmentTypes.length; i++ )
 		{
@@ -2007,6 +2019,14 @@ public class MInOut extends X_M_InOut implements DocAction
 		//	Is this a counter doc ?
 		if (getRef_InOut_ID() != 0)
 			return null;
+		
+		// F3P: check if is allowed to create counter doc for reversal, needed for compatibility with reeopn
+		
+		if(getReversal_ID() > 0 && 
+				STDSysConfig.isCreateCounterForReversal(getAD_Client_ID(), getAD_Org_ID()) == false)
+		{
+			return null;
+		}
 
 		//	Org Must be linked to BPartner
 		MOrg org = MOrg.get(getCtx(), getAD_Org_ID());
@@ -2025,7 +2045,7 @@ public class MInOut extends X_M_InOut implements DocAction
 
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
-		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID());
+		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID(), counterAD_Org_ID);  // F3P: added counter org for doc type
 		if (counterDT != null)
 		{
 			if (log.isLoggable(Level.FINE)) log.fine(counterDT.toString());
@@ -2035,7 +2055,7 @@ public class MInOut extends X_M_InOut implements DocAction
 		}
 		else	//	indirect
 		{
-			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID());
+			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID);  // F3P: added counter org for doc type
 			if (log.isLoggable(Level.FINE)) log.fine("Indirect C_DocTypeTarget_ID=" + C_DocTypeTarget_ID);
 			if (C_DocTypeTarget_ID <= 0)
 				return null;
@@ -2043,7 +2063,7 @@ public class MInOut extends X_M_InOut implements DocAction
 
 		//	Deep Copy
 		MInOut counter = copyFrom(this, getMovementDate(), getDateAcct(),
-			C_DocTypeTarget_ID, !isSOTrx(), true, get_TrxName(), true);
+			C_DocTypeTarget_ID, !isSOTrx(), true, get_TrxName(), true, false, getDocumentNo()); // F3P: keep doc noO
 
 		//
 		counter.setAD_Org_ID(counterAD_Org_ID);
@@ -2061,6 +2081,11 @@ public class MInOut extends X_M_InOut implements DocAction
 
 		//	Refernces (Should not be required
 		counter.setSalesRep_ID(getSalesRep_ID());
+		if(isSOTrx() && counter.isSOTrx()==false)
+		{
+			counter.setDocumentNo(getDocumentNo());
+		}
+		
 		counter.saveEx(get_TrxName());
 
 		String MovementType = counter.getMovementType();
@@ -2078,7 +2103,7 @@ public class MInOut extends X_M_InOut implements DocAction
 			//
 			counterLine.saveEx(get_TrxName());
 		}
-
+		
 		if (log.isLoggable(Level.FINE)) log.fine(counter.toString());
 
 		//	Document Action

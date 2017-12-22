@@ -309,12 +309,39 @@ public class MOrderLine extends X_C_OrderLine
 		setPriceList (m_productPrice.getPriceList());
 		setPriceLimit (m_productPrice.getPriceLimit());
 		//
-		if (getQtyEntered().compareTo(getQtyOrdered()) == 0)
-			setPriceEntered(getPriceActual());
-		else
-			setPriceEntered(getPriceActual().multiply(getQtyOrdered()
-				.divide(getQtyEntered(), 12, BigDecimal.ROUND_HALF_UP)));	//	precision
 		
+		if(m_productPrice.isSelectedPriceUOM(getC_UOM_ID()) == false)
+		{
+			//
+			setPriceActual (m_productPrice.getPriceStd());
+			//
+			if (getQtyEntered().compareTo(getQtyOrdered()) == 0)
+				setPriceEntered(getPriceActual());
+			else
+				setPriceEntered(getPriceActual().multiply(getQtyOrdered()
+					.divide(getQtyEntered(), 20, BigDecimal.ROUND_HALF_UP)));	//	precision	
+		}
+		else // F3P: new behaviour triggered by selection of price in same uom then line
+		{
+			setPriceEntered(m_productPrice.getPriceStd());
+			
+			//
+			if (getQtyEntered().compareTo(getQtyOrdered()) == 0)
+				setPriceActual(getPriceEntered());
+			else
+			{
+				if(getQtyOrdered().signum() != 0)
+				{
+					setPriceActual(getPriceEntered().multiply(getQtyEntered()
+							.divide(getQtyOrdered(), 20, BigDecimal.ROUND_HALF_UP)));	//	precision
+				}
+				else
+				{
+					setPriceActual(getPriceEntered());
+				}
+			}
+		}
+				
 		//	Calculate Discount
 		setDiscount(m_productPrice.getDiscount());
 		//	Set UOM
@@ -334,6 +361,11 @@ public class MOrderLine extends X_C_OrderLine
 			getC_BPartner_ID(), getQtyOrdered(), m_IsSOTrx);
 		m_productPrice.setM_PriceList_ID(M_PriceList_ID);
 		m_productPrice.setPriceDate(getDateOrdered());
+		
+		// F3P: integrated line uom and date fpr ppvb
+		m_productPrice.setDatePPVB(getDateOrdered()); 
+		m_productPrice.setLineC_UOM_ID(getC_UOM_ID());
+		
 		//
 		m_productPrice.calculatePrice();
 		return m_productPrice;
@@ -774,29 +806,40 @@ public class MOrderLine extends X_C_OrderLine
 		//	No List Price
 		if (Env.ZERO.compareTo(list) == 0)
 			return;
-		BigDecimal discount = list.subtract(getPriceActual())
+		
+		int				 iPriceScale = getParent().getM_PriceList().getPricePrecision(); // bdPriceActual.scale();
+		BigDecimal bdPrice = getPriceActual();
+		
+		if(m_productPrice != null && m_productPrice.isSelectedPriceUOM(getC_UOM_ID()))
+		{
+			bdPrice = getPriceEntered(); // Stessa unita di misura, usiamo entered per evitare il calcolo errato dello sconto (entered e' in uom del prodotto)
+		}
+		
+		BigDecimal discount = list.subtract(bdPrice)
 			.multiply(Env.ONEHUNDRED)
-			.divide(list, getPrecision(), BigDecimal.ROUND_HALF_UP);
+			.divide(list, iPriceScale, BigDecimal.ROUND_HALF_UP);
 		
 		// F3P: due to rounding, calculated discount may be different from the current one
 		//	but producing the same result:
 		// Example: 0,0242 40% discount, will be calculated as 40,08% discount, but the resulting actual price is the same.
 		// This need to be avoided
 		
+		
 		BigDecimal bdCurrentDiscount = getDiscount();
 		
 		if(bdCurrentDiscount.signum() > 0)
 		{
-			BigDecimal	bdPriceActual =  getPriceActual();
-			int				 	iPriceScale = getParent().getM_PriceList().getPricePrecision(); // bdPriceActual.scale();
-						
 			BigDecimal	bdRecalcPrice = Env.ONEHUNDRED.subtract(bdCurrentDiscount).divide(Env.ONEHUNDRED,10,RoundingMode.HALF_UP).
 																	multiply(list).setScale(iPriceScale,RoundingMode.HALF_UP);
 			
-			if(bdRecalcPrice.compareTo(bdPriceActual) == 0)
+			if(bdRecalcPrice.compareTo(bdPrice) == 0)
 			{
 				discount = bdCurrentDiscount;
 			}
+		}
+		else
+		{
+			discount = bdCurrentDiscount;
 		}
 		
 		// F3P end

@@ -44,6 +44,7 @@ public class STDSysConfig
 	public static final String F3P_CREATE_REVERSE_ORDER = "F3P_CREATE_REVERSE_ORDER";
 	//LS variabile per gestire i termini pag fatture prima del completa
 	public static final String LIT_PAYSCHEDULEINV_BEFORE_COMPLETE = "LIT_PAYSCHEDULEINV_BEFORE_COMPLETE";
+	public static final String LIT_PAYSCHEDULEORD_BEFORE_COMPLETE = "LIT_PAYSCHEDULEORD_BEFORE_COMPLETE";
 	// Angelo Dabala' (genied) add support for Desktop Mail Client
 	private static final String LIT_USE_DESKTOP_EMAIL = "LIT_USE_DESKTOP_EMAIL"; 
 	//F3P: default doc action
@@ -77,7 +78,23 @@ public class STDSysConfig
  	public static String REPORT_HOME_KEY = "REPORT_HOME_PATH";
  	
  	public static final String LIT_WEB_SERVICE_COMPATIBILITY_MODE = "LIT_WEB_SERVICE_COMPATIBILITY_MODE";
-
+ 	
+ 	public static final String F3P_ALLOW_SINGLE_SCHEDULE = "F3P_ALLOW_SINGLE_SCHEDULE";
+ 	
+ 	public static final String  LIT_COMMISSION_RULE_MINOR_SEQUENCE = "LIT_COMMISSION_RULE_MINOR_SEQUENCE";
+ 	
+ 	public static final String  LIT_COST_ENABLESEED = "LIT_COST_ENABLESEED";
+ 	 		
+	public static boolean isCommissionRuleMinorSequence(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_COMMISSION_RULE_MINOR_SEQUENCE , false,AD_Client_ID,AD_Org_ID);
+	}
+ 	
+ 	public static Boolean getAllowSingleSchedule(int AD_Client_ID,int AD_Org_ID)
+ 	{
+ 		return MSysConfig.getBooleanValue(F3P_ALLOW_SINGLE_SCHEDULE, false, AD_Client_ID, AD_Org_ID);
+ 	}
+ 	
  	public static Boolean getWebServiceCompatibilityMode(int AD_Client_ID,int AD_Org_ID)
  	{
  		return MSysConfig.getBooleanValue(LIT_WEB_SERVICE_COMPATIBILITY_MODE, false, AD_Client_ID, AD_Org_ID);
@@ -323,6 +340,11 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LIT_PAYSCHEDULEINV_BEFORE_COMPLETE, false, AD_Client_ID, AD_Org_ID);
 	}
 	
+	public static final boolean isPayScheduleOrdBeforeComplete(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_PAYSCHEDULEORD_BEFORE_COMPLETE, false, AD_Client_ID, AD_Org_ID);
+	}
+	
 	/** Check this variable before create the reverse for onCreditOrder,warehouseOrder or POSOrder
 	 * 
 	 * @param AD_Client_ID
@@ -373,8 +395,7 @@ public class STDSysConfig
 	{
 		return MSysConfig.getValue(REPORT_HOME_KEY, Ini.getAdempiereHome() + File.separator + "reports",AD_Client_ID,AD_Org_ID);
 	}
-	
-	
+		
 	public static int getPriceVendorBreakIgnoreTreshold()
 	{
 		return MSysConfig.getIntValue(PRICEVENDORBREAK_IGNORE_THRESHOLD, -1);
@@ -394,4 +415,37 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(FACTACCT_HASCURRENCYRATE, false, AD_Client_ID);
 	}
+	
+ 	// Cambia la sequenza di determinazione dei prezzi dal listino e vendor break (usata da MProductPrice)
+ 	// A: (default) standard adempiere/idempiere, se richiesto l'uso dei vb, questi hanno priorita sui product price
+ 	// L: default 'localizzazione italiana': se richiesto il pv, la priorita' e' per versione (vendor break, poi product, se non c'e scalo sul listino)
+ 	
+ 	public static final String LIT_PRICELIST_DET_SEQUENCE = "LIT_PRICELIST_DET_SEQUENCE";
+ 	public static final String LIT_PRICELIST_DET_SEQUENCE_Adempiere = "A";
+ 	public static final String LIT_PRICELIST_DET_SEQUENCE_Lit = "L";
+
+	public static final String getPriceListDetSequence(int AD_Client_ID)
+	{
+		return MSysConfig.getValue(LIT_PRICELIST_DET_SEQUENCE, LIT_PRICELIST_DET_SEQUENCE_Adempiere, AD_Client_ID);
+	}
+	
+	public static boolean isCostSeedEnabled(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_COST_ENABLESEED, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static final String DISPLAY_QTY_WARNING_ON_MAT_MOVEMENT= "DISPLAY_QTY_WARNING_ON_MAT_MOVEMENT";
+	
+	public static boolean isDisplayQtyWarningOnMatMovement(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(DISPLAY_QTY_WARNING_ON_MAT_MOVEMENT, true, AD_Client_ID, AD_Org_ID);
+	}
+		
+	public static final String LIT_CREATE_COUNTER_FOR_REVERSAL= "LIT_CREATE_COUNTER_FOR_REVERSAL";
+	
+	public static boolean isCreateCounterForReversal(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_CREATE_COUNTER_FOR_REVERSAL, true, AD_Client_ID, AD_Org_ID);
+	}
+	
 }

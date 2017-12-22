@@ -582,7 +582,7 @@ public class MMovementConfirm extends X_M_MovementConfirm implements DocAction
 	 * @param inventory 
 	 */
 	private void setInventoryDocType(MInventory inventory) {
-		MDocType[] doctypes = MDocType.getOfDocBaseType(Env.getCtx(), X_C_DocType.DOCBASETYPE_MaterialPhysicalInventory);
+		MDocType[] doctypes = MDocType.getOfDocBaseType(Env.getCtx(), X_C_DocType.DOCBASETYPE_MaterialPhysicalInventory,getAD_Org_ID());
 		for(MDocType doctype : doctypes)
 		{
 			if (X_C_DocType.DOCSUBTYPEINV_PhysicalInventory.equals(doctype.getDocSubTypeInv()))

@@ -2059,6 +2059,8 @@ public class MPayment extends X_C_Payment
 		}
 		// End Trifon - CashPayments
 		
+		// F3P: disabled set because of issues with inv. reactivation and it has no useful meaning
+		/*
 		//	update C_Invoice.C_Payment_ID and C_Order.C_Payment_ID reference
 		if (getC_Invoice_ID() != 0)
 		{
@@ -2068,7 +2070,8 @@ public class MPayment extends X_C_Payment
 				inv.setC_Payment_ID(getC_Payment_ID());
 				inv.saveEx();
 			}
-		}		
+		}	
+		*/	
 		if (getC_Order_ID() != 0)
 		{
 			MOrder ord = new MOrder(getCtx(), getC_Order_ID(), get_TrxName());
@@ -2140,7 +2143,7 @@ public class MPayment extends X_C_Payment
 
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
-		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID());
+		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID(), counterAD_Org_ID); // F3P: added counter org for doc type
 		if (counterDT != null)
 		{
 			if (log.isLoggable(Level.FINE)) log.fine(counterDT.toString());
@@ -2150,7 +2153,7 @@ public class MPayment extends X_C_Payment
 		}
 		else	//	indirect
 		{
-			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID());
+			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID); // F3P: added counter org for doc type
 			if (log.isLoggable(Level.FINE)) log.fine("Indirect C_DocTypeTarget_ID=" + C_DocTypeTarget_ID);
 			if (C_DocTypeTarget_ID <= 0)
 				return null;

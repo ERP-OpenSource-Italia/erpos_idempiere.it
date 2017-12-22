@@ -197,7 +197,7 @@ public class MMovement extends X_M_Movement implements DocAction
 	{
 		if (getC_DocType_ID() == 0)
 		{
-			MDocType types[] = MDocType.getOfDocBaseType(getCtx(), MDocType.DOCBASETYPE_MaterialMovement);
+			MDocType types[] = MDocType.getOfDocBaseType(getCtx(), MDocType.DOCBASETYPE_MaterialMovement,getAD_Org_ID());
 			if (types.length > 0)	//	get first
 				setC_DocType_ID(types[0].getC_DocType_ID());
 			else

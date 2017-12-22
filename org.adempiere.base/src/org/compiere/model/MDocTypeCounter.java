@@ -39,17 +39,17 @@ public class MDocTypeCounter extends X_C_DocTypeCounter
 	 */
 	private static final long serialVersionUID = 3469046560457430527L;
 
-
 	/**
 	 * 	Get Counter document for document type
 	 *	@param ctx context
 	 *	@param C_DocType_ID base document
+	 *	@param AD_Org_ID
 	 *	@return counter document C_DocType_ID or 0 or -1 if no counter doc
 	 */
-	public static int getCounterDocType_ID (Properties ctx, int C_DocType_ID)
+	public static int getCounterDocType_ID (Properties ctx, int C_DocType_ID,int AD_Org_ID)
 	{
 		//	Direct Relationship
-		MDocTypeCounter dtCounter = getCounterDocType (ctx, C_DocType_ID);
+		MDocTypeCounter dtCounter = getCounterDocType (ctx, C_DocType_ID, AD_Org_ID);
 		if (dtCounter != null)
 		{
 			if (!dtCounter.isCreateCounter() || !dtCounter.isValid())
@@ -65,7 +65,7 @@ public class MDocTypeCounter extends X_C_DocTypeCounter
 		String cDocBaseType = getCounterDocBaseType(dt.getDocBaseType());
 		if (cDocBaseType == null)
 			return 0;
-		MDocType[] counters = MDocType.getOfDocBaseType(ctx, cDocBaseType);
+		MDocType[] counters = MDocType.getOfDocBaseType(ctx, cDocBaseType,AD_Org_ID);
 		for (int i = 0; i < counters.length; i++)
 		{
 			MDocType counter = counters[i];
@@ -88,7 +88,7 @@ public class MDocTypeCounter extends X_C_DocTypeCounter
 	 *	@param C_DocType_ID base document
 	 *	@return counter document (may be invalid) or null
 	 */
-	public static MDocTypeCounter getCounterDocType (Properties ctx, int C_DocType_ID)
+	public static MDocTypeCounter getCounterDocType (Properties ctx, int C_DocType_ID, int AD_Org_ID)  // F3P: added check for org
 	{
 		Integer key = new Integer (C_DocType_ID);
 		MDocTypeCounter retValue = (MDocTypeCounter)s_counter.get(key);
@@ -97,13 +97,14 @@ public class MDocTypeCounter extends X_C_DocTypeCounter
 		
 		//	Direct Relationship
 		MDocTypeCounter temp = null;
-		String sql = "SELECT * FROM C_DocTypeCounter WHERE C_DocType_ID=?";
+		String sql = "SELECT * FROM C_DocTypeCounter WHERE C_DocType_ID=? AND AD_Org_ID IN (0,?)"; // F3P: added check for org
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
 		{
 			pstmt = DB.prepareStatement (sql, null);
 			pstmt.setInt (1, C_DocType_ID);
+			pstmt.setInt (2, AD_Org_ID);  // F3P: added check for org
 			rs = pstmt.executeQuery ();
 			while (rs.next () && retValue == null)
 			{
@@ -365,8 +366,9 @@ public class MDocTypeCounter extends X_C_DocTypeCounter
 	 */
 	protected boolean beforeSave (boolean newRecord)
 	{
-		if (getAD_Org_ID() != 0)
-			setAD_Org_ID(0);
+		// F3P: removed, now we check for organization
+		// if (getAD_Org_ID() != 0)
+		//	setAD_Org_ID(0);
 		
 		if (!newRecord
 			&& (is_ValueChanged("C_DocType_ID") || is_ValueChanged("Counter_C_DocType_ID")))
