@@ -27,6 +27,7 @@ import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.PeriodClosedException;
+import org.adempiere.util.FeedbackContainer;
 import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.DocAction;
@@ -40,6 +41,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 
 import it.idempiere.base.model.LITMInOut;
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *  Shipment Model
@@ -1734,6 +1736,13 @@ public class MInOut extends X_M_InOut implements DocAction
 		if(LITMInOut.isUpdateDocNo(this))//F3P: Check if we want to update docNo. This is not good in reopen process
 			setDefiniteDocumentNo();
 		
+		// F3P: check gathered feedback
+		
+		if(FeedbackContainer.getCurrent() != null)
+		{
+			FeedbackContainer.getCurrent().appendInfoFeedback(info);
+		}
+		
 		m_processMsg = info.toString();
 		setProcessed(true);
 		setDocAction(DOCACTION_Close);
@@ -2010,6 +2019,14 @@ public class MInOut extends X_M_InOut implements DocAction
 		//	Is this a counter doc ?
 		if (getRef_InOut_ID() != 0)
 			return null;
+		
+		// F3P: check if is allowed to create counter doc for reversal, needed for compatibility with reeopn
+		
+		if(getReversal_ID() > 0 && 
+				STDSysConfig.isCreateCounterForReversal(getAD_Client_ID(), getAD_Org_ID()) == false)
+		{
+			return null;
+		}
 
 		//	Org Must be linked to BPartner
 		MOrg org = MOrg.get(getCtx(), getAD_Org_ID());
@@ -2028,7 +2045,7 @@ public class MInOut extends X_M_InOut implements DocAction
 
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
-		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID());
+		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID(), counterAD_Org_ID);  // F3P: added counter org for doc type
 		if (counterDT != null)
 		{
 			if (log.isLoggable(Level.FINE)) log.fine(counterDT.toString());
@@ -2038,7 +2055,7 @@ public class MInOut extends X_M_InOut implements DocAction
 		}
 		else	//	indirect
 		{
-			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID);
+			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID);  // F3P: added counter org for doc type
 			if (log.isLoggable(Level.FINE)) log.fine("Indirect C_DocTypeTarget_ID=" + C_DocTypeTarget_ID);
 			if (C_DocTypeTarget_ID <= 0)
 				return null;

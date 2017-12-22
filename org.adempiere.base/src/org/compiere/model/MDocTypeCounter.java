@@ -49,7 +49,7 @@ public class MDocTypeCounter extends X_C_DocTypeCounter
 	public static int getCounterDocType_ID (Properties ctx, int C_DocType_ID,int AD_Org_ID)
 	{
 		//	Direct Relationship
-		MDocTypeCounter dtCounter = getCounterDocType (ctx, C_DocType_ID);
+		MDocTypeCounter dtCounter = getCounterDocType (ctx, C_DocType_ID, AD_Org_ID);
 		if (dtCounter != null)
 		{
 			if (!dtCounter.isCreateCounter() || !dtCounter.isValid())
@@ -88,7 +88,7 @@ public class MDocTypeCounter extends X_C_DocTypeCounter
 	 *	@param C_DocType_ID base document
 	 *	@return counter document (may be invalid) or null
 	 */
-	public static MDocTypeCounter getCounterDocType (Properties ctx, int C_DocType_ID)
+	public static MDocTypeCounter getCounterDocType (Properties ctx, int C_DocType_ID, int AD_Org_ID)  // F3P: added check for org
 	{
 		Integer key = new Integer (C_DocType_ID);
 		MDocTypeCounter retValue = (MDocTypeCounter)s_counter.get(key);
@@ -97,13 +97,14 @@ public class MDocTypeCounter extends X_C_DocTypeCounter
 		
 		//	Direct Relationship
 		MDocTypeCounter temp = null;
-		String sql = "SELECT * FROM C_DocTypeCounter WHERE C_DocType_ID=?";
+		String sql = "SELECT * FROM C_DocTypeCounter WHERE C_DocType_ID=? AND AD_Org_ID IN (0,?)"; // F3P: added check for org
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
 		{
 			pstmt = DB.prepareStatement (sql, null);
 			pstmt.setInt (1, C_DocType_ID);
+			pstmt.setInt (2, AD_Org_ID);  // F3P: added check for org
 			rs = pstmt.executeQuery ();
 			while (rs.next () && retValue == null)
 			{
@@ -365,8 +366,9 @@ public class MDocTypeCounter extends X_C_DocTypeCounter
 	 */
 	protected boolean beforeSave (boolean newRecord)
 	{
-		if (getAD_Org_ID() != 0)
-			setAD_Org_ID(0);
+		// F3P: removed, now we check for organization
+		// if (getAD_Org_ID() != 0)
+		//	setAD_Org_ID(0);
 		
 		if (!newRecord
 			&& (is_ValueChanged("C_DocType_ID") || is_ValueChanged("Counter_C_DocType_ID")))

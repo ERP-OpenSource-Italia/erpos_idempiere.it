@@ -33,6 +33,7 @@ import org.adempiere.exceptions.BPartnerNoShipToAddressException;
 import org.adempiere.exceptions.FillMandatoryException;
 import org.adempiere.model.ITaxProvider;
 import org.adempiere.process.SalesOrderRateInquiryProcess;
+import org.adempiere.util.FeedbackContainer;
 import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.DocAction;
@@ -2113,6 +2114,13 @@ public class MOrder extends X_C_Order implements DocAction
 				return DocAction.STATUS_Invalid;
 			}
 		}
+		
+		// F3P: check gathered feedback
+		
+		if(FeedbackContainer.getCurrent() != null)
+		{
+			FeedbackContainer.getCurrent().appendInfoFeedback(info);
+		}
 
 		setProcessed(true);	
 		m_processMsg = info.toString();
@@ -2459,7 +2467,7 @@ public class MOrder extends X_C_Order implements DocAction
 
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
-		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID());
+		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID(), counterAD_Org_ID);  // F3P: added counter org for doc type
 		if (counterDT != null)
 		{
 			if (log.isLoggable(Level.FINE)) log.fine(counterDT.toString());
@@ -2469,7 +2477,7 @@ public class MOrder extends X_C_Order implements DocAction
 		}
 		else	//	indirect
 		{
-			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID);
+			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID);  // F3P: added counter org for doc type
 			if (log.isLoggable(Level.FINE)) log.fine("Indirect C_DocTypeTarget_ID=" + C_DocTypeTarget_ID);
 			if (C_DocTypeTarget_ID <= 0)
 				return null;
@@ -2499,6 +2507,8 @@ public class MOrder extends X_C_Order implements DocAction
 			counterLine.saveEx(get_TrxName());
 		}
 		if (log.isLoggable(Level.FINE)) log.fine(counter.toString());
+		
+		// F3P: added auto-close of order
 		
 		if(STDSysConfig.isCompleteCounterOrder(Env.getAD_Client_ID(getCtx()),counterAD_Org_ID))
 		{
