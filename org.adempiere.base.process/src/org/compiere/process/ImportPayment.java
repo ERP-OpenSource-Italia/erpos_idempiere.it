@@ -552,6 +552,8 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 				payment.setOrig_TrxID(imp.getOrig_TrxID());
 				payment.setVoiceAuthCode(imp.getVoiceAuthCode());
 				
+				ModelValidationEngine.get().fireImportValidate(this,imp, payment, ImportValidator.TIMING_BEFORE_IMPORT);
+				
 				//	Save payment
 				if (payment.save())
 				{
