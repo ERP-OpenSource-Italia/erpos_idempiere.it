@@ -322,7 +322,7 @@ public class InvoiceGenerate extends SvrProcess
 					else
 					{
 						MInvoiceSchedule is = MInvoiceSchedule.get(getCtx(), m_bp.getC_InvoiceSchedule_ID(), get_TrxName());
-						if (is.canInvoice(order.getDateOrdered())) {
+						if (is.canInvoice(order.getDateOrdered(), p_DateInvoiced)) {
 							if (is.isAmount() && is.getAmt() != null)
 							p_MinimumAmtInvSched = is.getAmt();
 							doInvoice = true;
