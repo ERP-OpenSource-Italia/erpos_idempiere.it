@@ -2286,6 +2286,15 @@ public class MOrder extends X_C_Order implements DocAction
 	{
 		if (log.isLoggable(Level.INFO)) log.info("For " + dt);
 		MInOut shipment = new MInOut (this, dt.getC_DocTypeShipment_ID(), movementDate);
+		
+		String DocSubTypeSO = dt.getDocSubTypeSO();
+		
+		if(MDocType.DOCSUBTYPESO_WarehouseOrder.equals(DocSubTypeSO) && 
+				STDSysConfig.isCopyDocNoFromWhOrderToInout(getAD_Client_ID(),getAD_Org_ID())) // F3P: align document no of inout
+		{
+			shipment.setDocumentNo(getDocumentNo());
+		}		
+		
 	//	shipment.setDateAcct(getDateAcct());
 		if (!shipment.save(get_TrxName()))
 		{

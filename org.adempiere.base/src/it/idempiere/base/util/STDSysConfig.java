@@ -448,4 +448,11 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LIT_CREATE_COUNTER_FOR_REVERSAL, true, AD_Client_ID, AD_Org_ID);
 	}
 	
+	public static final String COPY_DOCNO_FROM_WAREHOUSEORDER_TO_INOUT = "ERPOS_COPY_DOCNO_FROM_WAREHOUSEORDER_TO_INOUT"; 
+
+	public static boolean isCopyDocNoFromWhOrderToInout(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(COPY_DOCNO_FROM_WAREHOUSEORDER_TO_INOUT, false, AD_Client_ID, AD_Org_ID);
+	}
+	
 }
