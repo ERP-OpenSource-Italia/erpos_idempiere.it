@@ -33,6 +33,7 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 
+import org.adempiere.base.Service;
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MAttachment;
 import org.compiere.model.MBPartner;
@@ -67,6 +68,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.Trace;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
+import org.compiere.util.WhereClauseAndParams;
 
 /**
  *	Workflow Activity Model.
@@ -74,6 +76,8 @@ import org.compiere.util.Util;
  *		set Node - startWork
  *
  *  @author Jorg Janke
+ *  @author Silvano Trinchero, www.freepath.it
+ *  		<li>IDEMPIERE-3209 added process-aware resultset-based constructor
  *  @version $Id: MWFActivity.java,v 1.4 2006/07/30 00:51:05 jjanke Exp $
  */
 public class MWFActivity extends X_AD_WF_Activity implements Runnable
@@ -203,7 +207,20 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		//
 		m_process = process;
 	}	//	MWFActivity
-
+	
+	/**
+	 * 	Process-aware Parent Contructor
+	 *	@param process process
+	 *	@param ctx context
+	 *	@param rs record to load
+	 *  @param trx transaction name
+	 */
+	public MWFActivity (MWFProcess process, Properties ctx, ResultSet rs, String trxName)
+	{
+		super(ctx, rs, trxName);
+		m_process = process;
+	}
+	
 	/**
 	 * 	Parent Contructor
 	 *	@param process process
@@ -1958,5 +1975,50 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		}
 		return sb.toString();
 	}	//	getSummary
-
+	
+	/** Get the where clause for activities, and the set of parameters needed
+	 * 
+	 * @return where clause and list of params
+	 */
+	public static WhereClauseAndParams getActivitiesWhere(Properties env)
+	{
+		String where = "a.Processed='N' AND a.WFState='OS' AND ("
+				//	Owner of Activity
+				+ " a.AD_User_ID=?"	//	#1
+				//	Invoker (if no invoker = all)
+				+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID"
+				+ " AND r.ResponsibleType='H' AND COALESCE(r.AD_User_ID,0)=0 AND COALESCE(r.AD_Role_ID,0)=0 AND (a.AD_User_ID=? OR a.AD_User_ID IS NULL))"	//	#2
+				//  Responsible User
+				+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID"
+				+ " AND r.ResponsibleType='H' AND r.AD_User_ID=?)"		//	#3
+				//	Responsible Role
+				+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r INNER JOIN AD_User_Roles ur ON (r.AD_Role_ID=ur.AD_Role_ID)"
+				+ " WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID AND r.ResponsibleType='R' AND ur.AD_User_ID=?)"	//	#4
+				//
+				+ ") AND a.AD_Client_ID=?";	//	#5
+		
+		int AD_User_ID = Env.getAD_User_ID(env);
+		int AD_Client_ID = Env.getAD_Client_ID(env);
+		
+		List<Object> params = new ArrayList<Object>();
+		params.add(AD_User_ID);
+		params.add(AD_User_ID);
+		params.add(AD_User_ID);
+		params.add(AD_User_ID);
+		params.add(AD_Client_ID);
+		
+		WhereClauseAndParams cap = new WhereClauseAndParams(where,params);
+		
+		List<IActivitiesQuery> aqs = Service.locator().list(IActivitiesQuery.class).getServices();
+		
+		if (aqs != null) 
+		{
+			for(IActivitiesQuery aq : aqs)
+			{
+				aq.refineQuery(cap);
+			}
+		}
+		
+		return cap;
+	}
 }	//	MWFActivity

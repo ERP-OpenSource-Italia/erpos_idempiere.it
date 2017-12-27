@@ -71,6 +71,8 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.ValueNamePair;
+import org.compiere.util.WhereClauseAndParams;
+import org.compiere.wf.IWorkflowAware;
 import org.compiere.wf.MWFActivity;
 import org.compiere.wf.MWFNode;
 
@@ -85,6 +87,9 @@ import org.compiere.wf.MWFNode;
  * 			<li> BF[2992649] Issue in Workflow Activities when the records are ordered
  * 			<li> https://sourceforge.net/tracker/?func=detail&aid=2992649&group_id=176962&atid=879332
  *  @author     Compiere - CarlosRuiz integrate code for table selection on workflow present at GPL version of Compiere 3.2.0
+ *  @author 	Silvano Trinchero, www.freepath.it
+ *  	   		<li>IDEMPIERE-3209 support for IWorkflowAware on forms
+ *              <li>IDEMPIERE-3216 usage of factory for activities query,removed getWhereActivities
  */
 public class WFActivity extends CPanel 
 	implements FormPanel, ActionListener, ListSelectionListener
@@ -382,10 +387,13 @@ public class WFActivity extends CPanel
 	{
 		int count = 0;
 		
+		// IDEMPIERE-3216 introduced usage of configurable where clause
+		
+		WhereClauseAndParams cap = MWFActivity.getActivitiesWhere(Env.getCtx());
+		
 		String sql = "SELECT COUNT(*) FROM AD_WF_Activity a "
-			+ "WHERE " + getWhereActivities();
-		int AD_User_ID = Env.getAD_User_ID(Env.getCtx());
-		int AD_Client_ID = Env.getAD_Client_ID(Env.getCtx());
+			+ "WHERE " + cap.getWhere();
+
 		MRole role = MRole.get(Env.getCtx(), Env.getAD_Role_ID(Env.getCtx()));
 		sql = role.addAccessSQL(sql, "a", true, false);
 		PreparedStatement pstmt = null;
@@ -393,11 +401,8 @@ public class WFActivity extends CPanel
 		try
 		{
 			pstmt = DB.prepareStatement (sql, null);
-			pstmt.setInt (1, AD_User_ID);
-			pstmt.setInt (2, AD_User_ID);
-			pstmt.setInt (3, AD_User_ID);
-			pstmt.setInt (4, AD_User_ID);
-			pstmt.setInt (5, AD_Client_ID);
+			DB.setParameters(pstmt, cap.getParams());
+
 			rs = pstmt.executeQuery ();
 			if (rs.next ()) {
 				count = rs.getInt(1);
@@ -423,15 +428,19 @@ public class WFActivity extends CPanel
 	 */
 	public int loadActivities()
 	{
+		// IDEMPIERE-3216 introduced usage of configurable where clause
+		
+		WhereClauseAndParams cap = MWFActivity.getActivitiesWhere(Env.getCtx());
+		
 		while (selTableModel.getRowCount() > 0)
 			selTableModel.removeRow(0);	
 		long start = System.currentTimeMillis();
 		ArrayList<MWFActivity> list = new ArrayList<MWFActivity>();
 		String sql = "SELECT * FROM AD_WF_Activity a "
-			+ "WHERE " + getWhereActivities()
+			+ "WHERE " + cap.getWhere()
 			+ " ORDER BY a.Priority DESC, Created";
-		int AD_User_ID = Env.getAD_User_ID(Env.getCtx());
-		int AD_Client_ID = Env.getAD_Client_ID(Env.getCtx());
+
+		
 		MRole role = MRole.get(Env.getCtx(), Env.getAD_Role_ID(Env.getCtx()));
 		sql = role.addAccessSQL(sql, "a", true, false);
 		PreparedStatement pstmt = null;
@@ -439,11 +448,8 @@ public class WFActivity extends CPanel
 		try
 		{
 			pstmt = DB.prepareStatement (sql, null);
-			pstmt.setInt (1, AD_User_ID);
-			pstmt.setInt (2, AD_User_ID);
-			pstmt.setInt (3, AD_User_ID);
-			pstmt.setInt (4, AD_User_ID);
-			pstmt.setInt (5, AD_Client_ID);
+			DB.setParameters(pstmt, cap.getParams());
+
 			rs = pstmt.executeQuery ();
 			while (rs.next ())
 			{
@@ -480,24 +486,6 @@ public class WFActivity extends CPanel
 		return selTable.getModel().getRowCount(); 
 	}	//	loadActivities
 	
-	private String getWhereActivities() {
-		final String where =
-			"a.Processed='N' AND a.WFState='OS' AND ("
-			//	Owner of Activity
-			+ " a.AD_User_ID=?"	//	#1
-			//	Invoker (if no invoker = all)
-			+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID"
-			+ " AND r.ResponsibleType='H' AND COALESCE(r.AD_User_ID,0)=0 AND COALESCE(r.AD_Role_ID,0)=0 AND (a.AD_User_ID=? OR a.AD_User_ID IS NULL))"	//	#2
-			//  Responsible User
-			+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID"
-			+ " AND r.ResponsibleType='H' AND r.AD_User_ID=?)"		//	#3
-			//	Responsible Role
-			+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r INNER JOIN AD_User_Roles ur ON (r.AD_Role_ID=ur.AD_Role_ID)"
-			+ " WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID AND r.ResponsibleType='R' AND ur.AD_User_ID=?)"	//	#4
-			//
-			+ ") AND a.AD_Client_ID=?";	//	#5
-		return where;
-	}
 
 	/**
 	 * 	Display.
@@ -685,10 +673,32 @@ public class WFActivity extends CPanel
 		{
 			int AD_Form_ID = node.getAD_Form_ID();
 			FormFrame ff = new FormFrame(null);
+			
+			// IDEMPIERE-3209 support for IWorkflowAware on forms
+			
+			FormPanel fp = ff.getFormPanel();
+			
+			if(fp instanceof IWorkflowAware)
+			{
+				((IWorkflowAware) fp).setWFActivity(m_activity);
+			}
+			
 			ff.openForm(AD_Form_ID);
 			ff.pack();
 			AEnv.addToWindowManager(ff);
 			AEnv.showCenterScreen(ff);
+			
+			// IDEMPIERE-3209 support for IWorkflowAware on forms
+			
+			if(fp instanceof IWorkflowAware)
+			{
+				boolean bRefresh = ((IWorkflowAware) fp).isShouldRefreshActivityList();
+				
+				if(bRefresh)
+				{
+					loadActivities();
+				}
+			}	
 		}
 		/*
 		else if (MWFNode.ACTION_UserWorkbench.equals(node.getAction()))

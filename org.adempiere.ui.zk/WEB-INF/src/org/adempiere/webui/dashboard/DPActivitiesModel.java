@@ -21,6 +21,8 @@ import org.compiere.model.MRole;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
+import org.compiere.util.WhereClauseAndParams;
+import org.compiere.wf.MWFActivity;
 
 /**
  * Dashboard item: Workflow activities, notices and requests
@@ -78,36 +80,20 @@ public class DPActivitiesModel {
 	public static int getWorkflowCount()
 	{
 		int count = 0;
+		
+		WhereClauseAndParams cap = MWFActivity.getActivitiesWhere(Env.getCtx());
 
 		String sql = "SELECT count(*) FROM AD_WF_Activity a "
 			+ "WHERE "
-			+ "a.Processed='N' AND a.WFState='OS' AND ("
-			//	Owner of Activity
-			+ " a.AD_User_ID=?"	//	#1
-			//	Invoker (if no invoker = all)
-			+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID"
-			+ " AND r.ResponsibleType='H' AND COALESCE(r.AD_User_ID,0)=0 AND COALESCE(r.AD_Role_ID,0)=0 AND (a.AD_User_ID=? OR a.AD_User_ID IS NULL))"	//	#2
-			//  Responsible User
-			+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID"
-			+ " AND r.ResponsibleType='H' AND r.AD_User_ID=?)"		//	#3
-			//	Responsible Role
-			+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r INNER JOIN AD_User_Roles ur ON (r.AD_Role_ID=ur.AD_Role_ID)"
-			+ " WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID AND r.ResponsibleType='R' AND ur.AD_User_ID=?)"	//	#4
-			//
-			+ ") AND a.AD_Client_ID=?";	//	#5
-		int AD_User_ID = Env.getAD_User_ID(Env.getCtx());
-		int AD_Client_ID = Env.getAD_Client_ID(Env.getCtx());
+			+ cap.getWhere();
+		
 		sql = MRole.getDefault().addAccessSQL(sql, "a", true, false);
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
 		{
 			pstmt = DB.prepareStatement (sql, null);
-			pstmt.setInt (1, AD_User_ID);
-			pstmt.setInt (2, AD_User_ID);
-			pstmt.setInt (3, AD_User_ID);
-			pstmt.setInt (4, AD_User_ID);
-			pstmt.setInt (5, AD_Client_ID);
+			DB.setParameters(pstmt, cap.getParams());
 			rs = pstmt.executeQuery ();
 			if (rs.next ()) {
 				count = rs.getInt(1);
