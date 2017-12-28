@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.List;
 import java.util.Properties;
 
 import org.compiere.model.X_M_ProductionLineMA;
@@ -42,10 +43,9 @@ public class MProductionLineMA extends X_M_ProductionLineMA {
 		{
 			if (asi > 0)
 			{
-				MAttributeSetInstance masi = new MAttributeSetInstance(parent.getCtx(), asi, parent.get_TrxName());
-				dateMaterialPolicy = masi.getCreated();
+				dateMaterialPolicy = MStorageOnHand.getDateMaterialPolicy(parent.getM_Product_ID(), asi, parent.get_TrxName());
 			}
-			else
+			if (dateMaterialPolicy == null)
 			{
 				dateMaterialPolicy = parent.getM_Production().getMovementDate();
 			}
@@ -78,4 +78,23 @@ public class MProductionLineMA extends X_M_ProductionLineMA {
 				Env.ZERO,dateMPolicy);
 	}
 
+	/**
+	 * 	Get Material Allocations for Line
+	 *	@param ctx context
+	 *	@param M_ProductionLine_ID line
+	 *	@param trxName trx
+	 *	@return allocations
+	 */
+	public static MProductionLineMA[] get (Properties ctx, int M_ProductionLine_ID, String trxName)
+	{
+	
+		Query query = MTable.get(ctx, MProductionLineMA.Table_Name)
+							.createQuery(I_M_ProductionLineMA.COLUMNNAME_M_ProductionLine_ID+"=?", trxName);
+		query.setParameters(M_ProductionLine_ID);
+		List<MProductionLineMA> list = query.list();		
+		MProductionLineMA[] retValue = list.toArray (new MProductionLineMA[0]);		
+		return retValue;
+	}	//	get
+	
+	
 }

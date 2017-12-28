@@ -115,10 +115,11 @@ public class Scheduler extends AdempiereServer
 		try
 		{
 			m_trx = Trx.get(Trx.createTrxName("Scheduler"), true);
+			m_trx.setDisplayName(getClass().getName()+"_"+getModel().getName()+"_doWork");
 			m_summary.append(runProcess(process));
 			m_trx.commit(true);
 		}
-		catch (Exception e)
+		catch (Throwable e)
 		{
 			if (m_trx != null)
 				m_trx.rollback();
@@ -169,6 +170,7 @@ public class Scheduler extends AdempiereServer
 		pi.setPrintPreview(true);
 		MUser from = new MUser(getCtx(), pi.getAD_User_ID(), null);
 		
+		pi.setTransactionName(m_trx != null ? m_trx.getTrxName() : null);
 		ServerProcessCtl.process(pi, m_trx);
 		if ( pi.isError() ) // note, this call close the transaction, don't use m_trx below
 		{

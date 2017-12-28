@@ -547,7 +547,7 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 
 	private void addSQLWhere(StringBuffer sql, int index, String value)
 	{
-		if (!(value.equals("") || value.equals("%")) && index < m_queryColumns.size())
+		if (!(value.equals("")) && index < m_queryColumns.size())
 		{
 			//F3P filter special chars
 			if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))

@@ -220,7 +220,7 @@ public class MPInstance extends X_AD_PInstance
 			MRole role = MRole.get(getCtx(), AD_Role_ID);
 			Boolean access = role.getProcessAccess(AD_Process_ID);
 			if (access == null || !access.booleanValue())
-				throw new IllegalAccessError(Msg.getMsg(getCtx(), "CannotAccessProcess", new Object[] {AD_Process_ID, role.getName()}));
+				throw new IllegalStateException(Msg.getMsg(getCtx(), "CannotAccessProcess", new Object[] {AD_Process_ID, role.getName()}));
 		}
 		super.setAD_Process_ID (AD_Process_ID);
 	}	//	setAD_Process_ID
@@ -406,6 +406,7 @@ public class MPInstance extends X_AD_PInstance
 			int cnt = 0;
 			try {
 				pstmt = DB.prepareStatement(sql, null);
+				pstmt.setFetchSize(lastRunCount);
 				pstmt.setInt(1, AD_Process_ID);
 				pstmt.setInt(2, AD_User_ID);
 				pstmt.setInt(3, Env.getAD_Client_ID(ctx));

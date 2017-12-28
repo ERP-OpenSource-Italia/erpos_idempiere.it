@@ -859,7 +859,7 @@ public class DataEngine
 					}
 					// F3P end
 					//	Check Columns for Function Columns
-					for (int i = pd.getColumnInfo().length-1; i >= 0; i--)	//	backwards (leaset group first)
+					for (int i = 0; i < pd.getColumnInfo().length; i++)	
 					{
 						PrintDataColumn group_pdc = pd.getColumnInfo()[i];
 						if (!m_group.isGroupColumn(group_pdc.getColumnName()))
@@ -868,13 +868,21 @@ public class DataEngine
 						int iSeq = mapSortADColumnSequence.get(group_pdc.getAD_Column_ID());
 						
 						//	Group change
-						Object value = m_group.groupChange(group_pdc.getColumnName(), rs.getObject(group_pdc.getAlias()));
+						Object value = m_group.groupChange(group_pdc.getColumnName(), rs.getObject(group_pdc.getAlias()), force);
 						if (value != null || iSeq >= iFirstChangedGroup)	//	Group change F3P: if the group is AFTER (subdetail of) a changed group, it has to be considered changed
 
 						{
 							if(value == null) // F3P: if a column is managed as changed due to being changed a 'parent' one, value will be null. Use result set value since its equals to the current one
 								value = rs.getObject(group_pdc.getAlias());
 							
+						}
+					}
+					
+					for (int j = changedGroups.size() - 1; j >= 0; j--) //	backwards (least group first)
+					{
+						PrintDataColumn group_pdc = changedGroups.get(j);
+						Object value = changedValues.get(j);
+						
 							char[] functions = m_group.getFunctions(group_pdc.getColumnName());
 							for (int f = 0; f < functions.length; f++)
 							{
@@ -913,7 +921,6 @@ public class DataEngine
 								m_group.reset(group_pdc.getColumnName(), pdc.getColumnName());
 							}
 						}	//	Group change
-					}	//	for all columns
 				}	//	group change
 
 				//	new row ---------------------------------------------------
@@ -1075,7 +1082,7 @@ public class DataEngine
 				PrintDataColumn group_pdc = pd.getColumnInfo()[i];
 				if (!m_group.isGroupColumn(group_pdc.getColumnName()))
 					continue;
-				Object value = m_group.groupChange(group_pdc.getColumnName(), new Object());
+				Object value = m_group.groupChange(group_pdc.getColumnName(), new Object(), false);
 				if (value != null)	//	Group change
 				{
 					char[] functions = m_group.getFunctions(group_pdc.getColumnName());

@@ -214,6 +214,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			}
 	
 			trx = Trx.get(trxName, true);
+			if (manageTrx)
+				trx.setDisplayName(getClass().getName()+"_"+webServiceName+"_setDocAction");
 			
 			Map<String, Object> requestCtx = getRequestCtx();
 	
@@ -422,6 +424,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			reqprocess.setADRecordID(modelRunProcess.getADRecordID());
 			reqprocess.setDocAction(modelRunProcess.getDocAction());
 			RunProcessResponseDocument response = Process.runProcess(getCompiereService(), docprocess, getRequestCtx(), localTrxName);
+			if (response != null && response.getRunProcessResponse() != null && response.getRunProcessResponse().getIsError())
+				log.warning("Error running webservice " + serviceType + " -> " + response.getRunProcessResponse().getError());
 			Map<String, Object> requestCtx = getRequestCtx();
 			requestCtx.put(serviceType+"_Summary", response.getRunProcessResponse().getSummary());
 			return response;
@@ -698,6 +702,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			}
 	
 			trx = Trx.get(trxName, true);
+			if (manageTrx)
+				trx.setDisplayName(getClass().getName()+"_"+webServiceName+"_deleteData");
 	
 			// get the PO for the tablename and record ID
 			MTable table = MTable.get(ctx, tableName);
@@ -780,6 +786,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	    	}
 	    		
 	    	trx = Trx.get(trxName, true);
+	    	if (manageTrx)
+	    		trx.setDisplayName(getClass().getName()+"_"+webServiceName+"_createData");
 	    	
 	    	
 	    	// get the PO for the tablename and record ID
@@ -892,6 +900,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 				manageTrx = true;
 			}
 			trx = Trx.get(trxName, true);
+			if (manageTrx)
+				trx.setDisplayName(getClass().getName()+"_"+webServiceName+"_createUpdateData");
 	
 			// get the PO for the tablename and record ID
 			MTable table = MTable.get(ctx, tableName);
@@ -1272,6 +1282,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	    	}
 	    	
 	    	trx = Trx.get(trxName, true);
+	    	if (manageTrx)
+	    		trx.setDisplayName(getClass().getName()+"_"+webServiceName+"_updateData");
 	    	
 	    	
 	    	
@@ -1464,6 +1476,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 				manageTrx = true;
 			}
 			trx = Trx.get(trxName, true);
+			if (manageTrx)
+				trx.setDisplayName(getClass().getName()+"_"+webServiceName+"_queryData");
 			
 	    	StringBuilder sqlBuilder = new StringBuilder(role.addAccessSQL("SELECT * FROM " + tableName, tableName, true, true));
 			

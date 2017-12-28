@@ -116,6 +116,9 @@ public class SystemIDs
 	public final static int REFERENCE_DATATYPE_URL = 40;
 	public final static int REFERENCE_DATATYPE_YES_NO = 20;
 	public final static int REFERENCE_DATATYPE_CHART = 53370;
+	public final static int REFERENCE_DATATYPE_DASHBOARD_CONTENT = 200122;
+	public final static int REFERENCE_DATATYPE_SINGLE_SELECTION_GRID = 200127;
+	public final static int REFERENCE_DATATYPE_MULTIPLE_SELECTION_GRID = 200128;
 
 	public final static int REFERENCE_AD_USER = 110;
 	public final static int REFERENCE_DOCUMENTACTION = 135;
@@ -143,16 +146,11 @@ public class SystemIDs
 
 	public final static int WINDOW_ACCOUNTCOMBINATION = 153;
 	public final static int WINDOW_CUSTOMERRETURN = 53097;
-	public final static int WINDOW_INVENTORYMOVE = 170;
 	public final static int WINDOW_LOT = 257;
-	public final static int WINDOW_MATERIALRECEIPT = 184;
 	public final static int WINDOW_MATERIALTRANSACTIONS_INDIRECTUSER = 223;
 	public final static int WINDOW_MY_REQUESTS = 237;
-	public final static int WINDOW_PHYSICALINVENTORY = 168;
-	public final static int WINDOW_PRODUCTION = 191;
 	public final static int WINDOW_REQUESTS_ALL = 232;
 	public final static int WINDOW_RETURNTOVENDOR = 53098;
-	public final static int WINDOW_SHIPMENT_CUSTOMER = 169;
 	public final static int WINDOW_WAREHOUSE_LOCATOR = 139;
 	public final static int WINDOW_WINDOW_TAB_FIELD = 102;	
 

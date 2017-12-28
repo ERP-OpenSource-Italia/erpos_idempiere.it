@@ -95,7 +95,7 @@ public class PrintDataGroup
 	 * 	@param value column value
 	 * 	@return null if no group change otherwise old value
 	 */
-	public Object groupChange (String groupColumnName, Object value)
+	public Object groupChange (String groupColumnName, Object value, boolean force)
 	{
 		return groupChange(groupColumnName, value,false); // F3P: added variant to avoid updating check value
 	}
@@ -119,7 +119,7 @@ public class PrintDataGroup
 		if (m_groupMap.containsKey(groupColumnName))
 		{
 			Object oldValue = m_groupMap.get(groupColumnName);
-			if (newValue.equals(oldValue))
+			if (newValue.equals(oldValue) && !force )
 				return null;
 			if(checkOnly == false) // F3P: added variant to avoid updating check value
 				m_groupMap.put(groupColumnName, newValue);

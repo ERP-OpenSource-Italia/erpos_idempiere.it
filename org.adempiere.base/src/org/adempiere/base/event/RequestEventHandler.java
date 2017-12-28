@@ -68,7 +68,7 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 				MNote note = new MNote(Env.getCtx(), AD_Message_ID, eventData.getTo().getAD_User_ID(),
 						X_R_Request.Table_ID, eventData.getRequestID(), 
 						eventData.getSubject(), eventData.getMessage(), null);
-				note.save();
+				note.saveEx();
 			}
 		}
 		else if (topic.equals(IEventTopics.PO_BEFORE_NEW) || topic.equals(IEventTopics.PO_BEFORE_CHANGE)
@@ -389,7 +389,7 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 					}
 				}
 				if (X_AD_User.NOTIFICATIONTYPE_Notice.equals(NotificationType)
-					&& AD_Role_ID >= 0)
+					&& AD_Role_ID < 0)
 				{
 					if (s_log.isLoggable(Level.CONFIG)) s_log.config("No internal User: " + Name);
 					continue;
@@ -419,7 +419,7 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 					MNote note = new MNote(r.getCtx(), AD_Message_ID, AD_User_ID,
 						X_R_Request.Table_ID, r.getR_Request_ID(), 
 						subject, message.toString(), r.get_TrxName());
-					note.save();
+					note.saveEx();
 				}
 			}
 		}

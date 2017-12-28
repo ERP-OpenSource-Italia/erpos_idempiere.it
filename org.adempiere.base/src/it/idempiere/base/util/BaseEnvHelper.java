@@ -63,6 +63,15 @@ public class BaseEnvHelper
 				{
 					String sVar = sTokenizer.nextToken();
 					
+					// IDEMPIERE-194 Handling null context variable
+					String defaultV = "NULL";
+					int idx = sVar.indexOf(":");	//	or clause
+					if (idx  >=  0) 
+					{
+						defaultV = sVar.substring(idx+1, sVar.length());
+						sVar = sVar.substring(0, idx);
+					}
+					
 					//format string
 					String format = "";
 					int f = sVar.indexOf('<');
@@ -91,7 +100,7 @@ public class BaseEnvHelper
 					}
 					
 					if(Util.isEmpty(sVal))
-						sParsed.append("NULL");
+						sParsed.append(defaultV);
 					else
 						sParsed.append(sVal);
 				}
@@ -189,8 +198,6 @@ public class BaseEnvHelper
 		
 		PreparedStatement	pstmt = DB.prepareStatement(sSQL, null);
 		ResultSet rs = null;
-		
-		
 		
 		try
 		{

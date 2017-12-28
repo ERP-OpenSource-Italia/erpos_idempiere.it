@@ -228,22 +228,88 @@ public class MMailText extends X_R_MailText
 		return text;
 	}	//	parse
 	
-	/**
+/**
 	 * 	Parse text
 	 *	@param text text
 	 *	@param po object
 	 *	@return parsed text
 	 */
-	// ADEMPIERE-49: replaced custom evaluation with standard function, with more functionalities. Removed unused function
 	private String parse (String text, PO po)
 	{
 		if (po == null || Util.isEmpty(text) || text.indexOf('@') == -1)
 			return text;
 		
-		return Env.parseVariable(text, po, po.get_TrxName(), true, ESCAPE_AT); 
+		String inStr = text;
+		String token;
+		StringBuilder outStr = new StringBuilder();
+
+		int i = inStr.indexOf('@');
+		while (i != -1)
+		{
+			outStr.append(inStr.substring(0, i));			// up to @
+			inStr = inStr.substring(i+1, inStr.length());	// from first @
+
+			int j = inStr.indexOf('@');						// next @
+			if (j < 0)										// no second tag
+			{
+				inStr = "@" + inStr;
+				break;
+			}
+
+			token = inStr.substring(0, j);
+			outStr.append(parseVariable(token, po));		// replace context
+
+			inStr = inStr.substring(j+1, inStr.length());	// from second @
+			i = inStr.indexOf('@');
+		}
+
+		outStr.append(inStr);           					//	add remainder
+		return outStr.toString();
 	}	//	parse
 
 	/**
+	 * 	Parse Variable
+	 *	@param variable variable
+	 *	@param po po
+	 *	@return translated variable or if not found the original tag
+	 */
+	private String parseVariable (String variable, PO po)
+	{
+		if (variable.contains("<") && variable.contains(">")) { // IDEMPIERE-3096
+			return Env.parseVariable("@"+variable+"@", po, get_TrxName(), true, ESCAPE_AT);
+		}
+		// special default formatting cases for dates/times/boolean in mail text not covered by Env.parseVariable
+		int index = po.get_ColumnIndex(variable);
+		if (index == -1){
+			StringBuilder msgreturn = new StringBuilder("@").append(variable).append("@");
+			return msgreturn.toString();	//	keep for next
+		}	
+		//
+		MColumn col = MColumn.get(Env.getCtx(), po.get_TableName(), variable);
+		Object value = null;
+		if (col != null && col.isSecure()) {
+			value = "********";
+		} else if (col.getAD_Reference_ID() == DisplayType.Date || col.getAD_Reference_ID() == DisplayType.DateTime || col.getAD_Reference_ID() == DisplayType.Time) {
+			SimpleDateFormat sdf = DisplayType.getDateFormat(col.getAD_Reference_ID());
+			value = sdf.format (po.get_Value(index));	
+		} else if (col.getAD_Reference_ID() == DisplayType.YesNo) {
+			if (po.get_ValueAsBoolean(variable))
+				value = Msg.getMsg(Env.getCtx(), "Yes");
+			else
+				value = Msg.getMsg(Env.getCtx(), "No");
+		} else {
+			value = po.get_Value(index);
+		}
+		if (value == null)
+			return "";
+		return value.toString();
+	}	//	translate
+
+	/**
+		if (variable.contains("<") && variable.contains(">")) { // IDEMPIERE-3096
+			return Env.parseVariable("@"+variable+"@", po, get_TrxName(), true);
+		}
+		// special default formatting cases for dates/times/boolean in mail text not covered by Env.parseVariable
 	 * 	Set User for parse
 	 *	@param AD_User_ID user
 	 */

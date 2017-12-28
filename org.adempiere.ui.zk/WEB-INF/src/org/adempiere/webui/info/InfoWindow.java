@@ -68,6 +68,7 @@ import org.compiere.model.MLookupFactory;
 import org.compiere.model.MLookupInfo;
 import org.compiere.model.MProcess;
 import org.compiere.model.MRole;
+import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
 import org.compiere.model.X_AD_InfoColumn;
 import org.compiere.util.DB;
@@ -108,11 +109,11 @@ import it.idempiere.base.util.STDSysConfig;
  * @contributor xolali 	IDEMPIERE-1045 Sub-Info Tabs  (reviewed by red1)
  */
 public class InfoWindow extends InfoPanel implements ValueChangeListener, EventListener<Event> {
-
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 8358292103127594383L;
+	private static final long serialVersionUID = 1672005382454423850L;
+
 	protected Grid parameterGrid;
 	private Borderlayout layout;
 	private Vbox southBody;
@@ -469,12 +470,13 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		
 		boolean splitValue = false;
 		if (m_count <= 0) {			
-			String[] values = queryValue.split("[_]");
+			String separator = MSysConfig.getValue(MSysConfig.IDENTIFIER_SEPARATOR, "_", Env.getAD_Client_ID(Env.getCtx()));
+			String[] values = queryValue.split("[" + separator.trim()+"]");
 			if (values.length == 2) {
 				splitValue = true;
 				for(int i = 0; i < values.length && i < identifiers.size(); i++) {
 					WEditor editor = identifiers.get(i);
-					editor.setValue(values[i]);
+					editor.setValue(values[i].trim());
 				}
 				testCount(false);
 			} 
@@ -1523,16 +1525,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
         dataSql = MRole.getDefault().addAccessSQL(dataSql, getTableName(),
             MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO);
         
-        if (infoWindow.getOtherClause() != null && infoWindow.getOtherClause().trim().length() > 0) {
-        	String otherClause = infoWindow.getOtherClause();
-        	if (otherClause.indexOf("@") >= 0) {
-        		String s = Env.parseContext(infoContext, p_WindowNo, otherClause, true, false);
-        		if (s.length() == 0) {
-        			log.severe("Failed to parse other clause. " + otherClause);
-        		} else {
-        			otherClause = s;
-        		}
-        	}
+        String otherClause = getOtherClauseParsed();
+        if (otherClause.length() > 0) {
         	dataSql = dataSql + " " + otherClause;
         }
         
@@ -1547,8 +1541,24 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
         }
 		return dataSql;
 	}
-    
-    @Override
+
+    private String getOtherClauseParsed() {
+    	String otherClause = "";
+        if (infoWindow != null && infoWindow.getOtherClause() != null && infoWindow.getOtherClause().trim().length() > 0) {
+        	otherClause = infoWindow.getOtherClause();
+        	if (otherClause.indexOf("@") >= 0) {
+        		String s = Env.parseContext(infoContext, p_WindowNo, otherClause, true, false);
+        		if (s.length() == 0) {
+        			log.severe("Failed to parse other clause. " + otherClause);
+        		} else {
+        			otherClause = s;
+        		}
+        	}
+        }
+    	return otherClause;
+	}
+
+	@Override
     protected void executeQuery() {
     	prepareTable();
     	super.executeQuery();
@@ -1754,6 +1764,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		}
 		countSql = MRole.getDefault().addAccessSQL	(countSql, getTableName(),
 													MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO);
+		// IDEMPIERE-3521
+		String otherClause = getOtherClauseParsed();
+        if (otherClause.length() > 0) {
+    		countSql = countSql + " " + otherClause;
+        }
 		
 		countSql = "SELECT COUNT(*) FROM ( " + countSql + " ) a";			
 		
@@ -2100,7 +2115,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		// eval only mandatory field
 		if (validateGrid.isMandatory(true)){
 			// update color of field
-			wEditor.updateLabelStyle();
+			wEditor.updateStyle();
 			Object data = wEditor.getValue();
 			if (data == null || data.toString().length() == 0) {				
 				return false;

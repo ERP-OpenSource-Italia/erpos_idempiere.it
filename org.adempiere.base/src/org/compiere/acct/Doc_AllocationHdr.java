@@ -1094,10 +1094,17 @@ class Doc_AllocationTax
 						total, m_WriteOffAmt, precision);
 					if (amount.signum() != 0)
 					{
-						fact.createLine (line, m_WriteOffAccount,
-							as.getC_Currency_ID(), amount, null);
-						fact.createLine (line, taxAcct,
-							as.getC_Currency_ID(), null, amount);
+						if (m_IsSOTrx) {
+							fact.createLine (line, m_WriteOffAccount,
+									as.getC_Currency_ID(), amount, null);
+							fact.createLine (line, taxAcct,
+									as.getC_Currency_ID(), null, amount);
+						} else {
+							fact.createLine (line, m_WriteOffAccount,
+									as.getC_Currency_ID(), amount.negate(), null);
+							fact.createLine (line, taxAcct,
+									as.getC_Currency_ID(), null, amount.negate());
+						}
 					}
 				}
 				//	Original Tax is CR - need to correct it DR
@@ -1107,10 +1114,17 @@ class Doc_AllocationTax
 						total, m_WriteOffAmt, precision);
 					if (amount.signum() != 0)
 					{
-						fact.createLine (line, taxAcct,
-							as.getC_Currency_ID(), amount, null);
-						fact.createLine (line, m_WriteOffAccount,
-							as.getC_Currency_ID(), null, amount);
+						if(m_IsSOTrx) {
+							fact.createLine (line, taxAcct,
+									as.getC_Currency_ID(), amount, null);
+							fact.createLine (line, m_WriteOffAccount,
+									as.getC_Currency_ID(), null, amount);
+						} else {
+							fact.createLine (line, taxAcct,
+									as.getC_Currency_ID(), amount.negate(), null);
+							fact.createLine (line, m_WriteOffAccount,
+									as.getC_Currency_ID(), null, amount.negate());
+						}
 					}
 				}
 			}	//	WriteOff

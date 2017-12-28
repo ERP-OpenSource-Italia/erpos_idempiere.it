@@ -32,6 +32,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
+import org.compiere.acct.Doc;
 import org.compiere.process.DocAction;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
@@ -54,7 +55,7 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -5752888482207479355L;
+	private static final long serialVersionUID = 2130445794890189020L;
 
 	/**
 	 * 	Get Check for Payment
@@ -142,6 +143,7 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 		psc.setIsReceipt(payment.isReceipt());
 		psc.setPayAmt (payment.getPayAmt());
 		psc.setDiscountAmt(payment.getDiscountAmt());
+		psc.setWriteOffAmt(payment.getWriteOffAmt());
 		psc.setQty (1);
 		psc.setDocumentNo(payment.getDocumentNo());
 		psc.setProcessed(true);
@@ -160,6 +162,7 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 			psl.setOpenAmt(payment.getPayAmt().add(payment.getDiscountAmt()));
 			psl.setPayAmt (payment.getPayAmt());
 			psl.setDiscountAmt(payment.getDiscountAmt());
+			psl.setWriteOffAmt(payment.getWriteOffAmt());
 			psl.setDifferenceAmt (Env.ZERO);
 			psl.setC_PaySelectionCheck_ID(psc.getC_PaySelectionCheck_ID());
 			psl.setProcessed(true);
@@ -182,6 +185,7 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 						psla.setOpenAmt(pAlloc.getAmount().add(pAlloc.getDiscountAmt()));
 						psla.setPayAmt (pAlloc.getAmount());
 						psla.setDiscountAmt(pAlloc.getDiscountAmt());
+						psla.setWriteOffAmt(pAlloc.getWriteOffAmt());
 						psla.setDifferenceAmt (Env.ZERO);
 						psla.setC_PaySelectionCheck_ID(psc.getC_PaySelectionCheck_ID());
 						psla.setProcessed(true);
@@ -293,13 +297,11 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 			localTrx = true;
 			trxName = Trx.createTrxName("ConfirmPrintSingle");
 			trx = Trx.get(trxName, true);
+			trx.setDisplayName(MPaySelectionCheck.class.getName()+"_confirmPrint");
 			check.set_TrxName(trxName);
 		}
-		
-		MPayment payment = null;
-		
 		try {
-			payment = PO.get(check.getCtx(), MPayment.Table_Name, check.getC_Payment_ID(), trxName);
+			MPayment payment = new MPayment(check.getCtx(), check.getC_Payment_ID(), trxName);
 			//	Existing Payment
 			if (check.getC_Payment_ID() != 0)
 			{
@@ -331,14 +333,14 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 				else
 				{
 					s_log.log(Level.SEVERE, "Unsupported Payment Rule=" + check.getPaymentRule());
-					return null;
+					return;
 				}
 				payment.setTrxType(X_C_Payment.TRXTYPE_CreditPayment);
 				// F3P: set receipt/payment
 				payment.setIsReceipt(check.isReceipt());
 				payment.setAmount(check.getParent().getC_Currency_ID(), check.getPayAmt());
 				payment.setDiscountAmt(check.getDiscountAmt());
-				
+				payment.setWriteOffAmt(check.getWriteOffAmt());
 //				payment.setDateTrx(check.getParent().getPayDate());
 				//new parameter added
 				if (trxDate != null) {
@@ -371,17 +373,16 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 					//
 					payment.setC_Invoice_ID (psl.getC_Invoice_ID());
 					payment.setDiscountAmt (psl.getDiscountAmt());
-					payment.setWriteOffAmt(psl.getDifferenceAmt());
+					payment.setWriteOffAmt (psl.getWriteOffAmt());
 					BigDecimal overUnder = psl.getOpenAmt().subtract(psl.getPayAmt())
-						.subtract(psl.getDiscountAmt()).subtract(psl.getDifferenceAmt());
+						.subtract(psl.getDiscountAmt()).subtract(psl.getWriteOffAmt()).subtract(psl.getDifferenceAmt());
 					payment.setOverUnderAmt(overUnder);
 				}
 				else
 				{
+					payment.setWriteOffAmt(Env.ZERO);
 					payment.setDiscountAmt(Env.ZERO);
-					payment.setWriteOffAmt(Env.ZERO); // F3P: moved into else to avoid overriding previously set value
 				}
-				// payment.setWriteOffAmt(Env.ZERO);
 				if (bCreateToDb)// F3P: check if we need to save it
 				{
 					payment.saveEx();
@@ -435,72 +436,127 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 	 * 	Create Payments the first time 
 	 * 	@param checks checks
 	 * 	@param batch batch
+	 * 	@param createDeposit create deposit batch
 	 * 	@return last Document number or 0 if nothing printed
 	 */
-	public static int confirmPrint (MPaySelectionCheck[] checks, MPaymentBatch batch)
+	public static int confirmPrint (MPaySelectionCheck[] checks, MPaymentBatch batch, boolean createDepositBatch)
 	{
 		boolean localTrx = false;
 		String trxName = null;
-		if (checks.length > 0)
-			trxName = checks[0].get_TrxName();
-		Trx trx = null;
-		if (trxName == null) {
-			localTrx = true;
-			trxName = Trx.createTrxName("ConfirmPrintMulti");
-			trx = Trx.get(trxName, true);
-		}
 		int lastDocumentNo = 0;
-		try {
-			for (int i = 0; i < checks.length; i++)
+
+		if (checks.length > 0)
+		{
+			trxName = checks[0].get_TrxName();
+			Properties ctx = checks[0].getCtx();
+			int c_BankAccount_ID = checks[0].getC_PaySelection().getC_BankAccount_ID() ;
+			String paymentRule = checks[0].getPaymentRule() ;
+			Boolean isDebit ;
+			if (MInvoice.PAYMENTRULE_DirectDeposit.compareTo(paymentRule) == 0
+					|| MInvoice.PAYMENTRULE_Check.compareTo(paymentRule) == 0
+					|| MInvoice.PAYMENTRULE_OnCredit.compareTo(paymentRule) == 0)
 			{
-				MPaySelectionCheck check = checks[i];
-				if (localTrx)
-					check.set_TrxName(trxName);
-				confirmPrint(check, batch);
-				
-				//	Get Check Document No
-				try
-				{
-					int no = Integer.parseInt(check.getDocumentNo());
-					if (lastDocumentNo < no)
-						lastDocumentNo = no;
-				}
-				catch (NumberFormatException ex)
-				{
-					s_log.log(Level.SEVERE, "DocumentNo=" + check.getDocumentNo(), ex);
-				}
-			}	//	all checks
-		} catch (Exception e) {
-			if (localTrx && trx != null) {
-				trx.rollback();
-				trx.close();
-				trx = null;
+				isDebit = false ;
 			}
-			throw new AdempiereException(e);
-		} finally {
-			if (localTrx && trx != null) {
-				trx.commit();
-				trx.close();
+			else if (MInvoice.PAYMENTRULE_DirectDebit.compareTo(paymentRule) == 0)
+			{
+				isDebit = true ;
+			}
+			else
+			{
+				isDebit = false ;
+				createDepositBatch = false ;
+			}
+			Trx trx = null;
+			if (trxName == null) {
+				localTrx = true;
+				trxName = Trx.createTrxName("ConfirmPrintMulti");
+				trx = Trx.get(trxName, true);
+			}
+
+			try {
+				MDepositBatch depositBatch = null;
+				if (createDepositBatch)
+				{
+					depositBatch = new MDepositBatch(ctx, 0, trxName) ;
+					depositBatch.setC_BankAccount_ID(c_BankAccount_ID);
+					if (isDebit)
+					{
+						depositBatch.setC_DocType_ID(MDocType.getDocType(Doc.DOCTYPE_ARReceipt));
+					}
+					else
+					{
+						depositBatch.setC_DocType_ID(MDocType.getDocType(Doc.DOCTYPE_APPayment));
+					}
+					depositBatch.setDateDeposit(new Timestamp((new Date()).getTime()));
+					depositBatch.setDateDoc(new Timestamp((new Date()).getTime()));
+					depositBatch.saveEx();
+				}
+
+				for (int i = 0; i < checks.length; i++)
+				{
+					MPaySelectionCheck check = checks[i];
+					if (localTrx)
+						check.set_TrxName(trxName);
+					confirmPrint(check, batch);
+					if (createDepositBatch)
+					{
+						MDepositBatchLine depositBatchLine = new MDepositBatchLine(depositBatch) ;
+						depositBatchLine.setC_Payment_ID(check.getC_Payment_ID());
+						depositBatchLine.setProcessed(true);
+						depositBatchLine.saveEx();
+					}
+					//	Get Check Document No
+					try
+					{
+						int no = Integer.parseInt(check.getDocumentNo());
+						if (lastDocumentNo < no)
+							lastDocumentNo = no;
+					}
+					catch (NumberFormatException ex)
+					{
+						s_log.log(Level.SEVERE, "DocumentNo=" + check.getDocumentNo(), ex);
+					}
+				}	//	all checks
+
+				if (createDepositBatch)
+				{
+
+					depositBatch.setProcessed(true);
+					depositBatch.saveEx();
+				}
+
+			} catch (Exception e) {
+				if (localTrx && trx != null) {
+					trx.rollback();
+					trx.close();
+					trx = null;
+				}
+				throw new AdempiereException(e);
+			} finally {
+				if (localTrx && trx != null) {
+					trx.commit();
+					trx.close();
+				}
 			}
 		}
-
 		if (s_log.isLoggable(Level.FINE)) s_log.fine("Last Document No = " + lastDocumentNo);
 		return lastDocumentNo;
 	}	//	confirmPrint
 	
 	/**************************************************************************
-	 * Confirm Print. Create Payments the first time
-	 * 
-	 * @param checks
-	 *            checks
-	 * @param batch
-	 *            batch
-	 * @param bCreateToDb
-	 *            if true, new MPayment and MPaymentBatch are saved to db,
-	 *            otherwise not (already created MPayment will be updated
-	 *            always)
-	 * @return hashMap tith payments and rifDoc associated
+	 * 	Confirm Print.
+	 * 	Create Payments the first time 
+	 * 	@param checks checks
+	 * 	@param batch batch
+	 * 	@return last Document number or 0 if nothing printed
 	 */
+
+	public static int confirmPrint (MPaySelectionCheck[] checks, MPaymentBatch batch)
+	{
+		return confirmPrint (checks,batch,false) ;
+	} // confirmPrint
+
 	public static HashMap<MPayment, ArrayList<RifDoc>> confirmPrint(
 			MPaySelectionCheck[] checks, MPaymentBatch batch,
 			boolean bCreateToDb) {
@@ -599,6 +655,7 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 		//	setPaymentRule (null);
 			setPayAmt (Env.ZERO);
 			setDiscountAmt(Env.ZERO);
+			setWriteOffAmt(Env.ZERO);
 			setIsPrinted (false);
 			setIsReceipt (false);
 			setQty (0);
@@ -660,6 +717,7 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 		setIsReceipt(line.isSOTrx());
 		setPayAmt (line.getPayAmt());
 		setDiscountAmt(line.getDiscountAmt());
+		setWriteOffAmt(line.getWriteOffAmt());
 		setQty (1);
 	}	//	MPaySelectionCheck
 
@@ -690,17 +748,19 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 	public void addLine (MPaySelectionLine line)
 	{
 		if (getC_BPartner_ID() != line.getInvoice().getC_BPartner_ID())
-			throw new IllegalArgumentException("Line for fifferent BPartner");
+			throw new IllegalArgumentException("Line for different BPartner");
 		//
 		if (isReceipt() == line.isSOTrx())
 		{
 			setPayAmt (getPayAmt().add(line.getPayAmt()));
 			setDiscountAmt(getDiscountAmt().add(line.getDiscountAmt()));
+			setWriteOffAmt(getWriteOffAmt().add(line.getWriteOffAmt()));
 		}
 		else
 		{
 			setPayAmt (getPayAmt().subtract(line.getPayAmt()));
 			setDiscountAmt(getDiscountAmt().subtract(line.getDiscountAmt()));
+			setWriteOffAmt(getWriteOffAmt().subtract(line.getWriteOffAmt()));
 		}
 		setQty (getQty()+1);
 	}	//	addLine

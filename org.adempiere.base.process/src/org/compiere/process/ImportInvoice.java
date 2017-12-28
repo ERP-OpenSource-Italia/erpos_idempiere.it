@@ -593,7 +593,7 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 				.append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0){
-			log.warning ("Invalid Tax=" + no);
+			log.warning ("Invalid C_1099Box_Value=" + no);
 			bErrorsOccurred = true; //F3P
 		}
 		
@@ -718,7 +718,7 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 							imp.setAD_User_ID (user.getAD_User_ID ());
 					}
 				}
-				imp.save ();
+				imp.saveEx();
 			}	//	for all new BPartners
 			//
 		}

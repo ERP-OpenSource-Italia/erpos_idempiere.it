@@ -2674,11 +2674,17 @@ public class GridTable extends AbstractTableModel
 						  || (hasDocTypeTargetField && field.getColumnName().equals("C_DocType_ID"))
 						  || ! field.isAllowCopy())
 				{
-					rowData[i] = field.getDefault();
-					field.setValue(rowData[i], m_inserting);
+					Object value = field.getDefault();
+					field.setValue(value, m_inserting);
+					field.validateValueNoDirect();
+					rowData[i] = field.getValue();
 				}
-				else
-					rowData[i] = origData[i];
+				else {
+					Object value = origData[i];
+					field.setValue(value, m_inserting);
+					field.validateValueNoDirect();
+					rowData[i] = field.getValue();
+				}
 			}
 		}
 		else	//	new
@@ -2686,8 +2692,10 @@ public class GridTable extends AbstractTableModel
 			for (int i = 0; i < size; i++)
 			{
 				GridField field = (GridField)m_fields.get(i);
-				rowData[i] = field.getDefault();
-				field.setValue(rowData[i], m_inserting);
+				Object value = field.getDefault();
+				field.setValue(value, m_inserting);
+				field.validateValueNoDirect();
+				rowData[i] = field.getValue();
 			}
 		}
 		
@@ -3619,6 +3627,8 @@ public class GridTable extends AbstractTableModel
 			//https://jdbc.postgresql.org/documentation/head/query.html#query-with-cursor
 			String trxName = m_virtual ? Trx.createTrxName("Loader") : null;
 			trx  = trxName != null ? Trx.get(trxName, true) : null;
+			if (trx != null)
+				trx.setDisplayName(getClass().getName()+"_openResultSet");
 			//	open Statement (closed by Loader.close)
 			try
 			{
@@ -4015,7 +4025,7 @@ public class GridTable extends AbstractTableModel
 		m_lastSortColumnIndex = -1;
 		m_lastSortedAscending = true;
 	}
-	
+
 	public int getKeyColumnIndex() {
 		return m_indexKeyColumn;
 	}

@@ -161,7 +161,7 @@ public class WStringEditor extends WEditor implements ContextMenuListener
 	        else
 	            getComponent().setMultiline(false);
 	        if (! gridField.isAutocomplete()) // avoid -> Combobox doesn't support multiple rows
-	        	getComponent().setRows(gridField.getNumLines() <= 0 || tableEditor ? 1 : gridField.getNumLines());        
+	        	getComponent().setRows(gridField.getNumLines() <= 0 || tableEditor ? 1 : gridField.getNumLines());
 	        if (getComponent().getRows() > 1)
 	        	ZKUpdateUtil.setHeight(getComponent(), "100%");
 
@@ -311,27 +311,26 @@ public class WStringEditor extends WEditor implements ContextMenuListener
 		else if (WEditorPopupMenu.REQUERY_EVENT.equals(evt.getContextEvent()))
 		{
 			actionRefresh();
-		}		
+		}
 	}
-
+    
     @Override
   	public void dynamicDisplay() {
   		super.dynamicDisplay();
-  		actionRefresh();
-  	}
+		actionRefresh();
+	}
 
-  	public void actionRefresh() {
-  		//refresh auto complete list
+	public void actionRefresh() {
+		//refresh auto complete list
   		if (gridField.isAutocomplete()) {
-  			Combobox combo = (Combobox)getComponent();
-  			List<String> items = gridField.getEntries();
-  			combo.removeAllItems();
-  			for(String s : items) {
-  				combo.appendItem(s);
-  			}
-  		}
-  	}
-
+			Combobox combo = (Combobox)getComponent();
+			List<String> items = gridField.getEntries();
+			combo.removeAllItems();
+			for(String s : items) {
+				combo.appendItem(s);
+			}
+		}
+	}
 
 	private AbstractADWindowContent findADWindowContent() {
 		Component parent = getComponent().getParent();

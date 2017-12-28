@@ -646,7 +646,7 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 			MJournal journal = journals[i];
 			if (!journal.isActive())
 				continue;
-			if (!journal.processIt(DOCACTION_Reverse_Correct)) //nectosoft
+			if (journal.reverseCorrectIt(reverse.getGL_JournalBatch_ID()) == null)
 			{
 				m_processMsg = "Could not reverse " + journal;
 				return false;
@@ -719,8 +719,12 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 		//	Reverse it
 		MJournalBatch reverse = new MJournalBatch (this);
 		reverse.setC_Period_ID(0);
-		reverse.setDateDoc(new Timestamp(System.currentTimeMillis()));
-		reverse.setDateAcct(reverse.getDateDoc());
+		Timestamp reversalDate = Env.getContextAsDate(getCtx(), "#Date");
+		if (reversalDate == null) {
+			reversalDate = new Timestamp(System.currentTimeMillis());
+		}
+		reverse.setDateDoc(reversalDate);
+		reverse.setDateAcct(reversalDate);
 		//	Reverse indicator
 		StringBuilder msgd = new StringBuilder("(->").append(getDocumentNo()).append(")");
 		reverse.addDescription(msgd.toString());
@@ -733,7 +737,7 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 			MJournal journal = journals[i];
 			if (!journal.isActive())
 				continue;
-			if (!journal.processIt(DOCACTION_Reverse_Accrual))//nectosoft
+			if (journal.reverseAccrualIt(reverse.getGL_JournalBatch_ID()) == null)
 			{
 				m_processMsg = "Could not reverse " + journal;
 				return false;

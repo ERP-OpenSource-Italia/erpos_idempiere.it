@@ -52,6 +52,7 @@ import org.compiere.model.MRole;
 import org.compiere.model.MTable;
 import org.compiere.model.MUser;
 import org.compiere.model.MUserRoles;
+import org.compiere.model.MWFActivityApprover;
 import org.compiere.model.PO;
 import org.compiere.model.Query;
 import org.compiere.model.X_AD_WF_Activity;
@@ -885,6 +886,8 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		}
 
 		trx = Trx.get(get_TrxName(), true);
+		if (localTrx)
+			trx.setDisplayName(getClass().getName()+"_run");
 
 		Savepoint savepoint = null;
 
@@ -1301,6 +1304,17 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 							}
 						}
 					}
+					else if(resp.isManual()) {
+					    MWFActivityApprover[] approvers = MWFActivityApprover.getOfActivity(getCtx(), getAD_WF_Activity_ID(), get_TrxName());
+                        for (int i = 0; i < approvers.length; i++)
+                        {
+                            if(approvers[i].getAD_User_ID() == Env.getAD_User_ID(getCtx()))
+                            {
+                                autoApproval = true;
+                                break;
+                            }
+                        }
+					}
 					else if(resp.isOrganization())
 					{
 						throw new AdempiereException("Support not implemented for "+resp);
@@ -1362,19 +1376,49 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 			dbValue = new Boolean("Y".equals(value));
 		else if (DisplayType.isNumeric(displayType))
 			dbValue = new BigDecimal (value);
-		//
-		else if (DisplayType.isID(displayType))
-			dbValue = new Integer(value);
+		else if (DisplayType.isID(displayType)) {
+			MColumn column = MColumn.get(Env.getCtx(), getNode().getAD_Column_ID());
+			String referenceTableName = column.getReferenceTableName();
+			if (referenceTableName != null) {
+				MTable refTable = MTable.get(Env.getCtx(), referenceTableName);
+				dbValue = Integer.valueOf(value);
+				boolean validValue = true;
+				PO po = refTable.getPO((Integer)dbValue, trx.getTrxName());
+				if (po == null || po.get_ID() == 0) {
+					// foreign key does not exist
+					validValue = false;
+				}
+				if (validValue && po.getAD_Client_ID() != Env.getAD_Client_ID(Env.getCtx())) {
+					validValue = false;
+					if (po.getAD_Client_ID() == 0) {
+						String accessLevel = refTable.getAccessLevel();
+						if (   MTable.ACCESSLEVEL_All.equals(accessLevel)
+							|| MTable.ACCESSLEVEL_SystemPlusClient.equals(accessLevel)) {
+							// client foreign keys are OK if the table has reference All or System+Client
+							validValue = true;
+						}
+					}
+				}
+				if (! validValue) {
+					throw new Exception("Persistent Object not updated - AD_Table_ID="
+							+ getAD_Table_ID() + ", Record_ID=" + getRecord_ID()
+							+ " - Value=" + value + " is not valid for a foreign key");
+				}
+			}
+		}
 		else if (DisplayType.isDate(displayType)) {
 			SimpleDateFormat dateFormat = DisplayType.getDateFormat(
 					displayType, Env.getLanguage(getCtx()));
 			Date parsedDate = dateFormat.parse(value);
 			dbValue = new Timestamp(parsedDate.getTime());
 		}
-		//
 		else
 			dbValue = value;
-		m_po.set_ValueOfColumn(getNode().getAD_Column_ID(), dbValue);
+		if (!m_po.set_ValueOfColumnReturningBoolean(getNode().getAD_Column_ID(), dbValue)) {
+			throw new Exception("Persistent Object not updated - AD_Table_ID="
+					+ getAD_Table_ID() + ", Record_ID=" + getRecord_ID()
+					+ " - Value=" + value + " error : " + CLogger.retrieveErrorString("check logs"));
+		}
 		m_po.saveEx();
 		if (dbValue != null && !dbValue.equals(m_po.get_ValueOfColumn(getNode().getAD_Column_ID())))
 			throw new Exception("Persistent Object not updated - AD_Table_ID="
@@ -2074,4 +2118,50 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		return sb.toString();
 	}	//	getSummary
 		
+	
+	/** Get the where clause for activities, and the set of parameters needed
+	 * 
+	 * @return where clause and list of params
+	 */
+	public static WhereClauseAndParams getActivitiesWhere(Properties env)
+	{
+		String where = "a.Processed='N' AND a.WFState='OS' AND ("
+				//	Owner of Activity
+				+ " a.AD_User_ID=?"	//	#1
+				//	Invoker (if no invoker = all)
+				+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID"
+				+ " AND r.ResponsibleType='H' AND COALESCE(r.AD_User_ID,0)=0 AND COALESCE(r.AD_Role_ID,0)=0 AND (a.AD_User_ID=? OR a.AD_User_ID IS NULL))"	//	#2
+				//  Responsible User
+				+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID"
+				+ " AND r.ResponsibleType='H' AND r.AD_User_ID=?)"		//	#3
+				//	Responsible Role
+				+ " OR EXISTS (SELECT * FROM AD_WF_Responsible r INNER JOIN AD_User_Roles ur ON (r.AD_Role_ID=ur.AD_Role_ID)"
+				+ " WHERE a.AD_WF_Responsible_ID=r.AD_WF_Responsible_ID AND r.ResponsibleType='R' AND ur.AD_User_ID=?)"	//	#4
+				//
+				+ ") AND a.AD_Client_ID=?";	//	#5
+		
+		int AD_User_ID = Env.getAD_User_ID(env);
+		int AD_Client_ID = Env.getAD_Client_ID(env);
+		
+		List<Object> params = new ArrayList<Object>();
+		params.add(AD_User_ID);
+		params.add(AD_User_ID);
+		params.add(AD_User_ID);
+		params.add(AD_User_ID);
+		params.add(AD_Client_ID);
+		
+		WhereClauseAndParams cap = new WhereClauseAndParams(where,params);
+		
+		List<IActivitiesQuery> aqs = Service.locator().list(IActivitiesQuery.class).getServices();
+		
+		if (aqs != null) 
+		{
+			for(IActivitiesQuery aq : aqs)
+			{
+				aq.refineQuery(cap);
+			}
+		}
+		
+		return cap;
+	}
 }	//	MWFActivity

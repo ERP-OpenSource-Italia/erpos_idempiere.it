@@ -999,6 +999,9 @@ public class GridView extends Vbox implements EventListener<Event>, IdSpace, IFi
                 }
                 else
                 {
+                    boolean rw = mField.isEditable(true);   //  r/w - check Context
+                    if (rw && !comp.isReadWrite()) // IDEMPIERE-3421 - if it was read-only the list can contain direct values
+                    	mField.refreshLookup();
                 	// 	F3P: refresh non-cacheable search editors
                 	
                 	if(comp instanceof WSearchEditor)
@@ -1013,9 +1016,9 @@ public class GridView extends Vbox implements EventListener<Event>, IdSpace, IFi
                 	
                 	// F3P end
                 	
-                	comp.dynamicDisplay();
-                    boolean rw = mField.isEditableGrid(true);   //  r/w - check Context
                     comp.setReadWrite(rw);
+                    comp.setMandatory(mField.isMandatory(true));    //  check context
+                	comp.dynamicDisplay();
                 }
                 
                 Properties ctx = isDetailPane() ? new GridRowCtx(Env.getCtx(), gridTab, gridTab.getCurrentRow()) 

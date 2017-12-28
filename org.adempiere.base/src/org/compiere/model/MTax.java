@@ -251,6 +251,9 @@ public class MTax extends X_C_Tax
 	 *	@param scale scale 
 	 *	@return  tax amount
 	 */
+	
+	// F3P: non utilizziamo la versione originale perche' provocherebbe un errore nel calcolo (la somma per singole componenti, ognuna arrontondata, e' errata a priori)
+	
 	public BigDecimal calculateTax (BigDecimal amount, boolean taxIncluded, int scale)
 	{
 		//	Null Tax

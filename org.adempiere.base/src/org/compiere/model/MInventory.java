@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.NegativeInventoryDisallowedException;
 import org.adempiere.exceptions.PeriodClosedException;
 import org.compiere.process.DocAction;
 import org.compiere.process.DocumentEngine;
@@ -435,6 +436,7 @@ public class MInventory extends X_M_Inventory implements DocAction
 			approveIt();
 		if (log.isLoggable(Level.INFO)) log.info(toString());
 
+		StringBuilder errors = new StringBuilder();
 		MInventoryLine[] lines = getLines(false);
 		for (MInventoryLine line : lines)
 		{
@@ -442,98 +444,159 @@ public class MInventory extends X_M_Inventory implements DocAction
 				continue;
 
 			MProduct product = line.getProduct();	
-
-			BigDecimal qtyDiff = Env.ZERO;
-			if (MDocType.DOCSUBTYPEINV_InternalUseInventory.equals(docSubTypeInv))
-				qtyDiff = line.getQtyInternalUse().negate();
-			else if (MDocType.DOCSUBTYPEINV_PhysicalInventory.equals(docSubTypeInv))
-				qtyDiff = line.getQtyCount().subtract(line.getQtyBook());
-			else if (MDocType.DOCSUBTYPEINV_CostAdjustment.equals(docSubTypeInv))
+			try
 			{
-				if (!isReversal())
+				BigDecimal qtyDiff = Env.ZERO;
+				if (MDocType.DOCSUBTYPEINV_InternalUseInventory.equals(docSubTypeInv))
+					qtyDiff = line.getQtyInternalUse().negate();
+				else if (MDocType.DOCSUBTYPEINV_PhysicalInventory.equals(docSubTypeInv))
+					qtyDiff = line.getQtyCount().subtract(line.getQtyBook());
+				else if (MDocType.DOCSUBTYPEINV_CostAdjustment.equals(docSubTypeInv))
 				{
-					BigDecimal currentCost = line.getCurrentCostPrice();
-					MClient client = MClient.get(getCtx(), getAD_Client_ID());
-					MAcctSchema as = client.getAcctSchema();
-					MAcctSchema[] ass = MAcctSchema.getClientAcctSchema(getCtx(), client.get_ID());
-					
-					if (as.getC_Currency_ID() != getC_Currency_ID()) 
+					if (!isReversal())
 					{
-						for (int i = 0; i < ass.length ; i ++)
+						BigDecimal currentCost = line.getCurrentCostPrice();
+						MClient client = MClient.get(getCtx(), getAD_Client_ID());
+						MAcctSchema as = client.getAcctSchema();
+						MAcctSchema[] ass = MAcctSchema.getClientAcctSchema(getCtx(), client.get_ID());
+						
+						if (as.getC_Currency_ID() != getC_Currency_ID()) 
 						{
-							MAcctSchema a =  ass[i];
-							if (a.getC_Currency_ID() ==  getC_Currency_ID()) 
-								as = a ; 
+							for (int i = 0; i < ass.length ; i ++)
+							{
+								MAcctSchema a =  ass[i];
+								if (a.getC_Currency_ID() ==  getC_Currency_ID()) 
+									as = a ; 
+							}
+						}
+	
+						MCost cost = product.getCostingRecord(as, getAD_Org_ID(), line.getM_AttributeSetInstance_ID(), getCostingMethod());
+						if (cost != null && cost.getCurrentCostPrice().compareTo(currentCost) != 0) 
+						{
+							m_processMsg = "Current Cost for Line " + line.getLine() + " have changed.";
+							return DocAction.STATUS_Invalid; 
 						}
 					}
-
-					MCost cost = product.getCostingRecord(as, getAD_Org_ID(), line.getM_AttributeSetInstance_ID(), getCostingMethod());
-					if (cost != null && cost.getCurrentCostPrice().compareTo(currentCost) != 0) 
-					{
-						m_processMsg = "Current Cost for Line " + line.getLine() + " have changed.";
-						return DocAction.STATUS_Invalid; 
-					}
 				}
-			}
-
-			//If Quantity Count minus Quantity Book = Zero, then no change in Inventory
-			if (qtyDiff.signum() == 0)
-				continue;
-
-			//Ignore the Material Policy when is Reverse Correction
-			if(!isReversal()){
-				BigDecimal qtyOnLineMA = MInventoryLineMA.getManualQty(line.getM_InventoryLine_ID(), get_TrxName());
-				
-				if(qtyDiff.signum()<0){
-					if(qtyOnLineMA.compareTo(qtyDiff)<0){
-						m_processMsg = "@Over_Qty_On_Attribute_Tab@ " + line.getLine();
-						return DOCSTATUS_Invalid;
+	
+				//If Quantity Count minus Quantity Book = Zero, then no change in Inventory
+				if (qtyDiff.signum() == 0)
+					continue;
+	
+				//Ignore the Material Policy when is Reverse Correction
+				if(!isReversal()){
+					BigDecimal qtyOnLineMA = MInventoryLineMA.getManualQty(line.getM_InventoryLine_ID(), get_TrxName());
+					
+					if(qtyDiff.signum()<0){
+						if(qtyOnLineMA.compareTo(qtyDiff)<0){
+							m_processMsg = "@Over_Qty_On_Attribute_Tab@ " + line.getLine();
+							return DOCSTATUS_Invalid;
+						}
+					}else{
+						if(qtyOnLineMA.compareTo(qtyDiff)>0){
+							m_processMsg = "@Over_Qty_On_Attribute_Tab@ " + line.getLine();
+							return DOCSTATUS_Invalid;
+						}
 					}
-				}else{
-					if(qtyOnLineMA.compareTo(qtyDiff)>0){
-						m_processMsg = "@Over_Qty_On_Attribute_Tab@ " + line.getLine();
-						return DOCSTATUS_Invalid;
-					}
+					checkMaterialPolicy(line, qtyDiff.subtract(qtyOnLineMA));
 				}
-				checkMaterialPolicy(line, qtyDiff.subtract(qtyOnLineMA));
-			}
-			//	Stock Movement - Counterpart MOrder.reserveStock
-			if (product != null 
-					&& product.isStocked() )
-			{
-				log.fine("Material Transaction");
-				MTransaction mtrx = null; 
-
-				//If AttributeSetInstance = Zero then create new  AttributeSetInstance use Inventory Line MA else use current AttributeSetInstance
-				if (line.getM_AttributeSetInstance_ID() == 0 || qtyDiff.compareTo(Env.ZERO) == 0)
+				//	Stock Movement - Counterpart MOrder.reserveStock
+				if (product != null 
+						&& product.isStocked() )
 				{
-					MInventoryLineMA mas[] = MInventoryLineMA.get(getCtx(),
-							line.getM_InventoryLine_ID(), get_TrxName());
-
-					for (int j = 0; j < mas.length; j++)
+					log.fine("Material Transaction");
+					MTransaction mtrx = null; 
+	
+					//If AttributeSetInstance = Zero then create new  AttributeSetInstance use Inventory Line MA else use current AttributeSetInstance
+					if (line.getM_AttributeSetInstance_ID() == 0 || qtyDiff.compareTo(Env.ZERO) == 0)
 					{
-						MInventoryLineMA ma = mas[j];
-						BigDecimal QtyMA = ma.getMovementQty();
-						BigDecimal QtyNew = QtyMA.add(qtyDiff);
-						if (log.isLoggable(Level.FINE)) log.fine("Diff=" + qtyDiff 
-								+ " - Instance OnHand=" + QtyMA + "->" + QtyNew);
-
+						MInventoryLineMA mas[] = MInventoryLineMA.get(getCtx(),
+								line.getM_InventoryLine_ID(), get_TrxName());
+	
+						for (int j = 0; j < mas.length; j++)
+						{
+							MInventoryLineMA ma = mas[j];
+							BigDecimal QtyMA = ma.getMovementQty();
+							BigDecimal QtyNew = QtyMA.add(qtyDiff);
+							if (log.isLoggable(Level.FINE)) log.fine("Diff=" + qtyDiff 
+									+ " - Instance OnHand=" + QtyMA + "->" + QtyNew);
+	
+							if (!MStorageOnHand.add(getCtx(), getM_Warehouse_ID(),
+									line.getM_Locator_ID(),
+									line.getM_Product_ID(), 
+									ma.getM_AttributeSetInstance_ID(), 
+									QtyMA.negate(),ma.getDateMaterialPolicy(), get_TrxName()))
+							{
+								String lastError = CLogger.retrieveErrorString("");
+								m_processMsg = "Cannot correct Inventory (MA) - " + lastError;
+								return DocAction.STATUS_Invalid;
+							}
+	
+							// Only Update Date Last Inventory if is a Physical Inventory
+							if (MDocType.DOCSUBTYPEINV_PhysicalInventory.equals(docSubTypeInv))
+							{	
+								MStorageOnHand storage = MStorageOnHand.get(getCtx(), line.getM_Locator_ID(), 
+										line.getM_Product_ID(), ma.getM_AttributeSetInstance_ID(),ma.getDateMaterialPolicy(),get_TrxName());						
+								storage.setDateLastInventory(getMovementDate());
+								if (!storage.save(get_TrxName()))
+								{
+									m_processMsg = "Storage not updated(2)";
+									return DocAction.STATUS_Invalid;
+								}
+							}
+	
+							String m_MovementType =null;
+							if(QtyMA.negate().compareTo(Env.ZERO) > 0 )
+								m_MovementType = MTransaction.MOVEMENTTYPE_InventoryIn;
+							else
+								m_MovementType = MTransaction.MOVEMENTTYPE_InventoryOut;
+							//	Transaction
+							mtrx = new MTransaction (getCtx(), line.getAD_Org_ID(), m_MovementType,
+									line.getM_Locator_ID(), line.getM_Product_ID(), ma.getM_AttributeSetInstance_ID(),
+									QtyMA.negate(), getMovementDate(), get_TrxName());
+							
+								mtrx.setM_InventoryLine_ID(line.getM_InventoryLine_ID());
+								if (!mtrx.save())
+								{
+									m_processMsg = "Transaction not inserted(2)";
+									return DocAction.STATUS_Invalid;
+								}
+								
+								qtyDiff = QtyNew;						
+	
+						}	
+					}
+	
+					//sLine.getM_AttributeSetInstance_ID() != 0
+					// Fallback
+					if (mtrx == null)
+					{
+						Timestamp dateMPolicy= qtyDiff.signum() > 0 ? getMovementDate() : null;
+						if (line.getM_AttributeSetInstance_ID() > 0)
+						{
+							Timestamp t = MStorageOnHand.getDateMaterialPolicy(line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(), line.get_TrxName());
+							if (t != null)
+								dateMPolicy = t;
+						}
+						
+						//Fallback: Update Storage - see also VMatch.createMatchRecord
 						if (!MStorageOnHand.add(getCtx(), getM_Warehouse_ID(),
 								line.getM_Locator_ID(),
 								line.getM_Product_ID(), 
-								ma.getM_AttributeSetInstance_ID(), 
-								QtyMA.negate(),ma.getDateMaterialPolicy(), get_TrxName()))
+								line.getM_AttributeSetInstance_ID(), 
+								qtyDiff,dateMPolicy,get_TrxName()))
 						{
 							String lastError = CLogger.retrieveErrorString("");
-							m_processMsg = "Cannot correct Inventory (MA) - " + lastError;
+							m_processMsg = "Cannot correct Inventory OnHand (MA) - " + lastError;
 							return DocAction.STATUS_Invalid;
 						}
-
+	
 						// Only Update Date Last Inventory if is a Physical Inventory
 						if (MDocType.DOCSUBTYPEINV_PhysicalInventory.equals(docSubTypeInv))
 						{	
 							MStorageOnHand storage = MStorageOnHand.get(getCtx(), line.getM_Locator_ID(), 
-									line.getM_Product_ID(), ma.getM_AttributeSetInstance_ID(),ma.getDateMaterialPolicy(),get_TrxName());						
+									line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(),dateMPolicy, get_TrxName());						
+	
 							storage.setDateLastInventory(getMovementDate());
 							if (!storage.save(get_TrxName()))
 							{
@@ -541,84 +604,40 @@ public class MInventory extends X_M_Inventory implements DocAction
 								return DocAction.STATUS_Invalid;
 							}
 						}
-
-						String m_MovementType =null;
-						if(QtyMA.negate().compareTo(Env.ZERO) > 0 )
+	
+						String m_MovementType = null;
+						if(qtyDiff.compareTo(Env.ZERO) > 0 )
 							m_MovementType = MTransaction.MOVEMENTTYPE_InventoryIn;
 						else
 							m_MovementType = MTransaction.MOVEMENTTYPE_InventoryOut;
 						//	Transaction
 						mtrx = new MTransaction (getCtx(), line.getAD_Org_ID(), m_MovementType,
-								line.getM_Locator_ID(), line.getM_Product_ID(), ma.getM_AttributeSetInstance_ID(),
-								QtyMA.negate(), getMovementDate(), get_TrxName());
-						
-							mtrx.setM_InventoryLine_ID(line.getM_InventoryLine_ID());
-							if (!mtrx.save())
-							{
-								m_processMsg = "Transaction not inserted(2)";
-								return DocAction.STATUS_Invalid;
-							}
-							
-							qtyDiff = QtyNew;						
-
-					}	
-				}
-
-				//sLine.getM_AttributeSetInstance_ID() != 0
-				// Fallback
-				if (mtrx == null)
-				{
-					Timestamp dateMPolicy= getMovementDate();
-					I_M_AttributeSetInstance asi = line.getM_AttributeSetInstance();
-					if (asi != null)
-						dateMPolicy =asi.getCreated();
-					
-					//Fallback: Update Storage - see also VMatch.createMatchRecord
-					if (!MStorageOnHand.add(getCtx(), getM_Warehouse_ID(),
-							line.getM_Locator_ID(),
-							line.getM_Product_ID(), 
-							line.getM_AttributeSetInstance_ID(), 
-							qtyDiff,dateMPolicy,get_TrxName()))
-					{
-						String lastError = CLogger.retrieveErrorString("");
-						m_processMsg = "Cannot correct Inventory OnHand (MA) - " + lastError;
-						return DocAction.STATUS_Invalid;
-					}
-
-					// Only Update Date Last Inventory if is a Physical Inventory
-					if (MDocType.DOCSUBTYPEINV_PhysicalInventory.equals(docSubTypeInv))
-					{	
-						MStorageOnHand storage = MStorageOnHand.get(getCtx(), line.getM_Locator_ID(), 
-								line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(),dateMPolicy, get_TrxName());						
-
-						storage.setDateLastInventory(getMovementDate());
-						if (!storage.save(get_TrxName()))
+								line.getM_Locator_ID(), line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(),
+								qtyDiff, getMovementDate(), get_TrxName());
+						mtrx.setM_InventoryLine_ID(line.getM_InventoryLine_ID());
+						if (!mtrx.save())
 						{
-							m_processMsg = "Storage not updated(2)";
+							m_processMsg = "Transaction not inserted(2)";
 							return DocAction.STATUS_Invalid;
-						}
-					}
-
-					String m_MovementType = null;
-					if(qtyDiff.compareTo(Env.ZERO) > 0 )
-						m_MovementType = MTransaction.MOVEMENTTYPE_InventoryIn;
-					else
-						m_MovementType = MTransaction.MOVEMENTTYPE_InventoryOut;
-					//	Transaction
-					mtrx = new MTransaction (getCtx(), line.getAD_Org_ID(), m_MovementType,
-							line.getM_Locator_ID(), line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(),
-							qtyDiff, getMovementDate(), get_TrxName());
-					mtrx.setM_InventoryLine_ID(line.getM_InventoryLine_ID());
-					if (!mtrx.save())
-					{
-						m_processMsg = "Transaction not inserted(2)";
-						return DocAction.STATUS_Invalid;
-					}					
-				}	//	Fallback
-			}	//	stock movement
+						}					
+					}	//	Fallback
+				}	//	stock movement
+			}
+			catch (NegativeInventoryDisallowedException e)
+			{
+				log.severe(e.getMessage());
+				errors.append(Msg.getElement(getCtx(), "Line")).append(" ").append(line.getLine()).append(": ");
+				errors.append(e.getMessage()).append("\n");
+			}
 
 		}	//	for all lines
 
+		if (errors.toString().length() > 0)
+		{
+			m_processMsg = errors.toString();
+			return DocAction.STATUS_Invalid;
+		}
+		
 		//	User Validation
 		String valid = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_AFTER_COMPLETE);
 		if (valid != null)
@@ -693,8 +712,73 @@ public class MInventory extends X_M_Inventory implements DocAction
 				
 				if(qtyDiff.compareTo(Env.ZERO)>0)
 				{
-					MInventoryLineMA lineMA =  MInventoryLineMA.addOrCreate(line, 0, qtyDiff.negate(), getMovementDate(),true);
-					lineMA.saveEx();
+					//AttributeSetInstance enable
+					I_M_AttributeSet as = line.getM_Product().getM_AttributeSet();
+					if (as != null && as.isInstanceAttribute())
+					{
+						//add quantity to last attributesetinstance
+						storages = MStorageOnHand.getWarehouse(getCtx(), getM_Warehouse_ID(), line.getM_Product_ID(), 0, null,
+								false, true, 0, get_TrxName());
+						for (MStorageOnHand storage : storages)
+						{
+							BigDecimal maQty = qtyDiff;
+							//backward compatibility: -ve in MA is incoming trx, +ve in MA is outgoing trx 
+							MInventoryLineMA lineMA =  new MInventoryLineMA(line, storage.getM_AttributeSetInstance_ID(), maQty.negate(), storage.getDateMaterialPolicy(),true);
+							lineMA.saveEx();
+							qtyDiff = qtyDiff.subtract(maQty);
+
+							if (qtyDiff.compareTo(Env.ZERO)==0)
+								break;
+							
+						}
+					} 
+					if(qtyDiff.compareTo(Env.ZERO)>0)
+					{
+						MClientInfo m_clientInfo = MClientInfo.get(getCtx(), getAD_Client_ID(), get_TrxName());
+						MAcctSchema acctSchema = new MAcctSchema(getCtx(), m_clientInfo.getC_AcctSchema1_ID(), get_TrxName());
+						if (MAcctSchema.COSTINGLEVEL_BatchLot.equals(product.getCostingLevel(acctSchema)) )
+						{
+							String sqlWhere = "M_Product_ID=? AND M_Locator_ID=? AND QtyOnHand = 0 AND M_AttributeSetInstance_ID > 0 ";
+							MStorageOnHand storage = new Query(getCtx(), MStorageOnHand.Table_Name, sqlWhere, get_TrxName())
+									.setParameters(line.getM_Product_ID(), line.getM_Locator_ID())
+									.setOrderBy(MStorageOnHand.COLUMNNAME_DateMaterialPolicy+","+ MStorageOnHand.COLUMNNAME_M_AttributeSetInstance_ID)
+									.first();
+								
+							if (storage != null )
+							{
+								MInventoryLineMA lineMA =  MInventoryLineMA.addOrCreate(line, storage.getM_AttributeSetInstance_ID(), qtyDiff.negate(), getMovementDate(),true);
+								lineMA.saveEx();
+							} 
+							else
+							{
+								String costingMethod = product.getCostingMethod(acctSchema);
+								StringBuilder localWhereClause = new StringBuilder("M_Product_ID =?" )
+										.append(" AND C_AcctSchema_ID=?")
+										.append(" AND ce.CostingMethod = ? ")
+										.append(" AND CurrentCostPrice <> 0 ");
+								MCost cost = new Query(getCtx(),I_M_Cost.Table_Name,localWhereClause.toString(),get_TrxName())
+									.setParameters(line.getM_Product_ID(), acctSchema.get_ID(), costingMethod)
+									.addJoinClause(" INNER JOIN M_CostElement ce ON (M_Cost.M_CostElement_ID =ce.M_CostElement_ID ) ")
+									.setOrderBy("Updated DESC")
+									.first();
+								if (cost != null)
+								{
+									MInventoryLineMA lineMA =  MInventoryLineMA.addOrCreate(line, cost.getM_AttributeSetInstance_ID(), qtyDiff.negate(), getMovementDate(),true);
+									lineMA.saveEx();
+								} 
+								else
+								{
+									m_processMsg = "Cannot retrieve cost of Inventory " ;
+								}
+							}
+							
+						} else
+						{
+							MInventoryLineMA lineMA =  MInventoryLineMA.addOrCreate(line, 0, qtyDiff.negate(), getMovementDate(),true);
+							lineMA.saveEx();
+						}
+						
+					}
 				}				
 			}
 			else	//	Outgoing Trx

@@ -64,7 +64,7 @@ public final class MRole extends X_AD_Role
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 3608297024439006903L;
+	private static final long serialVersionUID = 8952907008982481439L;
 
 	/**
 	 * 	Get Default (Client) Role
@@ -120,7 +120,7 @@ public final class MRole extends X_AD_Role
 	 * 	@param reload if true forces load
 	 *	@return role
 	 */
-	public static MRole get (Properties ctx, int AD_Role_ID, int AD_User_ID, boolean reload)
+	public synchronized static MRole get (Properties ctx, int AD_Role_ID, int AD_User_ID, boolean reload)
 	{
 		if (s_log.isLoggable(Level.INFO)) s_log.info("AD_Role_ID=" + AD_Role_ID + ", AD_User_ID=" + AD_User_ID + ", reload=" + reload);
 		String key = AD_Role_ID + "_" + AD_User_ID;
@@ -1500,7 +1500,7 @@ public final class MRole extends X_AD_Role
 	 *	@param AD_Window_ID window
 	 *	@return null in no access, TRUE if r/w and FALSE if r/o
 	 */
-	public Boolean getWindowAccess (int AD_Window_ID)
+	public synchronized Boolean getWindowAccess (int AD_Window_ID)
 	{
 		if (m_windowAccess == null)
 		{
@@ -1587,7 +1587,7 @@ public final class MRole extends X_AD_Role
 	 *	@param AD_Process_ID process
 	 *	@return null in no access, TRUE if r/w and FALSE if r/o
 	 */
-	public Boolean getProcessAccess (int AD_Process_ID)
+	public synchronized Boolean getProcessAccess (int AD_Process_ID)
 	{
 		if (m_processAccess == null)
 		{
@@ -1669,7 +1669,7 @@ public final class MRole extends X_AD_Role
 	 *	@param AD_Task_ID task
 	 *	@return null in no access, TRUE if r/w and FALSE if r/o
 	 */
-	public Boolean getTaskAccess (int AD_Task_ID)
+	public synchronized Boolean getTaskAccess (int AD_Task_ID)
 	{
 		if (m_taskAccess == null)
 		{
@@ -1749,7 +1749,7 @@ public final class MRole extends X_AD_Role
 	 *	@param AD_Form_ID form
 	 *	@return null in no access, TRUE if r/w and FALSE if r/o
 	 */
-	public Boolean getFormAccess (int AD_Form_ID)
+	public synchronized Boolean getFormAccess (int AD_Form_ID)
 	{
 		if (m_formAccess == null)
 		{
@@ -1829,7 +1829,7 @@ public final class MRole extends X_AD_Role
 	 *	@param AD_Workflow_ID workflow
 	 *	@return null in no access, TRUE if r/w and FALSE if r/o
 	 */
-	public Boolean getWorkflowAccess (int AD_Workflow_ID)
+	public synchronized Boolean getWorkflowAccess (int AD_Workflow_ID)
 	{
 		if (m_workflowAccess == null)
 		{
@@ -3187,7 +3187,7 @@ public final class MRole extends X_AD_Role
 		return whereClause.toString();
 	}
 
-	public Boolean getInfoAccess(int AD_InfoWindow_ID) {
+	public synchronized Boolean getInfoAccess(int AD_InfoWindow_ID) {
 		if (m_infoAccess == null)
 		{
 			m_infoAccess = new HashMap<Integer,Boolean>(20);

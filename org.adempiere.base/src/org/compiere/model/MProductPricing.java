@@ -50,16 +50,21 @@ public class MProductPricing
 	private static final String COL_PPVB_UOM_ID = "ppvbC_UOM_ID";
 	private static final DateFormat	TIMESTAMP_DAY_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 	
+	private String trxName=null;
+	
 	/**
 	 * 	Constructor
 	 * 	@param M_Product_ID product
 	 * 	@param C_BPartner_ID partner
 	 * 	@param Qty quantity
 	 * 	@param isSOTrx SO or PO
+	 *  @param trxName the transaction
 	 */
 	public MProductPricing (int M_Product_ID, int C_BPartner_ID, 
-		BigDecimal Qty, boolean isSOTrx)
+			BigDecimal Qty, boolean isSOTrx, String trxName)
 	{
+		this.trxName=trxName;
+
 		m_M_Product_ID = M_Product_ID;
 		m_C_BPartner_ID = C_BPartner_ID;
 		if (Qty != null && Env.ZERO.compareTo(Qty) != 0)
@@ -295,7 +300,7 @@ public class MProductPricing
 		ResultSet rs = null;
 		try
 		{
-			pstmt = DB.prepareStatement(sql, null);
+			pstmt = DB.prepareStatement(sql, trxName);
 			pstmt.setInt(1, m_M_Product_ID);
 			pstmt.setInt(2, m_M_PriceList_Version_ID);
 			rs = pstmt.executeQuery();
@@ -418,7 +423,7 @@ public class MProductPricing
 		ResultSet rs = null;
 		try
 		{
-			pstmt = DB.prepareStatement(sql, null);
+			pstmt = DB.prepareStatement(sql, trxName);
 			pstmt.setInt(1, m_M_Product_ID);
 			pstmt.setInt(2, m_M_PriceList_ID);
 			rs = pstmt.executeQuery();
@@ -505,7 +510,7 @@ public class MProductPricing
 		ResultSet rs = null;
 		try
 		{
-			pstmt = DB.prepareStatement(sql, null);
+			pstmt = DB.prepareStatement(sql, trxName);
 			pstmt.setInt(1, m_M_Product_ID);
 			pstmt.setInt(2, m_M_PriceList_ID);
 			rs = pstmt.executeQuery();
@@ -813,7 +818,7 @@ public class MProductPricing
 		ResultSet rs = null;
 		try
 		{
-			pstmt = DB.prepareStatement(sql, null);
+			pstmt = DB.prepareStatement(sql, trxName);
 			
 			int i = 1;
 			pstmt.setInt(i++, m_M_Product_ID);
@@ -959,9 +964,8 @@ public class MProductPricing
 		ResultSet rs = null;
 		try
 		{
-			
+			pstmt = DB.prepareStatement(sql, trxName);
 			int i = 1;
-			pstmt = DB.prepareStatement(sql, null);
 			pstmt.setInt(i++, m_M_Product_ID);
 			pstmt.setInt(i++, m_M_PriceList_ID);
 			pstmt.setInt(i++, m_C_BPartner_ID);
@@ -1079,7 +1083,7 @@ public class MProductPricing
 		ResultSet rs = null;
 		try
 		{
-			pstmt = DB.prepareStatement (sql, null);
+			pstmt = DB.prepareStatement (sql, trxName);
 			pstmt.setInt (1, m_C_BPartner_ID);
 			rs = pstmt.executeQuery ();
 			if (rs.next ())

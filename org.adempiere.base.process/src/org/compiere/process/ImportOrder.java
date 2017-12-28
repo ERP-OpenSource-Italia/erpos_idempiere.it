@@ -712,7 +712,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 							imp.setAD_User_ID (user.getAD_User_ID ());
 					}
 				}
-				imp.save ();
+				imp.saveEx();
 			}	//	for all new BPartners
 			//
 		}

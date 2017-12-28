@@ -69,6 +69,7 @@ import org.compiere.model.MStore;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MSystem;
 import org.compiere.model.Query;
+import org.compiere.server.AdempiereServer;
 import org.compiere.server.AdempiereServerGroup;
 import org.compiere.server.AdempiereServerMgr;
 import org.compiere.server.AdempiereServerMgr.ServerWrapper;
@@ -268,7 +269,32 @@ public class AdempiereMonitor extends HttpServlet
 			return false;
 		}
 		//
-		server.getServer().runNow();
+		AdempiereServer serverInstance = server.getServer();
+		if (serverInstance.isSleeping())
+		{
+			serverInstance.runNow();
+		}
+		else
+		{
+			int count = 0;
+			while(!serverInstance.isSleeping() && count < 5)
+			{
+				count++;
+				try {
+					Thread.sleep(60000);
+				} catch (InterruptedException e) {
+					Thread.interrupted();
+				}				
+			}
+			if (serverInstance.isSleeping())
+				serverInstance.runNow();
+			else
+			{
+				m_message = new p();
+				m_message.addElement(new strong("Timeout waiting for server process  to be available for execution."));
+				m_message.addElement(serverID);
+			}
+		}
 		//
 		return true;
 	}	//	processRunParameter
@@ -931,8 +957,13 @@ public class AdempiereMonitor extends HttpServlet
 			{
 				line = new tr();
 				line.addElement(new th().addElement("Active Transaction "));
-				line.addElement(new td().addElement("Name="+trx.getTrxName() 
-					+ ", StartTime=" + trx.getStartTime()));
+				td td = new td();
+				td.setOnClick("var newwindow=window.open('','Popup', 'width=800,height=600');newwindow.document.write('<title>"  + escapeEcmaScript(trx.getDisplayName()) +"</title>"
+						+ "<pre>" + escapeEcmaScript(trx.getStrackTrace()) + "</pre>')");
+				td.addElement("Name="+trx.getDisplayName() + ", StartTime=" + trx.getStartTime());
+				td.setTitle("Click to see stack trace");
+				td.setStyle("text-decoration: underline; color: blue");
+				line.addElement(td);
 				table.addElement(line);
 			}
 		}
@@ -1221,4 +1252,14 @@ public class AdempiereMonitor extends HttpServlet
 				
 		return dirAccessList;
 	}
+	
+	private static final String escapeEcmaScript(String input) {
+		input = input.replace("'", "\\'");
+		input = input.replace("\"", "\\\"");
+		input = input.replace("\\", "\\\\");
+		input = input.replace("/", "\\/");
+		input = input.replace("\n", "\\n");
+		input = input.replace("\t", "\\t");
+		return input;
+	 }
 }	//	AdempiereMonitor

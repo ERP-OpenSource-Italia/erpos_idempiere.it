@@ -202,7 +202,7 @@ public class ProcessParameterPanel extends Panel implements
 					+ "p.FieldLength, p.IsMandatory, p.IsRange, p.ColumnName, "
 					+ "p.DefaultValue, p.DefaultValue2, p.VFormat, p.ValueMin, p.ValueMax, "
 					+ "p.SeqNo, p.AD_Reference_Value_ID, vr.Code AS ValidationCode, "
-					+ "p.ReadOnlyLogic, p.DisplayLogic, p.IsEncrypted, NULL AS FormatPattern "
+					+ "p.ReadOnlyLogic, p.DisplayLogic, p.IsEncrypted, NULL AS FormatPattern, p.MandatoryLogic "
 					+ "FROM AD_Process_Para p"
 					+ " LEFT OUTER JOIN AD_Val_Rule vr ON (p.AD_Val_Rule_ID=vr.AD_Val_Rule_ID) "
 					+ "WHERE p.AD_Process_ID=?" // 1
@@ -213,7 +213,7 @@ public class ProcessParameterPanel extends Panel implements
 					+ "p.FieldLength, p.IsMandatory, p.IsRange, p.ColumnName, "
 					+ "p.DefaultValue, p.DefaultValue2, p.VFormat, p.ValueMin, p.ValueMax, "
 					+ "p.SeqNo, p.AD_Reference_Value_ID, vr.Code AS ValidationCode, "
-					+ "p.ReadOnlyLogic, p.DisplayLogic, p.IsEncrypted, NULL AS FormatPattern "
+					+ "p.ReadOnlyLogic, p.DisplayLogic, p.IsEncrypted, NULL AS FormatPattern,p.MandatoryLogic "
 					+ "FROM AD_Process_Para p"
 					+ " INNER JOIN AD_Process_Para_Trl t ON (p.AD_Process_Para_ID=t.AD_Process_Para_ID)"
 					+ " LEFT OUTER JOIN AD_Val_Rule vr ON (p.AD_Val_Rule_ID=vr.AD_Val_Rule_ID) "
@@ -520,7 +520,7 @@ public class ProcessParameterPanel extends Panel implements
 				result2 = editor2.getValue();
 
 			// Create Parameter
-			MPInstancePara para = new MPInstancePara(Env.getCtx(),
+			MPInstancePara para = MPInstancePara.getOrCreate(Env.getCtx(),
 					m_processInfo.getAD_PInstance_ID(), i);
 			GridField mField = (GridField) m_mFields.get(i);
 			para.setParameterName(mField.getColumnName());			
@@ -797,7 +797,7 @@ public class ProcessParameterPanel extends Panel implements
 				}
 			}
 			editor.setMandatory(mField.isMandatory(true));
-        	editor.updateLabelStyle();
+        	editor.updateStyle();
 		}
 		if (getParent() != null) {
 			getParent().invalidate();

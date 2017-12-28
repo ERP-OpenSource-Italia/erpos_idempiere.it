@@ -50,17 +50,22 @@ import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_TIME;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_URL;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_YES_NO;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_CHART;
+import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_DASHBOARD_CONTENT;
+import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_SINGLE_SELECTION_GRID;
+import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_MULTIPLE_SELECTION_GRID;
 
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.util.Currency;
 import java.util.List;
 import java.util.Locale;
 import java.util.logging.Level;
 
 import org.adempiere.base.IDisplayTypeFactory;
 import org.adempiere.base.Service;
+import org.compiere.model.MCurrency;
 
 /**
  *	System Display Types.
@@ -144,6 +149,12 @@ public final class DisplayType
 	public static final int Payment  = REFERENCE_DATATYPE_PAYMENT;
 	
 	public static final int Chart = REFERENCE_DATATYPE_CHART;
+	
+	public static final int DashboardContent = REFERENCE_DATATYPE_DASHBOARD_CONTENT;
+	
+	public static final int SingleSelectionGrid = REFERENCE_DATATYPE_SINGLE_SELECTION_GRID;
+	
+	public static final int MultipleSelectionGrid = REFERENCE_DATATYPE_MULTIPLE_SELECTION_GRID;
 
 	/**
 	 *	- New Display Type
@@ -259,7 +270,9 @@ public final class DisplayType
 		if (displayType == String || displayType == Text
 			|| displayType == TextLong || displayType == Memo
 			|| displayType == FilePath || displayType == FileName
-			|| displayType == URL || displayType == PrinterName)
+			|| displayType == URL || displayType == PrinterName
+			|| displayType == SingleSelectionGrid
+			|| displayType == MultipleSelectionGrid)
 			return true;
 		
 		List<IDisplayTypeFactory> factoryList = Service.locator().list(IDisplayTypeFactory.class).getServices();
@@ -724,5 +737,21 @@ public final class DisplayType
 		//
 		return "UNKNOWN DisplayType=" + displayType;
 	}	//	getDescription
+
+	/**
+	 *	Helper method to get a currency format in a language (multi-currency and multi-language system)
+	 *  @param language locale code
+	 *  @param currency code
+	 *  @return number format
+	 */
+	public static NumberFormat getCurrencyFormat(String langcode, String currencyCode)
+	{
+		Locale locale = Language.getLocale(langcode);
+	    NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(locale);
+	    Currency currency = Currency.getInstance(currencyCode);
+	    currencyFormatter.setCurrency(currency);
+		return currencyFormatter;
+	}   //  getCurrencyFormat
+
 
 }	//	DisplayType

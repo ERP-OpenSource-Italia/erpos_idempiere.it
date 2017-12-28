@@ -40,6 +40,10 @@ import org.compiere.model.MAccount;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MConversionRate;
 import org.compiere.model.MDocType;
+import org.compiere.model.MInOut;
+import org.compiere.model.MInvoice;
+import org.compiere.model.MMatchInv;
+import org.compiere.model.MMatchPO;
 import org.compiere.model.MNote;
 import org.compiere.model.MPeriod;
 import org.compiere.model.ModelValidationEngine;
@@ -52,6 +56,7 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
+import org.compiere.util.Util;
 
 import it.idempiere.base.acct.AccountingPreCheck;
 
@@ -241,6 +246,81 @@ public abstract class Doc
 		return DocManager.postDocument(ass, AD_Table_ID, Record_ID, force, true, trxName);
 	}   //  post
 
+	/**
+	 * Manual posting by user
+	 * @param WindowNo
+	 * @param AD_Client_ID
+	 * @param AD_Table_ID
+	 * @param Record_ID
+	 * @param force
+	 * @return error message ( if any )
+	 */
+	public static String manualPosting (int WindowNo, int AD_Client_ID,
+			int AD_Table_ID, int Record_ID, boolean force)
+	{
+		String error = null;
+		MAcctSchema[] ass = MAcctSchema.getClientAcctSchema(Env.getCtx(), AD_Client_ID);
+		Trx trx = Trx.get(Trx.createTrxName("ManulPosting"), true);
+		trx.setDisplayName(Doc.class.getName()+"_manualPosting");
+		try
+		{
+			//Costing: Post MatchPO before MR
+			if (AD_Table_ID == MInOut.Table_ID)
+			{
+				MMatchPO[] matchPos  = MMatchPO.getInOut(Env.getCtx(), Record_ID, trx.getTrxName());
+				for (MMatchPO matchPo : matchPos) 
+				{
+					if (!matchPo.isPosted())
+					{
+						error = postImmediate(ass, matchPo.get_Table_ID(), matchPo.get_ID(), force, matchPo.get_TrxName());
+						if (!Util.isEmpty(error))
+							break;
+					}
+				}	
+			}
+			if (Util.isEmpty(error))
+			{
+				error = postImmediate(ass, AD_Table_ID, Record_ID, force, trx.getTrxName());
+			}
+			//Costing: Post MatchInv after Invoice
+			if (Util.isEmpty(error))
+			{
+				if (AD_Table_ID == MInvoice.Table_ID)
+				{
+					MMatchInv[] matchInvs = MMatchInv.getInvoice(Env.getCtx(), Record_ID, trx.getTrxName());
+					for (MMatchInv matchInv : matchInvs) 
+					{
+						if (!matchInv.isPosted())
+						{
+							error = postImmediate(ass, matchInv.get_Table_ID(), matchInv.get_ID(), force, matchInv.get_TrxName());
+							if (!Util.isEmpty(error))
+								break;
+						}
+					}	
+				}
+			}
+			if (Util.isEmpty(error))
+			{
+				trx.commit(true);
+			}
+			else
+			{
+				trx.rollback();
+			}
+		}
+		catch (Throwable t)
+		{
+			trx.rollback();
+			return "@Error@ " + t.getLocalizedMessage();
+		}
+		finally
+		{
+			trx.close();
+		}
+		
+		return error;
+	}
+	
 	/**	Static Log						*/
 	protected static CLogger	s_log = CLogger.getCLogger(Doc.class);
 	/**	Log	per Document				*/
@@ -479,6 +559,12 @@ public abstract class Doc
 		p_Error = loadDocumentDetails();
 		if (p_Error != null)
 			return p_Error;
+		if (isDeferPosting())
+		{
+			unlock();
+			p_Status = STATUS_NotPosted;
+			return null;
+		}			
 
 		Trx trx = Trx.get(getTrxName(), true);
 		//  Delete existing Accounting
@@ -887,8 +973,8 @@ public abstract class Doc
 	{
 		if (DocumentType != null)
 			m_DocumentType = DocumentType;
-		//  No Document Type defined
-		if (m_DocumentType == null && getC_DocType_ID() != 0)
+		//  IDEMPIERE-3342 - prefer the category defined for the doctype if there is such column in the table
+		if (p_po.get_ColumnIndex("C_DocType_ID") >= 0 && getC_DocType_ID() != 0)
 		{
 			String sql = "SELECT DocBaseType, GL_Category_ID FROM C_DocType WHERE C_DocType_ID=?";
 			PreparedStatement pstmt = null;
@@ -2317,6 +2403,13 @@ public abstract class Doc
 	 */
 	public ArrayList<Fact> getFacts() {
 		return m_fact;
+	}
+	
+	/**
+	 * Return document whether need to defer posting or not
+	 */
+	public boolean isDeferPosting() {
+		return false;
 	}
 	
 	//F3P

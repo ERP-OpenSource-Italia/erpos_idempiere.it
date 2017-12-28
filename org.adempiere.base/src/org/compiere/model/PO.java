@@ -52,6 +52,7 @@ import org.adempiere.exceptions.DBException;
 import org.adempiere.process.UUIDGenerator;
 import org.compiere.Adempiere;
 import org.compiere.acct.Doc;
+import org.compiere.util.AdempiereUserError;
 import org.compiere.util.CCache;
 import org.compiere.util.CLogMgt;
 import org.compiere.util.CLogger;
@@ -1102,7 +1103,7 @@ public abstract class PO
 	{
 		int index = p_info.getColumnIndex(AD_Column_ID);
 		if (index < 0)
-			log.log(Level.SEVERE, "Not found - AD_Column_ID=" + AD_Column_ID);
+			throw new AdempiereUserError("Not found - AD_Column_ID=" + AD_Column_ID);
 		String ColumnName = p_info.getColumnName(index);
 		if (ColumnName.equals("IsApproved"))
 			return set_ValueNoCheck(ColumnName, value);
@@ -2011,7 +2012,7 @@ public abstract class PO
 												+ ", ID=" + m_IDs[0]);
 		}
 
-		String key = get_TableName() + "." + columnName + "|" + get_ID() + "|" + AD_Language;
+		String key = getTrlCacheKey(columnName, AD_Language);
 		String retValue = null;
 		if (! reload && trl_cache.containsKey(key)) {
 			retValue = trl_cache.get(key);
@@ -2043,6 +2044,11 @@ public abstract class PO
 		//
 		return retValue;
 	}	//	get_Translation
+
+	/** Return the key used in the translation cache */
+	private String getTrlCacheKey(String columnName, String AD_Language) {
+		return get_TableName() + "." + columnName + "|" + get_ID() + "|" + AD_Language;
+	}
 
 	/**
 	 * Get Translation of column
@@ -2144,6 +2150,8 @@ public abstract class PO
 				l_trxname.setLength(23);
 			m_trxName = Trx.createTrxName(l_trxname.toString());
 			localTrx = Trx.get(m_trxName, true);
+			localTrx.setDisplayName(getClass().getName()+"_save");
+			localTrx.getConnection();
 		}
 		else
 		{
@@ -2862,16 +2870,22 @@ public abstract class PO
 				set_ValueNoCheck(columnName, value);
 			}
 		}
-		//	Set empty Value
-		columnName = "Value";
-		index = p_info.getColumnIndex(columnName);
-		if (index != -1)
-		{
-			String value = (String)get_Value(index);
-			if (value == null || value.length() == 0)
+		// ticket 1007459 - exclude M_AttributeInstance from filling Value column
+		if (! MAttributeInstance.Table_Name.equals(get_TableName())) {
+			//	Set empty Value
+			columnName = "Value";
+			index = p_info.getColumnIndex(columnName);
+			if (index != -1)
 			{
-				value = DB.getDocumentNo (getAD_Client_ID(), p_info.getTableName(), m_trxName, this);
-				set_ValueNoCheck(columnName, value);
+				if (!p_info.isVirtualColumn(index))
+				{
+					String value = (String)get_Value(index);
+					if (value == null || value.length() == 0)
+					{
+						value = DB.getDocumentNo (getAD_Client_ID(), p_info.getTableName(), m_trxName, this);
+						set_ValueNoCheck(columnName, value);
+					}
+				}
 			}
 		}
 
@@ -3260,6 +3274,8 @@ public abstract class PO
 			{
 				localTrxName = Trx.createTrxName("POdel");
 				localTrx = Trx.get(localTrxName, true);
+				localTrx.setDisplayName(getClass().getName()+"_delete");
+				localTrx.getConnection();
 				m_trxName = localTrxName;
 			}
 			else
@@ -3740,6 +3756,14 @@ public abstract class PO
 				else
 					sqlcols.append(value.toString());
 				sqlcols.append(",");
+
+				// Reset of related translation cache entries
+		        String[] availableLanguages = Language.getNames();
+		        for (String langName : availableLanguages) {
+		    		Language language = Language.getLanguage(langName);
+					String key = getTrlCacheKey(columnName, language.getAD_Language());
+					trl_cache.remove(key);
+				}
 			}
 		}
 		StringBuilder whereid = new StringBuilder(" WHERE ").append(keyColumn).append("=").append(get_ID());

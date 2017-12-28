@@ -800,8 +800,8 @@ public final class Fact
 					factLine.setUserElement2_ID(LITMDistributionLine.getUserElement2_ID(dl));
 				// F3P end
 				//
-				if (dl.getAmt().signum() < 0)
-					factLine.setAmtSource(dLine.getC_Currency_ID(), null, dl.getAmt().abs()); 
+				if (dLine.getAmtAcctCr().signum() != 0) // isCredit
+					factLine.setAmtSource(dLine.getC_Currency_ID(), null, dl.getAmt().negate());
 				else
 					factLine.setAmtSource(dLine.getC_Currency_ID(), dl.getAmt(), null);
 				factLine.setQty(dl.getQty());

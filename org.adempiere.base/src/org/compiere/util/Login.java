@@ -995,8 +995,6 @@ public class Login
 			DB.close(rs, pstmt);
 			rs = null; pstmt = null;
 		}
-		//
-		Ini.saveProperties(Ini.isClient());
 		//	Country
 		Env.setContext(m_ctx, "#C_Country_ID", MCountry.getDefault(m_ctx).getC_Country_ID());
 		// Call ModelValidators afterLoadPreferences - teo_sarca FR [ 1670025 ]
@@ -1446,7 +1444,7 @@ public class Login
 				user.setFailedLoginCount(0);
 				user.setDateLastLogin(new Timestamp(now));
 				if (!user.save())
-					log.severe("Failed to update user record with date last login");
+					log.severe("Failed to update user record with date last login (" + user.getName() + " / clientID = " + user.getAD_Client_ID() + ")");
 			}
 		}
 		else if (validButLocked)

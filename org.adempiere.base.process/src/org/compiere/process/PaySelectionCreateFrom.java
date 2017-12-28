@@ -117,7 +117,7 @@ public class PaySelectionCreateFrom extends SvrProcess
 		
 	//	psel.getPayDate();
 
-		StringBuilder sql = new StringBuilder("SELECT C_Invoice_ID,")
+		StringBuilder sql = new StringBuilder("SELECT C_Invoice_ID,") // 1
 			//	Open
 			.append(" currencyConvert(invoiceOpen(i.C_Invoice_ID, i.C_InvoicePaySchedule_ID)")
 				.append(",i.C_Currency_ID, ?,?, i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS OpenAmt,")	//	##1/2 Currency_To,PayDate
@@ -128,14 +128,16 @@ public class PaySelectionCreateFrom extends SvrProcess
 				//	Discount
 			.append(" currencyConvert(invoiceDiscount(i.C_Invoice_ID,?,i.C_InvoicePaySchedule_ID)")	//	##6 PayDate
 				.append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS DiscountAmt,")	//	##7/8 Currency_To,PayDate
-			.append(" PaymentRule, IsSOTrx ")		//	4..6
+			.append(" PaymentRule, IsSOTrx, ") // 4..5
+			.append(" currencyConvert(invoiceWriteOff(i.C_Invoice_ID) ")
+			    .append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS WriteOffAmt ")	//	6 ##p6/p7 Currency_To,PayDate
 			.append("FROM C_Invoice_v i WHERE ");
 		if (X_C_Order.PAYMENTRULE_DirectDebit.equals(p_PaymentRule))
 			sql.append("IsSOTrx='Y'");
 		else
 			sql.append("IsSOTrx='N'");
 		sql.append(" AND IsPaid='N' AND DocStatus IN ('CO','CL')")
-			.append(" AND AD_Client_ID=?")				//	##6
+			.append(" AND AD_Client_ID=?")				//	##p8
 			//	Existing Payments - Will reselect Invoice if prepared but not paid 
 			.append(" AND NOT EXISTS (SELECT * FROM C_PaySelectionLine psl")
 						.append(" INNER JOIN C_PaySelectionCheck psc ON (psl.C_PaySelectionCheck_ID=psc.C_PaySelectionCheck_ID)")
@@ -143,7 +145,7 @@ public class PaySelectionCreateFrom extends SvrProcess
 						.append(" WHERE i.C_Invoice_ID=psl.C_Invoice_ID AND psl.IsActive='Y'")
 						.append(" AND (pmt.DocStatus IS NULL OR pmt.DocStatus NOT IN ('VO','RE')) )")
 			//	Don't generate again invoices already on this payment selection 
-			.append(" AND i.C_Invoice_ID NOT IN (SELECT i.C_Invoice_ID FROM C_PaySelectionLine psl WHERE psl.C_PaySelection_ID=?)"); //	##7 
+			.append(" AND i.C_Invoice_ID NOT IN (SELECT i.C_Invoice_ID FROM C_PaySelectionLine psl WHERE psl.C_PaySelection_ID=?)"); //	##p9
 		//	Disputed
 		if (!p_IncludeInDispute)
 			sql.append(" AND i.IsInDispute='N'");
@@ -215,6 +217,8 @@ public class PaySelectionCreateFrom extends SvrProcess
 			pstmt.setTimestamp(index++, psel.getPayDate());
 			pstmt.setInt (index++, C_CurrencyTo_ID);
 			pstmt.setTimestamp(index++, psel.getPayDate());
+			pstmt.setInt (index++, C_CurrencyTo_ID);
+			pstmt.setTimestamp(index++, psel.getPayDate());
 			//
 			pstmt.setInt(index++, psel.getAD_Client_ID());
 			pstmt.setInt(index++, p_C_PaySelection_ID);
@@ -247,7 +251,7 @@ public class PaySelectionCreateFrom extends SvrProcess
 				lines++;
 				MPaySelectionLine pselLine = new MPaySelectionLine (psel, lines*10, PaymentRule);
 				pselLine.setInvoice (C_Invoice_ID, isSOTrx,
-						openAmt, payAmt, DiscountAmt); //F3P set payamt from query
+						openAmt, payAmt, DiscountAmt, WriteOffAmt); //F3P set payamt from query
 				if (!pselLine.save())
 				{
 					throw new IllegalStateException ("Cannot save MPaySelectionLine");

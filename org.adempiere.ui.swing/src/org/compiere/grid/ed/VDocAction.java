@@ -95,7 +95,7 @@ public class VDocAction extends CDialog
 		}
 
 		//	dynamic init preparation
-		m_AD_Table_ID = Env.getContextAsInt(Env.getCtx(), WindowNo, "BaseTable_ID");
+		m_AD_Table_ID = mTab.getAD_Table_ID();
 		if (s_value == null)
 			readReference();
 		//

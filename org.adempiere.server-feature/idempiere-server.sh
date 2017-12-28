@@ -39,3 +39,4 @@ VMOPTS="-Xbootclasspath/p:alpn-boot.jar
 -Dmail.mime.decodeparameters=true"
 
 $JAVA ${DEBUG} $IDEMPIERE_JAVA_OPTIONS $VMOPTS -jar $BASE/plugins/org.eclipse.equinox.launcher_1.*.jar -application org.adempiere.server.application
+

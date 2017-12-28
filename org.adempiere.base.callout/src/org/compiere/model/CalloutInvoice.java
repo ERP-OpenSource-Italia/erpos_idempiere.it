@@ -275,7 +275,9 @@ public class CalloutInvoice extends CalloutEngine
 	 *	@param mField field
 	 *	@param value value
 	 *	@return null or error message
+	 *  @Deprecated - business logic moved to MInvoice.beforeSave - must not create/delete external records with callouts
 	 */
+	@Deprecated
 	public String paymentTerm (Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value)
 	{
 		Integer C_PaymentTerm_ID = (Integer)value;
@@ -290,7 +292,6 @@ public class CalloutInvoice extends CalloutEngine
 		
 		boolean valid = pt.apply (C_Invoice_ID);
 		mTab.setValue("IsPayScheduleValid", valid ? "Y" : "N");
-		
 		return "";
 	}	//	paymentTerm
 
@@ -326,7 +327,7 @@ public class CalloutInvoice extends CalloutEngine
 		boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
 		int C_BPartner_ID = Env.getContextAsInt(ctx, WindowNo, "C_BPartner_ID");
 		BigDecimal Qty = (BigDecimal)mTab.getValue("QtyInvoiced");
-		MProductPricing pp = new MProductPricing (M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx);
+		MProductPricing pp = new MProductPricing (M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx, null);
 		//
 		int M_PriceList_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_ID");
 		pp.setM_PriceList_ID(M_PriceList_ID);
@@ -563,7 +564,7 @@ public class CalloutInvoice extends CalloutEngine
 			if (QtyInvoiced == null)
 				QtyInvoiced = QtyEntered;
 			boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
-			MProductPricing pp = new MProductPricing (M_Product_ID, C_BPartner_ID, QtyInvoiced, IsSOTrx);
+			MProductPricing pp = new MProductPricing (M_Product_ID, C_BPartner_ID, QtyInvoiced, IsSOTrx, null);
 			pp.setM_PriceList_ID(M_PriceList_ID);
 			int	M_PriceList_Version_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_Version_ID");
 			pp.setM_PriceList_Version_ID(M_PriceList_Version_ID);
@@ -832,6 +833,45 @@ public class CalloutInvoice extends CalloutEngine
 		//
 		return "";
 	}	//	qty
-	
-	
+
+	public String navigateInvoiceLine(Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value) {
+		Integer M_Product_ID = Env.getContextAsInt(ctx, WindowNo, mTab.getTabNo(), "M_Product_ID");
+		if (M_Product_ID == null || M_Product_ID.intValue() == 0) {
+			Env.setContext(ctx, WindowNo, "DiscountSchema", "N");
+			return "";
+		}
+
+		/*****	Price Calculation see also qty	****/
+		int C_BPartner_ID = Env.getContextAsInt(ctx, WindowNo, "C_BPartner_ID");
+		BigDecimal Qty = (BigDecimal)mTab.getValue("QtyOrdered");
+		boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
+		MProductPricing pp = new MProductPricing (M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx, null);
+		//
+		int M_PriceList_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_ID");
+		pp.setM_PriceList_ID(M_PriceList_ID);
+		Timestamp orderDate = (Timestamp)mTab.getValue("DateOrdered");
+		/** PLV is only accurate if PL selected in header */
+		int M_PriceList_Version_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_Version_ID");
+		if ( M_PriceList_Version_ID == 0 && M_PriceList_ID > 0)
+		{
+			String sql = "SELECT plv.M_PriceList_Version_ID "
+				+ "FROM M_PriceList_Version plv "
+				+ "WHERE plv.M_PriceList_ID=? "						//	1
+				+ " AND plv.ValidFrom <= ? "
+				+ "ORDER BY plv.ValidFrom DESC";
+			//	Use newest price list - may not be future
+
+			M_PriceList_Version_ID = DB.getSQLValueEx(null, sql, M_PriceList_ID, orderDate);
+			if ( M_PriceList_Version_ID > 0 )
+				Env.setContext(ctx, WindowNo, "M_PriceList_Version_ID", M_PriceList_Version_ID );
+		}
+		pp.setM_PriceList_Version_ID(M_PriceList_Version_ID);
+		pp.setPriceDate(orderDate);
+		//
+		Env.setContext(ctx, WindowNo, "EnforcePriceLimit", pp.isEnforcePriceLimit() ? "Y" : "N");
+		Env.setContext(ctx, WindowNo, "DiscountSchema", pp.isDiscountSchema() ? "Y" : "N");
+
+		return "";
+	}
+
 }	//	CalloutInvoice

@@ -274,11 +274,14 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 		for (int i = 0; i < attributes.length; i++)
 		{
 			MAttributeInstance mai = attributes[i].getMAttributeInstance(getM_AttributeSetInstance_ID());
-			if (mai != null && mai.getValue() != null)
+			if (mai != null)
 			{
 				if (sb.length() > 0)
 					sb.append("_");
-				sb.append(mai.getValue());
+				if (mai.getValue() != null)
+					sb.append(mai.getValue());
+				else
+					sb.append("");
 			}
 		}
 		setDescription (sb.toString());
@@ -493,6 +496,31 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 			asi.getGuaranteeDate(true);
 		}
 		//
+		asi.setDescription();
+		asi.saveEx();
+		return asi;
+	}
+	
+	/**
+	 * AutoGerate & save a new ASI for given product.
+	 * Automatically creates Lot#
+	 * @param ctx
+	 * @param product
+	 * @param trxName
+	 * @return newly created ASI
+	 */
+	public static MAttributeSetInstance generateLot(Properties ctx, MProduct product, String trxName)
+	{
+		MAttributeSetInstance asi = new MAttributeSetInstance(ctx, 0, trxName);
+		asi.setClientOrg(product.getAD_Client_ID(), 0);
+		asi.setM_AttributeSet_ID(product.getM_AttributeSet_ID());
+		// Create new Lot
+		if (asi.getM_AttributeSet_ID() > 0)
+		{
+			asi.getLot(true, product.get_ID());
+		}
+		//
+		asi.setDescription();
 		asi.saveEx();
 		return asi;
 	}
