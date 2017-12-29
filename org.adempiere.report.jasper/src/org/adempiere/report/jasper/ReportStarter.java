@@ -35,7 +35,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -214,7 +213,8 @@ public class ReportStarter implements ProcessCall, ClientProcess
 				log.warning("404 not found: Report cannot be found on server "+ e.getMessage());
     		return null;
     	} catch (IOException e) {
-			throw new AdempiereException("I/O error when trying to download (sub)report from server "+ e.getLocalizedMessage());
+			log.severe("I/O error when trying to download (sub)report from server "+ e.getMessage());
+    		return null;
     	}
     }
 
@@ -313,7 +313,8 @@ public class ReportStarter implements ProcessCall, ClientProcess
 
     	}
     	catch (Exception e) {
-			throw new AdempiereException("Unknown exception: "+ e.getLocalizedMessage());
+    		log.severe("Unknown exception: "+ e.getMessage());
+    		return null;
     	}
     	return reportFile;
     }
@@ -338,7 +339,8 @@ public class ReportStarter implements ProcessCall, ClientProcess
     		String hash = new String(baos.toByteArray());
     		return hash;
     	} catch (IOException e) {
-			throw new AdempiereException("I/O error when trying to download (sub)report from server "+ e.getLocalizedMessage());
+			log.severe("I/O error when trying to download (sub)report from server "+ e.getMessage());
+    		return null;
     	}
 	}
 
@@ -414,18 +416,19 @@ public class ReportStarter implements ProcessCall, ClientProcess
         if (trx != null) {
         	trxName = trx.getTrxName();
         }
+        
         ReportData reportData = getReportData(pi, trxName);
         if (reportData == null) {
             reportResult(AD_PInstance_ID, "Can not find report data", trxName);
             return false;
         }
-
-      List<JasperPrint> jasperPrintList = new ArrayList<JasperPrint>();
-      String reportFilePath = reportData.getReportFilePath();
-      String[]  reportPathList = reportFilePath.split(";");
-      for (int idx = 0; idx < reportPathList.length; idx++) {
-
-        String reportPath = reportPathList[idx];
+        
+        String reportPath = null;
+        
+        if(reportFile == null)
+            reportPath = reportData.getReportFilePath();
+        else
+        	reportPath = reportFile.getName();
         
         if (Util.isEmpty(reportPath, true))
 		{
@@ -444,14 +447,14 @@ public class ReportStarter implements ProcessCall, ClientProcess
         reportPath = Env.parseContext(ctx, 0, reportPath, false, true);
         
 		JasperData data = null;
-		File reportFile = null;
 		String fileExtension = "";
-		HashMap<String, Object> params = new HashMap<String, Object>();
 
 		addProcessParameters(AD_PInstance_ID, params, trxName);
 		addProcessInfoParameters(params, pi.getParameter());
 
-		reportFile = getReportFile(reportPath, (String)params.get("ReportType"));
+		if(reportFile == null)
+			reportFile = getReportFile(reportPath, (String)params.get("ReportType"));
+		
 		if (reportFile == null || reportFile.exists() == false)
 		{
 			log.severe("No report file found for given type, falling back to " + reportPath);
@@ -561,7 +564,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
         }
 
         if (jasperReport != null) {
-			File[] subreports;
+        	File[] subreports;
 
             // Subreports
 			if(reportPath.startsWith("http://") || reportPath.startsWith("https://"))
@@ -806,20 +809,9 @@ public class ReportStarter implements ProcessCall, ClientProcess
 	                    	}
 	                    }	
 	                } else {
-	                	if (reportPathList.length == 1) {
-		                    if (log.isLoggable(Level.INFO)) log.info( "ReportStarter.startProcess run report -"+jasperPrint.getName());
-		                    JRViewerProvider viewerLauncher = Service.locator().locate(JRViewerProvider.class).getService();
-		                    viewerLauncher.openViewer(jasperPrint, pi.getTitle());
-	                	} else {
-	                		jasperPrintList.add(jasperPrint);
-	                		if (idx+1 == reportPathList.length) {
-			                    JRViewerProviderList viewerLauncher = Service.locator().locate(JRViewerProviderList.class).getService();
-			                    if (viewerLauncher == null) {
-			                    	throw new AdempiereException("Can not find a viewer provider for multiple jaspers");
-			                    }
-			                    viewerLauncher.openViewer(jasperPrintList, pi.getTitle());
-	                		}
-	                	}
+	                    if (log.isLoggable(Level.INFO)) log.info( "ReportStarter.startProcess run report -"+jasperPrint.getName());
+	                    JRViewerProvider viewerLauncher = Service.locator().locate(JRViewerProvider.class).getService();
+	                    viewerLauncher.openViewer(jasperPrint, pi.getTitle());
 	                }
                 }
                 else
@@ -907,8 +899,29 @@ public class ReportStarter implements ProcessCall, ClientProcess
                 	}
                 }
             } catch (JRException e) {
-                throw new AdempiereException(e.getLocalizedMessage() + (e.getCause() != null ? " -> " + e.getCause().getLocalizedMessage() : ""));
-            } finally {
+	            {
+	            	log.severe("ReportStarter.startProcess: Can not run report - "+ e.getMessage());
+	            	//F3P from adempiere
+	            	if(e.getCause() != null)
+	    			{
+	    				log.severe("Cause: "
+	    						+ e.getCause().getMessage());					
+	    			}
+	            	reportResult( AD_PInstance_ID, e.getMessage(), trxName);
+	            	return false;
+		             //F3P end
+	            }
+            }catch (Exception e)//F3P from adempiere
+            {
+                log.severe("ReportStarter.startProcess: Can not run report - "+ e.getMessage());
+                if(e.getCause() != null)
+      			{
+      				log.severe("Cause: "
+      						+ e.getCause().getMessage());					
+      			}
+                reportResult( AD_PInstance_ID, e.getMessage(), trxName);
+                return false; //F3P end
+            }finally {
             	if (conn != null) {
 					try {
 						conn.close();
@@ -917,8 +930,6 @@ public class ReportStarter implements ProcessCall, ClientProcess
             	}
             }
         }
-
-      } // for reportPathList
 
         if (onrows != null && onrows instanceof Integer) {
         	nrows = (Integer) onrows;
@@ -1498,6 +1509,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
         }
         catch (SQLException e)
         {
+//            log.severe("Execption; sql = "+sql+"; e.getMessage() = " +e.getMessage());
             throw new DBException(e, sql);
         }
         finally
@@ -1566,15 +1578,14 @@ public class ReportStarter implements ProcessCall, ClientProcess
     {
     	log.info("");
         String sql = "SELECT pr.JasperReport, pr.IsDirectPrint "
-        		   + "FROM AD_Process pr, AD_PInstance pi "
-                   + "WHERE pr.AD_Process_ID = pi.AD_Process_ID "
-                   + " AND pi.AD_PInstance_ID=?";
+        		   + "FROM AD_Process pr "
+                   + "WHERE pr.AD_Process_ID = ?"; //F3P: set directly AD_Process_ID
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try
         {
             pstmt = DB.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, trxName);
-            pstmt.setInt(1, pi.getAD_PInstance_ID());
+            pstmt.setInt(1, pi.getAD_Process_ID()); //F3P: set directly AD_Process_ID
             rs = pstmt.executeQuery();
             String path = null;
             boolean	directPrint = false;
@@ -1595,6 +1606,8 @@ public class ReportStarter implements ProcessCall, ClientProcess
         catch (SQLException e)
         {
         	throw new DBException(e, sql);
+//        	log.severe("sql = "+sql+"; e.getMessage() = "+ e.getMessage());
+//        	return null;
         }
         finally
         {
