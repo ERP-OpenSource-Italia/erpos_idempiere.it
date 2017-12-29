@@ -97,19 +97,6 @@ public class PrintDataGroup
 	 */
 	public Object groupChange (String groupColumnName, Object value, boolean force)
 	{
-		return groupChange(groupColumnName, value,false); // F3P: added variant to avoid updating check value
-	}
-	
-	// F3P: added variant to avoid updating check value
-	/**
-	 * 	Check for Group Change
-	 * 	@param groupColumnName column name
-	 * 	@param value column value
-	 *  @param checkOnly flag check only
-	 * 	@return null if no group change otherwise old value
-	 */
-	public Object groupChange (String groupColumnName, Object value, boolean checkOnly)
-	{
 		if (!isGroupColumn(groupColumnName))
 			return null;
 		Object newValue = value;
@@ -121,12 +108,10 @@ public class PrintDataGroup
 			Object oldValue = m_groupMap.get(groupColumnName);
 			if (newValue.equals(oldValue) && !force )
 				return null;
-			if(checkOnly == false) // F3P: added variant to avoid updating check value
-				m_groupMap.put(groupColumnName, newValue);
+			m_groupMap.put(groupColumnName, newValue);
 			return oldValue;
 		}
-		if(checkOnly == false) // F3P: added variant to avoid updating check value
-			m_groupMap.put(groupColumnName, newValue);
+		m_groupMap.put(groupColumnName, newValue);
 		return null;
 	}	//	groupChange
 
