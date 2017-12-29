@@ -646,7 +646,7 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 			MJournal journal = journals[i];
 			if (!journal.isActive())
 				continue;
-			if (journal.reverseCorrectIt(reverse.getGL_JournalBatch_ID()) == null)
+			if (!journal.processIt(DOCACTION_Reverse_Correct)) //nectosoft
 			{
 				m_processMsg = "Could not reverse " + journal;
 				return false;
@@ -737,7 +737,7 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 			MJournal journal = journals[i];
 			if (!journal.isActive())
 				continue;
-			if (journal.reverseAccrualIt(reverse.getGL_JournalBatch_ID()) == null)
+			if (!journal.processIt(DOCACTION_Reverse_Accrual))//nectosoft
 			{
 				m_processMsg = "Could not reverse " + journal;
 				return false;
