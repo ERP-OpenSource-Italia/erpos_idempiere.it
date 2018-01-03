@@ -365,6 +365,7 @@ public class MOrderLine extends X_C_OrderLine
 		// F3P: integrated line uom and date fpr ppvb
 		m_productPrice.setDatePPVB(getDateOrdered()); 
 		m_productPrice.setLineC_UOM_ID(getC_UOM_ID());
+		m_productPrice.setLineObject(this);
 		
 		//
 		m_productPrice.calculatePrice();

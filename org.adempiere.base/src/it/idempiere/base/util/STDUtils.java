@@ -474,4 +474,25 @@ public class STDUtils {
 		return t.getMessage();
 	}
 	
+	public static void setEnvGeneric(Properties ctx, int WindowNo, String name, Object oVal)
+	{
+		if(oVal == null)
+			return;
+		
+		if(oVal instanceof Timestamp)
+		{
+			Env.setContext(ctx,WindowNo,name, (Timestamp)oVal);
+		}
+		else if(oVal instanceof Integer)
+		{
+			Env.setContext(ctx,WindowNo,name, (Integer)oVal);
+		}
+		else if(oVal instanceof Boolean)
+		{
+			Env.setContext(ctx,WindowNo,name, (Boolean)oVal);
+		}
+		else
+			Env.setContext(ctx,WindowNo,name, oVal.toString());
+	}
+	
 }
