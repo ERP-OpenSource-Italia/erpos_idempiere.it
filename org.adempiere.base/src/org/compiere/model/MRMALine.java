@@ -159,6 +159,7 @@ public class MRMALine extends X_M_RMALine
         		// F3P: integrated line uom and date fpr ppvb
         		pp.setDatePPVB(invoice.getDateInvoiced()); 
         		pp.setLineC_UOM_ID(getC_UOM_ID());
+        		pp.setLineObject(this);
         		
         		precision = invoice.getPrecision();
         		taxId = Tax.get(getCtx(), getM_Product_ID(), getC_Charge_ID(), invoice.getDateInvoiced(), invoice.getDateInvoiced(),

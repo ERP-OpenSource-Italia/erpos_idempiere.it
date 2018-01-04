@@ -37,6 +37,7 @@ import org.compiere.util.Trace;
 import it.idempiere.base.model.CompositeDiscount;
 import it.idempiere.base.model.LITMProdPricingRule;
 import it.idempiere.base.util.STDSysConfig;
+import it.idempiere.base.util.STDUtils;
 
 /**
  *  Product Price Calculations
@@ -152,7 +153,8 @@ public class MProductPricing
 	private int m_productC_UOM_ID = 0;
 
 	private Timestamp m_dateOrder = null;
-	private String		productPriceDetSeq;
+	private String	productPriceDetSeq;
+	private Object	  m_lineObj = null; // F3P: generic object representing a line. As of now PO and GridTab are supported, every other will be silently ignored 
 	
 	private static final String FORMAT_DISCOUNT = "##.##";
 	
@@ -1457,6 +1459,10 @@ public class MProductPricing
 		return m_productC_UOM_ID;
 	}
 
+	public void setLineObject(Object line)
+	{
+		m_lineObj = line;
+	}
 	
 	private boolean calculateProductPriceRule()
 	{
@@ -1467,6 +1473,8 @@ public class MProductPricing
 		if(rules != null && rules.size() > 0)
 		{
 			Properties ruleCtx = new Properties(Env.getCtx());
+			
+			setContextFromLine(ruleCtx);
 			
 			Env.setContext(ruleCtx, 0, "M_Product_ID", m_M_Product_ID);
 			Env.setContext(ruleCtx, 0, "Qty", m_Qty.toString());
@@ -1499,6 +1507,11 @@ public class MProductPricing
 			{
 				String sql = rule.getScript();
 				sql = Env.parseContext(ruleCtx, 0, sql, false);
+				
+				if(log.isLoggable(Level.INFO))
+				{
+					log.info(sql.toString());
+				}
 				
 				PreparedStatement pstmt = DB.prepareStatement(sql, null);
 				ResultSet rs = null;
@@ -1551,6 +1564,43 @@ public class MProductPricing
 		}
 		
 		return calculated;
+	}
+	
+	private void setContextFromLine(Properties ctx)
+	{
+		if(m_lineObj == null) // Do we have a line ?
+			return;
+		
+		if(m_lineObj instanceof GridTab)
+		{
+			GridTab gTab = (GridTab)m_lineObj;
+			
+			for(GridField gf:gTab.getFields())
+			{
+				String columnName = gf.getColumnName();
+				Object oVal = gTab.getValue(gf);
+								
+				STDUtils.setEnvGeneric(ctx, 0, columnName, oVal);
+			}
+			
+		}
+		else if(m_lineObj instanceof PO)
+		{
+			PO po = (PO)m_lineObj;
+			int iColCount = po.get_ColumnCount();
+			
+			for(int i=0; i < iColCount; i++)
+			{
+				String columnName = po.get_ColumnName(i);
+				Object oVal = po.get_Value(i);
+				STDUtils.setEnvGeneric(ctx, 0, columnName, oVal);
+			}
+		}
+		else
+		{
+			log.warning("Unsupport line object type: " + m_lineObj.getClass().getName());
+		}
+		
 	}
 	
 }	//	MProductPrice

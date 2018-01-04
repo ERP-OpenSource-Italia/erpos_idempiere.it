@@ -577,6 +577,8 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 					}
 				}
 				
+				ModelValidationEngine.get().fireImportValidate(this,imp, payment, ImportValidator.TIMING_AFTER_IMPORT);
+				
 			}
 		}
 		catch(Exception e)

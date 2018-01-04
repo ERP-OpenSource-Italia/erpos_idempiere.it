@@ -149,6 +149,8 @@ public class CalloutRMA extends CalloutEngine {
 		MProductPricing pp = new MProductPricing(M_Product_ID, rma.getC_BPartner_ID(), Env.ONE, rma.isSOTrx(), null);
 		int taxId = 0;
 		int precision = 0;
+		
+		pp.setLineObject(mTab);
 
 		MInvoice invoice = rma.getOriginalInvoice();
 		if (invoice != null) 

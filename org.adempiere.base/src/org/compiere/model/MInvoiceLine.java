@@ -407,6 +407,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		// F3P: integrated line uom and date fpr ppvb
 		m_productPricing.setDatePPVB(m_DateInvoiced); 
 		m_productPricing.setLineC_UOM_ID(getC_UOM_ID());
+		m_productPricing.setLineObject(this);
 		
 		m_productPricing.calculatePrice();
 		setPriceList (m_productPricing.getPriceList());
