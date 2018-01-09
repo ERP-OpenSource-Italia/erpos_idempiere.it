@@ -65,7 +65,6 @@ import java.util.logging.Level;
 
 import org.adempiere.base.IDisplayTypeFactory;
 import org.adempiere.base.Service;
-import org.compiere.model.MCurrency;
 
 /**
  *	System Display Types.
