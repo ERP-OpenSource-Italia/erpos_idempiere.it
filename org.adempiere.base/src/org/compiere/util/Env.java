@@ -1797,7 +1797,8 @@ public final class Env
 							outStr.append("<").append(format).append(">");
 						outStr.append("@");
 					}
-				} 
+				}
+			}
 			else if (keepUnparseable)
 			{
 				outStr.append("@"+token);
