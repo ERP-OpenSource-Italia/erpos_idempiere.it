@@ -300,8 +300,11 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 			trx.setDisplayName(MPaySelectionCheck.class.getName()+"_confirmPrint");
 			check.set_TrxName(trxName);
 		}
+		
+		MPayment payment = null; // F3P: moved out of try/catch to be able to return it
+		
 		try {
-			MPayment payment = new MPayment(check.getCtx(), check.getC_Payment_ID(), trxName);
+			payment = new MPayment(check.getCtx(), check.getC_Payment_ID(), trxName);
 			//	Existing Payment
 			if (check.getC_Payment_ID() != 0)
 			{
@@ -333,7 +336,7 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 				else
 				{
 					s_log.log(Level.SEVERE, "Unsupported Payment Rule=" + check.getPaymentRule());
-					return;
+					return null;
 				}
 				payment.setTrxType(X_C_Payment.TRXTYPE_CreditPayment);
 				// F3P: set receipt/payment
@@ -556,81 +559,143 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 	{
 		return confirmPrint (checks,batch,false) ;
 	} // confirmPrint
-
+	
 	public static HashMap<MPayment, ArrayList<RifDoc>> confirmPrint(
-			MPaySelectionCheck[] checks, MPaymentBatch batch,
+			MPaySelectionCheck[] checks, MPaymentBatch batch, boolean createDepositBatch, 
 			boolean bCreateToDb) {
-		return confirmPrint(checks, batch, null, bCreateToDb);
+		return confirmPrint(checks, batch, createDepositBatch, null, bCreateToDb);
 	}
 
 	public static HashMap<MPayment, ArrayList<RifDoc>> confirmPrint(
-			MPaySelectionCheck[] checks, MPaymentBatch batch,
+			MPaySelectionCheck[] checks, MPaymentBatch batch, boolean createDepositBatch,
 			Timestamp trxDate, boolean bCreateToDb) {
 		HashMap<MPayment, ArrayList<RifDoc>> hmPaymentProcessed = new HashMap<MPayment, ArrayList<RifDoc>>(); // F3P: return value
 		
 		boolean localTrx = false;
 		String trxName = null;
+		int lastDocumentNo = 0;
+		
 		if (checks.length > 0)
+		{
 			trxName = checks[0].get_TrxName();
-		Trx trx = null;
-		if (trxName == null) {
-			localTrx = true;
-			trxName = Trx.createTrxName("ConfirmPrintMulti");
-			trx = Trx.get(trxName, true);
-		}
-		// int lastDocumentNo = 0; F3P: No longer used
-		try {
-			for (int i = 0; i < checks.length; i++)
+			Properties ctx = checks[0].getCtx();
+			int c_BankAccount_ID = checks[0].getC_PaySelection().getC_BankAccount_ID() ;
+			String paymentRule = checks[0].getPaymentRule() ;
+			Boolean isDebit ;
+			if (MInvoice.PAYMENTRULE_DirectDeposit.compareTo(paymentRule) == 0
+					|| MInvoice.PAYMENTRULE_Check.compareTo(paymentRule) == 0
+					|| MInvoice.PAYMENTRULE_OnCredit.compareTo(paymentRule) == 0)
 			{
-				MPaySelectionCheck check = checks[i];
-				if (localTrx)
-					check.set_TrxName(trxName);
-				MPayment payment = confirmPrint(check, batch, trxDate, bCreateToDb);
-				
-				// F3P: Manage reference to document
-				MPaySelectionLine[] psls = check.getPaySelectionLines(false);
-				ArrayList<RifDoc> rif = new ArrayList<RifDoc>();
+				isDebit = false ;
+			}
+			else if (MInvoice.PAYMENTRULE_DirectDebit.compareTo(paymentRule) == 0)
+			{
+				isDebit = true ;
+			}
+			else
+			{
+				isDebit = false ;
+				createDepositBatch = false ;
+			}
+			Trx trx = null;
+			if (trxName == null) {
+				localTrx = true;
+				trxName = Trx.createTrxName("ConfirmPrintMulti");
+				trx = Trx.get(trxName, true);
+			}
 
-				for (MPaySelectionLine psLine : psls) {
-					RifDoc rfd = new RifDoc();
-
-					// reason for payment must be translated into bp language. Use
-					// client one if null
-					String sBPLanguage = psLine.getC_Invoice().getC_BPartner()
-							.getAD_Language();
-					if (sBPLanguage == null)
-						sBPLanguage = Env.getCtx().getProperty("#AD_Language");
-					Date dateInvoiced = new Date();
-					dateInvoiced.setTime(psLine.getC_Invoice().getDateInvoiced()
-							.getTime());
-					String sDateInv = new SimpleDateFormat("dd/MM/yy")
-							.format(dateInvoiced);
-
-					String sDescr = MessageFormat.format(Msg.getMsg(sBPLanguage,
-							BaseMessages.MSG_PAYEXPORTDESCR), psLine.getC_Invoice()
-							.getDocumentNo(), sDateInv, psLine.getC_Invoice()
-							.getC_BPartner().getName(),psLine.getDescription());
-					rfd.setDescrizione(sDescr);
-
-					rif.add(rfd);
+			try {
+				MDepositBatch depositBatch = null;
+				if (createDepositBatch)
+				{
+					depositBatch = new MDepositBatch(ctx, 0, trxName) ;
+					depositBatch.setC_BankAccount_ID(c_BankAccount_ID);
+					if (isDebit)
+					{
+						depositBatch.setC_DocType_ID(MDocType.getDocType(Doc.DOCTYPE_ARReceipt));
+					}
+					else
+					{
+						depositBatch.setC_DocType_ID(MDocType.getDocType(Doc.DOCTYPE_APPayment));
+					}
+					depositBatch.setDateDeposit(new Timestamp((new Date()).getTime()));
+					depositBatch.setDateDoc(new Timestamp((new Date()).getTime()));
+					depositBatch.saveEx();
 				}
+		
+				for (int i = 0; i < checks.length; i++)
+				{
+					MPaySelectionCheck check = checks[i];
+					if (localTrx)
+						check.set_TrxName(trxName);
+					MPayment payment = confirmPrint(check, batch, trxDate, bCreateToDb); // F3P: ora payment puo essere null, lasciamo comunque per capire se esitono casi di pagamenti non compatibili
+					
+					if(payment == null)
+						throw new AdempiereException("Unspported payment type for pay selection check: " + check.getDocumentNo() + ", payment rule: " + check.getPaymentRule());
+					
+					if (createDepositBatch)
+					{
+						MDepositBatchLine depositBatchLine = new MDepositBatchLine(depositBatch) ;
+						depositBatchLine.setC_Payment_ID(check.getC_Payment_ID());
+						depositBatchLine.setProcessed(true);
+						depositBatchLine.saveEx();
+					}					
+					
+					// F3P: Manage reference to document
+					MPaySelectionLine[] psls = check.getPaySelectionLines(false);
+					ArrayList<RifDoc> rif = new ArrayList<RifDoc>();
+	
+					for (MPaySelectionLine psLine : psls) {
+						RifDoc rfd = new RifDoc();
+	
+						// reason for payment must be translated into bp language. Use
+						// client one if null
+						String sBPLanguage = psLine.getC_Invoice().getC_BPartner()
+								.getAD_Language();
+						if (sBPLanguage == null)
+							sBPLanguage = Env.getCtx().getProperty("#AD_Language");
+						Date dateInvoiced = new Date();
+						dateInvoiced.setTime(psLine.getC_Invoice().getDateInvoiced()
+								.getTime());
+						String sDateInv = new SimpleDateFormat("dd/MM/yy")
+								.format(dateInvoiced);
+	
+						String sDescr = MessageFormat.format(Msg.getMsg(sBPLanguage,
+								BaseMessages.MSG_PAYEXPORTDESCR), psLine.getC_Invoice()
+								.getDocumentNo(), sDateInv, psLine.getC_Invoice()
+								.getC_BPartner().getName(),psLine.getDescription());
+						rfd.setDescrizione(sDescr);
+	
+						rif.add(rfd);
+					}
+	
+					// F3P: add element to list
+					hmPaymentProcessed.put(payment, rif);
+				}
+				
+				if (createDepositBatch)
+				{
 
-				// F3P: add element to list
-				hmPaymentProcessed.put(payment, rif);
-			}
-		} catch (Exception e) {
-			if (localTrx && trx != null) {
-				trx.rollback();
-				trx.close();
-				trx = null;
-			}
-			throw new AdempiereException(e);
-		} finally {
-			if (localTrx && trx != null) {
-				trx.commit();
-				trx.close();
+					depositBatch.setProcessed(true);
+					depositBatch.saveEx();
+				}
+				
+			} catch (Exception e) {
+				if (localTrx && trx != null) {
+					trx.rollback();
+					trx.close();
+					trx = null;
+				}
+				throw new AdempiereException(e);
+			} finally {
+				if (localTrx && trx != null) {
+					trx.commit();
+					trx.close();
+				}
 			}
 		}
+		
+		if (s_log.isLoggable(Level.FINE)) s_log.fine("Last Document No = " + lastDocumentNo);
 		
 		return 	hmPaymentProcessed;
 	}

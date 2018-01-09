@@ -1468,7 +1468,7 @@ public class MProductPricing
 	{
 		boolean calculated = false;
 		
-		List<MRule> rules = LITMProdPricingRule.getRules(Env.getCtx(), null);
+		List<MRule> rules = LITMProdPricingRule.getRules(Env.getCtx(), trxName);
 		
 		if(rules != null && rules.size() > 0)
 		{
@@ -1513,7 +1513,7 @@ public class MProductPricing
 					log.info(sql.toString());
 				}
 				
-				PreparedStatement pstmt = DB.prepareStatement(sql, null);
+				PreparedStatement pstmt = DB.prepareStatement(sql, trxName);
 				ResultSet rs = null;
 				
 				try

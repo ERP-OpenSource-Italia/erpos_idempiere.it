@@ -82,7 +82,7 @@ import com.itextpdf.text.pdf.PdfReader;
  *    Carlos Ruiz - GlobalQSS - FR 3132033 - Make payment export class configurable per bank 
  *    Markus Bozem:  IDEMPIERE-1546 / IDEMPIERE-3286 
 */
-public class WPayPrint extends PayPrint implements IFormController, EventListener<Event>, ValueChangeListener
+public class WPayPrint extends PayPrint implements IFormController, EventListener<Event>, ValueChangeListener, IWPayPrint
 {
 	private CustomForm form = new CustomForm();
 

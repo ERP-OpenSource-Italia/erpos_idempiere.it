@@ -358,27 +358,47 @@ public class WPaySelect extends PaySelect
 			loadTableInfo();
 
 		else if (DialogEvents.ON_WINDOW_CLOSE.equals(e.getName())) {
-
-			//  Ask to Open Print Form
-			FDialog.ask(m_WindowNo, form, "VPaySelectPrint?", new Callback<Boolean>() {
-
-				@Override
-				public void onCallback(Boolean result) 
+			
+			// F3P: improved error reporting
+			
+			boolean isError = false;
+			
+			if(e.getTarget() instanceof ProcessModalDialog)
+			{
+				ProcessModalDialog processDialog = (ProcessModalDialog)e.getTarget();
+				ProcessInfo pi = processDialog.getProcessInfo();
+				
+				isError = pi.isError();
+				
+				if(isError)
 				{
-					if (result)
+					FDialog.error(m_WindowNo, pi.getSummary());
+				}				
+			}
+			
+			if(isError == false)
+			{
+				//  Ask to Open Print Form
+				FDialog.ask(m_WindowNo, form, "VPaySelectPrint?", new Callback<Boolean>() {
+	
+					@Override
+					public void onCallback(Boolean result) 
 					{
-						//  Start PayPrint
-						int AD_Form_ID = FORM_PAYMENT_PRINT_EXPORT;	//	Payment Print/Export
-						ADForm form = SessionManager.getAppDesktop().openForm(AD_Form_ID);
-						if (m_ps != null)
+						if (result)
 						{
-							WPayPrint pp = (WPayPrint) form.getICustomForm();
-							pp.setPaySelection(m_ps.getC_PaySelection_ID());
+							//  Start PayPrint
+							int AD_Form_ID = FORM_PAYMENT_PRINT_EXPORT;	//	Payment Print/Export
+							ADForm form = SessionManager.getAppDesktop().openForm(AD_Form_ID);
+							if (m_ps != null)
+							{
+								IWPayPrint pp = (IWPayPrint) form.getICustomForm();
+								pp.setPaySelection(m_ps.getC_PaySelection_ID());
+							}
 						}
+						
 					}
-					
-				}
-			});
+				});
+			}
 		}
 	}   //  actionPerformed
 

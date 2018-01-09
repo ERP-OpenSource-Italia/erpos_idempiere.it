@@ -131,7 +131,7 @@ public class PaySelectionCreateCheck extends SvrProcess
 		{
 			int C_BPartner_ID = check.getC_BPartner_ID();
 			MBPartner bp = MBPartner.get(getCtx(), C_BPartner_ID);
-			StringBuilder msg = new StringBuilder("@NotFound@ @C_BP_BankAccount@: ").append(bp.getName());
+			StringBuilder msg = new StringBuilder("@NotFound@ @C_BP_BankAccount_ID@: ").append(bp.getName()); // F3P: corretto messaggio (_ID)
 			throw new AdempiereUserError(msg.toString());
 		}
 		if (!check.save())
