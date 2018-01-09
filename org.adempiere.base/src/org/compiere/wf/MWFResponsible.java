@@ -101,7 +101,7 @@ public class MWFResponsible extends X_AD_WF_Responsible
 			return false;
 		}
 		
-		return getAD_User_ID() == 0 && getAD_Role_ID() == 0;
+		return getAD_User_ID() == 0 && getAD_Role_ID() == 0 && !isManual();
 	}	//	isInvoker
 	
 	/**

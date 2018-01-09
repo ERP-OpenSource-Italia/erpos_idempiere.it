@@ -34,6 +34,7 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 
+import org.adempiere.base.Service;
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MAttachment;
 import org.compiere.model.MBPartner;
@@ -69,6 +70,7 @@ import org.compiere.util.Trace;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
+import org.compiere.util.WhereClauseAndParams;
 
 import it.idempiere.base.model.WorkReqMWFResponsible;
 import it.idempiere.base.util.StateTerminatedException;
