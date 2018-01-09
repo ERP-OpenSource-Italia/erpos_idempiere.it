@@ -1583,8 +1583,8 @@ public class MInOut extends X_M_InOut implements DocAction
 					&& product.isCreateAsset()
 					&& !product.getM_Product_Category().getA_Asset_Group().isFixedAsset()
 					&& sLine.getMovementQty().signum() > 0
-					&& !isReversal())
-				&& (getMovementType().equals(MOVEMENTTYPE_CustomerReturns) == false))	// F3P: A customer return should not create an asset
+					&& !isReversal()
+					&& (getMovementType().equals(MOVEMENTTYPE_CustomerReturns) == false))	// F3P: A customer return should not create an asset
 				{
 					log.fine("Asset");
 					info.append("@A_Asset_ID@: ");
