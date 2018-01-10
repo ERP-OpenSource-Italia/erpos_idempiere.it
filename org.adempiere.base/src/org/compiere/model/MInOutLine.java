@@ -569,7 +569,8 @@ public class MInOutLine extends X_M_InOutLine
 		if (getM_Locator_ID() > 0)
 		{
 			MLocator locator = MLocator.get(getCtx(), getM_Locator_ID());
-			if (getM_Warehouse_ID() != locator.getM_Warehouse_ID())
+			if (getM_Warehouse_ID() != locator.getM_Warehouse_ID() 
+					&& !STDSysConfig.isInOutDocTypeInWarehouseLocatorCheckSkipList(getParent().getC_DocType_ID(), getAD_Client_ID(), getAD_Org_ID())) // F3P: is this inout doctype in skip list for this check ? 
 			{
 				throw new WarehouseLocatorConflictException(
 						MWarehouse.get(getCtx(), getM_Warehouse_ID()),
