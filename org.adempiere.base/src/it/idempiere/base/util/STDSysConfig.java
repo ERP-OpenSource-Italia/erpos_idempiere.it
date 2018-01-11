@@ -5,9 +5,11 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.regex.Pattern;
 
 import org.compiere.model.MSysConfig;
 import org.compiere.util.Ini;
+import org.compiere.util.Util;
 
 /** Variabili di configurazione applicabili all'implementazione standard iDempiere
  *  
@@ -17,6 +19,9 @@ import org.compiere.util.Ini;
  */
 public class STDSysConfig
 {
+	public static final String	STD_VALUES_SEPARATOR = ",";
+	public static final String	STD_VALUES_SEPARATOR_REGEX = Pattern.quote(STD_VALUES_SEPARATOR);
+	
 	public static final String	INVOICEGENERATE_BREAK_BY_BILL_CONTACT = "INVOICEGENERATE_BREAK_BY_BILL_CONTACT";
 	public static final String	INVOICEGENERATE_BREAK_BY_SALESREP = "INVOICEGENERATE_BREAK_BY_SALESREP";
 	public static final String	ROLE_AUTO_UPDATE_DOCACTIONACCESS = "ROLE_AUTO_UPDATE_DOCACTIONACCESS";
@@ -453,6 +458,54 @@ public class STDSysConfig
 	public static boolean isCopyDocNoFromWhOrderToInout(int AD_Client_ID, int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(COPY_DOCNO_FROM_WAREHOUSEORDER_TO_INOUT, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static final String WAREHOUSELOCATORCHECK_SKIP_INOUTDOCTYPES = "ERPOS_WAREHOUSELOCATORCHECK_SKIP_INOUTDOCTYPES";
+	
+	public static boolean	isInOutDocTypeInWarehouseLocatorCheckSkipList(int C_DocType_ID, int AD_Client_ID, int AD_Org_ID)
+	{
+		String docTypes = MSysConfig.getValue(WAREHOUSELOCATORCHECK_SKIP_INOUTDOCTYPES, null, AD_Client_ID, AD_Org_ID);
+		
+		if(docTypes == null)
+			return false;
+		
+		int ids[] = null;
+		
+		if(docTypes.indexOf(STD_VALUES_SEPARATOR) > 0)
+		{
+			String types[] = docTypes.split(STD_VALUES_SEPARATOR_REGEX);
+			ids = new int[types.length];
+			int i=0;
+			
+			for(String type:types)
+			{
+				int id = -1;
+				
+				if(Util.isEmpty(type,true) == false)
+				{
+					id = Integer.parseInt(type.trim());
+				}
+				
+				ids[i++] = id;
+			}
+		}
+		else
+		{
+			ids = new int[] {Integer.parseInt(docTypes.trim())};
+		}
+		
+		boolean found = false;
+		
+		for(int i=0;i<ids.length;i++)
+		{
+			if(ids[i] > 0 && ids[i] == C_DocType_ID)
+			{
+				found = true;
+				break;
+			}
+		}
+		
+		return found;
 	}
 	
 }
