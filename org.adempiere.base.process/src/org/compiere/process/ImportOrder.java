@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Timestamp;
 import java.util.LinkedList;
 import java.util.logging.Level;
@@ -33,9 +34,13 @@ import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
 import org.compiere.model.MUser;
 import org.compiere.model.ModelValidationEngine;
+import org.compiere.model.PO;
 import org.compiere.model.X_I_Order;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
+import org.compiere.util.Trx;
+
+import it.idempiere.base.util.STDUtils;
 
 /**
  *	Import Order from I_Order
@@ -741,6 +746,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 
 		int noInsert = 0;
 		int noInsertLine = 0;
+		int noProcessError = 0;
 
 		//	Go through Order Records w/o
 		sql = new StringBuilder ("SELECT * FROM I_Order ").append("WHERE I_IsImported='N'")
@@ -771,6 +777,10 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
 			X_I_Order lastImp=null;
 			X_I_Order imp=null;
+			
+			
+			boolean orderWasAlreadyCreated = false; // F3P: ci segniamo se l'ordine e' nuovo
+			
 			while (rs.next ())
 			{
 				imp = new X_I_Order (getCtx (), rs, get_TrxName());
@@ -788,17 +798,12 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 					{
 						potentialErrorImp=lastImp;// F3P: mark processing imp
 						//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
-						ModelValidationEngine.get().fireImportValidate(this, lastImp, order, ImportValidator.TIMING_AFTER_IMPORT);
-						if (m_docAction != null && m_docAction.length() > 0)
-						{
-							order.setDocAction(m_docAction);
-							if(!order.processIt (m_docAction)) {
-								log.warning("Order Process Failed: " + order + " - " + order.getProcessMsg());
-								throw new IllegalStateException("Order Process Failed: " + order + " - " + order.getProcessMsg());
-								
-							}
-						}
-						order.saveEx();
+						if(orderWasAlreadyCreated == false) // F3P: non lanciamo validate se l'ordine era pre-esistente
+							ModelValidationEngine.get().fireImportValidate(this, lastImp, order, ImportValidator.TIMING_AFTER_IMPORT);
+						
+						if(processDocument(order) == false)
+							noProcessError++;
+
 						lstImportedIOrder.clear(); //F3P from adempiere
 					}
 					oldC_BPartner_ID = imp.getC_BPartner_ID();
@@ -809,103 +814,125 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 						oldDocumentNo = "";
 					
 					potentialErrorImp=imp;// F3P: mark processing imp
-					//
-					order = new MOrder (getCtx(), 0, get_TrxName());
-					order.setClientOrg (imp.getAD_Client_ID(), imp.getAD_Org_ID());
-					order.setC_DocTypeTarget_ID(imp.getC_DocType_ID());
-					order.setIsSOTrx(imp.isSOTrx());
-					if (imp.getDeliveryRule() != null ) {
-						order.setDeliveryRule(imp.getDeliveryRule());
-					}
-					if (imp.getDocumentNo() != null)
-						order.setDocumentNo(imp.getDocumentNo());
-					//	Ship Partner
-					order.setC_BPartner_ID(imp.getC_BPartner_ID());
-					order.setC_BPartner_Location_ID(imp.getC_BPartner_Location_ID());
-					if (imp.getAD_User_ID() != 0)
-						order.setAD_User_ID(imp.getAD_User_ID());
-					//	Bill Partner
-					order.setBill_BPartner_ID(imp.getC_BPartner_ID());
-					order.setBill_Location_ID(imp.getBillTo_ID());
-					//
-					if (imp.getDescription() != null)
-						order.setDescription(imp.getDescription());
-					order.setC_PaymentTerm_ID(imp.getC_PaymentTerm_ID());
-					order.setM_PriceList_ID(imp.getM_PriceList_ID());
-					order.setM_Warehouse_ID(imp.getM_Warehouse_ID());
-					if (imp.getM_Shipper_ID() != 0)
-						order.setM_Shipper_ID(imp.getM_Shipper_ID());
-					//	SalesRep from Import or the person running the import
-					if (imp.getSalesRep_ID() != 0)
-						order.setSalesRep_ID(imp.getSalesRep_ID());
-					if (order.getSalesRep_ID() == 0)
-						order.setSalesRep_ID(getAD_User_ID());
-					//
-					if (imp.getAD_OrgTrx_ID() != 0)
-						order.setAD_OrgTrx_ID(imp.getAD_OrgTrx_ID());
-					if (imp.getC_Activity_ID() != 0)
-						order.setC_Activity_ID(imp.getC_Activity_ID());
-					if (imp.getC_Campaign_ID() != 0)
-						order.setC_Campaign_ID(imp.getC_Campaign_ID());
-					if (imp.getC_Project_ID() != 0)
-						order.setC_Project_ID(imp.getC_Project_ID());
-					//
-					if (imp.getDateOrdered() != null)
-						order.setDateOrdered(imp.getDateOrdered());
-					if (imp.getDateAcct() != null)
-						order.setDateAcct(imp.getDateAcct());
 					
-					// Set Order Source
-					if (imp.getC_OrderSource() != null)
-						order.setC_OrderSource_ID(imp.getC_OrderSource_ID());
-
-					//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
-					ModelValidationEngine.get().fireImportValidate(this, imp, order, ImportValidator.TIMING_BEFORE_IMPORT);
-					//
-					order.saveEx();
-					noInsert++;
+					// F3P: non creiamo l'ordine se gia' legato alla riga
+					
+					if(imp.getC_Order_ID() == 0)
+					{
+						orderWasAlreadyCreated = false;
+						
+						//
+						order = new MOrder (getCtx(), 0, get_TrxName());
+						order.setClientOrg (imp.getAD_Client_ID(), imp.getAD_Org_ID());
+						order.setC_DocTypeTarget_ID(imp.getC_DocType_ID());
+						order.setIsSOTrx(imp.isSOTrx());
+						if (imp.getDeliveryRule() != null ) {
+							order.setDeliveryRule(imp.getDeliveryRule());
+						}
+						if (imp.getDocumentNo() != null)
+							order.setDocumentNo(imp.getDocumentNo());
+						//	Ship Partner
+						order.setC_BPartner_ID(imp.getC_BPartner_ID());
+						order.setC_BPartner_Location_ID(imp.getC_BPartner_Location_ID());
+						if (imp.getAD_User_ID() != 0)
+							order.setAD_User_ID(imp.getAD_User_ID());
+						//	Bill Partner
+						order.setBill_BPartner_ID(imp.getC_BPartner_ID());
+						order.setBill_Location_ID(imp.getBillTo_ID());
+						//
+						if (imp.getDescription() != null)
+							order.setDescription(imp.getDescription());
+						order.setC_PaymentTerm_ID(imp.getC_PaymentTerm_ID());
+						order.setM_PriceList_ID(imp.getM_PriceList_ID());
+						order.setM_Warehouse_ID(imp.getM_Warehouse_ID());
+						if (imp.getM_Shipper_ID() != 0)
+							order.setM_Shipper_ID(imp.getM_Shipper_ID());
+						//	SalesRep from Import or the person running the import
+						if (imp.getSalesRep_ID() != 0)
+							order.setSalesRep_ID(imp.getSalesRep_ID());
+						if (order.getSalesRep_ID() == 0)
+							order.setSalesRep_ID(getAD_User_ID());
+						//
+						if (imp.getAD_OrgTrx_ID() != 0)
+							order.setAD_OrgTrx_ID(imp.getAD_OrgTrx_ID());
+						if (imp.getC_Activity_ID() != 0)
+							order.setC_Activity_ID(imp.getC_Activity_ID());
+						if (imp.getC_Campaign_ID() != 0)
+							order.setC_Campaign_ID(imp.getC_Campaign_ID());
+						if (imp.getC_Project_ID() != 0)
+							order.setC_Project_ID(imp.getC_Project_ID());
+						//
+						if (imp.getDateOrdered() != null)
+							order.setDateOrdered(imp.getDateOrdered());
+						if (imp.getDateAcct() != null)
+							order.setDateAcct(imp.getDateAcct());
+						
+						// Set Order Source
+						if (imp.getC_OrderSource() != null)
+							order.setC_OrderSource_ID(imp.getC_OrderSource_ID());
+	
+						//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+						ModelValidationEngine.get().fireImportValidate(this, imp, order, ImportValidator.TIMING_BEFORE_IMPORT);
+						//
+						order.saveEx();
+						noInsert++;
+					}
+					else // C_Order_ID == 0
+					{
+						orderWasAlreadyCreated = true;
+						order = PO.get(getCtx(), MOrder.Table_Name, imp.getC_Order_ID(), get_TrxName());
+					}
 					lineNo = 10;
 				}
+				
 				imp.setC_Order_ID(order.getC_Order_ID());
-				//	New OrderLine
-				MOrderLine line = new MOrderLine (order);
-				line.setLine(lineNo);
-				lineNo += 10;
-				if (imp.getM_Product_ID() != 0)
-					line.setM_Product_ID(imp.getM_Product_ID(), true);
-				if (imp.getC_Charge_ID() != 0)
-					line.setC_Charge_ID(imp.getC_Charge_ID());
-				line.setQty(imp.getQtyOrdered());
-				line.setPrice();
-				if (imp.getPriceActual().compareTo(Env.ZERO) != 0)
-					line.setPrice(imp.getPriceActual());
-				if (imp.getC_Tax_ID() != 0)
-					line.setC_Tax_ID(imp.getC_Tax_ID());
-				else
+				
+				MOrderLine line = null;
+												
+				if(imp.getC_OrderLine_ID() == 0)
 				{
-					line.setTax();
-					imp.setC_Tax_ID(line.getC_Tax_ID());
+					//	New OrderLine
+					line = new MOrderLine (order);
+
+					line.setLine(lineNo);
+					lineNo += 10;
+					if (imp.getM_Product_ID() != 0)
+						line.setM_Product_ID(imp.getM_Product_ID(), true);
+					if (imp.getC_Charge_ID() != 0)
+						line.setC_Charge_ID(imp.getC_Charge_ID());
+					line.setQty(imp.getQtyOrdered());
+					line.setPrice();
+					if (imp.getPriceActual().compareTo(Env.ZERO) != 0)
+						line.setPrice(imp.getPriceActual());
+					if (imp.getC_Tax_ID() != 0)
+						line.setC_Tax_ID(imp.getC_Tax_ID());
+					else
+					{
+						line.setTax();
+						imp.setC_Tax_ID(line.getC_Tax_ID());
+					}
+					if (imp.getFreightAmt() != null)
+						line.setFreightAmt(imp.getFreightAmt());
+					if (imp.getLineDescription() != null)
+						line.setDescription(imp.getLineDescription());
+					// SVT set project on line
+					if (imp.getC_Project_ID() != 0)
+						line.setC_Project_ID(imp.getC_Project_ID());
+					
+					//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+					ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_BEFORE_IMPORT);
+					
+					line.saveEx();
+					
+					//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
+					ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_AFTER_IMPORT);
+					
+					imp.setC_OrderLine_ID(line.getC_OrderLine_ID());
 				}
-				if (imp.getFreightAmt() != null)
-					line.setFreightAmt(imp.getFreightAmt());
-				if (imp.getLineDescription() != null)
-					line.setDescription(imp.getLineDescription());
-				// SVT set project on line
-				if (imp.getC_Project_ID() != 0)
-					line.setC_Project_ID(imp.getC_Project_ID());
-				
-				//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
-				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_BEFORE_IMPORT);
-				
-				line.saveEx();
-				
-				//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
-				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_AFTER_IMPORT);
 				
 				//F3P: save this line as imported
 				lstImportedIOrder.add(imp);
-				
-				imp.setC_OrderLine_ID(line.getC_OrderLine_ID());
+								
 				imp.setI_IsImported(true);
 				imp.setProcessed(true);
 				//
@@ -918,18 +945,12 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			if (order != null)
 			{
 				//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
-				ModelValidationEngine.get().fireImportValidate(this, imp, order, ImportValidator.TIMING_AFTER_IMPORT);
+				if(orderWasAlreadyCreated == false) // F3P: non lanciamo validate se l'ordine era pre-esistente
+					ModelValidationEngine.get().fireImportValidate(this, imp, order, ImportValidator.TIMING_AFTER_IMPORT);
 				
-				if (m_docAction != null && m_docAction.length() > 0)
-				{
-					order.setDocAction(m_docAction);
-					if(!order.processIt (m_docAction)) {
-						log.warning("Order Process Failed: " + order + " - " + order.getProcessMsg());
-						throw new IllegalStateException("Order Process Failed: " + order + " - " + order.getProcessMsg());
-						
-					}
-				}
-				order.saveEx();
+				if(processDocument(order) == false)
+					noProcessError++;
+
 			}
 		}
 		catch (Exception e)
@@ -990,6 +1011,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			.append(getDocumentNoFilter()); //F3P: added filter by docNo;
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		addLog (0, null, new BigDecimal (no), "@Errors@");
+		addLog (0, null, new BigDecimal (noProcessError), "@C_Order_ID@: @Errors@ @UnprocessedDocs@"); // F3P: aggiunti errori di elaborazione
 		//
 		addLog (0, null, new BigDecimal (noInsert), "@C_Order_ID@: @Inserted@");
 		addLog (0, null, new BigDecimal (noInsertLine), "@C_OrderLine_ID@: @Inserted@");
@@ -1024,6 +1046,83 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 	public String getWhereClause() {
 		StringBuilder whereClause = new StringBuilder(" AND AD_Client_ID=").append(m_AD_Client_ID);
 		return whereClause.toString();
+	}
+	
+	public boolean processDocument(MOrder order) throws SQLException
+	{
+		String processMsg = null;
+		boolean bHasError = false;
+		
+		if (m_docAction != null && m_docAction.length() > 0) // F3P: review processing: rollack
+		{
+			boolean shouddProcess = false;
+			String orderDocStatus = order.getDocStatus();
+			
+			// F3P: verifichiamo la compatibilita' dello stato documento
+			
+			if(m_docAction.equals(MOrder.DOCACTION_Prepare) || m_docAction.equals(MOrder.DOCACTION_Complete))
+			{
+				if(orderDocStatus.equals(MOrder.DOCSTATUS_Drafted) || 
+						orderDocStatus.equals(MOrder.DOCSTATUS_Invalid) ||
+						orderDocStatus.equals(MOrder.DOCSTATUS_InProgress))
+				{
+					shouddProcess = true;
+				}
+			}
+			
+			if(shouddProcess)
+			{
+				Trx trx = Trx.get(get_TrxName(), false);
+				Savepoint processSavepoint = trx.setSavepoint(null);
+	
+				
+				try
+				{
+					order.setDocAction(m_docAction);
+					if(!order.processIt (m_docAction)) 
+					{
+						log.warning("Order Process Failed: " + order.getDocumentNo() + " - " + order.getProcessMsg());
+						processMsg = "Order Process Failed: " + order.getDocumentNo() + " - " + order.getProcessMsg();
+						bHasError = true;
+					}
+				}
+				catch(Throwable t)
+				{
+					bHasError = true;
+					processMsg = "Order Process Failed: " + order.getDocumentNo() + " - " + STDUtils.getThrowableMessage(t);
+				}
+				finally
+				{
+					if(bHasError)
+						trx.rollback(processSavepoint);
+					
+					trx.releaseSavepoint(processSavepoint);
+					processSavepoint = null;
+				}					
+				
+				if(bHasError)
+					order.setDocStatus(MOrder.DOCSTATUS_Invalid);
+			}
+		}
+
+		try
+		{
+			order.saveEx();
+		}
+		catch(Exception e)
+		{
+			bHasError = true;
+			processMsg = STDUtils.getThrowableMessage(e);
+		}
+		
+		if(bHasError)
+		{
+			Object params[] = {processMsg, order.getC_Order_ID()};
+			String sSQLError = "UPDATE I_Order set I_IsImported='E', I_ErrorMsg = I_ErrorMsg||' ERR='||? WHERE C_Order_ID = ?";						
+			DB.executeUpdateEx(sSQLError, params, get_TrxName());
+		}
+		
+		return !bHasError;
 	}
 
 }	//	ImportOrder
