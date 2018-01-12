@@ -472,7 +472,8 @@ public class PaySelect
 					MPaySelectionLine psl = new MPaySelectionLine (m_ps, line, PaymentRule);
 					int C_Invoice_ID = id.getRecord_ID().intValue();
 					BigDecimal OpenAmt = (BigDecimal)miniTable.getValueAt(i, 9 +1 ); // F3P: aggiunta data fattura col 4, quindi offset di 1
-					BigDecimal DiscountAmt = (BigDecimal)miniTable.getValueAt(i, 6+1); // F3P: aggiunta data fattura col 4, quindi offset di 1
+					// BigDecimal DiscountAmt = (BigDecimal)miniTable.getValueAt(i, 6+1); // F3P: aggiunta data fattura col 4, quindi offset di 1
+					BigDecimal DiscountAmt = (BigDecimal)miniTable.getValueAt(i, 11+1); // F3P: Utilizzata nuova colonna
 					BigDecimal WriteOffAmt = (BigDecimal)miniTable.getValueAt(i, 7+1); // F3P: aggiunta data fattura col 4, quindi offset di 1
 					BigDecimal PayAmt = (BigDecimal)miniTable.getValueAt(i, 10 +1);  // F3P: aggiunta data fattura col 4, quindi offset di 1
 					boolean isSOTrx = false;
