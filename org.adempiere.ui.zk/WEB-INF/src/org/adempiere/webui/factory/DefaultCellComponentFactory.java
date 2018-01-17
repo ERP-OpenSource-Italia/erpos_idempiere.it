@@ -206,7 +206,7 @@ public class DefaultCellComponentFactory implements ICellComponentFactory
 			else if (field instanceof IDColumn)
 			{
 				listcell.setValue(((IDColumn) field).getRecord_ID());
-				if (!table.isCheckmark()) {
+				if (!table.isCheckmark() && columnIndex == 0) {
 					table.setCheckmark(true);
 					table.removeEventListener(Events.ON_SELECT, wliRenderer);
 					table.addEventListener(Events.ON_SELECT, wliRenderer);
