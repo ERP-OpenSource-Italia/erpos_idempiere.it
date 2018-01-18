@@ -31,6 +31,7 @@ import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.DocumentLink;
 import org.adempiere.webui.component.Mask;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.component.ZkCssHelper;
 import org.adempiere.webui.desktop.IDesktop;
 import org.adempiere.webui.panel.IHelpContext;
 import org.adempiere.webui.part.WindowContainer;
@@ -353,6 +354,8 @@ public class ProcessDialog extends AbstractProcessDialog implements EventListene
 			infoResultContent = new Div();
 			resultPanelLayout.appendChild(infoResultContent);
 		}
+		
+		ZkCssHelper.appendStyle(resultPanelLayout, "overflow:auto"); // F3P: scroll on result panel
 	}
 	
 	protected void replaceComponent(HtmlBasedComponent newComponent, HtmlBasedComponent oldComponent) {
