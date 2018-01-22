@@ -16,11 +16,15 @@
 
 package it.idempiere.base.util;
 
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
@@ -41,6 +45,7 @@ public class BaseEnvHelper
 {
 	protected static 			CLogger			s_log = CLogger.getCLogger(BaseEnvHelper.class);
 	
+	public static final DateFormat	SQLCOMPATIBLE_DAY_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 	public static final String SYSC_ENVFROMSQL_STRICTMODE = "F3P_ENVFROMSQL_STRICTMODE";
 	
 	public static final String PREFIX_COL_G = "_g_";
@@ -133,55 +138,55 @@ public class BaseEnvHelper
 				}
 				else
 				{	
-			    Object		oColValue = null,
-										oOriginalColValue = gTab.getValue(sColName);
-			    GridField	field = gTab.getField(sColName);
-			    
-			    if(field != null)
-			    {
-				    int				dtype = field.getVO().displayType;						    
+				    Object		oColValue = null,
+											oOriginalColValue = gTab.getValue(sColName);
+				    GridField	field = gTab.getField(sColName);
 				    
-				    if(DisplayType.isNumeric(dtype))
-				        oColValue = rs.getBigDecimal(i+1);
-				    else if(DisplayType.isDate(dtype))
-				        oColValue = rs.getTimestamp(i+1);
-				    else if(DisplayType.YesNo == dtype)
+				    if(field != null)
 				    {
-				    	String sVal = rs.getString(i+1);
-				    	if(sVal != null && sVal.equals("Y"))
-				    		oColValue = new Boolean(true);
-				    	else
-				    		oColValue = new Boolean(false);				    		
+					    int				dtype = field.getVO().displayType;						    
+					    
+					    if(DisplayType.isNumeric(dtype))
+					        oColValue = rs.getBigDecimal(i+1);
+					    else if(DisplayType.isDate(dtype))
+					        oColValue = rs.getTimestamp(i+1);
+					    else if(DisplayType.YesNo == dtype)
+					    {
+					    	String sVal = rs.getString(i+1);
+					    	if(sVal != null && sVal.equals("Y"))
+					    		oColValue = new Boolean(true);
+					    	else
+					    		oColValue = new Boolean(false);				    		
+					    }
+					    else if(sColName.toLowerCase().endsWith("_id")) // to lowercase, to avoid pg-related problems
+					    {
+					    	int value = rs.getInt(i+1);
+					    	
+					    	if(value > 0)
+					    	{
+					    		oColValue = new Integer(value);	
+					    	}
+					    }
+					    else
+					        oColValue = rs.getObject(i+1);
+					    
+					    boolean bSet = true;
+					    
+					    if( oOriginalColValue == null)
+					    {
+					    	if(oColValue == null)
+					    		bSet = false;
+					    }
+					    else if(oOriginalColValue.equals(oColValue))
+					    	bSet = false;
+					    	
+					    if(bSet)
+					    	gTab.setValue(sColName, oColValue);
 				    }
-				    else if(sColName.toLowerCase().endsWith("_id")) // to lowercase, to avoid pg-related problems
+				    else if(MSysConfig.getBooleanValue(SYSC_ENVFROMSQL_STRICTMODE, false, Env.getAD_Client_ID(ctx), Env.getAD_Org_ID(ctx)))
 				    {
-				    	int value = rs.getInt(i+1);
-				    	
-				    	if(value > 0)
-				    	{
-				    		oColValue = new Integer(value);	
-				    	}
+				    	throw new AdempiereException("Field " + sColName + " not found on tab");
 				    }
-				    else
-				        oColValue = rs.getObject(i+1);
-				    
-				    boolean bSet = true;
-				    
-				    if( oOriginalColValue == null)
-				    {
-				    	if(oColValue == null)
-				    		bSet = false;
-				    }
-				    else if(oOriginalColValue.equals(oColValue))
-				    	bSet = false;
-				    	
-				    if(bSet)
-				    	gTab.setValue(sColName, oColValue);
-			    }
-			    else if(MSysConfig.getBooleanValue(SYSC_ENVFROMSQL_STRICTMODE, false, Env.getAD_Client_ID(ctx), Env.getAD_Org_ID(ctx)))
-			    {
-			    	throw new AdempiereException("Field " + sColName + " not found on tab");
-			    }
 				}						
 			}										
 		}
@@ -212,5 +217,38 @@ public class BaseEnvHelper
 		{
 			DB.close(rs,pstmt);
 		}
+	}
+	
+	public static String convertToEnvString(String sName,Object param, DateFormat convFormat, boolean bConvertIDs)
+	{		
+		if(param == null)
+			return "NULL";
+		
+		if(param instanceof Boolean)
+		{
+			Boolean bParam = (Boolean)param;
+			return (bParam.booleanValue())?"Y":"N";
+		}
+		else if(param instanceof Timestamp)
+		{
+			if(convFormat == null)
+				convFormat = SQLCOMPATIBLE_DAY_FORMAT;
+			
+			return convFormat.format((Timestamp)param);
+		}
+		else if(param instanceof BigDecimal)
+		{
+			BigDecimal bdParam = (BigDecimal)param;
+			
+			if(bConvertIDs && sName.endsWith("_ID"))
+			{
+				int iVal = bdParam.intValue();
+				return Integer.toString(iVal);
+			}
+			
+			return bdParam.toPlainString();
+		}
+		
+		return param.toString();
 	}
 }
