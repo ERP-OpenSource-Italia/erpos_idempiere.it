@@ -46,6 +46,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
 
+import it.idempiere.base.model.LITMBPartnerLocation;
 import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
 
@@ -2520,6 +2521,36 @@ public class MOrder extends X_C_Order implements DocAction
 		
 		// F3P: set as reference
 		counter.setPOReference(getDocumentNo());
+		
+		// F3P: set adresses
+		
+		MBPartnerLocation ShipBPLoc = LITMBPartnerLocation.getCounterDocShipLocation(getCtx(), counterBP, get_TrxName());
+		MBPartnerLocation BillBPLoc = LITMBPartnerLocation.getCounterDocBillLocation(getCtx(), counterBP, get_TrxName());
+		
+		if(ShipBPLoc == null)
+		{
+			StringBuilder sbErr = new StringBuilder("@C_BPartner_Location_ID@ @mandatory@: ");
+			sbErr.append(counterBP.getName())
+				.append(" (")
+				.append(counterBP.getValue())
+				.append(")");
+			
+			throw new AdempiereException("@C_BPartner_Location_ID@ @mandatory@: " + counterBP.getName() + " (" + counterBP.getValue());
+		}
+		
+		if(BillBPLoc == null)
+		{
+			StringBuilder sbErr = new StringBuilder("@C_BPartner_Location_ID@ @mandatory@: ");
+			sbErr.append(counterBP.getName())
+				.append(" (")
+				.append(counterBP.getValue())
+				.append(")");
+			
+			throw new AdempiereException("@Bill_Location_ID@ @mandatory@: " + counterBP.getName() + " (" + counterBP.getValue());
+		}
+		
+		counter.setC_BPartner_Location_ID(ShipBPLoc.getC_BPartner_Location_ID());
+		counter.setBill_Location_ID(BillBPLoc.getC_BPartner_Location_ID());
 		
 		//
 //		counter.setBPartner(counterBP); // was set on copyFrom

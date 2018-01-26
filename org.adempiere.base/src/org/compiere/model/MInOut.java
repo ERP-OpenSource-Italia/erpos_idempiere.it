@@ -272,13 +272,31 @@ public class MInOut extends X_M_InOut implements DocAction
 				MOrder peer = PO.get(from.getCtx(), MOrder.Table_Name, from.getC_Order_ID(), from.get_TrxName());
 				// F3P:end
 				if (peer.getRef_Order_ID() != 0)
+				{
 					to.setC_Order_ID(peer.getRef_Order_ID());
+					
+					// F3P: propagate adress and user from order
+					I_C_Order refOrder = to.getC_Order();
+					to.setC_BPartner_Location_ID(refOrder.getC_BPartner_Location_ID());	
+					
+					if(refOrder.getAD_User_ID() > 0)
+						to.setAD_User_ID(refOrder.getAD_User_ID());
+				}
 			}
 			if (from.getC_Invoice_ID() != 0)
 			{
 				MInvoice peer = new MInvoice (from.getCtx(), from.getC_Invoice_ID(), from.get_TrxName());
 				if (peer.getRef_Invoice_ID() != 0)
+				{
 					to.setC_Invoice_ID(peer.getRef_Invoice_ID());
+				
+					// F3P: propagate user from invoice
+					
+					I_C_Invoice refInvoice = to.getC_Invoice();
+											
+					if(refInvoice.getAD_User_ID() > 0)
+						to.setAD_User_ID(refInvoice.getAD_User_ID());
+				}
 			}
 			//find RMA link
 			if (from.getM_RMA_ID() != 0)
@@ -909,35 +927,48 @@ public class MInOut extends X_M_InOut implements DocAction
 	/**
 	 * 	Set Business Partner Defaults & Details
 	 * 	@param bp business partner
+	 *  @param counter is a counter doc ?
 	 */
-	public void setBPartner (MBPartner bp)
+	
+	public void setBPartner (MBPartner bp, boolean counter) // F3P: if its a counter document and location/user are already set from 'copy', dont overwrite it
 	{
 		if (bp == null)
 			return;
 
 		setC_BPartner_ID(bp.getC_BPartner_ID());
-
-		//	Set Locations
-		MBPartnerLocation[] locs = bp.getLocations(false);
-		if (locs != null)
+		
+		if(counter == false || getC_BPartner_Location_ID() <= 0) // F3P: only set if its not a counter, or its empty
 		{
-			for (int i = 0; i < locs.length; i++)
+			//	Set Locations
+			MBPartnerLocation[] locs = bp.getLocations(false);
+			if (locs != null)
 			{
-				if (locs[i].isShipTo())
-					setC_BPartner_Location_ID(locs[i].getC_BPartner_Location_ID());
+				for (int i = 0; i < locs.length; i++)
+				{
+					if (locs[i].isShipTo())
+						setC_BPartner_Location_ID(locs[i].getC_BPartner_Location_ID());
+				}
+				//	set to first if not set
+				if (getC_BPartner_Location_ID() == 0 && locs.length > 0)
+					setC_BPartner_Location_ID(locs[0].getC_BPartner_Location_ID());
 			}
-			//	set to first if not set
-			if (getC_BPartner_Location_ID() == 0 && locs.length > 0)
-				setC_BPartner_Location_ID(locs[0].getC_BPartner_Location_ID());
+			if (getC_BPartner_Location_ID() == 0)
+				log.log(Level.SEVERE, "Has no To Address: " + bp);
 		}
-		if (getC_BPartner_Location_ID() == 0)
-			log.log(Level.SEVERE, "Has no To Address: " + bp);
 
-		//	Set Contact
-		MUser[] contacts = bp.getContacts(false);
-		if (contacts != null && contacts.length > 0)	//	get first User
-			setAD_User_ID(contacts[0].getAD_User_ID());
+		if(counter == false || getAD_User_ID() <= 0) // F3P: only set if its not a counter, or its empty
+		{
+			//	Set Contact
+			MUser[] contacts = bp.getContacts(false);
+			if (contacts != null && contacts.length > 0)	//	get first User
+				setAD_User_ID(contacts[0].getAD_User_ID());
+		}
 	}	//	setBPartner
+	
+	public void setBPartner (MBPartner bp)
+	{
+		setBPartner(bp, false);
+	}
 
 	/**
 	 * 	Create the missing next Confirmation
@@ -2065,13 +2096,13 @@ public class MInOut extends X_M_InOut implements DocAction
 
 		//	Deep Copy
 		MInOut counter = copyFrom(this, getMovementDate(), getDateAcct(),
-			C_DocTypeTarget_ID, !isSOTrx(), true, get_TrxName(), true, false, getDocumentNo()); // F3P: keep doc noO
+			C_DocTypeTarget_ID, !isSOTrx(), true, get_TrxName(), true, false, getDocumentNo()); // F3P: keep doc no
 
 		//
 		counter.setAD_Org_ID(counterAD_Org_ID);
 		counter.setM_Warehouse_ID(counterOrgInfo.getM_Warehouse_ID());
 		//
-		counter.setBPartner(counterBP);
+		counter.setBPartner(counterBP, true); // f3P: added flag to recognize counter doc
 
 		if ( isDropShip() )
 		{
