@@ -176,7 +176,16 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			{
 				MOrder peer = new MOrder (from.getCtx(), from.getC_Order_ID(), from.get_TrxName());
 				if (peer.getRef_Order_ID() != 0)
+				{
 					to.setC_Order_ID(peer.getRef_Order_ID());
+					
+				// F3P: propagate adress and user from order
+					I_C_Order refOrder = to.getC_Order();
+					to.setC_BPartner_Location_ID(refOrder.getBill_Location_ID());	
+					
+					if(refOrder.getAD_User_ID() > 0)
+						to.setAD_User_ID(refOrder.getAD_User_ID());					
+				}
 			}
 			// Try to find RMA link
 			if (from.getM_RMA_ID() != 0)
