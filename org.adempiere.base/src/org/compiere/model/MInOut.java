@@ -1333,7 +1333,8 @@ public class MInOut extends X_M_InOut implements DocAction
 		}
 
 		// Set the definite document number after completed (if needed)
-		setDefiniteDocumentNo();
+		if(LITMInOut.isUpdateDocNo(this))//F3P: Check if we want to update docNo. This is not good in reopen process
+			setDefiniteDocumentNo();
 
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_BEFORE_COMPLETE);
 		if (m_processMsg != null)
@@ -1762,10 +1763,6 @@ public class MInOut extends X_M_InOut implements DocAction
 			m_processMsg = valid;
 			return DocAction.STATUS_Invalid;
 		}
-
-		// Set the definite document number after completed (if needed)
-		if(LITMInOut.isUpdateDocNo(this))//F3P: Check if we want to update docNo. This is not good in reopen process
-			setDefiniteDocumentNo();
 		
 		// F3P: check gathered feedback
 		
