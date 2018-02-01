@@ -431,6 +431,9 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	private MInvoiceTax[]	m_taxes;
 	/**	Logger			*/
 	private static CLogger s_log = CLogger.getCLogger(MInvoice.class);
+	
+	// F3P: is generation in progress ?
+	private boolean generationInProgress = false;
 
 	/**
 	 * 	Overwrite Client/Org if required
@@ -2827,5 +2830,39 @@ public class MInvoice extends X_C_Invoice implements DocAction
 						Env.getAD_Org_ID(getCtx()));
 	}
 	
+  // F3P: mark generation in progress
+
+	public boolean isGenerationInProgress()
+	{
+		return generationInProgress;
+	}
+
+	public void setGenerationInProgress(boolean generationInProgress)
+	{
+		this.generationInProgress = generationInProgress;
+	}	
+	
+	public void calcTaxesAfterHGeneration()
+	{
+		Query qTaxes = new Query(getCtx(), MTax.Table_Name, "C_Tax_ID in (SELECT l.C_Tax_ID FROM C_InvoiceLine l WHERE l.C_Invoice_ID = ?)",get_TrxName());
+		qTaxes.setParameters(getC_Invoice_ID());
+		List<MTax> taxes = qTaxes.list();
+		
+		for(MTax tax:taxes)
+		{
+			// Need one invoice line for every tax to use the tax provider
+			
+			Query qInvLine = new Query(getCtx(), MInvoiceLine.Table_Name, "C_Tax_ID = ? and C_Invoice_ID = ?",get_TrxName());
+			qInvLine.setParameters(tax.getC_Tax_ID(), getC_Invoice_ID());
+			
+			MInvoiceLine line = qInvLine.first();
+			
+      MTaxProvider provider = new MTaxProvider(tax.getCtx(), tax.getC_TaxProvider_ID(), tax.get_TrxName());
+			ITaxProvider calculator = Core.getTaxProvider(provider);
+			if (calculator == null)
+				throw new AdempiereException(Msg.getMsg(getCtx(), "TaxNoProvider"));
+	    calculator.recalculateTax(provider, line, true);
+		}
+	}
 
 }	//	MInvoice

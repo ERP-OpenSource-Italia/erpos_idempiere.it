@@ -182,6 +182,11 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	private MProductPricing	m_productPricing = null;
 	/** Parent						*/
 	private MInvoice	m_parent = null;
+	
+	// F3P: added to keep cache, like parent
+	
+	private MOrderLine m_orderLine = null;
+	private MInOutLine m_inoutLine = null;
 
 	/**
 	 * 	Set Defaults from Order.
@@ -218,6 +223,9 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	 */
 	public void setOrderLine (MOrderLine oLine)
 	{
+		// F3P: keep cache
+		m_orderLine = oLine;
+		
 		setC_OrderLine_ID(oLine.getC_OrderLine_ID());
 		//
 		setLine(oLine.getLine());
@@ -260,6 +268,9 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	 */
 	public void setShipLine (MInOutLine sLine)
 	{
+		// F3P: keep cache
+		m_inoutLine = sLine;
+
 		setM_InOutLine_ID(sLine.getM_InOutLine_ID());
 		setC_OrderLine_ID(sLine.getC_OrderLine_ID());
 		// Set RMALine ID if shipment/receipt is based on RMA Doc
@@ -1015,12 +1026,22 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	{
 		if (!success)
 			return success;
-		MTax tax = new MTax(getCtx(), getC_Tax_ID(), get_TrxName());
-        MTaxProvider provider = new MTaxProvider(tax.getCtx(), tax.getC_TaxProvider_ID(), tax.get_TrxName());
-		ITaxProvider calculator = Core.getTaxProvider(provider);
-		if (calculator == null)
-			throw new AdempiereException(Msg.getMsg(getCtx(), "TaxNoProvider"));
-    	return calculator.recalculateTax(provider, this, newRecord);
+		
+		if(getParent().isGenerationInProgress() == false) // F3P: block expensive calculations during generation
+		{
+			if(newRecord || 
+					(is_ValueChanged(COLUMNNAME_C_Tax_ID) || is_ValueChanged(COLUMNNAME_LineNetAmt) || is_ValueChanged(COLUMNNAME_TaxAmt)))
+			{
+				MTax tax = new MTax(getCtx(), getC_Tax_ID(), get_TrxName());
+		        MTaxProvider provider = new MTaxProvider(tax.getCtx(), tax.getC_TaxProvider_ID(), tax.get_TrxName());
+				ITaxProvider calculator = Core.getTaxProvider(provider);
+				if (calculator == null)
+					throw new AdempiereException(Msg.getMsg(getCtx(), "TaxNoProvider"));
+		    	return calculator.recalculateTax(provider, this, newRecord);
+			}
+		}
+		
+		return true;
 	}	//	afterSave
 
 	/**
@@ -1427,5 +1448,49 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	{
 		this.m_parent = null;
 	}
+	
+  // F3P: keep caches
+
+	@Override
+	public void setC_OrderLine_ID(int C_OrderLine_ID)
+	{
+		if(m_orderLine != null && m_orderLine.getC_OrderLine_ID() != C_OrderLine_ID)
+			m_orderLine = null;
+		
+		super.setC_OrderLine_ID(C_OrderLine_ID);
+	}
+
+	@Override
+	public void setM_InOutLine_ID(int M_InOutLine_ID)
+	{
+		if(m_inoutLine != null && m_inoutLine.getM_InOutLine_ID() != M_InOutLine_ID)
+			m_inoutLine = null;
+
+		super.setM_InOutLine_ID(M_InOutLine_ID);
+	}
+
+	public MInOutLine getInOutLine()
+	{
+		if(m_inoutLine == null && getM_InOutLine_ID() > 0)			
+			m_inoutLine = PO.get(getCtx(), MInOutLine.Table_Name, getM_InOutLine_ID(), get_TrxName());
+		
+		return m_inoutLine;
+	}
+	
+	public MOrderLine getOrderLine()
+	{
+		if(m_orderLine == null && getC_OrderLine_ID() > 0)			
+			m_orderLine = PO.get(getCtx(), MOrderLine.Table_Name, getC_OrderLine_ID(), get_TrxName());
+		
+		return m_orderLine;
+	}
+	
+	// F3P: invoice generation complete
+	
+	public void invoiceGenerationComplete()
+	{
+		afterSave(false, true); // F3P: use after save so force tax calculation
+	}
+	
 
 }	//	MInvoiceLine
