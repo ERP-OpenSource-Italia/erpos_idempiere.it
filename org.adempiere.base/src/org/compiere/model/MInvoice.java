@@ -431,6 +431,9 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	private MInvoiceTax[]	m_taxes;
 	/**	Logger			*/
 	private static CLogger s_log = CLogger.getCLogger(MInvoice.class);
+	
+	// F3P: is generation in progress ?
+	private boolean generationInProgress = false;
 
 	/**
 	 * 	Overwrite Client/Org if required
@@ -695,6 +698,11 @@ public class MInvoice extends X_C_Invoice implements DocAction
 										.setParameters(getC_Invoice_ID())
 										.setOrderBy(I_C_InvoiceLine.COLUMNNAME_Line)
 										.list();
+		
+		// F3P: set parent invoice, this may avoid many queries to get the parent of each line at the cost of iterating over every single line
+		for(MInvoiceLine line:list)
+			line.setInvoice(this);
+		
 		return list.toArray(new MInvoiceLine[list.size()]);
 	}	//	getLines
 
@@ -752,64 +760,78 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			return 0;
 		MInvoiceLine[] fromLines = otherInvoice.getLines(false);
 		int count = 0;
-		for (int i = 0; i < fromLines.length; i++)
+		
+		try  // F3P: managing of generation in progress, require try/catch to reset flag
 		{
-			MInvoiceLine line = new MInvoiceLine (getCtx(), 0, get_TrxName());
-			MInvoiceLine fromLine = fromLines[i];
-			if (counter)	//	header
-				PO.copyValues (fromLine, line, getAD_Client_ID(), getAD_Org_ID());
-			else
-				PO.copyValues (fromLine, line, fromLine.getAD_Client_ID(), fromLine.getAD_Org_ID());
-			line.setC_Invoice_ID(getC_Invoice_ID());
-			line.setInvoice(this);
-			line.set_ValueNoCheck ("C_InvoiceLine_ID", I_ZERO);	// new
-			//	Reset
-			if (!setOrder)
-				line.setC_OrderLine_ID(0);
-			line.setRef_InvoiceLine_ID(0);
-			line.setM_InOutLine_ID(0);
-			line.setA_Asset_ID(0);
-			line.setM_AttributeSetInstance_ID(0);
-			line.setS_ResourceAssignment_ID(0);
-			//	New Tax
-			if (getC_BPartner_ID() != otherInvoice.getC_BPartner_ID())
-				line.setTax();	//	recalculate
-			//
-			if (counter)
+			setGenerationInProgress(true);
+			
+			for (int i = 0; i < fromLines.length; i++)
 			{
-				line.setRef_InvoiceLine_ID(fromLine.getC_InvoiceLine_ID());
-				if (fromLine.getC_OrderLine_ID() != 0)
-				{
-					MOrderLine peer = new MOrderLine (getCtx(), fromLine.getC_OrderLine_ID(), get_TrxName());
-					if (peer.getRef_OrderLine_ID() != 0)
-						line.setC_OrderLine_ID(peer.getRef_OrderLine_ID());
-				}
+				MInvoiceLine line = new MInvoiceLine (getCtx(), 0, get_TrxName());
+				MInvoiceLine fromLine = fromLines[i];
+				if (counter)	//	header
+					PO.copyValues (fromLine, line, getAD_Client_ID(), getAD_Org_ID());
+				else
+					PO.copyValues (fromLine, line, fromLine.getAD_Client_ID(), fromLine.getAD_Org_ID());
+				line.setC_Invoice_ID(getC_Invoice_ID());
+				line.setInvoice(this);
+				line.set_ValueNoCheck ("C_InvoiceLine_ID", I_ZERO);	// new
+				//	Reset
+				if (!setOrder)
+					line.setC_OrderLine_ID(0);
+				line.setRef_InvoiceLine_ID(0);
 				line.setM_InOutLine_ID(0);
-				if (fromLine.getM_InOutLine_ID() != 0)
+				line.setA_Asset_ID(0);
+				line.setM_AttributeSetInstance_ID(0);
+				line.setS_ResourceAssignment_ID(0);
+				//	New Tax
+				if (getC_BPartner_ID() != otherInvoice.getC_BPartner_ID())
+					line.setTax();	//	recalculate
+				//
+				if (counter)
 				{
-					MInOutLine peer = new MInOutLine (getCtx(), fromLine.getM_InOutLine_ID(), get_TrxName());
-					if (peer.getRef_InOutLine_ID() != 0)
-						line.setM_InOutLine_ID(peer.getRef_InOutLine_ID());
+					line.setRef_InvoiceLine_ID(fromLine.getC_InvoiceLine_ID());
+					if (fromLine.getC_OrderLine_ID() != 0)
+					{
+						MOrderLine peer = new MOrderLine (getCtx(), fromLine.getC_OrderLine_ID(), get_TrxName());
+						if (peer.getRef_OrderLine_ID() != 0)
+							line.setC_OrderLine_ID(peer.getRef_OrderLine_ID());
+					}
+					line.setM_InOutLine_ID(0);
+					if (fromLine.getM_InOutLine_ID() != 0)
+					{
+						MInOutLine peer = new MInOutLine (getCtx(), fromLine.getM_InOutLine_ID(), get_TrxName());
+						if (peer.getRef_InOutLine_ID() != 0)
+							line.setM_InOutLine_ID(peer.getRef_InOutLine_ID());
+					}
 				}
+				//
+				line.setProcessed(false);
+				//if (line.save(get_TrxName())) //F3P use saveEx
+				line.saveEx(get_TrxName());
+					count++;
+				//	Cross Link
+				if (counter)
+				{
+					fromLine.setRef_InvoiceLine_ID(line.getC_InvoiceLine_ID());
+					fromLine.saveEx(get_TrxName());
+				}
+	
+				// MZ Goodwill
+				// copy the landed cost
+				line.copyLandedCostFrom(fromLine);
+				line.allocateLandedCosts();
+				// end MZ
 			}
-			//
-			line.setProcessed(false);
-			//if (line.save(get_TrxName())) //F3P use saveEx
-			line.saveEx(get_TrxName());
-				count++;
-			//	Cross Link
-			if (counter)
-			{
-				fromLine.setRef_InvoiceLine_ID(line.getC_InvoiceLine_ID());
-				fromLine.saveEx(get_TrxName());
-			}
-
-			// MZ Goodwill
-			// copy the landed cost
-			line.copyLandedCostFrom(fromLine);
-			line.allocateLandedCosts();
-			// end MZ
+			
+			setGenerationInProgress(false);
+			calcTaxesAfterGeneration();
 		}
+		finally // F3P: end of block
+		{
+			setGenerationInProgress(false);
+		}
+		
 		if (fromLines.length != count)
 			log.log(Level.SEVERE, "Line difference - From=" + fromLines.length + " <> Saved=" + count);
 		return count;
@@ -2520,22 +2542,37 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 		//	Reverse Line Qty
 		MInvoiceLine[] rLines = reversal.getLines(true);
-		for (int i = 0; i < rLines.length; i++)
+		
+		// F3P: set as processing
+		try  // F3P: managing of generation in progress, require try/catch to reset flag
 		{
-			MInvoiceLine rLine = rLines[i];
-			rLine.setQtyEntered(rLine.getQtyEntered().negate());
-			rLine.setQtyInvoiced(rLine.getQtyInvoiced().negate());
-			rLine.setLineNetAmt(rLine.getLineNetAmt().negate());
-			if (rLine.getTaxAmt() != null && rLine.getTaxAmt().compareTo(Env.ZERO) != 0)
-				rLine.setTaxAmt(rLine.getTaxAmt().negate());
-			if (rLine.getLineTotalAmt() != null && rLine.getLineTotalAmt().compareTo(Env.ZERO) != 0)
-				rLine.setLineTotalAmt(rLine.getLineTotalAmt().negate());
-			if (!rLine.save(get_TrxName()))
+			reversal.setGenerationInProgress(true);
+		
+			for (int i = 0; i < rLines.length; i++)
 			{
-				m_processMsg = "Could not correct Invoice Reversal Line";
-				return null;
+				MInvoiceLine rLine = rLines[i];
+				rLine.setQtyEntered(rLine.getQtyEntered().negate());
+				rLine.setQtyInvoiced(rLine.getQtyInvoiced().negate());
+				rLine.setLineNetAmt(rLine.getLineNetAmt().negate());
+				if (rLine.getTaxAmt() != null && rLine.getTaxAmt().compareTo(Env.ZERO) != 0)
+					rLine.setTaxAmt(rLine.getTaxAmt().negate());
+				if (rLine.getLineTotalAmt() != null && rLine.getLineTotalAmt().compareTo(Env.ZERO) != 0)
+					rLine.setLineTotalAmt(rLine.getLineTotalAmt().negate());
+				if (!rLine.save(get_TrxName()))
+				{
+					m_processMsg = "Could not correct Invoice Reversal Line";
+					return null;
+				}
 			}
+			
+			reversal.setGenerationInProgress(false);
+			reversal.calcTaxesAfterGeneration();
 		}
+		finally // F3P: end of block
+		{
+			reversal.setGenerationInProgress(false);
+		}
+		
 		reversal.setC_Order_ID(getC_Order_ID());
 		StringBuilder msgadd = new StringBuilder("{->").append(getDocumentNo()).append(")");
 		reversal.addDescription(msgadd.toString());
@@ -2572,7 +2609,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			MInvoiceLine iLine = iLines[i];
 			if (iLine.getM_InOutLine_ID() != 0)
 			{
-				MInOutLine ioLine = new MInOutLine(getCtx(), iLine.getM_InOutLine_ID(), get_TrxName());
+				// MInOutLine ioLine = new MInOutLine(getCtx(), iLine.getM_InOutLine_ID(), get_TrxName());
+				MInOutLine ioLine = iLine.getInOutLine();
 				ioLine.setIsInvoiced(false);
 				ioLine.saveEx(get_TrxName());
 				//	Reconsiliation
@@ -2842,5 +2880,39 @@ public class MInvoice extends X_C_Invoice implements DocAction
 						Env.getAD_Org_ID(getCtx()));
 	}
 	
+  // F3P: mark generation in progress
+
+	public boolean isGenerationInProgress()
+	{
+		return generationInProgress;
+	}
+
+	public void setGenerationInProgress(boolean generationInProgress)
+	{
+		this.generationInProgress = generationInProgress;
+	}	
+	
+	public void calcTaxesAfterGeneration()
+	{
+		Query qTaxes = new Query(getCtx(), MTax.Table_Name, "C_Tax_ID in (SELECT l.C_Tax_ID FROM C_InvoiceLine l WHERE l.C_Invoice_ID = ?)",get_TrxName());
+		qTaxes.setParameters(getC_Invoice_ID());
+		List<MTax> taxes = qTaxes.list();
+		
+		for(MTax tax:taxes)
+		{
+			// Need one invoice line for every tax to use the tax provider
+			
+			Query qInvLine = new Query(getCtx(), MInvoiceLine.Table_Name, "C_Tax_ID = ? and C_Invoice_ID = ?",get_TrxName());
+			qInvLine.setParameters(tax.getC_Tax_ID(), getC_Invoice_ID());
+			
+			MInvoiceLine line = qInvLine.first();
+			
+      MTaxProvider provider = new MTaxProvider(tax.getCtx(), tax.getC_TaxProvider_ID(), tax.get_TrxName());
+			ITaxProvider calculator = Core.getTaxProvider(provider);
+			if (calculator == null)
+				throw new AdempiereException(Msg.getMsg(getCtx(), "TaxNoProvider"));
+	    calculator.recalculateTax(provider, line, true);
+		}
+	}
 
 }	//	MInvoice
