@@ -55,18 +55,18 @@ import it.idempiere.base.util.STDUtils;
 public class ImportOrder extends SvrProcess implements ImportProcess
 {
 	/**	Client to be imported to		*/
-	private int				m_AD_Client_ID = 0;
+	protected int				m_AD_Client_ID = 0;
 	/**	Organization to be imported to		*/
-	private int				m_AD_Org_ID = 0;
+	protected int				m_AD_Org_ID = 0;
 	/**	Delete old Imported				*/
-	private boolean			m_deleteOldImported = false;
+	protected boolean			m_deleteOldImported = false;
 	/**	Document Action					*/
-	private String			m_docAction = MOrder.DOCACTION_Prepare;
+	protected String			m_docAction = MOrder.DOCACTION_Prepare;
 	/** F3P: Document no*/
-	private String 			m_documentNo;
+	protected String 			m_documentNo;
 
 	/** Effective						*/
-	private Timestamp		m_DateValue = null;
+	protected Timestamp		m_DateValue = null;
 
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -549,6 +549,24 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid Product=" + no);
+		
+		sql = new StringBuilder ("UPDATE I_Order ")
+				  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Product Not On PriceList, ' ")
+				  .append(" WHERE (M_Product_ID IS NOT NULL OR M_Product_ID > 0 ) AND ")
+				  .append(" (M_PriceList_ID IS NOT NULL OR M_PriceList_ID > 0) AND ")
+				  .append(" NOT EXISTS (SELECT 'ok' FROM M_PriceList pl inner join M_PriceList_Version plv on (pl.M_PriceList_ID = plv.M_PriceList_ID ) ")
+				  .append(" left join M_ProductPrice pp on (pp.M_PriceList_Version_ID = plv.M_PriceList_Version_ID)")
+				  .append(" left join  M_ProductPriceVendorBreak ppvb on (ppvb.M_PriceList_Version_ID = plv.M_PriceList_Version_ID and")
+				  .append(" I_Order.dateOrdered between ppvb.validfrom and ppvb.validto )")
+				  .append(" where coalesce(ppvb.m_product_id,pp.m_product_id) = I_Order.m_product_id and plv.isactive = 'Y' and ")
+				  .append(" pl.m_pricelist_id=i_order.m_pricelist_id and " )
+				  .append(" plv.validfrom <= I_Order.dateOrdered AND NOT EXISTS (Select 'ok' from M_PriceList_Version v where v.M_PriceList_ID = plv.M_PriceList_ID ")
+			      .append(" and v.validfrom > plv.validfrom and v.M_PriceList_Version_ID != plv.M_PriceList_Version_ID )) ")
+				  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+				  .append(getDocumentNoFilter()); //F3P: added filter by docNo
+			no = DB.executeUpdate(sql.toString(), get_TrxName());
+			if (no != 0)
+				log.warning ("Product Not On PriceList =" + no);
 
 		//	Charge
 		sql = new StringBuilder ("UPDATE I_Order o ")
@@ -592,8 +610,21 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
 			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		
+		//F3P: added control for unique index c_order_documentno
+		sql = new StringBuilder ("UPDATE I_Order ")
+			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=DocumentNo Already Exist, ' ")
+			  .append("WHERE DocumentNo IS NOT NULL AND C_BPartner_ID IS NOT NULL ")
+			  .append(" AND C_DocType_ID IS NOT NULL AND (DateOrdered IS NOT NULL OR DateAcct IS NOT NULL)")
+			  .append(" AND EXISTS (SELECT 'KO' FROM C_Order o WHERE o.DocumentNo = I_Order.DocumentNo ")
+			  .append(" AND o.C_BPartner_ID = I_Order.C_BPartner_ID AND o.C_DocType_ID = I_Order.C_DocType_ID ")
+			  .append(" AND to_char(o.DateAcct,'YYYY') = to_char(COALESCE (I_Order.DateOrdered,I_Order.DateAcct),'YYYY'))")
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
-			log.warning ("Invalid Tax=" + no);
+			log.warning ("Invalid DocumentNo=" + no);
+		//F3P End
 		
 		//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
 		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);

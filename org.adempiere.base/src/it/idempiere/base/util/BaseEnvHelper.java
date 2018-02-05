@@ -219,6 +219,57 @@ public class BaseEnvHelper
 		}
 	}
 	
+	private static final String SQL = "@SQL=";
+	
+	public static String parseValue(Properties ctx,String toParseString,int windowNo,String trxName) 
+	{
+		String parsedValue = toParseString;
+		
+		if (toParseString != null )
+		{	
+			if(toParseString.startsWith(SQL))
+			{
+				String sql = toParseString.substring(5);
+				
+				if (sql.equals(""))
+				{
+					return toParseString;
+				}
+				else
+				{
+					sql = Env.parseContext(ctx, windowNo, sql, false, false);
+					PreparedStatement stmt = null;
+					ResultSet rs = null;
+					try
+					{
+						stmt = DB.prepareStatement(sql, trxName);
+						rs = stmt.executeQuery();
+						
+						if (rs.next())
+							parsedValue = rs.getString(1);
+					}
+					catch (SQLException e)
+					{
+						throw new AdempiereException(e);
+					}
+					finally
+					{
+						DB.close(rs, stmt);
+						rs = null;
+						stmt = null;
+					}
+				}
+			}
+			else if(toParseString.contains("@"))
+			{
+				parsedValue = Env.parseContext(ctx, windowNo, toParseString, false, false);
+			}
+		}
+	
+		
+		return parsedValue;
+	}
+	
 	public static String convertToEnvString(String sName,Object param, DateFormat convFormat, boolean bConvertIDs)
 	{		
 		if(param == null)

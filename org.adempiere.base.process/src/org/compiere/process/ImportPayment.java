@@ -44,22 +44,22 @@ import org.compiere.util.Env;
 public class ImportPayment extends SvrProcess implements ImportProcess
 {
 	/**	Organization to be imported to	*/
-	private int				p_AD_Org_ID = 0;
+	protected int				p_AD_Org_ID = 0;
 	/** Default Bank Account			*/
-	private int				p_C_BankAccount_ID = 0;
+	protected int				p_C_BankAccount_ID = 0;
 	/**	Delete old Imported				*/
-	private boolean			p_deleteOldImported = false;
+	protected boolean			p_deleteOldImported = false;
 	/**	Document Action					*/
-	private String			m_docAction = null;
+	protected String			m_docAction = null;
 
 	/** Properties						*/
-	private Properties 		m_ctx;
+	protected Properties 		m_ctx;
 
 	// Angelo Dabala' (genied) - nectosoft - added IsValidateOnly and IsImportOnlyNoErrors parameters
 	/**	Don't import					*/
-	private boolean			m_IsValidateOnly = false;
+	protected boolean			m_IsValidateOnly = false;
 	/** Import if no Errors				*/
-	private boolean			m_IsImportOnlyNoErrors = true;
+	protected boolean			m_IsImportOnlyNoErrors = true;
 	
 	/**
 	 *  Prepare - e.g., get Parameters.
