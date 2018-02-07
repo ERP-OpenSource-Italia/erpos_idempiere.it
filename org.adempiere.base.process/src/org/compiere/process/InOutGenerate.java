@@ -805,7 +805,7 @@ public class InOutGenerate extends SvrProcess
 						}
 						else
 						{
-							addLog(m_shipment.getM_InOut_ID(), m_shipment.getMovementDate(), null, m_shipment.getDocumentNo());
+							addLog(m_shipment.getM_InOut_ID(), m_shipment.getMovementDate(), null, m_shipment.getDocumentNo(),MInOut.Table_ID,m_shipment.getM_InOut_ID());
 						}
 					}
 					m_shipment.saveEx();
