@@ -808,6 +808,8 @@ public class MInOut extends X_M_InOut implements DocAction
 					// F3P: end
 					if (peer.getRef_OrderLine_ID() != 0)
 						line.setC_OrderLine_ID(peer.getRef_OrderLine_ID());
+					else
+						throw new AdempiereException("@Ref_OrderLine_ID@ @null@, @C_OrderLine_ID@ "+fromLine.getC_OrderLine_ID());
 				}
 				//RMALine link
 				if (fromLine.getM_RMALine_ID() != 0)
