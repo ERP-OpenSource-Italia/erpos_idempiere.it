@@ -154,6 +154,11 @@ public class MInOutLine extends X_M_InOutLine
 	private int				m_M_Warehouse_ID = 0;
 	/** Parent					*/
 	private MInOut			m_parent = null;
+	
+	
+	// F3P: added to keep cache, like parent
+	
+	private MOrderLine m_orderLine = null;
 
 	/**
 	 * 	Get Parent
@@ -175,6 +180,9 @@ public class MInOutLine extends X_M_InOutLine
 	 */
 	public void setOrderLine (MOrderLine oLine, int M_Locator_ID, BigDecimal Qty)
 	{
+		// F3P: keep cache
+		m_orderLine = oLine;
+		
 		setC_OrderLine_ID(oLine.getC_OrderLine_ID());
 		setLine(oLine.getLine());
 		setC_UOM_ID(oLine.getC_UOM_ID());
@@ -804,6 +812,25 @@ public class MInOutLine extends X_M_InOutLine
 
 		// inout has orderline and both has the same UOM
 		return true;
+	}
+	
+	
+	 // F3P: keep caches
+	@Override
+	public void setC_OrderLine_ID(int C_OrderLine_ID)
+	{
+		if(m_orderLine != null && m_orderLine.getC_OrderLine_ID() != C_OrderLine_ID)
+			m_orderLine = null;
+		
+		super.setC_OrderLine_ID(C_OrderLine_ID);
+	}
+
+	public MOrderLine getOrderLine()
+	{
+		if(m_orderLine == null && getC_OrderLine_ID() > 0)			
+			m_orderLine = PO.get(getCtx(), MOrderLine.Table_Name, getC_OrderLine_ID(), get_TrxName());
+		
+		return m_orderLine;
 	}
 
 }	//	MInOutLine
