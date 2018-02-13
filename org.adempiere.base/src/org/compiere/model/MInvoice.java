@@ -785,8 +785,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 				line.setM_AttributeSetInstance_ID(0);
 				line.setS_ResourceAssignment_ID(0);
 				//	New Tax
-				if (getC_BPartner_ID() != otherInvoice.getC_BPartner_ID())
-					line.setTax();	//	recalculate
+				/*if (getC_BPartner_ID() != otherInvoice.getC_BPartner_ID()) F3P Fix not recalculate tax for counter document
+					line.setTax();	//	recalculate*/
 				//
 				if (counter)
 				{
@@ -2319,7 +2319,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			counterLine.setClientOrg(counter);
 			counterLine.setInvoice(counter);	//	copies header values (BP, etc.)
 			counterLine.setPrice();
-			counterLine.setTax();
+			//counterLine.setTax(); F3P Fix not recalculate tax for counter document
 			//
 			counterLine.saveEx(get_TrxName());
 		}
