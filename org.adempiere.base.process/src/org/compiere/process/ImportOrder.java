@@ -557,7 +557,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 				  .append(" NOT EXISTS (SELECT 'ok' FROM M_PriceList pl inner join M_PriceList_Version plv on (pl.M_PriceList_ID = plv.M_PriceList_ID ) ")
 				  .append(" left join M_ProductPrice pp on (pp.M_PriceList_Version_ID = plv.M_PriceList_Version_ID)")
 				  .append(" left join  M_ProductPriceVendorBreak ppvb on (ppvb.M_PriceList_Version_ID = plv.M_PriceList_Version_ID and")
-				  .append(" I_Order.dateOrdered between ppvb.validfrom and ppvb.validto )")
+				  .append(" I_Order.dateOrdered between ppvb.validfrom and ppvb.validto and ppvb.m_product_id = I_Order.m_product_id )")
 				  .append(" where coalesce(ppvb.m_product_id,pp.m_product_id) = I_Order.m_product_id and plv.isactive = 'Y' and ")
 				  .append(" pl.m_pricelist_id=i_order.m_pricelist_id and " )
 				  .append(" plv.validfrom <= I_Order.dateOrdered AND NOT EXISTS (Select 'ok' from M_PriceList_Version v where v.M_PriceList_ID = plv.M_PriceList_ID ")
