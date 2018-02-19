@@ -1910,7 +1910,14 @@ public class MInvoice extends X_C_Invoice implements DocAction
 				{
 					ol = new MOrderLine (getCtx(), line.getC_OrderLine_ID(), get_TrxName());
 					if (line.getQtyInvoiced() != null)
-						ol.setQtyInvoiced(ol.getQtyInvoiced().add(line.getQtyInvoiced()));
+					{
+						//F3P if credit memo negate qty
+						BigDecimal qty = line.getQtyInvoiced();
+						if(isCreditMemo())
+							qty = qty.negate();
+						
+						ol.setQtyInvoiced(ol.getQtyInvoiced().add(qty));
+					}
 					if (!ol.save(get_TrxName()))
 					{
 						m_processMsg = "Could not update Order Line";
