@@ -429,7 +429,7 @@ public class ProcessDialog extends AbstractProcessDialog implements EventListene
 					} else {
 						Text t = new Text();
 						t.setEncode(false);
-						t.setValue(log.getP_Msg());
+						t.setValue(Msg.parseTranslation(getCtx(), log.getP_Msg()));
 						td.appendChild(t);
 					}
 				}
