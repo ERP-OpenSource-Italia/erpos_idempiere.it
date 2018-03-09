@@ -357,9 +357,10 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 		        FileOutputStream fos = new FileOutputStream(file);
 
 				// coding For Excel:
-				JRXlsExporter exporterXLS = new JRXlsExporter();
+		        JRXlsExporter exporterXLS = new JRXlsExporter();
 				SimpleXlsReportConfiguration xlsConfig = new SimpleXlsReportConfiguration();
 				xlsConfig.setOnePagePerSheet(false);
+				xlsConfig.setDetectCellType(true);
 
 				if (!isList){
 					jasperPrintList = new ArrayList<>();
