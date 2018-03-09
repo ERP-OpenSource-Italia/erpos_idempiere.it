@@ -7,4 +7,6 @@ public interface BaseMessages
 	public static final String MSG_PAYEXPORTDESCR = "LIT_PayExportDescr";
 	
 	public static final String MSG_ERR_INVALID_COMPOSITE_DISCOUNT = "LIT_ERR_InvalidCompositeDiscount";
+	
+	public static final String MSG_ERR_EXISTING_REL_DOCS = "LIT_ErrorExistingRelatedDocuments";
 }

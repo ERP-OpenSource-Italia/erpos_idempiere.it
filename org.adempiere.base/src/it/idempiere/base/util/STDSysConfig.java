@@ -89,6 +89,8 @@ public class STDSysConfig
  	public static final String  LIT_COMMISSION_RULE_MINOR_SEQUENCE = "LIT_COMMISSION_RULE_MINOR_SEQUENCE";
  	
  	public static final String  LIT_COST_ENABLESEED = "LIT_COST_ENABLESEED";
+ 	
+ 	public static final String LIT_CHECK_RELDOC_ON_REOPEN_ORDER = "LIT_CHECK_RELDOC_ON_REOPEN_ORDER";
  	 		
 	public static boolean isCommissionRuleMinorSequence(int AD_Client_ID,int AD_Org_ID)
 	{
@@ -506,6 +508,18 @@ public class STDSysConfig
 		}
 		
 		return found;
+	}
+	
+	
+	/** check if prevent re-open when exist invoices or shipments the reverse for onCreditOrder,warehouseOrder or POSOrder
+	 * 
+	 * @param AD_Client_ID
+	 * @param AD_Org_ID
+	 * @return prevent or not
+	 */
+	public static boolean isCheckRelDocOnReopenOrder(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_CHECK_RELDOC_ON_REOPEN_ORDER, false, AD_Client_ID, AD_Org_ID);
 	}
 	
 }

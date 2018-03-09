@@ -47,6 +47,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.Util;
 
 import it.idempiere.base.model.LITMBPartnerLocation;
+import it.idempiere.base.util.BaseMessages;
 import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
 
@@ -2901,8 +2902,6 @@ public class MOrder extends X_C_Order implements DocAction
 		if (m_processMsg != null)
 			return false;	
 				
-		
-		
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		String DocSubTypeSO = dt.getDocSubTypeSO();
 		
@@ -2926,19 +2925,30 @@ public class MOrder extends X_C_Order implements DocAction
 				setC_DocType_ID (newDT.getC_DocType_ID());
 		}
 
-		//F3P: Check this variable before create the reverse for onCreditOrder,warehouseOrder or POSOrder
-		boolean bCreateReversal = STDSysConfig.isOrderCreateReverse(getAD_Client_ID(), getAD_Org_ID());
-		
 		//	PO - just re-open
 		if (!isSOTrx()) {
 			if (log.isLoggable(Level.INFO)) log.info("Existing documents not modified - " + dt);
 		//	Reverse Direct Documents
-		} else if (bCreateReversal && MDocType.DOCSUBTYPESO_OnCreditOrder.equals(DocSubTypeSO)	//	(W)illCall(I)nvoice
+		} else if (MDocType.DOCSUBTYPESO_OnCreditOrder.equals(DocSubTypeSO)	//	(W)illCall(I)nvoice
 			|| MDocType.DOCSUBTYPESO_WarehouseOrder.equals(DocSubTypeSO)	//	(W)illCall(P)ickup	
 			|| MDocType.DOCSUBTYPESO_POSOrder.equals(DocSubTypeSO))			//	(W)alkIn(R)eceipt
 		{
-			if (!createReversals())
-				return false;
+			//F3P: Check this variable before create the reverse for onCreditOrder,warehouseOrder or POSOrder
+			if(STDSysConfig.isOrderCreateReverse(getAD_Client_ID(), getAD_Org_ID()))
+			{
+				if (!createReversals())
+					return false;
+			}
+			//F3P: check if prevent re-open when exist invoices or shipments
+			else if(STDSysConfig.isCheckRelDocOnReopenOrder(getAD_Client_ID(), getAD_Org_ID()))
+			{
+				if(getShipments().length > 0 || 
+					(MDocType.DOCSUBTYPESO_WarehouseOrder.equals(DocSubTypeSO) == false && getInvoices().length > 0))
+				{
+					m_processMsg = Msg.getMsg(getCtx(), BaseMessages.MSG_ERR_EXISTING_REL_DOCS);
+					return false;
+				}
+			}
 		}
 		else
 		{
