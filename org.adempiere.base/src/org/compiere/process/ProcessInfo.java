@@ -23,6 +23,7 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 
+import org.adempiere.util.FeedbackContainer;
 import org.compiere.model.PO;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
@@ -139,6 +140,8 @@ public class ProcessInfo implements Serializable
 	
 	/**	Export File				*/
 	private File				m_exportFile = null;
+	
+	private FeedbackContainer m_feedbackContainer = null;
 
 	/** Row count */
 	private int m_rowCount;
@@ -862,7 +865,16 @@ public class ProcessInfo implements Serializable
 	{
 		return m_windowNo;
 	}
+		
+	//Managed feedback container
+	public FeedbackContainer getFeedbackContainer(){
+		return m_feedbackContainer;
+	}
 	
+	public void setFeedbackContainer(FeedbackContainer feedbackContainer){
+		this.m_feedbackContainer = feedbackContainer;
+	}
+
 	//F3P end
 
 }   //  ProcessInfo

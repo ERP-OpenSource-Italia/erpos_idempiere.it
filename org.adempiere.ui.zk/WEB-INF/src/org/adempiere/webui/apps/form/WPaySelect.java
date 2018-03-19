@@ -466,7 +466,7 @@ public class WPaySelect extends PaySelect
 
 					//	Execute Process
 					ProcessModalDialog dialog = new ProcessModalDialog(WPaySelect.this, m_WindowNo, 
-							AD_Proces_ID, X_C_PaySelection.Table_ID, m_ps.getC_PaySelection_ID(), false);
+							AD_Proces_ID, X_C_PaySelection.Table_ID, m_ps.getC_PaySelection_ID(), false, null);
 					if (dialog.isValid()) {
 						try {
 							//dialog.setWidth("500px");

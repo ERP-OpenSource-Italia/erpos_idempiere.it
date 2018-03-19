@@ -12,7 +12,7 @@ import org.zkoss.zk.ui.Component;
 public class UIFeedbackNotifier
 {
 	private final FeedbackContainer container;
-	private final	Callback<?>				callAfterFeedback;
+	private final	Callback<UIFeedbackNotifier>	callAfterFeedback;
 	private final int								windowNo;
 	private final Component					component;
 	
@@ -20,7 +20,7 @@ public class UIFeedbackNotifier
 	private final List<FeedbackRequest>		questions;
 	private FeedbackRequest								currentRequest = null;
 
-	public UIFeedbackNotifier(int WindowNo, Component component, FeedbackContainer container, Callback<?> callAfterFeedback)
+	public UIFeedbackNotifier(int WindowNo, Component component, FeedbackContainer container, Callback<UIFeedbackNotifier> callAfterFeedback)
 	{
 		this.container = container;
 		this.callAfterFeedback = callAfterFeedback;
@@ -72,7 +72,7 @@ public class UIFeedbackNotifier
 			try
 			{
 				FeedbackContainer.setCurrent(container);
-				callAfterFeedback.onCallback(null);
+				callAfterFeedback.onCallback(this);
 			}
 			finally
 			{
