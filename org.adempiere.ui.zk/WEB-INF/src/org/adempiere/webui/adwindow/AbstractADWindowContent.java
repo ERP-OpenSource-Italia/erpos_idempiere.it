@@ -2242,11 +2242,15 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 	  			if(newRecord)
 	  				gatherFor = IEventTopics.PO_BEFORE_NEW;
 		  	
-		  		FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);
-		  		UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getComponent(), container, new Callback<Integer>()
+		  		final FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);
+		  		final UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getComponent(), container, new Callback<UIFeedbackNotifier>()
 		  		{
-		  			public void onCallback(Integer result) {
-		  				onSave1(onSaveEvent, navigationEvent, newRecord, wasChanged, callback);
+		  			public void onCallback(UIFeedbackNotifier notifier) {
+		  				
+		  				boolean bSave = onSave1(onSaveEvent, navigationEvent, newRecord, wasChanged, callback);
+		  				
+		  				if(bSave)
+		  					container.saveFeedbackRequest(adTabbox.getSelectedGridTab().getRecord_ID());
 		  			};
 		  		});
 		  		
@@ -2258,10 +2262,10 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 			}
 			
   		if(isFeedbackManaged == false)
-				onSave1(onSaveEvent, navigationEvent, newRecord, wasChanged, callback); // F3P: if no need to save still call original function
+  				onSave1(onSaveEvent, navigationEvent, newRecord, wasChanged, callback); // F3P: if no need to save still call original function
   	}
 
-	private void onSave1(boolean onSaveEvent, boolean navigationEvent,
+	private boolean onSave1(boolean onSaveEvent, boolean navigationEvent,
 			boolean newRecord, boolean wasChanged, Callback<Boolean> callback) {
 		IADTabpanel dirtyTabpanel = adTabbox.getDirtyADTabpanel();
 		boolean retValue = adTabbox.dataSave(onSaveEvent);
@@ -2271,7 +2275,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 			showLastError();
 			if (callback != null)
 				callback.onCallback(false);
-			return;
+			return retValue;
 		} else if (!onSaveEvent && dirtyTabpanel != null && !(dirtyTabpanel instanceof ADSortTab)) //need manual refresh
 		{
 			dirtyTabpanel.getGridTab().setCurrentRow(dirtyTabpanel.getGridTab().getCurrentRow());
@@ -2285,7 +2289,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		IADTabpanel dirtyTabpanel2 = adTabbox.getDirtyADTabpanel();
 		if (dirtyTabpanel2 != null && dirtyTabpanel2 != dirtyTabpanel) {
 			onSave(onSaveEvent, navigationEvent, callback);
-			return;
+			return retValue;
 		} else if (dirtyTabpanel instanceof ADSortTab) {
 			ADSortTab sortTab = (ADSortTab) dirtyTabpanel;
 			if (!sortTab.isChanged()) {
@@ -2336,6 +2340,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		
 		if (callback != null)
 			callback.onCallback(true);
+		return retValue;
 	}
 
 	private GridTab getMainTabAbove() {
@@ -2546,7 +2551,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 					int table_ID = adTabbox.getSelectedGridTab().getAD_Table_ID();
 					int record_ID = adTabbox.getSelectedGridTab().getRecord_ID();
 
-					final ProcessModalDialog dialog = new ProcessModalDialog(AbstractADWindowContent.this, getWindowNo(), AD_Process_ID,table_ID, record_ID, true);
+					final ProcessModalDialog dialog = new ProcessModalDialog(AbstractADWindowContent.this, getWindowNo(), AD_Process_ID,table_ID, record_ID, true, null);
 					if (dialog.isValid()) {
 						//dialog.setWidth("500px");
 						dialog.setBorder("normal");						
@@ -2864,11 +2869,11 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 							
 							if(gatherFor != null)
 							{
-								FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);
-								UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getComponent(), container, new Callback<Integer>()
+								final FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);
+								final UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getComponent(), container, new Callback<UIFeedbackNotifier>()
 								{
-					  			public void onCallback(Integer result) {
-					  				executeButtonProcess(wButton, startWOasking, table_ID, recordIdParam, isProcessMandatory);
+					  			public void onCallback(UIFeedbackNotifier notifier) {
+					  				executeButtonProcess(wButton, startWOasking, table_ID, recordIdParam, isProcessMandatory, container);
 					  			};
 								});
 								notifier.processFeedback();
@@ -2877,7 +2882,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		  			}
 						
 						if(isFeedbackManaged == false)
-							executeButtonProcess(wButton, startWOasking, table_ID, recordIdParam, isProcessMandatory);
+							executeButtonProcess(wButton, startWOasking, table_ID, recordIdParam, isProcessMandatory, null);
 						
 						// F3P: end						
 					}
@@ -2996,7 +3001,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		}   //  Posted
 
 		executeButtonProcess(wButton, startWOasking, table_ID, record_ID,
-				isProcessMandatory);
+				isProcessMandatory, null);
 	} // actionButton
 
 	private Div getMask() {
@@ -3029,7 +3034,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 
 	private void executeButtonProcess(final IProcessButton wButton,
 			final boolean startWOasking, final int table_ID, final int record_ID,
-			boolean isProcessMandatory) {
+			boolean isProcessMandatory, FeedbackContainer feedbackContainer) {
 		/**
 		 *  Start Process ----
 		 */
@@ -3054,19 +3059,19 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 				@Override
 				public void onCallback(Boolean result) {
 					if (result) {
-						executeButtonProcess0(wButton, startWOasking, table_ID, record_ID);
+						executeButtonProcess0(wButton, startWOasking, table_ID, record_ID, feedbackContainer);
 					}
 				}
 			});
 		}
 		else
 		{
-			executeButtonProcess0(wButton, startWOasking, table_ID, record_ID);
+			executeButtonProcess0(wButton, startWOasking, table_ID, record_ID, feedbackContainer);
 		}
 	}
 
 	private void executeButtonProcess0(final IProcessButton wButton,
-			boolean startWOasking, int table_ID, int record_ID) {
+			boolean startWOasking, int table_ID, int record_ID, FeedbackContainer feedbackContainer) {
 		// call form
 		MProcess pr = new MProcess(ctx, wButton.getProcess_ID(), null);
 		int adFormID = pr.getAD_Form_ID();
@@ -3106,7 +3111,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		}
 		else
 		{
-			ProcessModalDialog dialog = new ProcessModalDialog(this, curWindowNo, wButton.getProcess_ID(), table_ID, record_ID, startWOasking);
+			ProcessModalDialog dialog = new ProcessModalDialog(this, curWindowNo, wButton.getProcess_ID(), table_ID, record_ID, startWOasking, feedbackContainer);
 
 			if (dialog.isValid())
 			{
@@ -3254,6 +3259,12 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		ProcessInfoUtil.setLogFromDB(pi);
 		ProcessInfoLog m_logs[] = pi.getLogs();
 		statusBar.setStatusLine(pi.getSummary(), pi.isError(),m_logs);
+		
+		FeedbackContainer container = pi.getFeedbackContainer();
+		if(pi.isError() == false && pi.getAD_PInstance_ID() > 0 && container != null)
+		{	
+			container.saveFeedbackRequest();
+		}
 		
 		if (m_logs != null && m_logs.length > 0) {
 			ProcessInfoDialog.showProcessInfo(pi, curWindowNo, getComponent(), false);

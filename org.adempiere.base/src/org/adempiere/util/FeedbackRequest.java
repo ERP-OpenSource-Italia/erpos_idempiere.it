@@ -20,6 +20,7 @@ public class FeedbackRequest implements Serializable
 	private boolean response = true;
 	private String	title;
 	private String	message;
+	private String messageError;
 	
 	private boolean persistRequest = true;
 	private boolean defaultResponse = false;
@@ -94,5 +95,15 @@ public class FeedbackRequest implements Serializable
 	public void setDefaultResponse(boolean defaultResponse)
 	{
 		this.defaultResponse = defaultResponse;
+	}
+	
+	public String getMessageError()
+	{
+		return messageError;
+	}
+
+	public void setMessageError(String messageError)
+	{
+		this.messageError = messageError;
 	}
 }

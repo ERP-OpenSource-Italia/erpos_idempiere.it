@@ -7,12 +7,18 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.Properties;
+import java.util.logging.Level;
+
 import org.adempiere.base.event.EventManager;
 import org.adempiere.base.event.GatherFeedbackRequestEvent;
 import org.adempiere.base.event.IEventTopics;
 import org.adempiere.exceptions.AdempiereException;
+import org.compiere.model.MFeedbackResponse;
 import org.compiere.model.PO;
 import org.compiere.process.DocAction;
+import org.compiere.util.CLogger;
+import org.compiere.util.Env;
 import org.osgi.service.event.Event;
 
 public class FeedbackContainer implements Serializable
@@ -24,9 +30,13 @@ public class FeedbackContainer implements Serializable
 	 */
 	private static final long serialVersionUID = 2472325200502656692L;
 	
+	private static CLogger	log = CLogger.getCLogger(FeedbackContainer.class);
+	
 	private Map<String,FeedbackRequest> requests = new LinkedHashMap<>();
 	
 	private static ThreadLocal<FeedbackContainer> threadContainer = new ThreadLocal<>();
+	
+	private static PO feebackForPO = null;
 	
 	public static FeedbackContainer getCurrent()
 	{
@@ -131,6 +141,60 @@ public class FeedbackContainer implements Serializable
 		Event evt =  EventManager.newEvent(IEventTopics.GATHER_FEEDBACK, event);
 		EventManager.getInstance().sendEvent(evt);
 		
+		feebackForPO = po;
+		
 		return container;
+	}
+	
+	//Managed feedback container save
+	public void saveFeedbackRequest()
+	{
+		saveFeedbackRequest(-1);
+	}
+	
+	public void saveFeedbackRequest(int recordID)
+	{
+		Collection<FeedbackRequest> cont = getAll();
+		
+		Properties ctx = Env.getCtx();
+		int AD_User_ID = Env.getAD_User_ID(ctx);
+		int AD_Table_ID = feebackForPO.get_Table_ID();
+		
+		if(recordID < 0)
+			recordID = feebackForPO.get_ID();
+		else if(recordID == 0)
+			return ;
+		
+		for(FeedbackRequest feedback: cont)
+		{
+			if(feedback.isPersistRequest())
+			{
+				try
+				{
+					MFeedbackResponse feedbackResponse = PO.create(ctx, MFeedbackResponse.Table_Name, null);
+					
+					feedbackResponse.setAD_User_ID(AD_User_ID);
+					feedbackResponse.setAD_Table_ID(AD_Table_ID);
+					
+					feedbackResponse.setRecord_ID(recordID);
+					feedbackResponse.setFeedback_RequestID(feedback.getId());
+					feedbackResponse.setTitle(feedback.getTitle());
+					feedbackResponse.setFeedbackType(feedback.getType());
+					feedbackResponse.setMsgRequest(feedback.getMessage());
+					
+					String response = String.valueOf(feedback.getResponse());
+					
+					feedbackResponse.setResponse(response);
+					feedbackResponse.setMsgError(feedback.getMessageError());
+					
+					feedbackResponse.saveEx(null);
+				}
+				catch (AdempiereException e) 
+				{
+					log.log(Level.SEVERE, e.getMessage());
+				}
+			}
+		}
+		
 	}
 }

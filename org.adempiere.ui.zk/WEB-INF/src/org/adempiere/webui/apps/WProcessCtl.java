@@ -99,7 +99,7 @@ public class WProcessCtl extends AbstractProcessCtl {
 		}
 
 		//	Get Parameters (Dialog)
-		ProcessModalDialog para = new ProcessModalDialog(listener, WindowNo, pi, false);
+		ProcessModalDialog para = new ProcessModalDialog(listener, WindowNo, pi, false, null);
 		if (para.isValid())
 		{
 			//para.setWidth("500px");

@@ -182,10 +182,13 @@ public class CompositeADTabbox extends AbstractADTabbox
 							gatherFor = IEventTopics.PO_BEFORE_NEW;
 				  	
 			  		FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);
-			  		UIFeedbackNotifier notifier = new UIFeedbackNotifier(tabPanel.getGridTab().getWindowNo(), getComponent(), container, new Callback<Integer>()
+			  		UIFeedbackNotifier notifier = new UIFeedbackNotifier(tabPanel.getGridTab().getWindowNo(), getComponent(), container, new Callback<UIFeedbackNotifier>()
 			  		{
-			  			public void onCallback(Integer result) {
-			  				onDetailSaveEvent(tabPanel);
+			  			public void onCallback(UIFeedbackNotifier notifier) {
+			  				boolean bSave = onDetailSaveEvent(tabPanel);
+			  				
+			  				if(bSave)
+			  					container.saveFeedbackRequest(adWindowPanel.getActiveGridTab().getRecord_ID());
 			  			};
 			  		});
 			  		
@@ -204,12 +207,14 @@ public class CompositeADTabbox extends AbstractADTabbox
 			
 			// F3P: extracted from onEvent
 			
-			private void onDetailSaveEvent(final IADTabpanel tabPanel)
+			private boolean onDetailSaveEvent(final IADTabpanel tabPanel)
 			{
 				if (!tabPanel.getGridTab().dataSave(true)) {
 					showLastError();
+					return false;
 				} 
-				tabPanel.getGridTab().dataRefreshAll(true, true);				
+				tabPanel.getGridTab().dataRefreshAll(true, true);
+				return true;
 			}
 
 			private void onDelete() {
