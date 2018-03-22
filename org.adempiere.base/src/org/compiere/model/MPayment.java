@@ -2312,12 +2312,22 @@ public class MPayment extends X_C_Payment
 		BigDecimal allocationAmt = getPayAmt();			//	underpayment
 		if (getOverUnderAmt().signum() < 0 && getPayAmt().signum() > 0)
 			allocationAmt = allocationAmt.add(getOverUnderAmt());	//	overpayment (negative)
+		
+		
+		MInvoice mInvoice =	(MInvoice) getC_Invoice();
+		
+		Timestamp dateAcctToSet = null;
+		
+		if(getDateAcct().before(mInvoice.getDateAcct()))
+			dateAcctToSet = mInvoice.getDateAcct();
+		else
+			dateAcctToSet = getDateAcct();
 
 		MAllocationHdr alloc = new MAllocationHdr(getCtx(), false, 
-			getDateTrx(), getC_Currency_ID(),
+				dateAcctToSet, getC_Currency_ID(),
 			Msg.translate(getCtx(), "C_Payment_ID") + ": " + getDocumentNo() + " [1]", get_TrxName());
 		alloc.setAD_Org_ID(getAD_Org_ID());
-		alloc.setDateAcct(getDateAcct()); // in case date acct is different from datetrx in payment
+		
 		alloc.saveEx();
 		MAllocationLine aLine = null;
 		if (isReceipt())

@@ -19,6 +19,7 @@ package org.compiere.model;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
@@ -252,6 +253,26 @@ public class MPriceList extends X_M_PriceList
 		else
 			if (log.isLoggable(Level.FINE)) log.fine(m_plv.toString());
 		return m_plv;
+	}	//	getPriceListVersion
+	
+	/**
+	 * 	Get Price List Version
+	 *	@param valid date where PLV must be valid or today if null
+	 *	@return PLV
+	 */
+	public List<MPriceListVersion> getPriceListVersion ()
+	{
+		final String whereClause = "M_PriceList_ID=?";
+		List<MPriceListVersion> lplv = new Query(getCtx(), I_M_PriceList_Version.Table_Name, whereClause, get_TrxName())
+					.setParameters(getM_PriceList_ID())
+					.setOnlyActiveRecords(true)
+					.setOrderBy("ValidFrom DESC")
+					.list();
+		if (lplv == null)
+			log.warning("None found M_PriceList_ID=" + getM_PriceList_ID());
+		else
+			if (log.isLoggable(Level.FINE)) log.fine(lplv.toString());
+		return lplv;
 	}	//	getPriceListVersion
 
 	/**
