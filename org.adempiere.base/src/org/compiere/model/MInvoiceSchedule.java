@@ -205,7 +205,13 @@ public class MInvoiceSchedule extends X_C_InvoiceSchedule
 					return false;
 			}
 			Calendar invoice = (Calendar)today.clone(); // F3P: using 'today' (dateInvoiced/today)
-			invoice.set(Calendar.DAY_OF_MONTH, getInvoiceDay());
+			
+			int invoiceDay = getInvoiceDay();
+			
+			if(invoiceDay == today.getMaximum(Calendar.DAY_OF_MONTH)) // F3P: manage 31 as 'last day of month'
+				invoiceDay = today.getActualMaximum(Calendar.DAY_OF_MONTH);
+						
+			invoice.set(Calendar.DAY_OF_MONTH, invoiceDay);
 			if (invoice.after(today))
 				invoice.add(Calendar.MONTH, -1);
 			Timestamp invoiceDate = new Timestamp (invoice.getTimeInMillis());
