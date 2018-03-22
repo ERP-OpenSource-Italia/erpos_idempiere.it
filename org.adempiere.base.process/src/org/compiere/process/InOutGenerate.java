@@ -60,7 +60,7 @@ public class InOutGenerate extends SvrProcess
 {
 	// F3P: SelectionLine query
 	
-	public static final String SQL_SELECTIONLINE = "SELECT ol.C_OrderLine_ID,tl.Qty "
+	public static final String SQL_SELECTIONLINE = "SELECT ol.C_OrderLine_ID,tl.* "
 													+ " FROM T_SelectionLine tl INNER JOIN C_OrderLine ol on (tl.T_SelectionLine_ID = ol.C_OrderLine_ID AND ol.C_Order_ID = ?)"
 													+ " WHERE tl.AD_PInstance_ID = ?"
 													+ " ORDER BY ol.C_BPartner_Location_ID,ol.M_Product_ID,ol.line";
@@ -89,7 +89,7 @@ public class InOutGenerate extends SvrProcess
 	private Timestamp       p_DateShipped = null;
 	
 	// F3P: selection line
-	private boolean p_SelectionLine = false;
+	protected boolean p_SelectionLine = false;
 	private int	DocProcess_AD_Workflow_ID = -1;
 	
 	//F3P: renumber line
@@ -326,6 +326,8 @@ public class InOutGenerate extends SvrProcess
 							BigDecimal bdQty = rsLS.getBigDecimal("Qty");
 							
 							mapSelectionLineQty.put(C_OrderLine_ID, bdQty);
+							
+							processSelectionLine(rsLS);
 							
 							MOrderLine mOLine = PO.get(getCtx(), MOrderLine.Table_Name, C_OrderLine_ID, get_TrxName());
 							lstLines.add(mOLine);						
@@ -595,8 +597,22 @@ public class InOutGenerate extends SvrProcess
 					.multiply(orderLine.getQtyEntered())
 					.divide(orderLine.getQtyOrdered(), 12, BigDecimal.ROUND_HALF_UP));
 			line.setLine(m_line + orderLine.getLine());
+			
+			//F3P add extension point
+			beforeSaveInOutLine(line);
+			
+			/* F3P: changed to saveEx to avoid silently ignore the real error 
 			if (!line.save())
-				throw new IllegalStateException("Could not create Shipment Line");
+		    {
+					throw new IllegalStateException("Could not create Shipment Line");
+		    }
+			 */
+			
+			line.saveEx(get_TrxName());
+			
+			//F3P add extension point
+			afterSaveInOutLine(line);
+		
 			if (log.isLoggable(Level.FINE)) log.fine(line.toString());
 			return;
 		}
@@ -651,8 +667,22 @@ public class InOutGenerate extends SvrProcess
 				line.setQtyEntered(line.getMovementQty().multiply(orderLine.getQtyEntered())
 					.divide(orderLine.getQtyOrdered(), 12, BigDecimal.ROUND_HALF_UP));
 			line.setLine(m_line + orderLine.getLine());
+			
+			//F3P add extension point
+			beforeSaveInOutLine(line);
+			
+			/* F3P: changed to saveEx to avoid silently ignore the real error 
 			if (!line.save())
-				throw new IllegalStateException("Could not create Shipment Line");
+		    {
+					throw new IllegalStateException("Could not create Shipment Line");
+		    }
+			 */
+			
+			line.saveEx(get_TrxName());
+			
+			//F3P add extension point
+			afterSaveInOutLine(line);
+			
 			if (log.isLoggable(Level.FINE)) log.fine("ToDeliver=" + qty + "/" + deliver + " - " + line);
 			toDeliver = toDeliver.subtract(deliver);
 			//      Temp adjustment, actual update happen in MInOut.completeIt - just in memory - not saved
@@ -697,8 +727,11 @@ public class InOutGenerate extends SvrProcess
 							throw new IllegalStateException("Could not create Shipment Line");
 				    }
 				  */
-					
-				 line.saveEx(get_TrxName());
+				//F3P add extension point
+				beforeSaveInOutLine(line);
+				line.saveEx(get_TrxName());
+				//F3P add extension point
+				afterSaveInOutLine(line);
 			}
 		}	
 	}	//	createLine
@@ -779,7 +812,7 @@ public class InOutGenerate extends SvrProcess
 			{
 				savepoint = trx.setSavepoint("beforeComplete");
 				
-				if(DocProcess_AD_Workflow_ID > 0) // F3P use workflow instead of plain process
+				if(DocAction.ACTION_Complete.equals(p_docAction) && DocProcess_AD_Workflow_ID > 0) // F3P use workflow instead of plain process
 				{
 					ProcessInfo pi = new ProcessInfo("CompleteWF", getProcessInfo().getAD_Process_ID(), 0, m_shipment.getM_InOut_ID());
 					pi.setAD_User_ID (Env.getAD_User_ID(Env.getCtx()));
@@ -970,5 +1003,21 @@ public class InOutGenerate extends SvrProcess
 		}	//	hashCode
 		
 	}	//	Parameter
+	
+	//F3P
+	protected void processSelectionLine(ResultSet rs) throws Exception
+	{
+		//Nothing to do
+	}
+	
+	protected void beforeSaveInOutLine(MInOutLine line) throws AdempiereException
+	{
+		//Nothing to do
+	}
+	
+	protected void afterSaveInOutLine(MInOutLine line) throws AdempiereException
+	{
+		//Nothing to do
+	}
 	
 }	//	InOutGenerate
