@@ -302,11 +302,11 @@ public class InOutGenerate extends SvrProcess
 				//	Deadlock Prevention - Order by M_Product_ID
 				// F3P: support for T_SelectionLine
 				MOrderLine[] lines = null;
-				Map<Integer,BigDecimal> mapSelectionLineQty = null;
+				Map<String,BigDecimal> mapSelectionLineQty = null;
 				
 				if(p_SelectionLine)
 				{
-					mapSelectionLineQty = new HashMap<Integer, BigDecimal>();
+					mapSelectionLineQty = new HashMap<String, BigDecimal>();
 					
 					PreparedStatement ptmtSL = null;
 					ResultSet rsLS = null;
@@ -324,16 +324,18 @@ public class InOutGenerate extends SvrProcess
 						{
 							int C_OrderLine_ID = rsLS.getInt(MOrderLine.COLUMNNAME_C_OrderLine_ID);
 							BigDecimal bdQty = rsLS.getBigDecimal("Qty");
-							
-							mapSelectionLineQty.put(C_OrderLine_ID, bdQty);
-							
-							processSelectionLine(rsLS);
+							String uuid = rsLS.getString("T_SelectionLine_UU");
 							
 							MOrderLine mOLine = PO.get(getCtx(), MOrderLine.Table_Name, C_OrderLine_ID, get_TrxName());
-							lstLines.add(mOLine);						
+							SelectionLineOrderLineWrapper wrapper = new SelectionLineOrderLineWrapper(mOLine, uuid);
+							wrapper.qty = bdQty;
+							
+							processSelectionLine(mOLine, uuid, wrapper.additionalData, rsLS);							
+							
+							lstLines.add(wrapper);						
 						}
 						
-						lines = lstLines.toArray(new MOrderLine[lstLines.size()]);
+						lines = lstLines.toArray(new SelectionLineOrderLineWrapper[lstLines.size()]);
 					}
 					catch(Exception e)
 					{
@@ -352,6 +354,14 @@ public class InOutGenerate extends SvrProcess
 				for (int i = 0; i < lines.length; i++)
 				{
 					MOrderLine line = lines[i];
+					SelectionLineOrderLineWrapper wrapper = null;
+					
+					if(line instanceof SelectionLineOrderLineWrapper)
+					{
+						wrapper = (SelectionLineOrderLineWrapper)line;						
+						line = wrapper.orderLine;
+					}
+					
 					if (line.getM_Warehouse_ID() != p_M_Warehouse_ID)
 						continue;
 					if (log.isLoggable(Level.FINE)) log.fine("check: " + line);
@@ -359,9 +369,11 @@ public class InOutGenerate extends SvrProcess
 					BigDecimal toDeliver = line.getQtyOrdered()
 						.subtract(line.getQtyDelivered());
 					
-					// F3P: if we are using T_SelectionLine, correct toDeliver
-					if(mapSelectionLineQty != null && mapSelectionLineQty.containsKey(line.getC_OrderLine_ID()))
-						toDeliver = mapSelectionLineQty.get(line.getC_OrderLine_ID());
+					if(wrapper != null)
+					{
+						if(wrapper.qty != null)
+							toDeliver = wrapper.qty;
+					}
 					
 					MProduct product = line.getProduct();
 					//	Nothing to Deliver
@@ -415,7 +427,7 @@ public class InOutGenerate extends SvrProcess
 							|| toDeliver.signum() != 0))		//	lines w/o product
 					{
 						if (!MOrder.DELIVERYRULE_CompleteOrder.equals(order.getDeliveryRule()))	//	printed later
-							createLine (order, line, toDeliver, null, false);
+							createLine (order, wrapper, toDeliver, null, false);
 						else
 							logOrderLineInfo(line, " skipped: delivery rule == complete order");  // F3P: Helper for order line-related logs (level info)
 						continue;
@@ -452,7 +464,7 @@ public class InOutGenerate extends SvrProcess
 							+ " (Unconfirmed=" + unconfirmedShippedQty
 							+ ", ToDeliver=" + toDeliver + " - " + line);
 						//	
-						createLine (order, line, toDeliver, storages, false);
+						createLine (order, wrapper, toDeliver, storages, false);
 					}
 					//	Availability
 					else if (MOrder.DELIVERYRULE_Availability.equals(order.getDeliveryRule())
@@ -467,7 +479,7 @@ public class InOutGenerate extends SvrProcess
 							+ "), ToDeliver=" + toDeliver 
 							+ ", Delivering=" + deliver + " - " + line);
 						//	
-						createLine (order, line, deliver, storages, false);
+						createLine (order, wrapper, deliver, storages, false);
 					}
 					//	Force
 					else if (MOrder.DELIVERYRULE_Force.equals(order.getDeliveryRule()))
@@ -478,7 +490,7 @@ public class InOutGenerate extends SvrProcess
 							+ "), ToDeliver=" + toDeliver 
 							+ ", Delivering=" + deliver + " - " + line);
 						//	
-						createLine (order, line, deliver, storages, true);
+						createLine (order, wrapper, deliver, storages, true);
 					}
 					//	Manual
 					else if (MOrder.DELIVERYRULE_Manual.equals(order.getDeliveryRule())) {
@@ -498,10 +510,25 @@ public class InOutGenerate extends SvrProcess
 					for (int i = 0; i < lines.length; i++)
 					{
 						MOrderLine line = lines[i];
+						SelectionLineOrderLineWrapper orderLineWrapper = null;
+						
+						if(line instanceof SelectionLineOrderLineWrapper)
+						{
+							orderLineWrapper = (SelectionLineOrderLineWrapper)line;						
+							line = orderLineWrapper.orderLine;
+						}
+						
 						if (line.getM_Warehouse_ID() != p_M_Warehouse_ID)
 							continue;
 						MProduct product = line.getProduct();
 						BigDecimal toDeliver = line.getQtyOrdered().subtract(line.getQtyDelivered());
+						
+						if(orderLineWrapper != null)
+						{
+							if(orderLineWrapper.qty != null)
+								toDeliver = orderLineWrapper.qty;
+						}
+						
 						//
 						MStorageOnHand[] storages = null;
 						if (product != null && product.isStocked())
@@ -512,7 +539,7 @@ public class InOutGenerate extends SvrProcess
 								minGuaranteeDate, MClient.MMPOLICY_FiFo.equals(MMPolicy));
 						}
 						//	
-						createLine (order, line, toDeliver, storages, false);
+						createLine (order, orderLineWrapper, toDeliver, storages, false);
 					}
 				}
 				// F3P: avoid mix order when there are more than 100 lines
@@ -570,6 +597,18 @@ public class InOutGenerate extends SvrProcess
 	private void createLine (MOrder order, MOrderLine orderLine, BigDecimal qty, 
 		MStorageOnHand[] storages, boolean force)
 	{
+		SelectionLineOrderLineWrapper orderLineWrapper = null;
+		Map<String, Object> wrapperAdditionalData = null;
+		String selectionLineUuid = null;
+		
+		if(orderLine instanceof SelectionLineOrderLineWrapper)
+		{
+			orderLineWrapper = (SelectionLineOrderLineWrapper)orderLine;
+			wrapperAdditionalData = orderLineWrapper.additionalData;
+			selectionLineUuid = orderLineWrapper.uuid;
+			orderLine = orderLineWrapper.orderLine;
+		}
+				
 		//	Complete last Shipment - can have multiple shipments
 		if (m_lastC_BPartner_Location_ID != orderLine.getC_BPartner_Location_ID() )
 			completeShipment();
@@ -599,7 +638,7 @@ public class InOutGenerate extends SvrProcess
 			line.setLine(m_line + orderLine.getLine());
 			
 			//F3P add extension point
-			beforeSaveInOutLine(line);
+			beforeSaveInOutLine(line, selectionLineUuid, wrapperAdditionalData);
 			
 			/* F3P: changed to saveEx to avoid silently ignore the real error 
 			if (!line.save())
@@ -611,7 +650,7 @@ public class InOutGenerate extends SvrProcess
 			line.saveEx(get_TrxName());
 			
 			//F3P add extension point
-			afterSaveInOutLine(line);
+			afterSaveInOutLine(line, selectionLineUuid, wrapperAdditionalData);
 		
 			if (log.isLoggable(Level.FINE)) log.fine(line.toString());
 			return;
@@ -669,7 +708,7 @@ public class InOutGenerate extends SvrProcess
 			line.setLine(m_line + orderLine.getLine());
 			
 			//F3P add extension point
-			beforeSaveInOutLine(line);
+			beforeSaveInOutLine(line, selectionLineUuid, wrapperAdditionalData);
 			
 			/* F3P: changed to saveEx to avoid silently ignore the real error 
 			if (!line.save())
@@ -681,7 +720,7 @@ public class InOutGenerate extends SvrProcess
 			line.saveEx(get_TrxName());
 			
 			//F3P add extension point
-			afterSaveInOutLine(line);
+			afterSaveInOutLine(line, selectionLineUuid, wrapperAdditionalData);
 			
 			if (log.isLoggable(Level.FINE)) log.fine("ToDeliver=" + qty + "/" + deliver + " - " + line);
 			toDeliver = toDeliver.subtract(deliver);
@@ -728,10 +767,10 @@ public class InOutGenerate extends SvrProcess
 				    }
 				  */
 				//F3P add extension point
-				beforeSaveInOutLine(line);
+				beforeSaveInOutLine(line, selectionLineUuid, wrapperAdditionalData);
 				line.saveEx(get_TrxName());
 				//F3P add extension point
-				afterSaveInOutLine(line);
+				afterSaveInOutLine(line, selectionLineUuid, wrapperAdditionalData);
 			}
 		}	
 	}	//	createLine
@@ -1005,19 +1044,40 @@ public class InOutGenerate extends SvrProcess
 	}	//	Parameter
 	
 	//F3P
-	protected void processSelectionLine(ResultSet rs) throws Exception
+	protected void processSelectionLine(MOrderLine line, String uuid, Map<String,Object> lineAdditionalData, ResultSet rs) throws Exception
 	{
 		//Nothing to do
 	}
 	
-	protected void beforeSaveInOutLine(MInOutLine line) throws AdempiereException
+	protected void beforeSaveInOutLine(MInOutLine line, String selectionLineUuid, Map<String,Object> selectionLineAdditionalData) throws AdempiereException
 	{
 		//Nothing to do
 	}
 	
-	protected void afterSaveInOutLine(MInOutLine line) throws AdempiereException
+	protected void afterSaveInOutLine(MInOutLine line, String selectionLineUuid, Map<String,Object> selectionLineAdditionalData) throws AdempiereException
 	{
 		//Nothing to do
+	}
+	
+	public class SelectionLineOrderLineWrapper extends MOrderLine
+	{
+		/**
+		 * 
+		 */
+		
+		private static final long serialVersionUID = -7385140481126599352L;
+		private MOrderLine	orderLine = null;
+		private String			uuid = null;
+		private BigDecimal	qty = null;
+		private Map<String, Object> additionalData = new HashMap<>(); 
+		
+		public SelectionLineOrderLineWrapper(MOrderLine line,String uuid)
+		{
+			super(line.getParent());
+			
+			this.uuid = uuid;
+			this.orderLine = line;
+		}
 	}
 	
 }	//	InOutGenerate
