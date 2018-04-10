@@ -218,7 +218,9 @@ public class InvoicePrint extends SvrProcess
 				sql.append("i.DocStatus IN ('CO','CL') "); 
 			}
 		}
-		sql.append(" ORDER BY i.C_Invoice_ID, pf.AD_Org_ID DESC");	//	more than 1 PF record
+		//remove for order by ad_org_id,dateinvoice and documentno 
+		//sql.append(" ORDER BY i.C_Invoice_ID, pf.AD_Org_ID DESC");	//	more than 1 PF record
+		sql.append(" ORDER BY pf.AD_Org_ID,i.DateInvoiced,i.DocumentNo DESC");
 		if (log.isLoggable(Level.FINE)) log.fine(sql.toString());
 
 		MPrintFormat format = null;
