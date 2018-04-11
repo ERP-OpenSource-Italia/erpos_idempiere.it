@@ -1014,6 +1014,65 @@ public class TimeUtil
 		BigDecimal workedtime = MUOMConversion.convert(Env.getCtx(), getHour_UOM_ID(Env.getCtx()), res.getC_UOM_ID(), new BigDecimal(timeWorked));
 		return workedtime;
 	}
+	
+	static public BigDecimal calcWorkingHours(int R_Resource_ID, Timestamp dateFrom, Timestamp dateTo)
+	{
+		BigDecimal workedTime = Env.ZERO;
+		
+		if(TimeUtil.isSameDay(dateFrom, dateTo))
+		{
+			workedTime = diffDateInHours(dateFrom, dateTo);
+		}
+		else
+		{
+			MResource res = new MResource(Env.getCtx(), R_Resource_ID, null);
+			MResourceType mResourceType = res.getResourceType();
+					
+			Calendar calendar = GregorianCalendar.getInstance(); // creates a new calendar instance
+			
+			calendar.setTime(dateFrom);   // assigns calendar to given date 
+			int hoursDateFrom = calendar.get(Calendar.HOUR_OF_DAY); // gets hour in 24h format
+			int minuteDateFrom = calendar.get(Calendar.MINUTE);
+			calendar.setTime(mResourceType.getTimeSlotEnd());
+			int hoursSlotEnd = calendar.get(Calendar.HOUR_OF_DAY);
+			int minuteSlotEnd = calendar.get(Calendar.MINUTE);
+			
+			int diffHours = hoursSlotEnd-hoursDateFrom;
+			if(minuteSlotEnd>minuteDateFrom)
+				diffHours++;
+			if(diffHours > 0)
+				workedTime=workedTime.add(new BigDecimal(diffHours));
+			
+			calendar.setTime(dateTo);
+			int hoursDateTo = calendar.get(Calendar.HOUR_OF_DAY);
+			int minuteDateTo = calendar.get(Calendar.MINUTE);
+			calendar.setTime(mResourceType.getTimeSlotStart());
+			int hoursSlotStart = calendar.get(Calendar.HOUR_OF_DAY);
+			int minuteSlotStart = calendar.get(Calendar.MINUTE);
+			
+			diffHours = hoursDateTo-hoursSlotStart;
+			if(minuteDateTo>minuteSlotStart)
+				diffHours++;
+			
+			if(diffHours > 0)
+				workedTime=workedTime.add(new BigDecimal(diffHours));
+			
+			int nDays = diffDateInHours(dateFrom, dateTo).divide(new BigDecimal(24),0,BigDecimal.ROUND_DOWN).intValue();
+			if(nDays > 1)
+			{
+				int slotHours = mResourceType.getTimeSlotHours();
+				workedTime=workedTime.add(new BigDecimal(slotHours*(nDays-1)));
+			}
+		}
+		
+		return workedTime;
+	}
+	
+	static public BigDecimal diffDateInHours(Timestamp dateFrom, Timestamp dateTo)
+	{
+		long diff= dateTo.getTime()-dateFrom.getTime();
+		return new BigDecimal(diff).divide(new BigDecimal(1000*60*60),0,BigDecimal.ROUND_UP);
+	}
 
 	static public boolean isHoliday(Timestamp day)
 	{
