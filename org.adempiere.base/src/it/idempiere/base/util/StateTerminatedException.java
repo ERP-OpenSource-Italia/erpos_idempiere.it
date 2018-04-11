@@ -21,7 +21,7 @@ public class StateTerminatedException extends RuntimeException
 	 * @param e	exception to check
 	 * @return if the exception was a StateTerminatedException
 	 */
-	public static final boolean wasStateTerminatedException(Exception e)
+	public static final boolean wasStateTerminatedException(Throwable e)
 	{
 		if(e instanceof StateTerminatedException)
 			return true;
@@ -38,7 +38,7 @@ public class StateTerminatedException extends RuntimeException
 		}
 	}
 	
-	public static final String getOriginalMessage(Exception e)
+	public static final String getOriginalMessage(Throwable e)
 	{
 		String sMsg = e.getLocalizedMessage();
 		
