@@ -434,6 +434,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	
 	// F3P: is generation in progress ?
 	private boolean generationInProgress = false;
+	// F3P: is reopen in progress ?
+	private boolean reopenInProgress = false;
 
 	/**
 	 * 	Overwrite Client/Org if required
@@ -2268,7 +2270,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		// F3P: check if is allowed to create counter doc for reversal, needed for compatibility with reeopn
 		
 		if(getReversal_ID() > 0 && 
-				STDSysConfig.isCreateCounterForReversal(getAD_Client_ID(), getAD_Org_ID()) == false)
+				(STDSysConfig.isCreateCounterForReversal(getAD_Client_ID(), getAD_Org_ID()) == false ||
+						isReopenInProgress()))
 		{
 			return null;
 		}		
@@ -2325,7 +2328,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			MInvoiceLine counterLine = counterLines[i];
 			counterLine.setClientOrg(counter);
 			counterLine.setInvoice(counter);	//	copies header values (BP, etc.)
-			counterLine.setPrice();
+			//counterLine.setPrice(); F3P Fix not recalculate price for counter document
 			//counterLine.setTax(); F3P Fix not recalculate tax for counter document
 			//
 			counterLine.saveEx(get_TrxName());
@@ -2551,9 +2554,10 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		MInvoiceLine[] rLines = reversal.getLines(true);
 		
 		// F3P: set as processing
-		try  // F3P: managing of generation in progress, require try/catch to reset flag
+		try  // F3P: managing of generation in progress and reopen in progress, require try/catch to reset flag
 		{
 			reversal.setGenerationInProgress(true);
+			reversal.setReopenInProgress(isReopenInProgress());
 		
 			for (int i = 0; i < rLines.length; i++)
 			{
@@ -2897,6 +2901,18 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	public void setGenerationInProgress(boolean generationInProgress)
 	{
 		this.generationInProgress = generationInProgress;
+	}	
+	
+	// F3P: mark reopen in progress
+
+	public boolean isReopenInProgress()
+	{
+		return reopenInProgress;
+	}
+
+	public void setReopenInProgress(boolean reopenInProgress)
+	{
+		this.reopenInProgress = reopenInProgress;
 	}	
 	
 	public void calcTaxesAfterGeneration()
