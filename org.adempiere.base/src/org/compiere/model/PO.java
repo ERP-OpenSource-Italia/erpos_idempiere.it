@@ -72,6 +72,8 @@ import org.osgi.service.event.Event;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import it.idempiere.base.util.POTrxData;
+
 /**
  *  Persistent Object.
  *  Superclass for actual implementations
@@ -119,6 +121,10 @@ public abstract class PO
 	
 	/**	Cache						*/
 	private static CCache<String,PO>	s_cache	= new CCache<String,PO>("POCache", 200, 5, true);	//	5 minutes
+	
+	//F3P
+	protected POTrxData trxData;
+	
 	
 	/** Creates a new model (equivalent to new MInvoice(ctx,0,trxName); )
 	 * 
@@ -290,6 +296,9 @@ public abstract class PO
 			load(rs);		//	will not have virtual columns
 		else
 			load(ID, trxName);
+		
+		//F3P add POTrxData
+		trxData = new POTrxData(p_info.getTableName());
 	}   //  PO
 
 	/**
@@ -362,7 +371,6 @@ public abstract class PO
 	public static final int ACCESSLEVEL_SYSTEMCLIENT = 6;
 	/** Access Level _CO 011	3	Client shared info	*/
 	public static final int ACCESSLEVEL_CLIENTORG = 3;
-
 
 	/**
 	 *  Initialize and return PO_Info
@@ -2165,6 +2173,9 @@ public abstract class PO
 				log.severe("Transaction closed or never opened ("+m_trxName+") => starting now --> " + toString());
 			}
 		}
+		
+		//F3P start saving session 
+		trxData.startSaveTrx();
 
 		//	Before Save
 		try
@@ -2187,6 +2198,10 @@ public abstract class PO
 					trx.rollback(savepoint);
 					savepoint = null;
 				}
+				
+				//F3P end saving session 
+				trxData.endSaveTrx();
+				
 				return false;
 			}
 		}
@@ -2209,9 +2224,13 @@ public abstract class PO
 				} catch (SQLException e1){}
 				savepoint = null;
 			}
+			
+			//F3P end saving session 
+			trxData.endSaveTrx();
+			
 			return false;
 		}
-
+		
 		try
 		{
 			// Call ModelValidators TYPE_NEW/TYPE_CHANGE
@@ -2230,6 +2249,7 @@ public abstract class PO
 				{
 					trx.rollback(savepoint);
 				}
+				
 				return false;
 			}
 			//	Save
@@ -2250,6 +2270,7 @@ public abstract class PO
 						localTrx.rollback();
 					else
 						trx.rollback(savepoint);
+					
 					return b;
 				}
 			}
@@ -2270,6 +2291,7 @@ public abstract class PO
 						localTrx.rollback();
 					else
 						trx.rollback(savepoint);
+					
 					return b;
 				}
 			}
@@ -2291,6 +2313,7 @@ public abstract class PO
 				} catch (SQLException e1){}
 				savepoint = null;
 			}
+			
 			return false;
 		}
 		finally
@@ -2313,6 +2336,9 @@ public abstract class PO
 				savepoint = null;
 				trx = null;
 			}
+			
+			//F3P end saving session 
+			trxData.endSaveTrx();
 		}
 	}	//	save
 
@@ -4893,6 +4919,12 @@ public abstract class PO
 	{
 		String key = getCacheKey(po.get_TableName(), po.get_ID());		
 		s_cache.put(key,po);
+	}
+	
+	//F3P
+	public POTrxData getPOTrxData()
+	{
+		return trxData;
 	}
 	
 }   //  PO
