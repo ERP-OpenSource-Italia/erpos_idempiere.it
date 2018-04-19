@@ -80,18 +80,22 @@ public class STDSysConfig
 	
 	public static final String	FACTACCT_HASCURRENCYRATE = "LIT_FACTACCT_HASCURRENCYRATE";
 	
- 	public static String REPORT_HOME_KEY = "REPORT_HOME_PATH";
+ 	public static final String REPORT_HOME_KEY = "REPORT_HOME_PATH";
  	
  	public static final String LIT_WEB_SERVICE_COMPATIBILITY_MODE = "LIT_WEB_SERVICE_COMPATIBILITY_MODE";
  	
  	public static final String F3P_ALLOW_SINGLE_SCHEDULE = "F3P_ALLOW_SINGLE_SCHEDULE";
  	
- 	public static final String  LIT_COMMISSION_RULE_MINOR_SEQUENCE = "LIT_COMMISSION_RULE_MINOR_SEQUENCE";
+ 	public static final String LIT_COMMISSION_RULE_MINOR_SEQUENCE = "LIT_COMMISSION_RULE_MINOR_SEQUENCE";
  	
- 	public static final String  LIT_COST_ENABLESEED = "LIT_COST_ENABLESEED";
+ 	public static final String LIT_COST_ENABLESEED = "LIT_COST_ENABLESEED";
  	
  	public static final String LIT_CHECK_RELDOC_ON_REOPEN_ORDER = "LIT_CHECK_RELDOC_ON_REOPEN_ORDER";
  	 		
+ 	public static final String LIT_IS_ADVANCED_PACKIN_BACKUP = "LIT_IS_ADVANCED_PACKIN_BACKUP";
+ 	
+ 	public static final String FIN_FILTER_BY_ORG="FIN_FILTER_BY_ORG";
+ 	
 	public static boolean isCommissionRuleMinorSequence(int AD_Client_ID,int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(LIT_COMMISSION_RULE_MINOR_SEQUENCE , false,AD_Client_ID,AD_Org_ID);
@@ -522,4 +526,21 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LIT_CHECK_RELDOC_ON_REOPEN_ORDER, false, AD_Client_ID, AD_Org_ID);
 	}
 	
+	/** If true save new values and sql statement
+	 * 
+	 * @return advanced backup or not
+	 */
+	public static boolean isAdvancedPackinBackup()
+	{
+		return MSysConfig.getBooleanValue(LIT_IS_ADVANCED_PACKIN_BACKUP, false);
+	}
+	
+	/** If true add org filter to financial report
+	 * 
+	 * @return if add org filter
+	 */
+	public static boolean isFinFilterByOrg()
+	{
+		return MSysConfig.getBooleanValue(FIN_FILTER_BY_ORG, false);
+	}
 }

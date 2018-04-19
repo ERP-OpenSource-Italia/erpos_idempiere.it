@@ -43,6 +43,9 @@ import org.compiere.util.Util;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
+import it.idempiere.base.model.LITMPackageImpBackup;
+import it.idempiere.base.util.STDSysConfig;
+
 import java.sql.ResultSet;
 import java.sql.PreparedStatement;
 
@@ -157,6 +160,13 @@ public abstract class AbstractElementHandler implements ElementHandler {
 		    		Object value = from.get_ValueOld(i);
 					backup.setColValue(value != null ? value.toString() : null);
 	
+					//F3P advanced packin backup
+					if(STDSysConfig.isAdvancedPackinBackup())
+					{
+						Object newValue = from.get_Value(i);
+						LITMPackageImpBackup.setNewValue(backup, newValue != null ? newValue.toString() : null);
+					}
+					
 					backup.saveEx();
 				}
 		    }
