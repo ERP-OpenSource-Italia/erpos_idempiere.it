@@ -26,6 +26,7 @@ import java.util.logging.Level;
 
 import org.adempiere.base.Core;
 import org.adempiere.base.IProductPricing;
+import org.adempiere.model.GridTabWrapper;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
@@ -804,10 +805,13 @@ public class CalloutOrder extends CalloutEngine
 		boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
 		IProductPricing pp = Core.getProductPricing();
 		pp.setInitialValues(M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx, null);
+		Timestamp orderDate = (Timestamp)mTab.getValue("DateOrdered");
+		pp.setPriceDate(orderDate);
+		I_C_OrderLine orderLine = GridTabWrapper.create(mTab, I_C_OrderLine.class);
+		pp.setOrderLine(orderLine, null);
 		//
 		int M_PriceList_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_ID");
 		pp.setM_PriceList_ID(M_PriceList_ID);
-		Timestamp orderDate = (Timestamp)mTab.getValue("DateOrdered");
 		/** PLV is only accurate if PL selected in header */
 		int M_PriceList_Version_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_Version_ID");
 		if ( M_PriceList_Version_ID == 0 && M_PriceList_ID > 0)
@@ -824,7 +828,6 @@ public class CalloutOrder extends CalloutEngine
 				Env.setContext(ctx, WindowNo, "M_PriceList_Version_ID", M_PriceList_Version_ID );
 		}
 		pp.setM_PriceList_Version_ID(M_PriceList_Version_ID);
-		pp.setPriceDate(orderDate);
 		//
 		mTab.setValue("PriceList", pp.getPriceList());
 		mTab.setValue("PriceLimit", pp.getPriceLimit());
@@ -1101,11 +1104,13 @@ public class CalloutOrder extends CalloutEngine
 			boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
 			IProductPricing pp = Core.getProductPricing();
 			pp.setInitialValues(M_Product_ID, C_BPartner_ID, QtyOrdered, IsSOTrx, null);
+			Timestamp date = (Timestamp)mTab.getValue("DateOrdered");
+			pp.setPriceDate(date);
+			I_C_OrderLine orderLine = GridTabWrapper.create(mTab, I_C_OrderLine.class);
+			pp.setOrderLine(orderLine, null);
 			pp.setM_PriceList_ID(M_PriceList_ID);
 			int M_PriceList_Version_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_Version_ID");
 			pp.setM_PriceList_Version_ID(M_PriceList_Version_ID);
-			Timestamp date = (Timestamp)mTab.getValue("DateOrdered");
-			pp.setPriceDate(date);
 			//
 			PriceEntered = MUOMConversion.convertProductFrom (ctx, M_Product_ID,
 				C_UOM_To_ID, pp.getPriceStd());
@@ -1431,10 +1436,13 @@ public class CalloutOrder extends CalloutEngine
 		boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
 		IProductPricing pp = Core.getProductPricing();
 		pp.setInitialValues(M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx, null);
+		Timestamp orderDate = (Timestamp)mTab.getValue("DateOrdered");
+		pp.setPriceDate(orderDate);
+		I_C_OrderLine orderLine = GridTabWrapper.create(mTab, I_C_OrderLine.class);
+		pp.setOrderLine(orderLine, null);
 		//
 		int M_PriceList_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_ID");
 		pp.setM_PriceList_ID(M_PriceList_ID);
-		Timestamp orderDate = (Timestamp)mTab.getValue("DateOrdered");
 		/** PLV is only accurate if PL selected in header */
 		int M_PriceList_Version_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_Version_ID");
 		if ( M_PriceList_Version_ID == 0 && M_PriceList_ID > 0)
@@ -1451,7 +1459,6 @@ public class CalloutOrder extends CalloutEngine
 				Env.setContext(ctx, WindowNo, "M_PriceList_Version_ID", M_PriceList_Version_ID );
 		}
 		pp.setM_PriceList_Version_ID(M_PriceList_Version_ID);
-		pp.setPriceDate(orderDate);
 		//
 		Env.setContext(ctx, WindowNo, "EnforcePriceLimit", pp.isEnforcePriceLimit() ? "Y" : "N");
 		Env.setContext(ctx, WindowNo, "DiscountSchema", pp.isDiscountSchema() ? "Y" : "N");
