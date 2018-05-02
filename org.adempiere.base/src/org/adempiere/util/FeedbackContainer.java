@@ -178,7 +178,12 @@ public class FeedbackContainer implements Serializable
 					
 					feedbackResponse.setRecord_ID(recordID);
 					feedbackResponse.setFeedback_RequestID(feedback.getId());
-					feedbackResponse.setTitle(feedback.getTitle());
+					
+					if(feedback.getTitle() != null)
+						feedbackResponse.setTitle(feedback.getTitle());
+					else
+						feedbackResponse.setTitle("-");
+				
 					feedbackResponse.setFeedbackType(feedback.getType());
 					feedbackResponse.setMsgRequest(feedback.getMessage());
 					

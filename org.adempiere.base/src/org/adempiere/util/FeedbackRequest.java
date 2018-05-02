@@ -30,6 +30,9 @@ public class FeedbackRequest implements Serializable
 		this.type = type;
 		this.id = id;
 		this.data = data;
+		
+		if(type == TYPE_INFO)
+			persistRequest = false;
 	}
 
 	public boolean getResponse()

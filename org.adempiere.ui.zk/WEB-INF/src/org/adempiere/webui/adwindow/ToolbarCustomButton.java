@@ -97,7 +97,21 @@ public class ToolbarCustomButton implements EventListener<Event>, Evaluatee {
 		
 		String displayLogic = mToolbarButton.getDisplayLogic();
 		if (displayLogic == null || displayLogic.trim().length() == 0)
+		{
+			// F3P: If we have no logic, just check visibily via IAction2
+			
+			IAction action = getAction();
+			
+			if(action instanceof IAction2)
+			{
+				IAction2 act2 = (IAction2)action;
+				boolean visible = act2.isVisible(ADWindow.get(windowNo));
+				toolbarButton.setVisible(visible);
+			}
+			
 			return;
+		}
+			
 		
 		boolean visible = false;
 		//F3P Aggiunta variante per logica di visibilita' tramite sql 
@@ -143,7 +157,7 @@ public class ToolbarCustomButton implements EventListener<Event>, Evaluatee {
 			visible = Evaluator.evaluateLogic(this, displayLogic);
 		}
 		
-		if(visible)
+		if(visible) // F3P: if the action is IAction2, we 'and' IAction2 visibility too
 		{
 			IAction action = getAction();
 			
