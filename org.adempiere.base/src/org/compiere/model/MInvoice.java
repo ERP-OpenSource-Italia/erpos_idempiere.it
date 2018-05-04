@@ -2917,6 +2917,10 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	
 	public void calcTaxesAfterGeneration()
 	{
+		// Delete Taxes
+		StringBuilder msgdb = new StringBuilder("DELETE C_InvoiceTax WHERE C_Invoice_ID=").append(getC_Invoice_ID());
+		DB.executeUpdateEx(msgdb.toString(), get_TrxName());
+			
 		Query qTaxes = new Query(getCtx(), MTax.Table_Name, "C_Tax_ID in (SELECT l.C_Tax_ID FROM C_InvoiceLine l WHERE l.C_Invoice_ID = ?)",get_TrxName());
 		qTaxes.setParameters(getC_Invoice_ID());
 		List<MTax> taxes = qTaxes.list();
