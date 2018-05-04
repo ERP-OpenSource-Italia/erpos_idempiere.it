@@ -2566,9 +2566,9 @@ public class MOrder extends X_C_Order implements DocAction
 		{
 			MOrderLine counterLine = counterLines[i];
 			counterLine.setOrder(counter);	//	copies header values (BP, etc.)
-			counterLine.setPrice();
+			//counterLine.setPrice(); F3P Fix not recalculate price for counter document
 			counterLine.setAD_Org_ID(counterAD_Org_ID);
-			counterLine.setTax();
+			//counterLine.setTax(); F3P Fix not recalculate tax for counter document
 			counterLine.saveEx(get_TrxName());
 		}
 		if (log.isLoggable(Level.FINE)) log.fine(counter.toString());
