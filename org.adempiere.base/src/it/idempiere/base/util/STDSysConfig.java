@@ -539,8 +539,8 @@ public class STDSysConfig
 	 * 
 	 * @return if add org filter
 	 */
-	public static boolean isFinFilterByOrg()
+	public static boolean isFinFilterByOrg(int AD_Client_ID)
 	{
-		return MSysConfig.getBooleanValue(FIN_FILTER_BY_ORG, false);
+		return MSysConfig.getBooleanValue(FIN_FILTER_BY_ORG, false, AD_Client_ID);
 	}
 }
