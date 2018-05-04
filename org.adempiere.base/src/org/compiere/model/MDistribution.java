@@ -63,6 +63,28 @@ public class MDistribution extends X_GL_Distribution
 			acct.getUser1_ID(), acct.getUser2_ID(),
 			acct.getUserElement1_ID(), acct.getUserElement2_ID());//F3P: added UserElement1_ID and UserElement2_ID
 	}	//	get
+	
+	/**
+	 * Get Distribution for combination
+	 * @param acct (ValidCombination)
+	 * @param PostingType only posting type
+	 * @param C_DocType_ID only document type
+	 * @param AD_Org_ID only document organization
+	 * @return array of distributions
+	 */
+	//F3P: variante utile per specificare l'AD_Org_ID da utilizzare
+	public static MDistribution[] get (MAccount acct,  
+			String PostingType, int C_DocType_ID, int AD_Org_ID) 
+	{
+		return get (acct.getCtx(), acct.getC_AcctSchema_ID(), 
+				PostingType, C_DocType_ID,
+				AD_Org_ID, acct.getAccount_ID(),
+				acct.getM_Product_ID(), acct.getC_BPartner_ID(), acct.getC_Project_ID(),
+				acct.getC_Campaign_ID(), acct.getC_Activity_ID(), acct.getAD_OrgTrx_ID(),
+				acct.getC_SalesRegion_ID(), acct.getC_LocTo_ID(), acct.getC_LocFrom_ID(),
+				acct.getUser1_ID(), acct.getUser2_ID(), 
+				acct.getUserElement1_ID(), acct.getUserElement2_ID());//F3P: added UserElement1_ID and UserElement2_ID
+	}	//	get
 
 	/**
 	 * 	Get Distributions for combination
