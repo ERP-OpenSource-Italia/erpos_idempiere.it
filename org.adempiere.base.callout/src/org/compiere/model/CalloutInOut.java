@@ -763,7 +763,7 @@ public class CalloutInOut extends CalloutEngine
 		// Angelo Dabala' get product UOM
 		MProduct prod = new MProduct(ctx, M_Product_ID, null);
 		int Prod_UOM_ID = prod.getC_UOM_ID();
-		int C_UOM_To_ID = Env.getContextAsInt(ctx, WindowNo, "C_UOM_ID");
+		int C_UOM_To_ID = Env.getContextAsInt(ctx, WindowNo, mTab.getTabNo(), "C_UOM_ID");
 		//	UOM Changed - convert from Entered -> Product
 		if (mField.getColumnName().equals("C_UOM_ID"))
 		{
