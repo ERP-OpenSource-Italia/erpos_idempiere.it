@@ -13,6 +13,7 @@ import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MAcctSchema;
+import org.compiere.model.MAttachment;
 import org.compiere.model.MClientInfo;
 import org.compiere.model.MColumn;
 import org.compiere.model.MConversionRate;
@@ -21,7 +22,9 @@ import org.compiere.model.MInOut;
 import org.compiere.model.MInvoice;
 import org.compiere.model.MOrder;
 import org.compiere.model.MSysConfig;
+import org.compiere.model.MTable;
 import org.compiere.model.PO;
+import org.compiere.model.Query;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -493,6 +496,20 @@ public class STDUtils {
 		}
 		else
 			Env.setContext(ctx,WindowNo,name, oVal.toString());
+	}
+	
+	public static int getAD_Org_IDFromRecord(MAttachment mAttachment)
+	{
+		MTable table = MTable.get(mAttachment.getCtx(), mAttachment.getAD_Table_ID());
+		String keyColName = table.getKeyColumns()[0]; //multy key not allowed
+		
+		StringBuilder whereClause = new StringBuilder();
+		whereClause.append(keyColName).append("=?");
+		
+		PO po = new Query(mAttachment.getCtx(), table, whereClause.toString(),mAttachment.get_TrxName())
+		.setParameters(mAttachment.getRecord_ID()).first();
+		
+		return po.getAD_Org_ID();
 	}
 	
 }
