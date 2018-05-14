@@ -33,6 +33,7 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.util.ProductPricing2Support;
 import it.idempiere.base.util.STDSysConfig;
 
 /**
@@ -311,7 +312,7 @@ public class MOrderLine extends X_C_OrderLine
 		setPriceLimit (m_productPrice.getPriceLimit());
 		//
 		
-		if(m_productPrice.isSelectedPriceUOM(getC_UOM_ID()) == false)
+		if(ProductPricing2Support.isSelectedPriceUOM(m_productPrice, getC_UOM_ID()) == false)		
 		{
 			//
 			setPriceActual (m_productPrice.getPriceStd());
@@ -361,11 +362,6 @@ public class MOrderLine extends X_C_OrderLine
 		m_productPrice = Core.getProductPricing();
 		m_productPrice.setOrderLine(this, get_TrxName());
 		m_productPrice.setM_PriceList_ID(M_PriceList_ID);
-		
-		// F3P: integrated line uom and date fpr ppvb
-		m_productPrice.setDatePPVB(getDateOrdered()); 
-		m_productPrice.setLineC_UOM_ID(getC_UOM_ID());
-		m_productPrice.setLineObject(this);
 		
 		//
 		m_productPrice.calculatePrice();
@@ -811,7 +807,8 @@ public class MOrderLine extends X_C_OrderLine
 		int				 iPriceScale = getParent().getM_PriceList().getPricePrecision(); // bdPriceActual.scale();
 		BigDecimal bdPrice = getPriceActual();
 		
-		if(m_productPrice != null && m_productPrice.isSelectedPriceUOM(getC_UOM_ID()))
+		if(m_productPrice != null &&
+				ProductPricing2Support.isSelectedPriceUOM(m_productPrice, getC_UOM_ID()))
 		{
 			bdPrice = getPriceEntered(); // Stessa unita di misura, usiamo entered per evitare il calcolo errato dello sconto (entered e' in uom del prodotto)
 		}

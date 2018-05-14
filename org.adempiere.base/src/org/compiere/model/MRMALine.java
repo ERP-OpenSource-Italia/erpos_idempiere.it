@@ -158,10 +158,6 @@ public class MRMALine extends X_M_RMALine
         	{
         		pp.setM_PriceList_ID(invoice.getM_PriceList_ID());
         		pp.setPriceDate(invoice.getDateInvoiced());
-        		// F3P: integrated line uom and date fpr ppvb
-        		pp.setDatePPVB(invoice.getDateInvoiced()); 
-        		pp.setLineC_UOM_ID(getC_UOM_ID());
-        		pp.setLineObject(this);
         		
         		precision = invoice.getPrecision();
         		taxId = Tax.get(getCtx(), getM_Product_ID(), getC_Charge_ID(), invoice.getDateInvoiced(), invoice.getDateInvoiced(),
@@ -176,9 +172,6 @@ public class MRMALine extends X_M_RMALine
         		{
         			pp.setM_PriceList_ID(order.getM_PriceList_ID());
         			pp.setPriceDate(order.getDateOrdered());
-          		// F3P: integrated line uom and date fpr ppvb
-          		pp.setDatePPVB(order.getDateOrdered()); 
-          		pp.setLineC_UOM_ID(getC_UOM_ID());        			
         			
         			precision = order.getPrecision();
         			taxId = Tax.get(getCtx(), getM_Product_ID(), getC_Charge_ID(), order.getDateOrdered(), order.getDateOrdered(),
