@@ -26,6 +26,7 @@ import org.compiere.model.CalloutEngine;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.model.I_C_InvoiceLine;
+import org.compiere.model.I_M_RMALine;
 import org.compiere.model.MCharge;
 import org.compiere.model.MInOutLine;
 import org.compiere.model.MInvoice;
@@ -149,10 +150,10 @@ public class CalloutRMA extends CalloutEngine {
 		MRMA rma = new MRMA(ctx, M_RMA_ID, null);
 		IProductPricing pp = Core.getProductPricing();
 		pp.setInitialValues(M_Product_ID, rma.getC_BPartner_ID(), Env.ONE, rma.isSOTrx(), null);
+		I_M_RMALine rmaLine = GridTabWrapper.create(mTab, I_M_RMALine.class);
+		pp.setRMALine(rmaLine, null);		
 		int taxId = 0;
 		int precision = 0;
-		
-		pp.setLineObject(mTab);
 
 		MInvoice invoice = rma.getOriginalInvoice();
 		if (invoice != null) 
