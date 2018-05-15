@@ -36,9 +36,6 @@ import org.compiere.util.Trace;
  */
 public class MProductPricing extends AbstractProductPricing
 {
-	
-	private String trxName=null;
-
 	/**
 	 * New constructor to be used with the ProductPriceFactories
 	 */
