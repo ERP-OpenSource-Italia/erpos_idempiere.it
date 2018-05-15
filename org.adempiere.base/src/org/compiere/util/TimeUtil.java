@@ -41,6 +41,14 @@ import org.compiere.model.MUOMConversion;
  */
 public class TimeUtil
 {
+	/**It works assuming this constants*/
+	/** Days = D */
+	public static final String UOMPERIOD_Days = "D";
+	/** Months = M */
+	public static final String UOMPERIOD_Months = "M";
+	/** Years = Y */
+	public static final String UOMPERIOD_Years = "Y";
+	
 	/**
 	 * 	Get earliest time of a day (truncate)
 	 *  @param time day and time
@@ -1131,6 +1139,54 @@ public class TimeUtil
 			return true;
 		else
 			return false;
+	}
+	
+	/**
+	 * Partendo da una data tsStartDate restituisce un timestamp che rappresenta
+	 * la prima data utile successiva definita secondo sUom e nNPeriod. La data viene poi spostata all'ultimo
+	 * del mese se bLastMonthDay e' true.
+	 * 
+	 * @param sUomPeriod
+	 * @param nNPeriod
+	 * @param tsStartDate
+	 * @param bLastMonthDay
+	 * @return
+	 */
+	public static Timestamp getNextDate(String sUomPeriod, int nNPeriod, Timestamp tsStartDate,boolean bLastMonthDay)
+	{				
+		int fieldAdd =  -1;
+		int nLastDay = -1;
+		int actualDay = -1;
+		
+		if(sUomPeriod.equals(UOMPERIOD_Days))
+			fieldAdd = Calendar.DAY_OF_MONTH;
+		else if (sUomPeriod.equals(UOMPERIOD_Months))
+			fieldAdd = Calendar.MONTH;
+		else if (sUomPeriod.equals(UOMPERIOD_Years))
+			fieldAdd = Calendar.YEAR;
+		
+		Calendar cal = Calendar.getInstance();
+		cal.setTimeInMillis(tsStartDate.getTime());
+		if(fieldAdd != Calendar.DAY_OF_MONTH)
+		{
+			actualDay = cal.get(Calendar.DAY_OF_MONTH);
+			cal.set(Calendar.DAY_OF_MONTH, 1);
+		}
+		cal.add(fieldAdd, nNPeriod);
+		
+		if (bLastMonthDay && fieldAdd != Calendar.DAY_OF_MONTH)
+		{
+			nLastDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+			cal.set(Calendar.DAY_OF_MONTH, nLastDay);
+		}
+		else if (fieldAdd != Calendar.DAY_OF_MONTH)
+		{
+			nLastDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+			if(nLastDay >= actualDay)
+				cal.set(Calendar.DAY_OF_MONTH, actualDay);
+		}
+				
+		return new Timestamp(cal.getTimeInMillis());			
 	}
 
 }	//	TimeUtil
