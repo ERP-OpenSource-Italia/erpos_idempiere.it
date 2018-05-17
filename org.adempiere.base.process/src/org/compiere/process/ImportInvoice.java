@@ -866,6 +866,7 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 				imp.setC_Invoice_ID (invoice.getC_Invoice_ID());
 				//	New InvoiceLine
 				MInvoiceLine line = new MInvoiceLine (invoice);
+				
 				if (imp.getLineDescription() != null)
 					line.setDescription(imp.getLineDescription());
 				line.setLine(lineNo);
@@ -899,6 +900,9 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 				if (taxAmt != null && Env.ZERO.compareTo(taxAmt) != 0)
 					line.setTaxAmt(taxAmt);
 				line.setC_1099Box_ID(imp.getC_1099Box_ID());
+				
+				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_BEFORE_IMPORT);
+				
 				//F3P: was saveEx)=
 				line.saveEx(get_TrxName());
 				//F3P: save this line as imported

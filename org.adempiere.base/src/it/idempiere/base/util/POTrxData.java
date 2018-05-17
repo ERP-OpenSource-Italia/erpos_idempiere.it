@@ -1,5 +1,6 @@
 package it.idempiere.base.util;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,7 +12,12 @@ import org.compiere.util.Util;
  * @author mbean
  *
  */
-public class POTrxData {
+public class POTrxData implements Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1211577179434571178L;
 
 	protected boolean isFirstSave = false;
 	
@@ -26,7 +32,7 @@ public class POTrxData {
 	protected String tableName;
 	
 	/** Static Logger					*/
-	protected static CLogger s_log = CLogger.getCLogger (POTrxData.class);
+	protected static final CLogger s_log = CLogger.getCLogger (POTrxData.class);
 	
 	protected static final String SEP = ".";
 	
