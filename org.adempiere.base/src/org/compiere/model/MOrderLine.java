@@ -33,6 +33,7 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.LineDocumentDiscount;
 import it.idempiere.base.util.ProductPricing2Support;
 import it.idempiere.base.util.STDSysConfig;
 
@@ -441,6 +442,16 @@ public class MOrderLine extends X_C_OrderLine
 		int precision = getPrecision();
 		if (bd.scale() > precision)
 			bd = bd.setScale(precision, BigDecimal.ROUND_HALF_UP);
+		
+		// F3P: doc discount
+		
+		BigDecimal bdDocDiscount = LineDocumentDiscount.getLIT_LineDocDiscVal(this);
+		
+		if(bdDocDiscount != null)
+		{
+			bd = bd.subtract(bdDocDiscount);
+		}
+		
 		super.setLineNetAmt (bd);
 	}	//	setLineNetAmt
 	
@@ -1184,7 +1195,7 @@ public class MOrderLine extends X_C_OrderLine
 	{
 		if (!success)
 			return success;
-		if (getParent().isProcessed())
+		if (getParent().isProcessed() || getParent().isLinesOpInProgress()) // F3P: if lines operations are in progress, dont update tax. Will be re-generated ad ops complete
 			return success;
 		if (   newRecord
 			|| is_ValueChanged(MOrderLine.COLUMNNAME_C_Tax_ID)

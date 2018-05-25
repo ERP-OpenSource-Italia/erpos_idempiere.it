@@ -34,6 +34,7 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.LineDocumentDiscount;
 import it.idempiere.base.util.ProductPricing2Support;
 import it.idempiere.base.util.STDSysConfig;
 
@@ -582,6 +583,16 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		int precision = getPrecision();
 		if (bd.scale() > precision)
 			bd = bd.setScale(precision, BigDecimal.ROUND_HALF_UP);
+		
+		// F3P: doc discount
+		
+		BigDecimal bdDocDiscount = LineDocumentDiscount.getLIT_LineDocDiscVal(this);
+		
+		if(bdDocDiscount != null)
+		{
+			bd = bd.subtract(bdDocDiscount);
+		}
+		
 		super.setLineNetAmt (bd);
 	}	//	setLineNetAmt
 	/**
