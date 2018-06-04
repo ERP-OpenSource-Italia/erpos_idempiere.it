@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.util.Random;
 import java.util.logging.Level;
 
@@ -34,8 +35,14 @@ import org.compiere.util.MimeType;
  *  @author Jorg Janke
  *  @version $Id: MAttachmentEntry.java,v 1.2 2006/07/30 00:58:18 jjanke Exp $
  */
-public class MAttachmentEntry
+public class MAttachmentEntry implements Serializable
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -2419829684187687011L;
+
+
 	/**
 	 * 	Attachment Entry
 	 * 	@param name name
