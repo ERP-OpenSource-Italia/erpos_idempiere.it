@@ -23,6 +23,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Properties;
@@ -48,6 +49,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 
 import it.idempiere.base.model.FreeOfCharge;
+import it.idempiere.base.util.GenericPOAdvancedComparator;
 import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
 
@@ -127,10 +129,34 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		int C_DocTypeTarget_ID, boolean isSOTrx, boolean counter,
 		String trxName, boolean setOrder, String documentNo)
 	{
+		return copyFrom (from, dateDoc, dateAcct,
+				C_DocTypeTarget_ID, isSOTrx, counter,
+				trxName, setOrder,documentNo, null);
+	}
+	
+	/**
+	 * 	Create new Invoice by copying
+	 * 	@param from invoice
+	 * 	@param dateDoc date of the document date
+	 *  @param acctDate original account date 
+	 * 	@param C_DocTypeTarget_ID target doc type
+	 * 	@param isSOTrx sales order
+	 * 	@param counter create counter links
+	 * 	@param trxName trx
+	 * 	@param setOrder set Order links
+	 *  @param Document Number for reversed invoices
+	 *  @param vatLedgerNo for reversed invoices
+	 *	@return Invoice
+	 */
+	public static MInvoice copyFrom (MInvoice from, Timestamp dateDoc, Timestamp dateAcct,
+		int C_DocTypeTarget_ID, boolean isSOTrx, boolean counter,
+		String trxName, boolean setOrder, String documentNo, String vatLedgerNo)
+	{
 		MInvoice to = new MInvoice (from.getCtx(), 0, trxName);
 		PO.copyValues (from, to, from.getAD_Client_ID(), from.getAD_Org_ID());
 		to.set_ValueNoCheck ("C_Invoice_ID", I_ZERO);
 		to.set_ValueNoCheck ("DocumentNo", documentNo);
+		to.set_ValueNoCheck (COLUMNNAME_VATLedgerNo, vatLedgerNo); //F3P
 		//
 		to.setDocStatus (DOCSTATUS_Drafted);		//	Draft
 		to.setDocAction(DOCACTION_Complete);
@@ -696,6 +722,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		String whereClauseFinal = "C_Invoice_ID=? ";
 		if (whereClause != null)
 			whereClauseFinal += whereClause;
+		
 		List<MInvoiceLine> list = new Query(getCtx(), I_C_InvoiceLine.Table_Name, whereClauseFinal, get_TrxName())
 										.setParameters(getC_Invoice_ID())
 										.setOrderBy(I_C_InvoiceLine.COLUMNNAME_Line)
@@ -1876,7 +1903,11 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		//	Update Order & Match
 		int matchInv = 0;
 		int matchPO = 0;
-		MInvoiceLine[] lines = getLines(false);
+		
+		//F3P reorder invoice
+		//MInvoiceLine[] lines = getLines(false);
+		MInvoiceLine[] lines = getOrderedLines();
+		
 		for (int i = 0; i < lines.length; i++)
 		{
 			MInvoiceLine line = lines[i];
@@ -2539,10 +2570,18 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 		//	Deep Copy
 		MInvoice reversal = null;
-		if (MSysConfig.getBooleanValue(MSysConfig.Invoice_ReverseUseNewNumber, true, getAD_Client_ID()))
-			reversal = copyFrom (this, reversalDateInvoiced, reversalDate, getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true);
-		else 
-			reversal = copyFrom (this, reversalDateInvoiced, reversalDate, getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true, getDocumentNo()+"^");
+		//F3P check document no and vat ledger no for reversed
+		String docNo = null;
+		String vatLedgerNo = null;
+		
+		if (MSysConfig.getBooleanValue(MSysConfig.Invoice_ReverseUseNewNumber, true, getAD_Client_ID()) == false)
+			docNo = getDocumentNo()+"^";
+		
+		if(STDSysConfig.isReversedInvoiceUseNewVATLedgerNo(getAD_Client_ID(), getAD_Org_ID()) == false)
+			vatLedgerNo = getVATLedgerNo(); //F3P vatLedgerNo must be isAllowCopy=N, if reversed doesn't use new vatLedgerNo set original no
+			
+		reversal = copyFrom (this, reversalDateInvoiced, reversalDate, getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true, docNo, vatLedgerNo);
+
 		if (reversal == null)
 		{
 			m_processMsg = "Could not create Invoice Reversal";
@@ -2942,4 +2981,17 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 	}
 
+	//F3P
+	protected MInvoiceLine[] getOrderedLines()
+	{
+		MInvoiceLine[] orderedLines = getLines(false).clone();
+		
+		GenericPOAdvancedComparator comparator = new GenericPOAdvancedComparator();
+		comparator.addOrderColumn(MInvoiceLine.COLUMNNAME_M_InOutLine_ID, true);
+		comparator.addOrderColumn(MInvoiceLine.COLUMNNAME_Line);
+		
+		Arrays.sort(orderedLines, comparator);
+		
+		return orderedLines;
+	}
 }	//	MInvoice

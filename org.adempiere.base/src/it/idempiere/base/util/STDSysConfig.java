@@ -96,6 +96,8 @@ public class STDSysConfig
  	
  	public static final String FIN_FILTER_BY_ORG="FIN_FILTER_BY_ORG";
  	
+ 	public static final String LIT_INVOICE_REVERSE_USE_NEW_VATLEDGERNO = "LIT_INVOICE_REVERSE_USE_NEW_VATLEDGERNO";
+ 	
 	public static boolean isCommissionRuleMinorSequence(int AD_Client_ID,int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(LIT_COMMISSION_RULE_MINOR_SEQUENCE , false,AD_Client_ID,AD_Org_ID);
@@ -542,5 +544,14 @@ public class STDSysConfig
 	public static boolean isFinFilterByOrg(int AD_Client_ID)
 	{
 		return MSysConfig.getBooleanValue(FIN_FILTER_BY_ORG, false, AD_Client_ID);
+	}
+	
+	/** If true reversed invoice use new VATLedgerNo
+	 * 
+	 * @return if reversed invoice use new VATLedgerNo
+	 */
+	public static boolean isReversedInvoiceUseNewVATLedgerNo(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_INVOICE_REVERSE_USE_NEW_VATLEDGERNO, true, AD_Client_ID, AD_Org_ID);
 	}
 }
