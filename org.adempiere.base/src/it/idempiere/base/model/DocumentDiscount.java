@@ -230,6 +230,9 @@ public class DocumentDiscount
 	
 	public static boolean isDiscountableLine(PO line, boolean isDiscOnlyProd)
 	{
+		if(FreeOfCharge.isFreeOfCharge(line))
+			return false;
+		
 		return line.get_ValueAsInt(COLUMNNAME_M_Product_ID) > 0 || //product
 				(isDiscOnlyProd == false && line.get_ValueAsInt(COLUMNNAME_C_Charge_ID) > 0);// charge and discount only product = false
 	}
