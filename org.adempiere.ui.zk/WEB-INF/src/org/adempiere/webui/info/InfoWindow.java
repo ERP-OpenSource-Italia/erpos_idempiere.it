@@ -674,7 +674,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				: tableInfos[0].getTableName();
 					
 		String keySelectClause = keyTableAlias+"."+p_keyColumn;
-		list.add(new ColumnInfo(" ", keySelectClause, IDColumn.class));
+		list.add(new ColumnInfo(" ", keySelectClause, IDColumn.class, true, false, null, p_keyColumn));
 		
 		int i = 0;
 		for(MInfoColumn infoColumn : infoColumns) 
@@ -714,6 +714,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				}
 				columnInfo.setColDescription(infoColumn.get_Translation("Description"));
 				columnInfo.setGridField(gridFields.get(i));
+				columnInfo.setColumnName(infoColumn.getColumnName());
 				list.add(columnInfo);
 				
 				if (keyColumnOfView == infoColumn){
