@@ -305,8 +305,21 @@ public interface I_AD_InfoColumn
 	  */
 	public boolean isDisplayed();
 
-    /** Column name IsIdentifier */
-    public static final String COLUMNNAME_IsIdentifier = "IsIdentifier";
+    /** Column name IsReadOnly */
+    public static final String COLUMNNAME_IsReadOnly = "IsReadOnly";
+
+	/** Set Read Only.
+	  * Determines, if this field is Read Only
+	  */
+	public void setIsReadOnly (boolean IsReadOnly);
+
+	/** Get Read Only.
+	  * Determines, if this field is Read Only
+	  */
+	public boolean isReadOnly();
+	  
+	/** Column name IsIdentifier */
+	public static final String COLUMNNAME_IsIdentifier = "IsIdentifier";
 
 	/** Set Identifier.
 	  * This column is part of the record identifier

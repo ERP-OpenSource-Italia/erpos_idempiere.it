@@ -44,11 +44,38 @@ public class ColumnInfo
 	 *  @param colHeader Column Header
 	 *  @param colSQL    SQL select code for column
 	 *  @param colClass  class of column - determines display
+	 *  @param readOnly  column is read only
+	 */
+	public ColumnInfo (String colHeader, String colSQL, Class<?> colClass, boolean readOnly)
+	{
+		this(colHeader, colSQL, colClass, readOnly, false, null);
+	}   //  ColumnInfo
+
+	/**
+	 *  Create Info Column (r/o and not color column)
+	 *
+	 *  @param colHeader Column Header
+	 *  @param colSQL    SQL select code for column
+	 *  @param colClass  class of column - determines display
 	 *  @param keyPairColSQL  SQL select for the ID of the for the displayed column
 	 */
 	public ColumnInfo (String colHeader, String colSQL, Class<?> colClass, String keyPairColSQL)
 	{
 		this(colHeader, colSQL, colClass, true, false, keyPairColSQL);
+	}   //  ColumnInfo
+	
+	/**
+	 *  Create Info Column (r/o and not color column)
+	 *
+	 *  @param colHeader Column Header
+	 *  @param colSQL    SQL select code for column
+	 *  @param colClass  class of column - determines display
+	 *  @param keyPairColSQL  SQL select for the ID of the for the displayed column
+	 *  @param readOnly  column is read only
+	 */
+	public ColumnInfo (String colHeader, String colSQL, Class<?> colClass, String keyPairColSQL, boolean readOnly)
+	{
+		this(colHeader, colSQL, colClass, readOnly, false, keyPairColSQL);
 	}   //  ColumnInfo
 
 	/**
