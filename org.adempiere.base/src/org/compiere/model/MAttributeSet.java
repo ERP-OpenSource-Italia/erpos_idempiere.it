@@ -36,7 +36,7 @@ import org.compiere.util.DB;
  * @author Teo Sarca, www.arhipac.ro
  *			<li>FR [ 2214883 ] Remove SQL code and Replace for Query
  */
-public class MAttributeSet extends X_M_AttributeSet
+public class l extends X_M_AttributeSet
 {
 	/**
 	 * 
@@ -250,8 +250,12 @@ public class MAttributeSet extends X_M_AttributeSet
 				.setParameters(get_ID())
 				.setOnlyActiveRecords(true)
 				.list();
-			m_excludes = new X_M_AttributeSetExclude[list.size ()];
-			list.toArray (m_excludes);
+			
+			if(list.size() > 0) // Added check for zero-len array
+			{
+				m_excludes = new X_M_AttributeSetExclude[list.size ()];
+				list.toArray (m_excludes);
+			}
 		}
 	}
 	
