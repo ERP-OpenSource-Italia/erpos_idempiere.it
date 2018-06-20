@@ -36,7 +36,7 @@ import org.compiere.util.DB;
  * @author Teo Sarca, www.arhipac.ro
  *			<li>FR [ 2214883 ] Remove SQL code and Replace for Query
  */
-public class l extends X_M_AttributeSet
+public class MAttributeSet extends X_M_AttributeSet
 {
 	/**
 	 * 
