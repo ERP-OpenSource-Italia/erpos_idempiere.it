@@ -295,7 +295,8 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		int C_OrderLine_ID = sLine.getC_OrderLine_ID();
 		if (C_OrderLine_ID != 0)
 		{
-			MOrderLine oLine = new MOrderLine (getCtx(), C_OrderLine_ID, get_TrxName());
+			// MOrderLine oLine = new MOrderLine (getCtx(), C_OrderLine_ID, get_TrxName());
+			MOrderLine oLine = getOrderLine();
 			setS_ResourceAssignment_ID(oLine.getS_ResourceAssignment_ID());
 			//
 			if (sLine.sameOrderLineUOM())
@@ -320,7 +321,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
             try
             {
             	MInOutLine xLine = (MInOutLine) rmaLine.getM_InOutLine();	// Original Shipment
-            	MOrderLine oLine = (MOrderLine) xLine.getC_OrderLine();		// Original Order
+            	MOrderLine oLine = xLine.getOrderLine();		// Original Order
     			if (xLine.sameOrderLineUOM())
     				setPriceEntered(oLine.getPriceEntered());
     			else

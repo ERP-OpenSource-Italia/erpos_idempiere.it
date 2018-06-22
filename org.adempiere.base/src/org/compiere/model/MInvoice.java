@@ -416,7 +416,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		setDocumentNo(line.getDocumentNo());
 		//
 		setIsSOTrx(batch.isSOTrx());
-		MBPartner bp = new MBPartner (line.getCtx(), line.getC_BPartner_ID(), line.get_TrxName());
+		// MBPartner bp = new MBPartner (line.getCtx(), line.getC_BPartner_ID(), line.get_TrxName());
+		MBPartner bp = MBPartner.getReadonlyNoVirtualCols(line.getCtx(), line.getC_BPartner_ID());
 		setBPartner(bp);	//	defaults
 		//
 		setIsTaxIncluded(line.isTaxIncluded());
@@ -572,7 +573,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 		setIsSOTrx(ship.isSOTrx());
 		//
-		MBPartner bp = new MBPartner (getCtx(), ship.getC_BPartner_ID(), null);
+		// MBPartner bp = new MBPartner (getCtx(), ship.getC_BPartner_ID(), null);
+		MBPartner bp = MBPartner.getReadonlyNoVirtualCols(getCtx(), ship.getC_BPartner_ID());
 		setBPartner (bp);
 		//
 		setAD_User_ID(ship.getAD_User_ID());
@@ -1016,7 +1018,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		if (getC_BPartner_ID() == 0)
 			setBPartner(MBPartner.getTemplate(getCtx(), getAD_Client_ID()));
 		if (getC_BPartner_Location_ID() == 0)
-			setBPartner(new MBPartner(getCtx(), getC_BPartner_ID(), null));
+			// setBPartner(new MBPartner(getCtx(), getC_BPartner_ID(), null));
+			setBPartner(MBPartner.getReadonlyNoVirtualCols(getCtx(), getC_BPartner_ID()));
 
 		//	Price List
 		if (getM_PriceList_ID() == 0)
@@ -1577,7 +1580,9 @@ public class MInvoice extends X_C_Invoice implements DocAction
 				(doc.getDocBaseType().equals(MDocType.DOCBASETYPE_ARInvoice) && getGrandTotal().signum() > 0 )
 			   )
 			{	
-				MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), null);
+				// MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), null);
+				MBPartner bp = MBPartner.getReadonlyNoVirtualCols (getCtx(), getC_BPartner_ID());
+				
 				if ( MBPartner.SOCREDITSTATUS_CreditStop.equals(bp.getSOCreditStatus()) )
 				{
 					m_processMsg = "@BPartnerCreditStop@ - @TotalOpenBalance@="
@@ -2017,7 +2022,12 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 
 		//	Update BP Statistics
-		MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), get_TrxName());
+		//  MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), get_TrxName());
+		
+		// F3P: small improvement to avoid reading expensive virtual columns
+		Query qBP = new Query(getCtx(), MBPartner.Table_Name,  "C_BPartner_ID = ?", get_TrxName());		
+		MBPartner bp = qBP.setNoVirtualColumn(true).setParameters(getC_BPartner_ID()).first();
+				
 		DB.getDatabase().forUpdate(bp, 0);
 		//	Update total revenue and balance / credit limit (reversed on AllocationLine.processIt)
 		BigDecimal invAmt = MConversionRate.convertBase(getCtx(), getGrandTotal(true),	//	CM adjusted
@@ -2313,12 +2323,14 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		if (counterC_BPartner_ID == 0)
 			return null;
 		//	Business Partner needs to be linked to Org
-		MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), null);
+		// MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), null);
+		MBPartner bp = MBPartner.getReadonlyNoVirtualCols (getCtx(), getC_BPartner_ID());
 		int counterAD_Org_ID = bp.getAD_OrgBP_ID_Int();
 		if (counterAD_Org_ID == 0)
 			return null;
 
-		MBPartner counterBP = new MBPartner (getCtx(), counterC_BPartner_ID, null);
+		// MBPartner counterBP = new MBPartner (getCtx(), counterC_BPartner_ID, null);
+		MBPartner counterBP = MBPartner.getReadonlyNoVirtualCols (getCtx(), counterC_BPartner_ID);
 //		MOrgInfo counterOrgInfo = MOrgInfo.get(getCtx(), counterAD_Org_ID);
 		if (log.isLoggable(Level.INFO)) log.info("Counter BP=" + counterBP.getName());
 
