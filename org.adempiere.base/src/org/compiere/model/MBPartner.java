@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -90,6 +91,28 @@ public class MBPartner extends X_C_BPartner
 		}
 		return template;
 	}	//	getTemplate
+	
+	// F3P: bp cache, intended for read-only usage
+	
+	static private CCache<Integer,MBPartner>	s_cache = new CCache<Integer,MBPartner>(MBPartner.Table_Name, 200);
+	
+	public static MBPartner getReadonlyNoVirtualCols(Properties ctx, int C_BPartner_ID)
+	{
+		MBPartner retValue = (MBPartner)s_cache.get(C_BPartner_ID);
+		if (retValue == null)
+		{
+			final String whereClause = "C_BPartner_ID=? AND AD_Client_ID=?";
+			retValue = new Query(ctx,Table_Name,whereClause, null)
+									.setParameters(C_BPartner_ID,Env.getAD_Client_ID(ctx))
+									.setNoVirtualColumn(true)
+									.firstOnly();
+			
+			s_cache.put(C_BPartner_ID, retValue);
+		}
+		
+		return retValue; 
+	}
+
 
 	/**
 	 * 	Get Cash Trx Business Partner
