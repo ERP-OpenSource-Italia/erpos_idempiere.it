@@ -160,7 +160,9 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 		if (-1 == changeType || TYPE_BEFORE_NEW == changeType || TYPE_BEFORE_CHANGE == changeType) {
 			int invoice_id = SetGetUtil.get_AttrValueAsInt(m, MInvoiceLine.COLUMNNAME_C_Invoice_ID);
 			@SuppressWarnings("unused")
-			boolean isSOTrx = DB.isSOTrx(MInvoice.Table_Name, MInvoice.COLUMNNAME_C_Invoice_ID+"="+invoice_id);
+			// boolean isSOTrx = DB.isSOTrx(MInvoice.Table_Name, MInvoice.COLUMNNAME_C_Invoice_ID+"="+invoice_id);
+			String soTrx = DB.getSQLValueStringEx(m.get_TrxName(), "SELECT IsSoTrx FROM C_Invoice WHERE C_Invoice_ID = ?", invoice_id);
+			boolean isSOTrx = soTrx.equals("Y") ? true:false;
 			boolean isAsset = false;
 			/* comment by @win
 			boolean isFixedAsset = false;

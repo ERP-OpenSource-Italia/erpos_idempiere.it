@@ -6,7 +6,8 @@ org.eclipse.jetty.http/bin
 alpn-boot.jar
 tmp
 migdiff.txt
-reports/*.jasper
+reports/*
+templates/*
 syntax: regexp
 ^adempiere$
 ^org\.adempiere\.install/lib$

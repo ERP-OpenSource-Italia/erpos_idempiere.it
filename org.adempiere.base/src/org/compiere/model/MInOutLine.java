@@ -159,6 +159,14 @@ public class MInOutLine extends X_M_InOutLine
 	// F3P: added to keep cache, like parent
 	
 	private MOrderLine m_orderLine = null;
+	
+	// F3P: added setHeaderInfo, inspired by MOrderLine.setHeaderInfo
+	
+	public void setHeaderInfo(MInOut inOut)
+	{
+		m_parent = inOut;
+		m_M_Warehouse_ID = inOut.getM_Warehouse_ID();		
+	}
 
 	/**
 	 * 	Get Parent
