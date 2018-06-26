@@ -28,6 +28,8 @@ import org.compiere.model.MProjectPhase;
 import org.compiere.model.MProjectTask;
 import org.compiere.util.Env;
 
+import it.idempiere.base.util.STDSysConfig;
+
 
 /**
  *  Generate Order from Project Phase
@@ -68,7 +70,10 @@ public class ProjectPhaseGenOrder  extends SvrProcess
 			throw new IllegalArgumentException("C_ProjectPhase_ID == 0");
 		MProjectPhase fromPhase = new MProjectPhase (getCtx(), m_C_ProjectPhase_ID, get_TrxName());
 		MProject fromProject = ProjectGenOrder.getProject (getCtx(), fromPhase.getC_Project_ID(), get_TrxName());
-		MOrder order = new MOrder (fromProject, true, MOrder.DocSubTypeSO_Proposal); //F3P: set proposal, from adempiere
+		
+		//F3P docSubTypeSO
+		String docSubTypeSO = STDSysConfig.getProjectPhaseOrderDocSubTypeSO(fromProject.getAD_Client_ID(), fromProject.getAD_Org_ID());
+		MOrder order = new MOrder (fromProject, true, docSubTypeSO); 
 		order.setDescription(order.getDescription() + " - " + fromPhase.getName());
 		if (!order.save())
 			throw new Exception("Could not create Order");

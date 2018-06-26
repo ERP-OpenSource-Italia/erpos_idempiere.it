@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.regex.Pattern;
 
+import org.compiere.model.MOrder;
 import org.compiere.model.MSysConfig;
 import org.compiere.util.Ini;
 import org.compiere.util.Util;
@@ -103,6 +104,8 @@ public class STDSysConfig
 	public static final String	F3P_INFOPRODUCT_LISTVERSIONS_YES = "Y",
 								F3P_INFOPRODUCT_LISTVERSIONS_NO = "N",
 								F3P_INFOPRODUCT_LISTVERSIONS_NO_PURCHASE = "P";
+	
+	public static final String LIT_PROJ_PHASE_ORDER_DOCSUBTYPESO = "LIT_PROJ_PHASE_ORDER_DOCSUBTYPESO";
  	
 	public static boolean isCommissionRuleMinorSequence(int AD_Client_ID,int AD_Org_ID)
 	{
@@ -564,5 +567,16 @@ public class STDSysConfig
 	public static String getInfoProductListVersions(int AD_Client_ID,int AD_Org_ID)
 	{
 		return MSysConfig.getValue(F3P_INFOPRODUCT_LISTVERSIONS, F3P_INFOPRODUCT_LISTVERSIONS_YES, AD_Client_ID, AD_Org_ID);
+	}
+	
+	/**
+	 * 
+	 * @param AD_Client_ID
+	 * @param AD_Org_ID
+	 * @return docSubTypeSO for ProjectPhaseGenOrder
+	 */
+	public static String getProjectPhaseOrderDocSubTypeSO(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getValue(LIT_PROJ_PHASE_ORDER_DOCSUBTYPESO, MOrder.DocSubTypeSO_Proposal, AD_Client_ID, AD_Org_ID);
 	}
 }
