@@ -98,6 +98,12 @@ public class STDSysConfig
  	
  	public static final String LIT_INVOICE_REVERSE_USE_NEW_VATLEDGERNO = "LIT_INVOICE_REVERSE_USE_NEW_VATLEDGERNO";
  	
+ 	public static final String F3P_INFOPRODUCT_LISTVERSIONS = "F3P_INFOPRODUCT_LISTVERSIONS";
+ 	
+	public static final String	F3P_INFOPRODUCT_LISTVERSIONS_YES = "Y",
+								F3P_INFOPRODUCT_LISTVERSIONS_NO = "N",
+								F3P_INFOPRODUCT_LISTVERSIONS_NO_PURCHASE = "P";
+ 	
 	public static boolean isCommissionRuleMinorSequence(int AD_Client_ID,int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(LIT_COMMISSION_RULE_MINOR_SEQUENCE , false,AD_Client_ID,AD_Org_ID);
@@ -553,5 +559,10 @@ public class STDSysConfig
 	public static boolean isReversedInvoiceUseNewVATLedgerNo(int AD_Client_ID, int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(LIT_INVOICE_REVERSE_USE_NEW_VATLEDGERNO, true, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static String getInfoProductListVersions(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getValue(F3P_INFOPRODUCT_LISTVERSIONS, F3P_INFOPRODUCT_LISTVERSIONS_YES, AD_Client_ID, AD_Org_ID);
 	}
 }
