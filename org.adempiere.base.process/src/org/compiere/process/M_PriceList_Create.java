@@ -284,7 +284,7 @@ public class M_PriceList_Create extends SvrProcess {
 							sql.append(",List_MaxAmt,List_Fixed,Std_Base,Std_Addamt,Std_Discount,Std_Rounding");
 							sql.append(",Std_MinAmt,Std_MaxAmt,Std_Fixed,Limit_Base,Limit_AddAmt,Limit_Discount");
 							sql.append(",Limit_Rounding,Limit_Minamt,Limit_MaxAmt,Limit_Fixed,Group1,Group2,C_ConversionType_ID");
-							sql.append(",LIT_StdCompositeDisc, LIT_LimitCompositeDisc"); // F3P: aggiunte colonne sconto composito"
+							sql.append(",LIT_StdCompositeDisc, LIT_LimitCompositeDisc"); // F3P: aggiunte colonne sconto composito
 							sql.append(" FROM  M_DiscountSchemaLine");
 							sql.append(" WHERE M_DiscountSchema_ID=");
 							sql.append(rsCurgen.getInt("M_DiscountSchema_ID"));
@@ -424,7 +424,7 @@ public class M_PriceList_Create extends SvrProcess {
 					// F3P: generiamo la parti insert necessarie per la propagazione dei dati di sconto
 					
 					String sCompDiscInsertFragment = "",
-								 sCompDiscWhereFragment = "";
+								 sCompDiscSelectFragment = "";
 					
 					String		 sStdBase = rsDiscountLine.getString("Std_Base"),
 										 sLimitBase = rsDiscountLine.getString("Limit_Base"),
@@ -437,96 +437,99 @@ public class M_PriceList_Create extends SvrProcess {
 										 bdLimitDiscount = rsDiscountLine.getBigDecimal("limit_discount"),
 										 bdLimitAddAmt = rsDiscountLine.getBigDecimal("limit_addamt"),
 										 bdLimitMinAmt = rsDiscountLine.getBigDecimal("limit_minamt"),
-										 bdLimitMaxAmt = rsDiscountLine.getBigDecimal("limit_maxamt");				
+										 bdLimitMaxAmt = rsDiscountLine.getBigDecimal("limit_maxamt");
+					
+					StringBuilder	sbDiscSelectFragment = new StringBuilder(", ");
 					
 					if(isAdvancedDiscount)
 					{
-						sCompDiscInsertFragment = ", LIT_StdCompositeDisc, LIT_LimitCompositeDisc, LIT_StdDiscount, LIT_LimitDiscount";
-						
-						StringBuilder	sbDiscWhereFragment = new StringBuilder(", ");
+						sCompDiscInsertFragment = ", LIT_StdCompositeDisc, LIT_LimitCompositeDisc";
+												
 						int priceListBase_ID = rsCurgen.getInt("M_PriceList_Version_Base_ID");
 						if(Util.isEmpty(sStdCompositeDisc) == false 
 								&& sStdBase.equals(MDiscountSchemaLine.LIMIT_BASE_FixedPrice) == false) 
 						{
-							sbDiscWhereFragment.append(DB.TO_STRING(sStdCompositeDisc));
+							sbDiscSelectFragment.append(DB.TO_STRING(sStdCompositeDisc));
 						}
 						else
 						{
 							if(priceListBase_ID > 0)
-								sbDiscWhereFragment.append("pp.LIT_StdCompositeDisc");
+								sbDiscSelectFragment.append("pp.LIT_StdCompositeDisc");
 							else
-								sbDiscWhereFragment.append("null");
+								sbDiscSelectFragment.append("null");
 						}
 						
-						sbDiscWhereFragment.append(", ");
+						sbDiscSelectFragment.append(", ");
 						
 						if(Util.isEmpty(sLimitCompositeDisc) == false 
 								&& sLimitBase.equals(MDiscountSchemaLine.LIMIT_BASE_FixedPrice) == false)
 						{
-							sbDiscWhereFragment.append(DB.TO_STRING(sLimitCompositeDisc));
+							sbDiscSelectFragment.append(DB.TO_STRING(sLimitCompositeDisc));
 						}
 						else
 						{
 							if(priceListBase_ID > 0)
-								sbDiscWhereFragment.append("pp.LIT_LimitCompositeDisc");
+								sbDiscSelectFragment.append("pp.LIT_LimitCompositeDisc");
 							else
-								sbDiscWhereFragment.append("null");
+								sbDiscSelectFragment.append("null");
 						}
 						
-						sbDiscWhereFragment.append(", ");
-
-						if(sStdBase.equals(MDiscountSchemaLine.LIMIT_BASE_FixedPrice))
+						sbDiscSelectFragment.append(", ");
+					}
+					
+					// F3P: StdDiscount and limit are always calculated
+					
+					sCompDiscInsertFragment += ", LIT_StdDiscount, LIT_LimitDiscount";
+					
+					if(sStdBase.equals(MDiscountSchemaLine.LIMIT_BASE_FixedPrice))
+					{
+						sbDiscSelectFragment.append("0");
+					}
+					else if(sStdBase.equals(CompositeDiscount.BASE_CURRENTLISTPRICE) 
+							&& bdStdAddAmt.signum() == 0
+							&& bdStdMinAmt.signum() == 0
+							&& bdStdMaxAmt.signum() == 0)
+					{
+						sbDiscSelectFragment.append(bdStdDiscount);
+					}
+					else
+					{
+						if(Util.isEmpty(sStdCompositeDisc,true) == false)
 						{
-							sbDiscWhereFragment.append("0");
-						}
-						else if(sStdBase.equals(CompositeDiscount.BASE_CURRENTLISTPRICE) 
-								&& bdStdAddAmt.signum() == 0
-								&& bdStdMinAmt.signum() == 0
-								&& bdStdMaxAmt.signum() == 0)
-						{
-							sbDiscWhereFragment.append(bdStdDiscount);
+							sbDiscSelectFragment.append(CompositeDiscount.parseCompositeDiscount(sStdCompositeDisc));
 						}
 						else
 						{
-							if(Util.isEmpty(sStdCompositeDisc,true) == false)
-							{
-								sbDiscWhereFragment.append(CompositeDiscount.parseCompositeDiscount(sStdCompositeDisc));
-							}
-							else
-							{
-								sbDiscWhereFragment.append(bdStdDiscount);
-							}
+							sbDiscSelectFragment.append(bdStdDiscount);
 						}
-						
-						sbDiscWhereFragment.append(", ");
-						
-						if(sLimitBase.equals(MDiscountSchemaLine.LIMIT_BASE_FixedPrice))
+					}
+					
+					sbDiscSelectFragment.append(", ");
+					
+					if(sLimitBase.equals(MDiscountSchemaLine.LIMIT_BASE_FixedPrice))
+					{
+						sbDiscSelectFragment.append("0");
+					}
+					else if(sLimitBase.equals(CompositeDiscount.BASE_CURRENTLISTPRICE) 
+							&& bdLimitAddAmt.signum() == 0
+							&& bdLimitMinAmt.signum() == 0
+							&& bdLimitMaxAmt.signum() == 0)
+					{
+						sbDiscSelectFragment.append(bdLimitDiscount);
+					}
+					else
+					{
+						if(Util.isEmpty(sLimitCompositeDisc,true) == false)
 						{
-							sbDiscWhereFragment.append("0");
-						}
-						else if(sLimitBase.equals(CompositeDiscount.BASE_CURRENTLISTPRICE) 
-								&& bdLimitAddAmt.signum() == 0
-								&& bdLimitMinAmt.signum() == 0
-								&& bdLimitMaxAmt.signum() == 0)
-						{
-							sbDiscWhereFragment.append(bdLimitDiscount);
+							sbDiscSelectFragment.append(CompositeDiscount.parseCompositeDiscount(sLimitCompositeDisc));
 						}
 						else
 						{
-							if(Util.isEmpty(sLimitCompositeDisc,true) == false)
-							{
-								sbDiscWhereFragment.append(CompositeDiscount.parseCompositeDiscount(sLimitCompositeDisc));
-							}
-							else
-							{
-								sbDiscWhereFragment.append(bdLimitDiscount);
-							}
+							sbDiscSelectFragment.append(bdLimitDiscount);
 						}
-
-						sCompDiscWhereFragment = sbDiscWhereFragment.toString();
-					}				
-
-
+					}							
+					
+					sCompDiscSelectFragment = sbDiscSelectFragment.toString();
 
 					//
 					//	Copy (Insert) Prices
@@ -608,7 +611,7 @@ public class M_PriceList_Create extends SvrProcess {
 									sqlins.append(", ");
 									sqlins.append(rsCurgen.getInt("AD_Org_ID"));
 									sqlins.append("),0)");
-									sqlins.append(sCompDiscWhereFragment); // F3P: aggiunte colonne sconto composito
+									sqlins.append(sCompDiscSelectFragment); // F3P: aggiunte colonne sconto composito
 									sqlins.append(" FROM	M_Product_PO po ");
 									sqlins.append(" WHERE EXISTS (SELECT * FROM T_Selection s WHERE po.M_Product_ID=s.T_Selection_ID"); 
 										sqlins.append(" AND s.AD_PInstance_ID=").append(m_AD_PInstance_ID).append(") ");
@@ -732,7 +735,7 @@ public class M_PriceList_Create extends SvrProcess {
 									sqlins.append(", ");
 									sqlins.append(rsCurgen.getInt("AD_Org_ID"));
 									sqlins.append("),0)");
-									sqlins.append(sCompDiscWhereFragment); // F3P: aggiunte colonne sconto composito
+									sqlins.append(sCompDiscSelectFragment); // F3P: aggiunte colonne sconto composito
 									sqlins.append(" FROM M_ProductPrice pp");
 									sqlins.append(" INNER JOIN M_PriceList_Version plv ON (pp.M_PriceList_Version_ID=plv.M_PriceList_Version_ID)");
 									sqlins.append(" INNER JOIN M_PriceList pl ON (plv.M_PriceList_ID=pl.M_PriceList_ID)");
@@ -794,88 +797,84 @@ public class M_PriceList_Create extends SvrProcess {
 					cntu = pstmu.executeUpdate();
 
 					
-					// F3P: applichiamo il tipo base 'current list price'
-					
-					if(isAdvancedDiscount)
+					// F3P: applichiamo il tipo base 'current list price'					
+					// Se stiamo per usare il PriceList appena calcolato, prima lo arrotondiamo
+						
+					if(sStdBase.equals(CompositeDiscount.BASE_CURRENTLISTPRICE) || 
+							sLimitBase.equals(CompositeDiscount.BASE_CURRENTLISTPRICE))
 					{
-						// Se stiamo per usare il PriceList appena calcolato, prima lo arrotondiamo
+						//
+						//Rounding	(AD_Reference_ID=155)
+						//
+						String	sqlupdCLP = "UPDATE	M_ProductPrice p "
+								+ " SET	PriceList = DECODE('"
+								+ rsDiscountLine.getString("List_Rounding") + "',"
+								+ " 'N', PriceList, " 
+								+ " '0', ROUND(PriceList, 0)," //Even .00
+								+ " 'D', ROUND(PriceList, 1)," //Dime .10
+								+ " 'T', ROUND(PriceList, -1), " //Ten 10.00
+								+ " '5', ROUND(PriceList*20,0)/20," //Nickle .05
+								+ " 'Q', ROUND(PriceList*4,0)/4," //Quarter .25
+								+ " '9', CASE"  //Whole 9 or 5
+									+ " WHEN MOD(ROUND(PriceList),10)<=5 THEN ROUND(PriceList)+(5-MOD(ROUND(PriceList),10))"
+									+ " WHEN MOD(ROUND(PriceList),10)>5 THEN ROUND(PriceList)+(9-MOD(ROUND(PriceList),10)) END,"
+								+ " ROUND(PriceList, " + rsCurgen.getInt("StdPrecision")
+								+ "))"
+								+ " WHERE	M_PriceList_Version_ID="
+								+ p_PriceList_Version_ID
+								+ " AND EXISTS	(SELECT * FROM T_Selection s "
+								+ " WHERE s.T_Selection_ID=p.M_Product_ID" 
+								+ " AND s.AD_PInstance_ID=" + m_AD_PInstance_ID + ")";
+						int cntuCLP = DB.executeUpdate(sqlupdCLP, get_TrxName());
+						if (cntuCLP == -1)
+							raiseError("Update  M_ProductPrice ", sqlupdCLP);						
+						log.fine("Updated (pre-application of currentlistprice)" + cntu);						
+					}
+					
+					if(sStdBase.equals(CompositeDiscount.BASE_CURRENTLISTPRICE))
+					{
+						String sqlupd1 = "UPDATE M_ProductPrice p "
+								+ " SET	PriceStd = (PriceList + ?) * (1 - LIT_StdDiscount/100) "
+								+ " WHERE	M_PriceList_Version_ID = "
+								+ p_PriceList_Version_ID
+								+ " AND EXISTS	(SELECT * FROM T_Selection s "
+								+ " WHERE s.T_Selection_ID = p.M_Product_ID" 
+								+ " AND s.AD_PInstance_ID=" + m_AD_PInstance_ID + ")";
+						PreparedStatement pstmu1 = DB.prepareStatement(sqlupd1,
+								ResultSet.TYPE_SCROLL_INSENSITIVE,
+								ResultSet.CONCUR_UPDATABLE, get_TrxName());
 						
-						if(sStdBase.equals(CompositeDiscount.BASE_CURRENTLISTPRICE) || 
-								sLimitBase.equals(CompositeDiscount.BASE_CURRENTLISTPRICE))
-						{
-							//
-							//Rounding	(AD_Reference_ID=155)
-							//
-							String	sqlupdCLP = "UPDATE	M_ProductPrice p "
-									+ " SET	PriceList = DECODE('"
-									+ rsDiscountLine.getString("List_Rounding") + "',"
-									+ " 'N', PriceList, " 
-									+ " '0', ROUND(PriceList, 0)," //Even .00
-									+ " 'D', ROUND(PriceList, 1)," //Dime .10
-									+ " 'T', ROUND(PriceList, -1), " //Ten 10.00
-									+ " '5', ROUND(PriceList*20,0)/20," //Nickle .05
-									+ " 'Q', ROUND(PriceList*4,0)/4," //Quarter .25
-									+ " '9', CASE"  //Whole 9 or 5
-										+ " WHEN MOD(ROUND(PriceList),10)<=5 THEN ROUND(PriceList)+(5-MOD(ROUND(PriceList),10))"
-										+ " WHEN MOD(ROUND(PriceList),10)>5 THEN ROUND(PriceList)+(9-MOD(ROUND(PriceList),10)) END,"
-									+ " ROUND(PriceList, " + rsCurgen.getInt("StdPrecision")
-									+ "))"
-									+ " WHERE	M_PriceList_Version_ID="
-									+ p_PriceList_Version_ID
-									+ " AND EXISTS	(SELECT * FROM T_Selection s "
-									+ " WHERE s.T_Selection_ID=p.M_Product_ID" 
-									+ " AND s.AD_PInstance_ID=" + m_AD_PInstance_ID + ")";
-							int cntuCLP = DB.executeUpdate(sqlupdCLP, get_TrxName());
-							if (cntuCLP == -1)
-								raiseError("Update  M_ProductPrice ", sqlupdCLP);						
-							log.fine("Updated (pre-application of currentlistprice)" + cntu);						
-						}
+						pstmu1.setDouble(1, rsDiscountLine.getDouble("Std_AddAmt"));
 						
-						if(sStdBase.equals(CompositeDiscount.BASE_CURRENTLISTPRICE))
-						{
-							String sqlupd1 = "UPDATE M_ProductPrice p "
-									+ " SET	PriceStd = (PriceList + ?) * (1 - LIT_StdDiscount/100) "
-									+ " WHERE	M_PriceList_Version_ID = "
-									+ p_PriceList_Version_ID
-									+ " AND EXISTS	(SELECT * FROM T_Selection s "
-									+ " WHERE s.T_Selection_ID = p.M_Product_ID" 
-									+ " AND s.AD_PInstance_ID=" + m_AD_PInstance_ID + ")";
-							PreparedStatement pstmu1 = DB.prepareStatement(sqlupd1,
-									ResultSet.TYPE_SCROLL_INSENSITIVE,
-									ResultSet.CONCUR_UPDATABLE, get_TrxName());
-							
-							pstmu1.setDouble(1, rsDiscountLine.getDouble("Std_AddAmt"));
-							
-							int cntu1 = pstmu1.executeUpdate();
-							
-							if (cntu1 == -1)
-								raiseError("Update M_ProductPrice for Std from Current List Price", sqlupd1);
-							
-							log.fine("Updated for Std from Current List Price" + cntu1);
-						}
+						int cntu1 = pstmu1.executeUpdate();
 						
-						if(sLimitBase.equals(CompositeDiscount.BASE_CURRENTLISTPRICE))
-						{
-							String sqlupd1 = "UPDATE M_ProductPrice p "
-									+ " SET	PriceLimit = (PriceList + ?) * (1 - LIT_LimitDiscount/100) "
-									+ " WHERE	M_PriceList_Version_ID = "
-									+ p_PriceList_Version_ID
-									+ " AND EXISTS	(SELECT * FROM T_Selection s "
-									+ " WHERE s.T_Selection_ID = p.M_Product_ID" 
-									+ " AND s.AD_PInstance_ID=" + m_AD_PInstance_ID + ")";
-							PreparedStatement pstmu1 = DB.prepareStatement(sqlupd1,
-									ResultSet.TYPE_SCROLL_INSENSITIVE,
-									ResultSet.CONCUR_UPDATABLE, get_TrxName());
-							
-							pstmu1.setDouble(1, rsDiscountLine.getDouble("Limit_AddAmt"));
-							
-							int cntu1 = pstmu1.executeUpdate();
-							
-							if (cntu1 == -1)
-								raiseError("Update M_ProductPrice for Limit from Current List Price", sqlupd1);
-							
-							log.fine("Updated for Limit from Current List Price" + cntu1);
-						}
+						if (cntu1 == -1)
+							raiseError("Update M_ProductPrice for Std from Current List Price", sqlupd1);
+						
+						log.fine("Updated for Std from Current List Price" + cntu1);
+					}
+					
+					if(sLimitBase.equals(CompositeDiscount.BASE_CURRENTLISTPRICE))
+					{
+						String sqlupd1 = "UPDATE M_ProductPrice p "
+								+ " SET	PriceLimit = (PriceList + ?) * (1 - LIT_LimitDiscount/100) "
+								+ " WHERE	M_PriceList_Version_ID = "
+								+ p_PriceList_Version_ID
+								+ " AND EXISTS	(SELECT * FROM T_Selection s "
+								+ " WHERE s.T_Selection_ID = p.M_Product_ID" 
+								+ " AND s.AD_PInstance_ID=" + m_AD_PInstance_ID + ")";
+						PreparedStatement pstmu1 = DB.prepareStatement(sqlupd1,
+								ResultSet.TYPE_SCROLL_INSENSITIVE,
+								ResultSet.CONCUR_UPDATABLE, get_TrxName());
+						
+						pstmu1.setDouble(1, rsDiscountLine.getDouble("Limit_AddAmt"));
+						
+						int cntu1 = pstmu1.executeUpdate();
+						
+						if (cntu1 == -1)
+							raiseError("Update M_ProductPrice for Limit from Current List Price", sqlupd1);
+						
+						log.fine("Updated for Limit from Current List Price" + cntu1);
 					}
 
 					if (cntu == -1)
