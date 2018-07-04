@@ -25,6 +25,7 @@ import java.util.Set;
 
 import org.adempiere.base.Service;
 import org.adempiere.webui.AdempiereWebUI;
+import org.adempiere.webui.Extensions;
 import org.adempiere.webui.event.TableValueChangeEvent;
 import org.adempiere.webui.event.TableValueChangeListener;
 import org.adempiere.webui.factory.ICellComponentFactory;
@@ -201,7 +202,8 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	 * @param columnIndex	The column in which the cell is to be placed.
 	 * @return	The list cell component.
 	 */
-	private Listcell getCellComponent(WListbox table, Object field,
+	// F3P: from private to protected to allow overriding
+	protected Listcell getCellComponent(WListbox table, Object field, 
 									  int rowIndex, int columnIndex)
 	{
 		ListCell listcell = new ListCell();
@@ -215,19 +217,7 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 
 		if (field != null)
 		{
-			// F3P: IDEMPIERE-3318 - Factory for generating cell renderers
-			List<ICellComponentFactory> factories = Service.locator().list(ICellComponentFactory.class).getServices();
-			
-			if (factories != null) {
-				for(ICellComponentFactory factory : factories) 
-				{
-					boolean managed = factory.createCellComponent(this, listcell, table, field, rowIndex, columnIndex, 
-							isCellEditable, identifier);
-					
-					if(managed)
-						break;	
-				}
-			}
+			Extensions.createCellComponent(this, listcell, table, field, rowIndex, columnIndex, isCellEditable, identifier);
 		}
 		else
 		{
