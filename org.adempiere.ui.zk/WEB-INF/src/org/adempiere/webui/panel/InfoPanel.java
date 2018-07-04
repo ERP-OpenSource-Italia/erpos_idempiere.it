@@ -2046,7 +2046,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 				{
 					// layout has same columns as selectedInfo
 					if (!p_layout[col].isReadOnly())
-						values.put(p_layout[col].getColHeader(), selectedInfo.getValue().get(col));
+						values.put(p_layout[col].getColumnName(), selectedInfo.getValue().get(col));
 				}
 				if(values.size() > 0)
 					m_values.put(kp, values);
@@ -2070,7 +2070,19 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 				{
 					List<Object> parameters = new ArrayList<Object>();
 					parameters.add(AD_PInstance_ID);
-					parameters.add(records.getKey());
+					
+					Object key = records.getKey();
+					
+					if(key instanceof KeyNamePair)
+					{
+						KeyNamePair knp = (KeyNamePair)key;
+						parameters.add(knp.getKey());
+					}
+					else
+					{
+						parameters.add(key);
+					}
+
 					parameters.add(field.getKey());
 					
 					Object data = field.getValue();
@@ -2081,7 +2093,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 						parameters.add(null);
 						parameters.add(id.getRecord_ID());
 						parameters.add(null);
-					}
+					}					
 					else if (data instanceof String)
 					{
 						parameters.add(data);
@@ -2118,13 +2130,21 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 						else 
 						parameters.add(data);
 					}
+					else if(data instanceof KeyNamePair)
+					{
+						KeyNamePair knpData = (KeyNamePair)data;
+						
+						parameters.add(null);
+						parameters.add(knpData.getKey());
+						parameters.add(null);						
+					}
 					else
 					{
 						parameters.add(data);
 						parameters.add(null);
 						parameters.add(null);
 					}
-					DB.executeUpdateEx(insert.toString(),parameters.toArray() , null);		
+					DB.executeUpdateEx(insert.toString(),parameters.toArray() , null);
 						
 				}
 		}
