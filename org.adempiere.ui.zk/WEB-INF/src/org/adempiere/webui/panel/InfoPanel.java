@@ -1361,14 +1361,28 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			if (recordSelectedData.containsKey(keyViewValue)){
 				// TODO: maybe add logic to check value of current record (focus only to viewKeys value) is same as value save in lsSelectedKeyValue
 				// because record can change by other user
-				lsSelectionRecord.add(contentPanel.getModel().get(rowIndex));
+				Object row = contentPanel.getModel().get(rowIndex);
+								
+				if(onRestoreSelectedItemIndexInPage(keyViewValue, rowIndex, row)) // F3P: provide an hook for operations on restored index
+					lsSelectionRecord.add(row);
 			}
 		}
 		
 		contentPanel.getModel().setSelection(lsSelectionRecord);
 	}
 	
-	
+	/** Hook to intercept 'restore selection' actions 
+	 * 
+	 * @param keyViewValue row view key
+	 * @param rowIndex row index
+	 * @param row row
+	 * @return false to skip restore selection
+	 */
+	public boolean onRestoreSelectedItemIndexInPage(Integer keyViewValue, int rowIndex, Object row)
+	{
+		return true;
+	}
+		
 	protected AdempiereException getKeyNullException (){
 		String errorMessage = String.format("has null value at column %1$s use as key of view in info window %2$s", 
 				keyColumnOfView == null ? p_keyColumn : keyColumnOfView, infoWindow.getName());
@@ -1935,7 +1949,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	/**
 	 * Update relate info when selection in main info change
 	 */
-	protected void updateSubcontent (){};
+	protected void updateSubcontent (){ updateSubcontent(-1);};
+	
+	/**
+	 * Update relate info for a specific row, if targetRow < 0 update using selected row
+	 */
+	protected void updateSubcontent (int targetRow){};
+
 
 	/**
 	 * Reset parameter to default value or to empty value? implement at
