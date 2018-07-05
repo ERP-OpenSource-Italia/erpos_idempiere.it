@@ -2245,11 +2245,76 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					
 	}
 	
-	// Edit Callback method and original values management 
+	// Edit Callback method and original values management
+	
+	public Properties getRowaAsCtx(int row, int editingColumn, Object editingValue)
+	{
+		ListModelTable model = contentPanel.getModel();
+		Properties ctx = new Properties(Env.getCtx()); // Allow session values
+		
+		// Parameter dditors
+		
+		for(WEditor e:editors)
+		{
+			Object val = e.getValue();
+			String column = e.getColumnName();
+			
+			if(val != null)
+			{
+				if(val instanceof Integer)
+					Env.setContext(ctx, 0, column, (Integer)val);
+				else if(val instanceof Timestamp)
+					Env.setContext(ctx, 0, column, (Timestamp)val);
+				else if(val instanceof Boolean)
+					Env.setContext(ctx, 0, column, (Boolean)val);
+				else
+					Env.setContext(ctx, 0, column, val.toString());
+			}
+		}
+		
+		for(int i=0; i < p_layout.length; i++)			
+		{			
+			String column = p_layout[i].getColumnName();
+					
+			Object val = null;
+			
+			if(i != editingColumn)
+				val = model.getValueAt(row, i);
+			else
+				val = editingValue;
+			
+			// Get id from 'complex' types
+			
+			if(val != null)
+			{				
+				if(val instanceof IDColumn)
+				{
+					IDColumn idc = (IDColumn)val;
+					val = idc.getRecord_ID();
+				}
+				else if(val instanceof KeyNamePair)
+				{
+					KeyNamePair knp = (KeyNamePair)val;
+					val = knp.getKey();
+				}
+								
+				if(val instanceof Integer)
+					Env.setContext(ctx, 0, column, (Integer)val);
+				else if(val instanceof Timestamp)
+					Env.setContext(ctx, 0, column, (Timestamp)val);
+				else if(val instanceof Boolean)
+					Env.setContext(ctx, 0, column, (Boolean)val);
+				else
+					Env.setContext(ctx, 0, column, val.toString());
+			}				
+		}
+		
+		return ctx;
+	}
 	
 	public void onCellEditCallback(ValueChangeEvent event, int rowIndex, int colIndex, WEditor editor, GridField field)
 	{		
-		Object val = event.getNewValue();			
+		Object val = event.getNewValue();
 	
 		if(val != null && columnInfos[colIndex].getColClass().equals(KeyNamePair.class))
 		{
@@ -2260,17 +2325,71 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			val = kdc;
 		}
 		
-		// Editing a row delesects it, make sure it stays selected
+		MInfoColumn infoColumn = infoColumns[colIndex - 1];
+		boolean changeIsValid = true;
+		String validationSQL = null;
 		
-		ListModelTable model = contentPanel.getModel();
-		Object row = model.get(rowIndex);
+		if(!Util.isEmpty(infoColumn.getInputFieldValidation(), true)) // Run validation
+		{
+			changeIsValid = false;
+			
+			Properties ctx = getRowaAsCtx(rowIndex, colIndex, val);
+			
+			String rawSQL = infoColumn.getInputFieldValidation(); 
+			validationSQL = Env.parseContext(ctx, 0, rawSQL, false);
+			
+			try
+			{
+				List<List<Object>> errors = DB.getSQLArrayObjectsEx(null, validationSQL);
+			
+				if(errors != null && errors.size() > 0)
+				{
+					StringBuilder sbError = new StringBuilder();
+
+					for(List<Object> line:errors)
+					{
+						if(line.size() > 0)
+						{
+							if(sbError.length() > 0)
+								sbError.append('\n');
+							
+							sbError.append(line.get(0));
+						}
+					}
+					
+					String msg = Msg.translate(ctx, sbError.toString());
+					FDialog.error(0, this, "ValidationError", msg); // TODO messaggio
+				}
+				else	
+					changeIsValid = true;
+			}
+			catch(Exception e)
+			{
+				log.log(Level.SEVERE, "Error executing validation SQL: " + validationSQL, e);
+				
+				FDialog.error(0, this, "Error", validationSQL); // TODO messaggio
+				changeIsValid = false;
+			}
+		}
 		
-		// Since the row object is a collection, we can update it safely, but the hash code will be different from the one stored
-		// in the selection. So we need to remove and re-add the row after to keep the selection in sync
-		
-		model.removeFromSelection(row);
-		contentPanel.setValueAt(val, rowIndex, colIndex);		
-		model.addToSelection(row);
+		if(changeIsValid)
+		{		
+			// Editing a row delesects it, make sure it stays selected
+			
+			ListModelTable model = contentPanel.getModel();
+			Object row = model.get(rowIndex);
+			
+			// Since the row object is a collection, we can update it safely, but the hash code will be different from the one stored
+			// in the selection. So we need to remove and re-add the row after to keep the selection in sync
+			
+			model.removeFromSelection(row);
+			contentPanel.setValueAt(val, rowIndex, colIndex);		
+			model.addToSelection(row);
+		}
+		else
+		{
+			editor.setValue(event.getOldValue());
+		}
 	}
 	
 	protected void restoreOriginalValues(int rowIndex)

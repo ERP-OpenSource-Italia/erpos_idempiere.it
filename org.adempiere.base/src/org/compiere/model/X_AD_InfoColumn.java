@@ -30,7 +30,7 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20170306L;
+	private static final long serialVersionUID = 20180705L;
 
     /** Standard Constructor */
     public X_AD_InfoColumn (Properties ctx, int AD_InfoColumn_ID, String trxName)
@@ -43,9 +43,11 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 			setAD_Reference_ID (0);
 			setColumnName (null);
 			setEntityType (null);
-// U
+// @F3PX_Default_EntityType:U@
 			setIsCentrallyMaintained (true);
 // Y
+			setIsDefaultQueryCriteria (false);
+// N
 			setIsDisplayed (true);
 // Y
 			setIsIdentifier (false);
@@ -53,6 +55,8 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 			setIsMandatory (false);
 // N
 			setIsQueryCriteria (false);
+			setIsReadOnly (true);
+// Y
 			setName (null);
 			setSelectClause (null);
 			setSeqNo (0);
@@ -370,6 +374,23 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 		return (String)get_Value(COLUMNNAME_Help);
 	}
 
+	/** Set Input field validation.
+		@param InputFieldValidation 
+		Input field validaton query
+	  */
+	public void setInputFieldValidation (String InputFieldValidation)
+	{
+		set_Value (COLUMNNAME_InputFieldValidation, InputFieldValidation);
+	}
+
+	/** Get Input field validation.
+		@return Input field validaton query
+	  */
+	public String getInputFieldValidation () 
+	{
+		return (String)get_Value(COLUMNNAME_InputFieldValidation);
+	}
+
 	/** Set Centrally maintained.
 		@param IsCentrallyMaintained 
 		Information maintained in System Element table
@@ -434,31 +455,6 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 		{
 			 if (oo instanceof Boolean) 
 				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-	
-	/**
-	 * Set Read Only.
-	 * 
-	 * @param IsReadOnly
-	 * Determines, if this field is Read Only
-	 */
-	public void setIsReadOnly(boolean IsReadOnly) {
-		set_Value(COLUMNNAME_IsReadOnly, Boolean.valueOf(IsReadOnly));
-	}
-
-	/**
-	 * Get Read Only.
-	 * 
-	 * @return Determines, if this field is Read Only
-	 */
-	public boolean isReadOnly() {
-		Object oo = get_Value(COLUMNNAME_IsReadOnly);
-		if (oo != null) {
-			if (oo instanceof Boolean)
-				return ((Boolean) oo).booleanValue();
 			return "Y".equals(oo);
 		}
 		return false;
@@ -551,6 +547,30 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 	public boolean isQueryCriteria () 
 	{
 		Object oo = get_Value(COLUMNNAME_IsQueryCriteria);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Read Only.
+		@param IsReadOnly 
+		Field is read only
+	  */
+	public void setIsReadOnly (boolean IsReadOnly)
+	{
+		set_Value (COLUMNNAME_IsReadOnly, Boolean.valueOf(IsReadOnly));
+	}
+
+	/** Get Read Only.
+		@return Field is read only
+	  */
+	public boolean isReadOnly () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsReadOnly);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 
