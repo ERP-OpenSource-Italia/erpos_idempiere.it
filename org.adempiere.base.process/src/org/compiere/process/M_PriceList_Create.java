@@ -257,7 +257,7 @@ public class M_PriceList_Create extends SvrProcess {
 		sql = new StringBuilder("SELECT p.C_Currency_ID  , c.StdPrecision ");
 						sql.append(" , v.AD_Client_ID  , v.AD_Org_ID  , v.UpdatedBy ");
 						sql.append(" , v.M_DiscountSchema_ID ");
-						sql.append(" , M_PriceList_Version_Base_ID  FROM	M_PriceList p ");
+						sql.append(" , M_PriceList_Version_Base_ID, p.PricePrecision as PriceListPrecision  FROM	M_PriceList p ");
 						sql.append("     ,M_PriceList_Version v      ,C_Currency c ");
 						sql.append(" WHERE	p.M_PriceList_ID = v.M_PriceList_ID ");
 						sql.append(" AND	    p.C_Currency_ID  = c.C_Currency_ID");
@@ -277,6 +277,7 @@ public class M_PriceList_Create extends SvrProcess {
 				// For All Discount Lines in Sequence
 				//
 				int precision = rsCurgen.getInt("StdPrecision");
+				int priceListPrecision = rsCurgen.getInt("PriceListPrecision"); // F3P: precision from price list
 				sql = new StringBuilder("SELECT M_DiscountSchemaLine_ID");
 							sql.append(",AD_Client_ID,AD_Org_ID,IsActive,Created,Createdby,Updated,Updatedby"); 
 							sql.append(",M_DiscountSchema_ID,SeqNo,M_Product_Category_ID,C_Bpartner_ID,M_Product_ID");
@@ -809,7 +810,7 @@ public class M_PriceList_Create extends SvrProcess {
 						String	sqlupdCLP = "UPDATE	M_ProductPrice p "
 								+ " SET	PriceList = DECODE('"
 								+ rsDiscountLine.getString("List_Rounding") + "',"
-								+ " 'N', PriceList, " 
+								+ " 'N', ROUND(PriceList, " + priceListPrecision + "), " // F3P: no rounding == price list precision rounding 
 								+ " '0', ROUND(PriceList, 0)," //Even .00
 								+ " 'D', ROUND(PriceList, 1)," //Dime .10
 								+ " 'T', ROUND(PriceList, -1), " //Ten 10.00
@@ -967,7 +968,7 @@ public class M_PriceList_Create extends SvrProcess {
 					sqlupd = new StringBuilder("UPDATE	M_ProductPrice p ");
 								 sqlupd.append(" SET PriceList = DECODE('");
 								 sqlupd.append(rsDiscountLine.getString("List_Rounding")).append("',");
-								 sqlupd.append(" 'N', PriceList, ");
+								 sqlupd.append(" 'N', ROUND(PriceList, " + priceListPrecision + "), ");
 								 sqlupd.append(" '0', ROUND(PriceList, 0),"); //Even .00
 								 sqlupd.append(" 'D', ROUND(PriceList, 1),"); //Dime .10
 								 sqlupd.append(" 'T', ROUND(PriceList, -1), "); //Ten 10.00
@@ -979,7 +980,7 @@ public class M_PriceList_Create extends SvrProcess {
 							 	 sqlupd.append(" ROUND(PriceList, ").append(precision);
 							 	 sqlupd.append(")),");//Currency
 							 	 sqlupd.append(" PriceStd = DECODE('").append(rsDiscountLine.getString("Std_Rounding"));
-							 	 sqlupd.append("',").append(" 'N', PriceStd, ");
+							 	 sqlupd.append("',").append(" 'N', ROUND(PriceStd, " + priceListPrecision + "), ");
 							 	 sqlupd.append(" '0', ROUND(PriceStd, 0), "); //Even .00
 							 	 sqlupd.append(" 'D', ROUND(PriceStd, 1), "); //Dime .10
 							 	 sqlupd.append("'T', ROUND(PriceStd, -1),"); //Ten 10.00)
@@ -991,7 +992,7 @@ public class M_PriceList_Create extends SvrProcess {
 						 	 	 sqlupd.append("ROUND(PriceStd, ").append(precision).append(")),"); //Currency
 						 	 	 sqlupd.append("PriceLimit = DECODE('");	
 						 	 	 sqlupd.append(rsDiscountLine.getString("Limit_Rounding")).append("', ");
-						 	 	 sqlupd.append(" 		'N', PriceLimit, ");
+						 	 	 sqlupd.append(" 		'N', ROUND(PriceLimit, " + priceListPrecision + "), ");
 						 	 	 sqlupd.append(" 	'0', ROUND(PriceLimit, 0),	"); //	Even .00
 						 	 	 sqlupd.append("	'D', ROUND(PriceLimit, 1),	"); //	Dime .10
 						 	 	 sqlupd.append("	'T', ROUND(PriceLimit, -1),	"); //	Ten 10.00
