@@ -16,6 +16,7 @@ import org.compiere.model.MProductPrice;
 import org.compiere.model.PO;
 import org.compiere.model.X_M_ProductPriceVendorBreak;
 import org.compiere.util.Env;
+import org.compiere.util.Msg;
 import org.compiere.util.Util;
 
 import it.idempiere.base.util.BaseMessages;
@@ -91,7 +92,7 @@ public class CompositeDiscount
 	 * @return percentuale di sconto
 	 * @throws AdempiereException Errore di formattazione del campo
 	 */
-	public static BigDecimal parseCompositeDiscount(String composite) throws AdempiereException
+	public static BigDecimal parseCompositeDiscount(String composite, String columnName) throws AdempiereException
 	{
 		BigDecimal discount = null;
 
@@ -101,7 +102,12 @@ public class CompositeDiscount
 		}
 		catch(Exception e)
 		{
-			throw new AdempiereException("@" + BaseMessages.MSG_ERR_INVALID_COMPOSITE_DISCOUNT + "@:" + e.getMessage());
+			String translatedColumn = "-";
+			
+			if(columnName != null)
+				translatedColumn = Msg.translate(Env.getCtx(), columnName);
+			
+			throw new AdempiereException("@" + BaseMessages.MSG_ERR_INVALID_COMPOSITE_DISCOUNT + "@:" + e.getMessage() + " (" + translatedColumn + ")");
 		}
 
 		return discount;
@@ -213,7 +219,7 @@ public class CompositeDiscount
 
 		try
 		{
-			parseCompositeDiscount(compositeDsc);
+			parseCompositeDiscount(compositeDsc, column);
 		}
 		catch(AdempiereException e)
 		{
@@ -351,7 +357,7 @@ public class CompositeDiscount
 		
 		if(stdDiscount.signum() == 0 && Util.isEmpty(stdCompositeDiscountText, true) == false)
 		{
-				stdDiscount = CompositeDiscount.parseCompositeDiscount(stdCompositeDiscountText);
+				stdDiscount = CompositeDiscount.parseCompositeDiscount(stdCompositeDiscountText, COLUMNNAME_LIT_StdCompositeDisc);
 				CompositeDiscount.setLIT_StdDiscount(model,stdDiscount);
 		}
 		
@@ -379,7 +385,7 @@ public class CompositeDiscount
 			CompositeDiscount.setLIT_StdDiscount(model,stdDiscount);
 		}
 		
-		BigDecimal stdCompositeDiscount =CompositeDiscount.parseCompositeDiscount(stdCompositeDiscountText);
+		BigDecimal stdCompositeDiscount =CompositeDiscount.parseCompositeDiscount(stdCompositeDiscountText, COLUMNNAME_LIT_StdCompositeDisc);
 		
 		if(stdCompositeDiscount.compareTo(stdDiscount)!=0)
 		{
@@ -397,7 +403,7 @@ public class CompositeDiscount
 		
 		if(limitDiscount.signum() == 0 && Util.isEmpty(limitCompositeDiscountText, true) == false)
 		{
-				limitDiscount = CompositeDiscount.parseCompositeDiscount(limitCompositeDiscountText);
+				limitDiscount = CompositeDiscount.parseCompositeDiscount(limitCompositeDiscountText, COLUMNNAME_LIT_LimitCompositeDisc);
 				CompositeDiscount.setLIT_LimitDiscount(model,limitDiscount);
 		}		
 		
@@ -425,7 +431,7 @@ public class CompositeDiscount
 			CompositeDiscount.setLIT_LimitDiscount(model,limitDiscount);
 		}
 		
-		BigDecimal limitCompositeDiscount =CompositeDiscount.parseCompositeDiscount(limitCompositeDiscountText);
+		BigDecimal limitCompositeDiscount =CompositeDiscount.parseCompositeDiscount(limitCompositeDiscountText, COLUMNNAME_LIT_LimitCompositeDisc);
 
 		if(limitCompositeDiscount.compareTo(limitDiscount)!=0)
 		{

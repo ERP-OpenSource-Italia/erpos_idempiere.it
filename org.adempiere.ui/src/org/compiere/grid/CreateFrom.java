@@ -130,6 +130,10 @@ public abstract class CreateFrom implements ICreateFrom
 			sql = sql.append(" AND o.M_Warehouse_ID=? ");
 		}
 		sql = sql.append(" ORDER BY o.DateOrdered,o.DocumentNo");
+		
+		// F3P: apply filter
+		sql = filterLoadOrderDataQuery(sql, C_BPartner_ID, forInvoice, sameWarehouseOnly);
+		
 		//
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -215,6 +219,10 @@ public abstract class CreateFrom implements ICreateFrom
 				+ "l.M_Product_ID,COALESCE(p.Name,c.Name), l.Line,l.C_OrderLine_ID "
 			+ "ORDER BY l.Line");
 		//
+		
+		// F3P: apply filter
+		sql = filterGetOrderDataQuery(sql, C_Order_ID, forInvoice);
+		
 		if (log.isLoggable(Level.FINER)) log.finer(sql.toString());
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -296,5 +304,17 @@ public abstract class CreateFrom implements ICreateFrom
 	public static boolean isShowOnlyServiceOrder()
 	{
 		return STDSysConfig.isShowOnlyServiceOrder();
+	}
+	
+	// F3P: functions to filter data sql queries
+	
+	public StringBuilder filterLoadOrderDataQuery (StringBuilder sql, int C_BPartner_ID, boolean forInvoice, boolean sameWarehouseOnly)
+	{
+		return sql;
+	}
+	
+	public StringBuilder filterGetOrderDataQuery (StringBuilder sql, int C_Order_ID, boolean forInvoice)
+	{
+		return sql;
 	}
 }

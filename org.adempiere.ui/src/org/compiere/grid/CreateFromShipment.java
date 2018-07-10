@@ -39,7 +39,6 @@ import org.compiere.model.MUOM;
 import org.compiere.model.MWarehouse;
 import org.compiere.model.PO;
 import org.compiere.util.DB;
-import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
@@ -98,7 +97,10 @@ public abstract class CreateFromShipment extends CreateFrom
 			.append( "AND r.M_RMA_ID in (SELECT rl.M_RMA_ID FROM M_RMALine rl ")
 			.append( "WHERE rl.M_RMA_ID=r.M_RMA_ID AND rl.QtyDelivered < rl.Qty )") ;
 			// + "AND rl.M_InOutLine_ID IS NOT NULL)"; F3P: removed for match 'Returns' without M_InOutLine
-
+		
+		// F3P: apply filter
+		
+		sqlStmt = filterLoadRMADataQuery(sqlStmt, C_BPartner_ID);
 
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -142,7 +144,7 @@ public abstract class CreateFromShipment extends CreateFrom
 		//
 		//StringBuffer sql = new StringBuffer("SELECT i.C_Invoice_ID,").append(display)
 		//	.append(" FROM C_Invoice i ")
-		StringBuffer sql = new StringBuffer(display)
+		StringBuilder sql = new StringBuilder(display)
 			.append( "WHERE i.C_BPartner_ID=? AND i.IsSOTrx='N' AND i.DocStatus IN ('CL','CO')")
 			.append( " AND i.C_Invoice_ID IN ")
 			.append( "(SELECT il.C_Invoice_ID FROM C_InvoiceLine il")
@@ -153,6 +155,10 @@ public abstract class CreateFromShipment extends CreateFrom
 			.append( "HAVING (il.QtyInvoiced<>SUM(mi.Qty) AND mi.C_InvoiceLine_ID IS NOT NULL)")
 			.append( " OR mi.C_InvoiceLine_ID IS NULL) ")
 			.append( "ORDER BY i.DateInvoiced");
+		
+		// F3P: apply filter
+		
+		sql = filterLoadInvoiceData(sql, C_BPartner_ID);
 
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -235,6 +241,10 @@ public abstract class CreateFromShipment extends CreateFrom
 		.append( "p.Value,l.Description," )//F3P: see above note 2
 		.append( "COALESCE(p.Name,c.Name), l.Line,l.C_OrderLine_ID ")
 		.append( "ORDER BY l.Line");
+		
+		// F3P: apply filter
+		sql = filterGetOrderDataQuery(sql, C_Order_ID, forInvoice);
+		
 		//
 		if (log.isLoggable(Level.FINER)) log.finer(sql.toString());
 		PreparedStatement pstmt = null;
@@ -348,6 +358,10 @@ public abstract class CreateFromShipment extends CreateFrom
 	    sqlStmt.append("WHERE rl.M_RMA_ID=? ");
 	    sqlStmt.append("AND rl.C_Charge_ID IS NOT NULL AND rl.M_InOutLine_ID IS NULL");
 	    sqlStmt.append(" ORDER BY 2");
+	    
+	    // F3P: apply filter
+	    
+	    sqlStmt = filterGetRMADataQuery(sqlStmt, M_RMA_ID);
      
 	    PreparedStatement pstmt = null;
 	    ResultSet rs = null;
@@ -431,6 +445,10 @@ public abstract class CreateFromShipment extends CreateFrom
 				.append( "p.Name, po.VendorProductNo, l.C_InvoiceLine_ID,l.Line,l.C_OrderLine_ID ")
 
 				.append("ORDER BY l.Line");
+		
+		// F3P: apply filter
+		sql = filterGetInvoiceData(sql, C_Invoice_ID);
+		
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
@@ -825,5 +843,26 @@ public abstract class CreateFromShipment extends CreateFrom
 		defaultLocator_ID = M_Locator_ID;
 		return getInvoiceData (C_Invoice_ID);
 	}
+	
+	// F3P: functions to filter data sql queries
+	
+	public StringBuilder filterLoadRMADataQuery(StringBuilder sql, int C_BPartner_ID)
+	{
+		return sql;
+	}
+	
+	public StringBuilder filterGetRMADataQuery(StringBuilder sql, int M_RMA_ID)
+	{
+		return sql;
+	}
 
+	public StringBuilder filterLoadInvoiceData(StringBuilder sql, int C_BPartner_ID)
+	{
+		return sql;
+	}
+		
+	public StringBuilder filterGetInvoiceData(StringBuilder sql, int C_Invoice_ID)
+	{
+		return sql;
+	}
 }
