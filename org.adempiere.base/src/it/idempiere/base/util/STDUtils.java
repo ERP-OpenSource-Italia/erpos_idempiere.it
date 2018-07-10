@@ -512,4 +512,21 @@ public class STDUtils {
 		return po.getAD_Org_ID();
 	}
 	
+	/** Calcola il valore propozionale:
+	 * 
+	 * x : toScale = propResult : propScale
+	 * 
+	 * X = (toScale * propResult) / propScale
+	 * 
+	 * @param toScale
+	 * @param propResult
+	 * @param propScale
+	 * @return
+	 */
+	public BigDecimal proportionallValue(BigDecimal toScale, BigDecimal propResult, BigDecimal propScale, int scale)
+	{
+		BigDecimal mult = toScale.multiply(propResult);
+	
+		return mult.divide(propScale, scale, RoundingMode.HALF_UP);
+	}	
 }

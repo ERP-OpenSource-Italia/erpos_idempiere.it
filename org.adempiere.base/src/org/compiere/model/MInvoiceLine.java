@@ -26,6 +26,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.adempiere.base.Core;
+import org.adempiere.base.IProductPricing;
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.model.ITaxProvider;
 import org.compiere.util.CLogger;
@@ -33,6 +34,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.LineDocumentDiscount;
+import it.idempiere.base.util.ProductPricing2Support;
 import it.idempiere.base.util.STDSysConfig;
 
 
@@ -179,7 +182,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	/** Cached Precision			*/
 	private Integer		m_precision = null;
 	/** Product Pricing				*/
-	private MProductPricing	m_productPricing = null;
+	private IProductPricing	m_productPricing = null;
 	/** Parent						*/
 	private MInvoice	m_parent = null;
 	
@@ -411,21 +414,15 @@ public class MInvoiceLine extends X_C_InvoiceLine
 			return;
 		//
 		if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_ID=" + M_PriceList_ID);
-		m_productPricing = new MProductPricing (getM_Product_ID(),
-			C_BPartner_ID, getQtyInvoiced(), m_IsSOTrx, get_TrxName());
+		m_productPricing = Core.getProductPricing();
+		m_productPricing.setInvoiceLine(this, get_TrxName());
 		m_productPricing.setM_PriceList_ID(M_PriceList_ID);
-		m_productPricing.setPriceDate(m_DateInvoiced);
-		
-		// F3P: integrated line uom and date fpr ppvb
-		m_productPricing.setDatePPVB(m_DateInvoiced); 
-		m_productPricing.setLineC_UOM_ID(getC_UOM_ID());
-		m_productPricing.setLineObject(this);
 		
 		m_productPricing.calculatePrice();
 		setPriceList (m_productPricing.getPriceList());
 		setPriceLimit (m_productPricing.getPriceLimit());
 
-		if(m_productPricing.isSelectedPriceUOM(getC_UOM_ID()) == false)
+		if(ProductPricing2Support.isSelectedPriceUOM(m_productPricing, getC_UOM_ID()) == false)
 		{
 			//
 			setPriceActual (m_productPricing.getPriceStd());
@@ -587,6 +584,16 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		int precision = getPrecision();
 		if (bd.scale() > precision)
 			bd = bd.setScale(precision, BigDecimal.ROUND_HALF_UP);
+		
+		// F3P: doc discount
+		
+		BigDecimal bdDocDiscount = LineDocumentDiscount.getLIT_LineDocDiscVal(this);
+		
+		if(bdDocDiscount != null)
+		{
+			bd = bd.subtract(bdDocDiscount);
+		}
+		
 		super.setLineNetAmt (bd);
 	}	//	setLineNetAmt
 	/**

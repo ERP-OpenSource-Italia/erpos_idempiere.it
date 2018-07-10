@@ -5,6 +5,7 @@ External Plug-in Libraries
 org.eclipse.jetty.http/bin
 alpn-boot.jar
 tmp
+migdiff.txt
 reports/*
 templates/*
 syntax: regexp

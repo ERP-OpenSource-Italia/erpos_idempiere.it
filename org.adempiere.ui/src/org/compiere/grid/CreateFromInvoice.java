@@ -94,7 +94,7 @@ public abstract class CreateFromInvoice extends CreateFrom
 		StringBuffer display = new StringBuffer("s.DocumentNo||' - '||")
 			.append(DB.TO_CHAR("s.MovementDate", DisplayType.Date, Env.getAD_Language(Env.getCtx())));
 		//
-		StringBuffer sql = new StringBuffer("SELECT s.M_InOut_ID,").append(display)
+		StringBuilder sql = new StringBuilder("SELECT s.M_InOut_ID,").append(display)
 			.append(" FROM M_InOut s "
 			+ "WHERE s.C_BPartner_ID=? AND s.IsSOTrx=? AND s.DocStatus IN ('CL','CO')"
 			+ " AND s.M_InOut_ID IN "
@@ -118,6 +118,10 @@ public abstract class CreateFromInvoice extends CreateFrom
 					.append(" GROUP BY sl.M_InOutLine_ID")
 					.append(" HAVING sl.MovementQty - sum(COALESCE(il.QtyInvoiced,0)) > 0");
 			sql.append(") ORDER BY s.MovementDate");
+			
+		// F3P: apply filter query
+		sql = filterLoadShipmentDataQuery(sql, C_BPartner_ID);
+			
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
@@ -160,6 +164,9 @@ public abstract class CreateFromInvoice extends CreateFrom
 				+ "AND r.C_BPartner_ID=? "
 				+ "AND NOT EXISTS (SELECT * FROM C_Invoice inv "
 				+ "WHERE inv.M_RMA_ID=r.M_RMA_ID AND inv.DocStatus IN ('CO', 'CL'))";
+		
+		// F3P: apply filter query
+		sqlStmt = filterLoadRMADataQuery(sqlStmt, C_BPartner_ID);
 
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -236,6 +243,10 @@ public abstract class CreateFromInvoice extends CreateFrom
 		else
 			sql.append(" HAVING l.MovementQty-SUM(COALESCE(il.QtyInvoiced,0)) <>0");
 		sql.append("ORDER BY l.Line");
+		
+		// F3P: apply filter query
+		sql = filterGetShipmentDataQuery(sql, M_InOut_ID);				
+		
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
@@ -324,6 +335,9 @@ public abstract class CreateFromInvoice extends CreateFrom
         }
 	    sqlStmt.append("WHERE rl.M_RMA_ID=? ");
 	    sqlStmt.append("AND rl.C_Charge_ID IS NOT NULL");
+	    
+	    // F3P: apply filter
+	    sqlStmt = filterGetRMADataQuery(sqlStmt, M_RMA_ID);
 
 	    PreparedStatement pstmt = null;
 	    ResultSet rs = null;
@@ -654,5 +668,26 @@ public abstract class CreateFromInvoice extends CreateFrom
 
 	    return columnNames;
 	}
-
+	
+	// F3P: functions to filter data sql queries
+	
+	public StringBuilder filterLoadShipmentDataQuery(StringBuilder sql, int C_BPartner_ID)
+	{
+		return sql;
+	}
+	
+	public String filterLoadRMADataQuery(String sql, int C_BPartner_ID)
+	{
+		return sql;
+	}
+	
+	public StringBuilder filterGetShipmentDataQuery(StringBuilder sql, int M_InOut_ID)
+	{
+		return sql;
+	}
+	
+	public StringBuilder filterGetRMADataQuery(StringBuilder sql, int M_RMA_ID)
+	{
+		return sql;
+	}
 }

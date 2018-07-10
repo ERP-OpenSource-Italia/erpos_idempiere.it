@@ -24,6 +24,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.adempiere.base.Core;
+import org.adempiere.base.IProductPricing;
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.ProductNotOnPriceListException;
 import org.adempiere.model.ITaxProvider;
@@ -32,6 +33,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.LineDocumentDiscount;
+import it.idempiere.base.util.ProductPricing2Support;
 import it.idempiere.base.util.STDSysConfig;
 
 /**
@@ -199,7 +202,7 @@ public class MOrderLine extends X_C_OrderLine
 	//
 	protected boolean			m_IsSOTrx = true;
 	//	Product Pricing
-	protected MProductPricing	m_productPrice = null;
+	protected IProductPricing	m_productPrice = null;
 
 	/** Tax							*/
 	protected MTax 		m_tax = null;
@@ -310,7 +313,7 @@ public class MOrderLine extends X_C_OrderLine
 		setPriceLimit (m_productPrice.getPriceLimit());
 		//
 		
-		if(m_productPrice.isSelectedPriceUOM(getC_UOM_ID()) == false)
+		if(ProductPricing2Support.isSelectedPriceUOM(m_productPrice, getC_UOM_ID()) == false)		
 		{
 			//
 			setPriceActual (m_productPrice.getPriceStd());
@@ -355,17 +358,11 @@ public class MOrderLine extends X_C_OrderLine
 	 *	@param M_PriceList_ID id
 	 *	@return product pricing
 	 */
-	protected MProductPricing getProductPricing (int M_PriceList_ID)
+	protected IProductPricing getProductPricing (int M_PriceList_ID)
 	{
-		m_productPrice = new MProductPricing (getM_Product_ID(), 
-			getC_BPartner_ID(), getQtyOrdered(), m_IsSOTrx, get_TrxName());
+		m_productPrice = Core.getProductPricing();
+		m_productPrice.setOrderLine(this, get_TrxName());
 		m_productPrice.setM_PriceList_ID(M_PriceList_ID);
-		m_productPrice.setPriceDate(getDateOrdered());
-		
-		// F3P: integrated line uom and date fpr ppvb
-		m_productPrice.setDatePPVB(getDateOrdered()); 
-		m_productPrice.setLineC_UOM_ID(getC_UOM_ID());
-		m_productPrice.setLineObject(this);
 		
 		//
 		m_productPrice.calculatePrice();
@@ -445,6 +442,16 @@ public class MOrderLine extends X_C_OrderLine
 		int precision = getPrecision();
 		if (bd.scale() > precision)
 			bd = bd.setScale(precision, BigDecimal.ROUND_HALF_UP);
+		
+		// F3P: doc discount
+		
+		BigDecimal bdDocDiscount = LineDocumentDiscount.getLIT_LineDocDiscVal(this);
+		
+		if(bdDocDiscount != null)
+		{
+			bd = bd.subtract(bdDocDiscount);
+		}
+		
 		super.setLineNetAmt (bd);
 	}	//	setLineNetAmt
 	
@@ -811,7 +818,8 @@ public class MOrderLine extends X_C_OrderLine
 		int				 iPriceScale = getParent().getM_PriceList().getPricePrecision(); // bdPriceActual.scale();
 		BigDecimal bdPrice = getPriceActual();
 		
-		if(m_productPrice != null && m_productPrice.isSelectedPriceUOM(getC_UOM_ID()))
+		if(m_productPrice != null &&
+				ProductPricing2Support.isSelectedPriceUOM(m_productPrice, getC_UOM_ID()))
 		{
 			bdPrice = getPriceEntered(); // Stessa unita di misura, usiamo entered per evitare il calcolo errato dello sconto (entered e' in uom del prodotto)
 		}
@@ -1187,7 +1195,7 @@ public class MOrderLine extends X_C_OrderLine
 	{
 		if (!success)
 			return success;
-		if (getParent().isProcessed())
+		if (getParent().isProcessed() || getParent().isLinesOpInProgress()) // F3P: if lines operations are in progress, dont update tax. Will be re-generated ad ops complete
 			return success;
 		if (   newRecord
 			|| is_ValueChanged(MOrderLine.COLUMNNAME_C_Tax_ID)
