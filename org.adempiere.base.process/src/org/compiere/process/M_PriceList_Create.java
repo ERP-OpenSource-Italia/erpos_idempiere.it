@@ -497,7 +497,7 @@ public class M_PriceList_Create extends SvrProcess {
 					{
 						if(Util.isEmpty(sStdCompositeDisc,true) == false)
 						{
-							sbDiscSelectFragment.append(CompositeDiscount.parseCompositeDiscount(sStdCompositeDisc));
+							sbDiscSelectFragment.append(CompositeDiscount.parseCompositeDiscount(sStdCompositeDisc, CompositeDiscount.COLUMNNAME_LIT_StdCompositeDisc));
 						}
 						else
 						{
@@ -522,7 +522,7 @@ public class M_PriceList_Create extends SvrProcess {
 					{
 						if(Util.isEmpty(sLimitCompositeDisc,true) == false)
 						{
-							sbDiscSelectFragment.append(CompositeDiscount.parseCompositeDiscount(sLimitCompositeDisc));
+							sbDiscSelectFragment.append(CompositeDiscount.parseCompositeDiscount(sLimitCompositeDisc, CompositeDiscount.COLUMNNAME_LIT_LimitCompositeDisc));
 						}
 						else
 						{
