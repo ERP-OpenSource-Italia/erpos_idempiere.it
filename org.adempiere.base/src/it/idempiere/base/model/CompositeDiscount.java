@@ -102,7 +102,11 @@ public class CompositeDiscount
 		}
 		catch(Exception e)
 		{
-			String translatedColumn = Msg.translate(Env.getCtx(), columnName);
+			String translatedColumn = "-";
+			
+			if(columnName != null)
+				translatedColumn = Msg.translate(Env.getCtx(), columnName);
+			
 			throw new AdempiereException("@" + BaseMessages.MSG_ERR_INVALID_COMPOSITE_DISCOUNT + "@:" + e.getMessage() + " (" + translatedColumn + ")");
 		}
 
