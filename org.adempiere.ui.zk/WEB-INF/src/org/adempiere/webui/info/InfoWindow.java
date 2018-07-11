@@ -3,13 +3,13 @@
  */
 package org.adempiere.webui.info;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +18,8 @@ import java.util.Properties;
 import java.util.TreeMap;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.impexp.AbstractExcelExporter;
 import org.adempiere.model.IInfoColumn;
 import org.adempiere.model.MInfoProcess;
 import org.adempiere.model.MInfoRelated;
@@ -54,6 +56,7 @@ import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.event.ValueChangeListener;
 import org.adempiere.webui.event.WTableModelEvent;
+import org.adempiere.webui.factory.ButtonFactory;
 import org.adempiere.webui.grid.WQuickEntry;
 import org.adempiere.webui.panel.InfoPanel;
 import org.adempiere.webui.session.SessionManager;
@@ -68,6 +71,7 @@ import org.compiere.model.AccessSqlParser.TableInfo;
 import org.compiere.model.GridField;
 import org.compiere.model.GridFieldVO;
 import org.compiere.model.GridWindow;
+import org.compiere.model.Lookup;
 import org.compiere.model.MInfoColumn;
 import org.compiere.model.MInfoWindow;
 import org.compiere.model.MLookupFactory;
@@ -82,8 +86,10 @@ import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
+import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
+import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.au.out.AuEcho;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Page;
@@ -98,6 +104,7 @@ import org.zkoss.zul.Checkbox;
 import org.zkoss.zul.Comboitem;
 import org.zkoss.zul.ComboitemRenderer;
 import org.zkoss.zul.Div;
+import org.zkoss.zul.Filedownload;
 import org.zkoss.zul.ListModelList;
 import org.zkoss.zul.Listitem;
 import org.zkoss.zul.Menuitem;
@@ -153,6 +160,10 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	private boolean hasEditable = false;
 	private Map<Integer, List<Object>> cacheOriginalValues = new HashMap<>();
 	private Map<Integer, List<Object>> temporarySelectedData = new HashMap<>(); 
+	
+	// F3P: export 
+	
+	private Button exportButton = null;
 
 	/**
 	 * Menu contail process menu item
@@ -247,6 +258,9 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			}			
 		}
 		
+		// F3P: add export button
+		
+		initExport();
 	}
 	
 	/** 
@@ -2457,36 +2471,17 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 		super.tableChanged(event);
 	}
-
+	
 	@Override
 	public void onQueryCallback(Event event)
 	{
-		if(isQueryByUser && hasEditable)
-		{
-			cacheOriginalValues.clear();
-			
-			temporarySelectedData = new HashMap<>();
-			
-			// The list contents (rows) will be cleared during query, so we need a backup to restore the in-edit data
-			
-			for(Entry<Integer, List<Object>> entry: recordSelectedData.entrySet())
-			{
-				ArrayList<Object> clonedRow = new ArrayList<>(entry.getValue());				
-				temporarySelectedData.put(entry.getKey(), clonedRow);
-			}			
-		}
-		
 		super.onQueryCallback(event);
 		
-		if(temporarySelectedData != null)
-		{
-			temporarySelectedData.clear();
-			temporarySelectedData = null;
-		}		
+		enableExportButton();
 	}
 	
 	@Override
-	public void sort(Comparator<Object> cmpr, boolean ascending) 
+	protected void updateListSelected()
 	{
 		if(hasEditable)
 		{
@@ -2511,16 +2506,23 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				ArrayList<Object> clonedRow = new ArrayList<>(entry.getValue());				
 				temporarySelectedData.put(entry.getKey(), clonedRow);
 			}						
-		}
-		
-		super.sort(cmpr, ascending);
+		}		
 
+		super.updateListSelected();
+	}
+
+	@Override
+	protected void restoreSelectedInPage()
+	{
+		super.restoreSelectedInPage();
+		
 		if(temporarySelectedData != null)
 		{
 			temporarySelectedData.clear();
 			temporarySelectedData = null;
 		}		
 	}
+
 
 	@Override
 	public boolean onRestoreSelectedItemIndexInPage(Integer keyViewValue, int rowIndex, Object oRow)
@@ -2560,5 +2562,189 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		return super.onRestoreSelectedItemIndexInPage(keyViewValue, rowIndex, oRow);
 	}
 	
+	// F3P: Export function
 	
+	protected void initExport()
+	{
+    exportButton = ButtonFactory.createNamedButton("Export", false, true);        
+    exportButton.setId("Export");
+    exportButton.setEnabled(false);       
+    exportButton.addEventListener(Events.ON_CLICK, new XlsExportAction());
+
+    confirmPanel.addComponentsLeft(exportButton);
+	}
+
+	protected void enableExportButton()
+	{
+		if(exportButton == null)
+			return;
+		
+		exportButton.setEnabled(contentPanel.getRowCount() > 0);		
+	}
+	
+	private class XlsExportAction implements EventListener<Event>
+	{		
+		@Override
+		public void onEvent(Event evt) throws Exception
+		{
+			if(evt.getTarget() == exportButton)
+			{
+				XlsExporter exporter = new XlsExporter();
+				
+				exporter.doExport();
+			}
+		}
+	}
+	
+	private class XlsExporter extends AbstractExcelExporter
+	{
+		private ResultSet m_rs = null;
+		private int rowCount = -1;
+		private int currentRow = -1;
+		
+		public void doExport() throws Exception
+		{
+			int originalCount = m_count;
+			
+			String dataSql = buildDataSQL(0, 0);
+			
+			File file = File.createTempFile("Export", ".xls");
+			
+			testCount();
+			
+			rowCount = m_count;
+			m_count = originalCount;				
+			
+			if(rowCount > 0)
+			{
+				PreparedStatement pstmt = null;
+				Trx trx = null;
+				
+				try
+				{
+					String trxName = Trx.createTrxName("InfoPanelLoad:");
+					trx  = Trx.get(trxName, true);
+					trx.setDisplayName(getClass().getName()+"_exportXls");
+					pstmt = DB.prepareStatement(dataSql, trxName);
+					setParameters (pstmt, false);	//	no count
+
+					pstmt.setFetchSize(100);
+					m_rs = pstmt.executeQuery();
+
+					export(file, null);
+				}
+				catch(SQLException e)
+				{
+					log.log(Level.SEVERE, dataSql, e);
+				}
+				finally
+				{
+					DB.close(m_rs, pstmt);
+					trx.close();
+					
+					m_rs = null;
+					currentRow = -1;
+				}
+				
+				AMedia media = null;
+				media = new AMedia(file.getName(), null, "application/vnd.ms-excel", file, true);
+				Filedownload.save(media);
+			}			
+		}
+
+		@Override
+		public boolean isFunctionRow()
+		{
+			return false;
+		}
+
+		@Override
+		public int getColumnCount()
+		{			
+			return columnInfos.length;
+		}
+
+		@Override
+		public int getRowCount()
+		{
+			return rowCount;
+		}
+
+		@Override
+		protected void setCurrentRow(int row)
+		{
+			if(row > currentRow)
+			{
+				try
+				{
+					m_rs.next();
+					currentRow = row;
+				}
+				catch(SQLException e)
+				{
+					throw new AdempiereException(e);
+				}
+			}
+		}
+
+		@Override
+		protected int getCurrentRow()
+		{
+			return currentRow;
+		}
+
+		@Override
+		public boolean isColumnPrinted(int col)
+		{
+			return (columnInfos[col].getGridField() != null);
+		}
+
+		@Override
+		public String getHeaderName(int col)
+		{			
+			return columnInfos[col].getColHeader();
+		}
+
+		@Override
+		public int getDisplayType(int row, int col)
+		{
+			int displayType = -1;
+			GridField gridField = columnInfos[col].getGridField();
+			displayType = gridField.getDisplayType();
+						
+			return displayType;
+		}
+
+		@Override
+		public Object getValueAt(int row, int col)
+		{
+			Object val = null;
+			
+			try
+			{
+				val = m_rs.getObject(col + 1); // Col are zero-based, while resultset col are 1 based
+			}
+			catch(SQLException e)
+			{
+				throw new AdempiereException(e);
+			}
+			
+			GridField gridField = columnInfos[col].getGridField();
+			
+			Lookup lookup = gridField.getLookup();
+
+			if (lookup != null)
+			{
+				val = lookup.getDisplay(val);
+			}
+			
+			return val; 
+		}
+
+		@Override
+		public boolean isPageBreak(int row, int col)
+		{
+			return false;
+		}		
+	}	
 }
