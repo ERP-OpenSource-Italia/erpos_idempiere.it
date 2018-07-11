@@ -2399,6 +2399,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			model.removeFromSelection(row);
 			contentPanel.setValueAt(val, rowIndex, colIndex);		
 			model.addToSelection(row);
+			
+			Clients.resize(contentPanel);
 		}
 		else
 		{
@@ -2467,6 +2469,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					}
 				}
 			}
+			
+			Clients.resize(contentPanel);
 		}
 
 		super.tableChanged(event);
@@ -2479,6 +2483,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		
 		enableExportButton();
 	}
+		
 	
 	@Override
 	protected void updateListSelected()
