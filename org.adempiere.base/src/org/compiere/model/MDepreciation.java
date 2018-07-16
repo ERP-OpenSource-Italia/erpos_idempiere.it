@@ -10,7 +10,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.adempiere.exceptions.AdempiereException;
-import org.compiere.model.Query;
 import org.compiere.util.CCache;
 import org.compiere.util.CLogMgt;
 import org.compiere.util.CLogger;
@@ -523,12 +522,21 @@ public class MDepreciation extends X_A_Depreciation
 				//					calEnd = TimeUtil.getCalendar(dateAcct);
 				
 				//F3P: Fix per anno fiscale diverso dall'anno solare
-				MPeriod periodStart = MPeriod.get(getCtx(), wk.getAsset(false).getAssetServiceDate(), getAD_Org_ID());
-				MPeriod periodEnd = MPeriod.get(getCtx(), dateAcct, getAD_Org_ID());
+				Timestamp assetServiceDate = wk.getAsset(false).getAssetServiceDate();
+				
+				if(assetServiceDate == null)
+					throw new AdempiereException("@" + MAsset.COLUMNNAME_AssetServiceDate + "@: @NotValid@");
+				
+				MPeriod periodStart = MPeriod.get(getCtx(), assetServiceDate, getAD_Org_ID(), wk.get_TrxName());
+				MPeriod periodEnd = MPeriod.get(getCtx(), dateAcct, getAD_Org_ID(), wk.get_TrxName());
 				if(periodStart == null)
-					throw new AdempiereException("Fiscal period for date " + new SimpleDateFormat("dd/MM/yyyy").format(wk.getAsset(false).getAssetServiceDate()) + " does not exist.");
+				{
+					throw new AdempiereException("Fiscal period for date " + new SimpleDateFormat("dd/MM/yyyy").format(assetServiceDate) + " does not exist.");
+				}
 				if(periodEnd == null)
+				{
 					throw new AdempiereException("Fiscal period for date " + new SimpleDateFormat("dd/MM/yyyy").format(dateAcct) + " does not exist.");
+				}
 				
 				int iPeriod = Integer.valueOf(periodEnd.getC_Year().getFiscalYear()) - Integer.valueOf(periodStart.getC_Year().getFiscalYear());
 				//
