@@ -118,7 +118,7 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 		if (p_deleteOldImported)
 		{
 			sql = new StringBuilder ("DELETE I_Payment ")
-				  .append("WHERE I_IsImported='Y'").append (getWhereClause());
+				  .append("WHERE I_IsImported='Y'");
 			no = DB.executeUpdate(sql.toString(), get_TrxName());
 			if (log.isLoggable(Level.FINE)) log.fine("Delete Old Impored =" + no);
 		}
@@ -134,7 +134,8 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 			  .append(" UpdatedBy = COALESCE (UpdatedBy, 0),")
 			  .append(" I_ErrorMsg = ' ',")
 			  .append(" I_IsImported = 'N' ")
-			  .append("WHERE I_IsImported<>'Y' OR I_IsImported IS NULL OR AD_Client_ID IS NULL OR AD_Org_ID IS NULL OR AD_Client_ID=0 OR AD_Org_ID=0");
+			  .append("WHERE (I_IsImported<>'Y' OR I_IsImported IS NULL OR AD_Client_ID IS NULL OR AD_Org_ID IS NULL OR AD_Client_ID=0 OR AD_Org_ID=0) ")
+			  .append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info ("Reset=" + no);
 		
@@ -463,7 +464,7 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 		
 		//Import Bank Statement
 		sql = new StringBuilder("SELECT * FROM I_Payment")
-			.append(" WHERE I_IsImported='N'")
+			.append(" WHERE I_IsImported='N'").append(getWhereClause())
 			.append(" ORDER BY C_BankAccount_ID, CheckNo, DateTrx, R_AuthCode");
 			
 		MBankAccount account = null;
