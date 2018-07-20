@@ -2543,6 +2543,9 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			List<Object> row = (List<Object>)oRow;
 			List<Object> originalSelectedRow = temporarySelectedData.get(keyViewValue);
 			ListModelTable model = contentPanel.getModel();
+			
+			// While restoring values we dong want to trigger listeners
+			model.removeTableModelListener(this);
 						
 			for(int i=0; i < infoColumns.length; i++)
 			{
@@ -2562,6 +2565,9 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				IDColumn idc = (IDColumn)id;
 				idc.setSelected(true);
 			}
+			
+			// Restore listners
+			model.addTableModelListener(this);
 		}
 
 		return super.onRestoreSelectedItemIndexInPage(keyViewValue, rowIndex, oRow);
