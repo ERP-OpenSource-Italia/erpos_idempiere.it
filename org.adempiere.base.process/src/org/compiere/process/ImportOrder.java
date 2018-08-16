@@ -39,6 +39,7 @@ import org.compiere.model.X_I_Order;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Trx;
+import org.compiere.util.Util;
 
 import it.idempiere.base.util.STDUtils;
 
@@ -901,6 +902,11 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 						// Set Order Source
 						if (imp.getC_OrderSource() != null)
 							order.setC_OrderSource_ID(imp.getC_OrderSource_ID());
+						
+						if (Util.isEmpty(m_docAction,true) == false)
+						{
+							order.setDocAction(m_docAction);
+						}
 	
 						//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
 						ModelValidationEngine.get().fireImportValidate(this, imp, order, ImportValidator.TIMING_BEFORE_IMPORT);
@@ -1084,7 +1090,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		String processMsg = null;
 		boolean bHasError = false;
 		
-		if (m_docAction != null && m_docAction.length() > 0) // F3P: review processing: rollack
+		if (m_docAction != null && m_docAction.length() > 0) // F3P: review processing: rollbackji8 
 		{
 			boolean shouddProcess = false;
 			String orderDocStatus = order.getDocStatus();
@@ -1106,10 +1112,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 				Trx trx = Trx.get(get_TrxName(), false);
 				Savepoint processSavepoint = trx.setSavepoint(null);
 	
-				
 				try
 				{
-					order.setDocAction(m_docAction);
 					if(!order.processIt (m_docAction)) 
 					{
 						log.warning("Order Process Failed: " + order.getDocumentNo() + " - " + order.getProcessMsg());
