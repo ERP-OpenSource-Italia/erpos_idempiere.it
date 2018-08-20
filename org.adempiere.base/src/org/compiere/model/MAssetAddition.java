@@ -757,11 +757,15 @@ public class MAssetAddition extends X_A_Asset_Addition
 			throw new AssetException("New document has nulls");
 		}
 
-		// Only New assets can be activated
-		if (isA_CreateAsset() && !MAsset.A_ASSET_STATUS_New.equals(asset.getA_Asset_Status()))
-		{
-			throw new AssetException("Only new assets can be activated");
-		}
+		if(getPostingType().equals(POSTINGTYPE_Actual)) // F3P: only 'actual' posting type can activate the asset
+    {
+        // Only New assets can be activated
+        if (isA_CreateAsset() && !MAsset.A_ASSET_STATUS_New.equals(asset.getA_Asset_Status())) 
+        {
+            throw new AssetException("Only new assets can be activated");
+        }
+    }
+		
 		//
 		// Validate Source - Project
 		if (A_SOURCETYPE_Project.equals(getA_SourceType()))
@@ -852,21 +856,24 @@ public class MAssetAddition extends X_A_Asset_Addition
 		// F3P: added check to block usage of accumulated_depr if this is an addition and not a creation,
 		// 	unless the 'allow accumulated_depr always" is true
 		
-		boolean	bAllowAccumulateDeprAlways = MSysConfig.getBooleanValue("FA_ADDITION_ALLOW_ACCDEPR_ALWAYS", false,getAD_Client_ID(),getAD_Org_ID());
-		
-		if(!bAllowAccumulateDeprAlways)
-		{		
-			if( (getA_Accumulated_Depr().signum() != 0 ||
-					 getA_Accumulated_Depr_F().signum() != 0 ||
-					 getA_Period_Start() > 0 ||
-					 isA_Accumulated_Depr_Adjust()) && 
-					 (	asset.getA_Asset_Status() != null && 
-							asset.getA_Asset_Status().equals(X_A_Asset.A_ASSET_STATUS_New) == false))
-			{
-				throw new AssetException("@FA_Error_Addition_AssetAlreadyCreated@");
+		if(getPostingType().equals(POSTINGTYPE_Actual)) // F3P: only 'actual' postings can activate the asset
+		{
+			boolean	bAllowAccumulateDeprAlways = MSysConfig.getBooleanValue("FA_ADDITION_ALLOW_ACCDEPR_ALWAYS", false,getAD_Client_ID(),getAD_Org_ID());
+			
+			if(!bAllowAccumulateDeprAlways)
+			{		
+				if( (getA_Accumulated_Depr().signum() != 0 ||
+						 getA_Accumulated_Depr_F().signum() != 0 ||
+						 getA_Period_Start() > 0 ||
+						 isA_Accumulated_Depr_Adjust()) && 
+						 (	asset.getA_Asset_Status() != null && 
+								asset.getA_Asset_Status().equals(X_A_Asset.A_ASSET_STATUS_New) == false))
+				{
+					throw new AssetException("@FA_Error_Addition_AssetAlreadyCreated@");
+				}
 			}
+			//F3P:end
 		}
-		//F3P:end
 		
 		//
 		// Get/Create Asset Workfile:
@@ -902,22 +909,25 @@ public class MAssetAddition extends X_A_Asset_Addition
 		} 
 		MAssetChange.createAddition(this, assetwk);
 		
-		// Setting locator if is CreateAsset
-		if (isA_CreateAsset() && getM_Locator_ID() > 0)
+		if(getPostingType().equals(POSTINGTYPE_Actual)) // F3P: only 'actual' postings can activate the asset
 		{
-			asset.setM_Locator_ID(getM_Locator_ID());
+			// Setting locator if is CreateAsset
+			if (isA_CreateAsset() && getM_Locator_ID() > 0)
+			{
+				asset.setM_Locator_ID(getM_Locator_ID());
+			}
+			
+			// Creating/Updating asset product
+			updateA_Asset_Product(false);
+			//
+			// Changing asset status to Activated or Depreciated
+			if (isA_CreateAsset())
+			{
+				asset.setAssetServiceDate(getDateDoc());
+			}
+			asset.changeStatus(MAsset.A_ASSET_STATUS_Activated, getDateAcct());
+			asset.saveEx();
 		}
-		
-		// Creating/Updating asset product
-		updateA_Asset_Product(false);
-		//
-		// Changing asset status to Activated or Depreciated
-		if (isA_CreateAsset())
-		{
-			asset.setAssetServiceDate(getDateDoc());
-		}
-		asset.changeStatus(MAsset.A_ASSET_STATUS_Activated, getDateAcct());
-		asset.saveEx();
 		
 		//@win set initial depreciation period = 1 
 		if (isA_CreateAsset() && !isA_Accumulated_Depr_Adjust())
@@ -1397,10 +1407,11 @@ public class MAssetAddition extends X_A_Asset_Addition
 		}
 		else
 		{
-			final String sql = "SELECT COUNT(*) FROM A_Asset_Addition WHERE A_Asset_ID=? AND A_CreateAsset='Y'"
+			final String sql = "SELECT COUNT(*) FROM A_Asset_Addition WHERE A_Asset_ID=? AND A_CreateAsset='Y'" // F3P: check for posting type too
 							+" AND DocStatus<>'VO' AND IsActive='Y'"
-							+" AND A_Asset_Addition_ID<>?";
-			int cnt = DB.getSQLValueEx(get_TrxName(), sql, getA_Asset_ID(), getA_Asset_Addition_ID());// Angelo Dabala' (genied) set transaction
+							+" AND PostingType = ? "
+							+" AND A_Asset_Addition_ID<>? ";
+			int cnt = DB.getSQLValueEx(get_TrxName(), sql, getA_Asset_ID(), getPostingType(), getA_Asset_Addition_ID());// Angelo Dabala' (genied) set transaction
 			if(isA_CreateAsset())
 			{
 				// A_CreateAsset='Y' must be unique

@@ -112,7 +112,7 @@ public class MDiscountSchema extends X_M_DiscountSchema
 		if (m_breaks != null && !reload)
 			return m_breaks;
 		
-		String sql = "SELECT * FROM M_DiscountSchemaBreak WHERE M_DiscountSchema_ID=? ORDER BY SeqNo";
+		String sql = "SELECT * FROM M_DiscountSchemaBreak WHERE M_DiscountSchema_ID=? ORDER BY SeqNo, BreakValue DESC, BreakDiscount";
 		ArrayList<MDiscountSchemaBreak> list = new ArrayList<MDiscountSchemaBreak>();
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;

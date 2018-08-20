@@ -23,6 +23,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Properties;
@@ -48,6 +49,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 
 import it.idempiere.base.model.FreeOfCharge;
+import it.idempiere.base.util.GenericPOAdvancedComparator;
 import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
 
@@ -127,10 +129,34 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		int C_DocTypeTarget_ID, boolean isSOTrx, boolean counter,
 		String trxName, boolean setOrder, String documentNo)
 	{
+		return copyFrom (from, dateDoc, dateAcct,
+				C_DocTypeTarget_ID, isSOTrx, counter,
+				trxName, setOrder,documentNo, null);
+	}
+	
+	/**
+	 * 	Create new Invoice by copying
+	 * 	@param from invoice
+	 * 	@param dateDoc date of the document date
+	 *  @param acctDate original account date 
+	 * 	@param C_DocTypeTarget_ID target doc type
+	 * 	@param isSOTrx sales order
+	 * 	@param counter create counter links
+	 * 	@param trxName trx
+	 * 	@param setOrder set Order links
+	 *  @param Document Number for reversed invoices
+	 *  @param vatLedgerNo for reversed invoices
+	 *	@return Invoice
+	 */
+	public static MInvoice copyFrom (MInvoice from, Timestamp dateDoc, Timestamp dateAcct,
+		int C_DocTypeTarget_ID, boolean isSOTrx, boolean counter,
+		String trxName, boolean setOrder, String documentNo, String vatLedgerNo)
+	{
 		MInvoice to = new MInvoice (from.getCtx(), 0, trxName);
 		PO.copyValues (from, to, from.getAD_Client_ID(), from.getAD_Org_ID());
 		to.set_ValueNoCheck ("C_Invoice_ID", I_ZERO);
 		to.set_ValueNoCheck ("DocumentNo", documentNo);
+		to.set_ValueNoCheck (COLUMNNAME_VATLedgerNo, vatLedgerNo); //F3P
 		//
 		to.setDocStatus (DOCSTATUS_Drafted);		//	Draft
 		to.setDocAction(DOCACTION_Complete);
@@ -390,7 +416,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		setDocumentNo(line.getDocumentNo());
 		//
 		setIsSOTrx(batch.isSOTrx());
-		MBPartner bp = new MBPartner (line.getCtx(), line.getC_BPartner_ID(), line.get_TrxName());
+		// MBPartner bp = new MBPartner (line.getCtx(), line.getC_BPartner_ID(), line.get_TrxName());
+		MBPartner bp = MBPartner.getReadonlyNoVirtualCols(line.getCtx(), line.getC_BPartner_ID());
 		setBPartner(bp);	//	defaults
 		//
 		setIsTaxIncluded(line.isTaxIncluded());
@@ -434,6 +461,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	
 	// F3P: is generation in progress ?
 	private boolean generationInProgress = false;
+	// F3P: is reopen in progress ?
+	private boolean reopenInProgress = false;
 
 	/**
 	 * 	Overwrite Client/Org if required
@@ -544,7 +573,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 		setIsSOTrx(ship.isSOTrx());
 		//
-		MBPartner bp = new MBPartner (getCtx(), ship.getC_BPartner_ID(), null);
+		// MBPartner bp = new MBPartner (getCtx(), ship.getC_BPartner_ID(), null);
+		MBPartner bp = MBPartner.getReadonlyNoVirtualCols(getCtx(), ship.getC_BPartner_ID());
 		setBPartner (bp);
 		//
 		setAD_User_ID(ship.getAD_User_ID());
@@ -694,6 +724,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		String whereClauseFinal = "C_Invoice_ID=? ";
 		if (whereClause != null)
 			whereClauseFinal += whereClause;
+		
 		List<MInvoiceLine> list = new Query(getCtx(), I_C_InvoiceLine.Table_Name, whereClauseFinal, get_TrxName())
 										.setParameters(getC_Invoice_ID())
 										.setOrderBy(I_C_InvoiceLine.COLUMNNAME_Line)
@@ -987,7 +1018,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		if (getC_BPartner_ID() == 0)
 			setBPartner(MBPartner.getTemplate(getCtx(), getAD_Client_ID()));
 		if (getC_BPartner_Location_ID() == 0)
-			setBPartner(new MBPartner(getCtx(), getC_BPartner_ID(), null));
+			// setBPartner(new MBPartner(getCtx(), getC_BPartner_ID(), null));
+			setBPartner(MBPartner.getReadonlyNoVirtualCols(getCtx(), getC_BPartner_ID()));
 
 		//	Price List
 		if (getM_PriceList_ID() == 0)
@@ -1548,7 +1580,9 @@ public class MInvoice extends X_C_Invoice implements DocAction
 				(doc.getDocBaseType().equals(MDocType.DOCBASETYPE_ARInvoice) && getGrandTotal().signum() > 0 )
 			   )
 			{	
-				MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), null);
+				// MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), null);
+				MBPartner bp = MBPartner.getReadonlyNoVirtualCols (getCtx(), getC_BPartner_ID());
+				
 				if ( MBPartner.SOCREDITSTATUS_CreditStop.equals(bp.getSOCreditStatus()) )
 				{
 					m_processMsg = "@BPartnerCreditStop@ - @TotalOpenBalance@="
@@ -1874,7 +1908,11 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		//	Update Order & Match
 		int matchInv = 0;
 		int matchPO = 0;
-		MInvoiceLine[] lines = getLines(false);
+		
+		//F3P reorder invoice
+		//MInvoiceLine[] lines = getLines(false);
+		MInvoiceLine[] lines = getOrderedLines();
+		
 		for (int i = 0; i < lines.length; i++)
 		{
 			MInvoiceLine line = lines[i];
@@ -1984,7 +2022,12 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 
 		//	Update BP Statistics
-		MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), get_TrxName());
+		//  MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), get_TrxName());
+		
+		// F3P: small improvement to avoid reading expensive virtual columns
+		Query qBP = new Query(getCtx(), MBPartner.Table_Name,  "C_BPartner_ID = ?", get_TrxName());		
+		MBPartner bp = qBP.setNoVirtualColumn(true).setParameters(getC_BPartner_ID()).first();
+				
 		DB.getDatabase().forUpdate(bp, 0);
 		//	Update total revenue and balance / credit limit (reversed on AllocationLine.processIt)
 		BigDecimal invAmt = MConversionRate.convertBase(getCtx(), getGrandTotal(true),	//	CM adjusted
@@ -2268,7 +2311,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		// F3P: check if is allowed to create counter doc for reversal, needed for compatibility with reeopn
 		
 		if(getReversal_ID() > 0 && 
-				STDSysConfig.isCreateCounterForReversal(getAD_Client_ID(), getAD_Org_ID()) == false)
+				(STDSysConfig.isCreateCounterForReversal(getAD_Client_ID(), getAD_Org_ID()) == false ||
+						isReopenInProgress()))
 		{
 			return null;
 		}		
@@ -2279,12 +2323,14 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		if (counterC_BPartner_ID == 0)
 			return null;
 		//	Business Partner needs to be linked to Org
-		MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), null);
+		// MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), null);
+		MBPartner bp = MBPartner.getReadonlyNoVirtualCols (getCtx(), getC_BPartner_ID());
 		int counterAD_Org_ID = bp.getAD_OrgBP_ID_Int();
 		if (counterAD_Org_ID == 0)
 			return null;
 
-		MBPartner counterBP = new MBPartner (getCtx(), counterC_BPartner_ID, null);
+		// MBPartner counterBP = new MBPartner (getCtx(), counterC_BPartner_ID, null);
+		MBPartner counterBP = MBPartner.getReadonlyNoVirtualCols (getCtx(), counterC_BPartner_ID);
 //		MOrgInfo counterOrgInfo = MOrgInfo.get(getCtx(), counterAD_Org_ID);
 		if (log.isLoggable(Level.INFO)) log.info("Counter BP=" + counterBP.getName());
 
@@ -2325,7 +2371,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			MInvoiceLine counterLine = counterLines[i];
 			counterLine.setClientOrg(counter);
 			counterLine.setInvoice(counter);	//	copies header values (BP, etc.)
-			counterLine.setPrice();
+			//counterLine.setPrice(); F3P Fix not recalculate price for counter document
 			//counterLine.setTax(); F3P Fix not recalculate tax for counter document
 			//
 			counterLine.saveEx(get_TrxName());
@@ -2536,10 +2582,18 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 		//	Deep Copy
 		MInvoice reversal = null;
-		if (MSysConfig.getBooleanValue(MSysConfig.Invoice_ReverseUseNewNumber, true, getAD_Client_ID()))
-			reversal = copyFrom (this, reversalDateInvoiced, reversalDate, getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true);
-		else 
-			reversal = copyFrom (this, reversalDateInvoiced, reversalDate, getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true, getDocumentNo()+"^");
+		//F3P check document no and vat ledger no for reversed
+		String docNo = null;
+		String vatLedgerNo = null;
+		
+		if (MSysConfig.getBooleanValue(MSysConfig.Invoice_ReverseUseNewNumber, true, getAD_Client_ID()) == false)
+			docNo = getDocumentNo()+"^";
+		
+		if(STDSysConfig.isReversedInvoiceUseNewVATLedgerNo(getAD_Client_ID(), getAD_Org_ID()) == false)
+			vatLedgerNo = getVATLedgerNo(); //F3P vatLedgerNo must be isAllowCopy=N, if reversed doesn't use new vatLedgerNo set original no
+			
+		reversal = copyFrom (this, reversalDateInvoiced, reversalDate, getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true, docNo, vatLedgerNo);
+
 		if (reversal == null)
 		{
 			m_processMsg = "Could not create Invoice Reversal";
@@ -2551,9 +2605,10 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		MInvoiceLine[] rLines = reversal.getLines(true);
 		
 		// F3P: set as processing
-		try  // F3P: managing of generation in progress, require try/catch to reset flag
+		try  // F3P: managing of generation in progress and reopen in progress, require try/catch to reset flag
 		{
 			reversal.setGenerationInProgress(true);
+			reversal.setReopenInProgress(isReopenInProgress());
 		
 			for (int i = 0; i < rLines.length; i++)
 			{
@@ -2899,8 +2954,24 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		this.generationInProgress = generationInProgress;
 	}	
 	
+	// F3P: mark reopen in progress
+
+	public boolean isReopenInProgress()
+	{
+		return reopenInProgress;
+	}
+
+	public void setReopenInProgress(boolean reopenInProgress)
+	{
+		this.reopenInProgress = reopenInProgress;
+	}	
+	
 	public void calcTaxesAfterGeneration()
 	{
+		// Delete Taxes
+		StringBuilder msgdb = new StringBuilder("DELETE C_InvoiceTax WHERE C_Invoice_ID=").append(getC_Invoice_ID());
+		DB.executeUpdateEx(msgdb.toString(), get_TrxName());
+			
 		Query qTaxes = new Query(getCtx(), MTax.Table_Name, "C_Tax_ID in (SELECT l.C_Tax_ID FROM C_InvoiceLine l WHERE l.C_Invoice_ID = ?)",get_TrxName());
 		qTaxes.setParameters(getC_Invoice_ID());
 		List<MTax> taxes = qTaxes.list();
@@ -2922,4 +2993,17 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 	}
 
+	//F3P
+	protected MInvoiceLine[] getOrderedLines()
+	{
+		MInvoiceLine[] orderedLines = getLines(false).clone();
+		
+		GenericPOAdvancedComparator comparator = new GenericPOAdvancedComparator();
+		comparator.addOrderColumn(MInvoiceLine.COLUMNNAME_M_InOutLine_ID, true);
+		comparator.addOrderColumn(MInvoiceLine.COLUMNNAME_Line);
+		
+		Arrays.sort(orderedLines, comparator);
+		
+		return orderedLines;
+	}
 }	//	MInvoice

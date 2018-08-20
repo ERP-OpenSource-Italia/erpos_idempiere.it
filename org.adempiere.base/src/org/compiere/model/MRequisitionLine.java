@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.base.Core;
+import org.adempiere.base.IProductPricing;
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -232,14 +234,10 @@ public class MRequisitionLine extends X_M_RequisitionLine
 			return;
 		//
 		if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_ID=" + M_PriceList_ID);
-		boolean isSOTrx = false;
-		MProductPricing pp = new MProductPricing (getM_Product_ID(), 
-			getC_BPartner_ID(), getQty(), isSOTrx, get_TrxName());
+		IProductPricing pp = Core.getProductPricing();
+		pp.setRequisitionLine(this, get_TrxName());
 		pp.setM_PriceList_ID(M_PriceList_ID);		
 	//	pp.setPriceDate(getDateOrdered());
-		// F3P: integrated line uom and date fpr ppvb
-		// m_productPricing.setDatePPVB(m_DateInvoiced); 
-		pp.setLineC_UOM_ID(getC_UOM_ID());
 		
 		//
 		setPriceActual (pp.getPriceStd());

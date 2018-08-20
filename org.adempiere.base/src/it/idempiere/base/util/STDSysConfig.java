@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.regex.Pattern;
 
+import org.compiere.model.MOrder;
 import org.compiere.model.MSysConfig;
 import org.compiere.util.Ini;
 import org.compiere.util.Util;
@@ -80,23 +81,31 @@ public class STDSysConfig
 	
 	public static final String	FACTACCT_HASCURRENCYRATE = "LIT_FACTACCT_HASCURRENCYRATE";
 	
- 	public static String REPORT_HOME_KEY = "REPORT_HOME_PATH";
+ 	public static final String REPORT_HOME_KEY = "REPORT_HOME_PATH";
  	
  	public static final String LIT_WEB_SERVICE_COMPATIBILITY_MODE = "LIT_WEB_SERVICE_COMPATIBILITY_MODE";
  	
  	public static final String F3P_ALLOW_SINGLE_SCHEDULE = "F3P_ALLOW_SINGLE_SCHEDULE";
  	
- 	public static final String  LIT_COMMISSION_RULE_MINOR_SEQUENCE = "LIT_COMMISSION_RULE_MINOR_SEQUENCE";
+ 	public static final String LIT_COMMISSION_RULE_MINOR_SEQUENCE = "LIT_COMMISSION_RULE_MINOR_SEQUENCE";
  	
- 	public static final String  LIT_COST_ENABLESEED = "LIT_COST_ENABLESEED";
+ 	public static final String LIT_COST_ENABLESEED = "LIT_COST_ENABLESEED";
  	
  	public static final String LIT_CHECK_RELDOC_ON_REOPEN_ORDER = "LIT_CHECK_RELDOC_ON_REOPEN_ORDER";
  	 		
+ 	public static final String LIT_IS_ADVANCED_PACKIN_BACKUP = "LIT_IS_ADVANCED_PACKIN_BACKUP";
+ 	
+ 	public static final String FIN_FILTER_BY_ORG="FIN_FILTER_BY_ORG";
+ 	
+ 	public static final String LIT_INVOICE_REVERSE_USE_NEW_VATLEDGERNO = "LIT_INVOICE_REVERSE_USE_NEW_VATLEDGERNO";
+ 	
  	public static final String F3P_INFOPRODUCT_LISTVERSIONS = "F3P_INFOPRODUCT_LISTVERSIONS";
  	
 	public static final String	F3P_INFOPRODUCT_LISTVERSIONS_YES = "Y",
 								F3P_INFOPRODUCT_LISTVERSIONS_NO = "N",
 								F3P_INFOPRODUCT_LISTVERSIONS_NO_PURCHASE = "P";
+	
+	public static final String LIT_PROJ_PHASE_ORDER_DOCSUBTYPESO = "LIT_PROJ_PHASE_ORDER_DOCSUBTYPESO";
  	
 	public static boolean isCommissionRuleMinorSequence(int AD_Client_ID,int AD_Org_ID)
 	{
@@ -531,5 +540,47 @@ public class STDSysConfig
 	public static boolean isCheckRelDocOnReopenOrder(int AD_Client_ID,int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(LIT_CHECK_RELDOC_ON_REOPEN_ORDER, false, AD_Client_ID, AD_Org_ID);
+	}
+	/** If true save new values and sql statement
+	 * 
+	 * @return advanced backup or not
+	 */
+	public static boolean isAdvancedPackinBackup()
+	{
+		return MSysConfig.getBooleanValue(LIT_IS_ADVANCED_PACKIN_BACKUP, false);
+	}
+	
+	/** If true add org filter to financial report
+	 * 
+	 * @return if add org filter
+	 */
+	public static boolean isFinFilterByOrg(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(FIN_FILTER_BY_ORG, false, AD_Client_ID);
+	}
+	
+	/** If true reversed invoice use new VATLedgerNo
+	 * 
+	 * @return if reversed invoice use new VATLedgerNo
+	 */
+	public static boolean isReversedInvoiceUseNewVATLedgerNo(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_INVOICE_REVERSE_USE_NEW_VATLEDGERNO, true, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static String getInfoProductListVersions(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getValue(F3P_INFOPRODUCT_LISTVERSIONS, F3P_INFOPRODUCT_LISTVERSIONS_YES, AD_Client_ID, AD_Org_ID);
+	}
+	
+	/**
+	 * 
+	 * @param AD_Client_ID
+	 * @param AD_Org_ID
+	 * @return docSubTypeSO for ProjectPhaseGenOrder
+	 */
+	public static String getProjectPhaseOrderDocSubTypeSO(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getValue(LIT_PROJ_PHASE_ORDER_DOCSUBTYPESO, MOrder.DocSubTypeSO_Proposal, AD_Client_ID, AD_Org_ID);
 	}
 }

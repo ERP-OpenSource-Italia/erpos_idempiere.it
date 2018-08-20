@@ -45,6 +45,9 @@ import org.compiere.util.Env;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
+import it.idempiere.base.model.LITMPackageImpDetail;
+import it.idempiere.base.util.STDSysConfig;
+
 public class SQLMandatoryElementHandler extends AbstractElementHandler {
 
 	public void startElement(PIPOContext ctx, Element element) throws SAXException {
@@ -86,6 +89,13 @@ public class SQLMandatoryElementHandler extends AbstractElementHandler {
 					stmt = null;
 				}
 			}
+			//F3P advanced packin backup
+			if(STDSysConfig.isAdvancedPackinBackup())
+			{
+				LITMPackageImpDetail.setDBType(impDetail, DBType);
+				LITMPackageImpDetail.setSQLStatement(impDetail, sql);
+			}
+			
 			logImportDetail (ctx, impDetail, 1, "SQLMandatory",1,"Execute");
 			ctx.packIn.getNotifier().addSuccessLine("-> " + sql);
 		} catch (Exception e)	{

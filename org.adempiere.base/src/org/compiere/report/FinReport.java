@@ -41,6 +41,8 @@ import org.compiere.util.Env;
 import org.compiere.util.Ini;
 import org.compiere.util.TimeUtil;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *  Financial Report Engine
  *
@@ -323,22 +325,6 @@ public class FinReport extends SvrProcess
 					+ "FROM PA_ReportLine "
 					+ "WHERE IsActive='Y' AND PA_ReportLineSet_ID=").append(PA_ReportLineSet_ID);
 		*/
-		//F3P: get translation
-				/*
-				StringBuffer sql = new StringBuffer ("INSERT INTO T_Report "
-					+ "(AD_PInstance_ID, PA_ReportLine_ID, Record_ID,Fact_Acct_ID, SeqNo,LevelNo, Name,Description) "
-					+ "SELECT ").append(getAD_PInstance_ID()).append(", PA_ReportLine_ID, 0,0, SeqNo,0, Name,Description "
-					+ "FROM PA_ReportLine "
-					+ "WHERE IsActive='Y' AND PA_ReportLineSet_ID=").append(PA_ReportLineSet_ID);
-		*/
-		//F3P: get translation
-				/*
-				StringBuffer sql = new StringBuffer ("INSERT INTO T_Report "
-					+ "(AD_PInstance_ID, PA_ReportLine_ID, Record_ID,Fact_Acct_ID, SeqNo,LevelNo, Name,Description) "
-					+ "SELECT ").append(getAD_PInstance_ID()).append(", PA_ReportLine_ID, 0,0, SeqNo,0, Name,Description "
-					+ "FROM PA_ReportLine "
-					+ "WHERE IsActive='Y' AND PA_ReportLineSet_ID=").append(PA_ReportLineSet_ID);
-		*/
 		StringBuffer sql = new StringBuffer ("INSERT INTO T_Report "
 				+ "(AD_PInstance_ID, PA_ReportLine_ID, Record_ID,Fact_Acct_ID, SeqNo,LevelNo, Name,Description) "
 				+ "SELECT ").append(getAD_PInstance_ID()).append(", PA_ReportLine.PA_ReportLine_ID, 0,0, SeqNo,0, "
@@ -525,13 +511,12 @@ public class FinReport extends SvrProcess
 					select.append(" AND GL_Budget_ID=" + m_columns[col].getGL_Budget_ID());
 			}
 			// end globalqss
-			else // Angelo Dabala' (genied) nectosoft - must filter with PostingType at line level
-			{
-				select.append(" AND fb.PostingType=x.PostingType ");
-			}
 		}
 
 			if (m_columns[col].isColumnTypeSegmentValue())
+				select.append(m_columns[col].getWhereClause(p_PA_Hierarchy_ID));
+			//F3P add org filter
+			else if(STDSysConfig.isFinFilterByOrg(Env.getAD_Client_ID(getCtx())));
 				select.append(m_columns[col].getWhereClause(p_PA_Hierarchy_ID));
 			
 			//	Parameter Where
@@ -1438,6 +1423,10 @@ public class FinReport extends SvrProcess
 			select.append(m_parameterWhere);
 			if (log.isLoggable(Level.FINEST))
 				log.finest("Col=" + col + ", Line=" + line + ": " + select);
+			//F3P add org filter
+			if(STDSysConfig.isFinFilterByOrg(Env.getAD_Client_ID(getCtx())) && m_columns[col].getOrg_ID() > 0)
+				select.append(" AND AD_Org_ID = ").append(m_columns[col].getOrg_ID());
+		
 			//
 			insert.append("(").append(select).append(")");
 		}

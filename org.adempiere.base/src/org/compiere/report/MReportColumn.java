@@ -22,6 +22,9 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.compiere.model.X_PA_ReportColumn;
+import org.compiere.util.Env;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *  Report Column Model
@@ -152,10 +155,15 @@ public class MReportColumn extends X_PA_ReportColumn
 	 */
 	public String getWhereClause(int PA_Hierarchy_ID)
 	{
-		if (!isColumnTypeSegmentValue())
+		//F3P add org filter
+		if (!isColumnTypeSegmentValue() && get_ValueAsString(COLUMNNAME_ElementType) == null 
+			&& STDSysConfig.isFinFilterByOrg(Env.getAD_Client_ID(getCtx()))==false)
 			return "";
 		
 		String et = getElementType();
+		//F3P add org filter
+		if(STDSysConfig.isFinFilterByOrg(Env.getAD_Client_ID(getCtx())))
+			et = get_ValueAsString(COLUMNNAME_ElementType) ;
 		//	ID for Tree Leaf Value
 		int ID = 0;
 		//

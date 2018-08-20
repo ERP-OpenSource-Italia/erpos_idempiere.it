@@ -24,6 +24,9 @@ import java.sql.Timestamp;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.base.Core;
+import org.adempiere.base.IProductPricing;
+import org.adempiere.model.GridTabWrapper;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
@@ -327,12 +330,17 @@ public class CalloutInvoice extends CalloutEngine
 		boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
 		int C_BPartner_ID = Env.getContextAsInt(ctx, WindowNo, "C_BPartner_ID");
 		BigDecimal Qty = (BigDecimal)mTab.getValue("QtyInvoiced");
-		MProductPricing pp = new MProductPricing (M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx, null);
+		IProductPricing pp = Core.getProductPricing();
+		pp.setInitialValues(M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx, null);
+		Timestamp invoiceDate = Env.getContextAsDate(ctx, WindowNo, "DateInvoiced");
+		pp.setPriceDate(invoiceDate);
+		I_C_InvoiceLine invoiceLine = GridTabWrapper.create(mTab, I_C_InvoiceLine.class);
+		pp.setInvoiceLine(invoiceLine, null);
+
 		//
 		int M_PriceList_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_ID");
 		pp.setM_PriceList_ID(M_PriceList_ID);
 
-		Timestamp invoiceDate = Env.getContextAsDate(ctx, WindowNo, "DateInvoiced");
 		/** PLV is only accurate if PL selected in header */
 		int M_PriceList_Version_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_Version_ID");
 		if ( M_PriceList_Version_ID == 0 && M_PriceList_ID > 0)
@@ -350,8 +358,6 @@ public class CalloutInvoice extends CalloutEngine
 		}
 		
 		pp.setM_PriceList_Version_ID(M_PriceList_Version_ID);
-		Timestamp date = Env.getContextAsDate(ctx, WindowNo, "DateInvoiced");
-		pp.setPriceDate(date);
 		//		
 		mTab.setValue("PriceList", pp.getPriceList());
 		mTab.setValue("PriceLimit", pp.getPriceLimit());
@@ -564,12 +570,15 @@ public class CalloutInvoice extends CalloutEngine
 			if (QtyInvoiced == null)
 				QtyInvoiced = QtyEntered;
 			boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
-			MProductPricing pp = new MProductPricing (M_Product_ID, C_BPartner_ID, QtyInvoiced, IsSOTrx, null);
+			IProductPricing pp = Core.getProductPricing();
+			pp.setInitialValues(M_Product_ID, C_BPartner_ID, QtyInvoiced, IsSOTrx, null);
+			Timestamp date = (Timestamp)mTab.getValue("DateInvoiced");
+			pp.setPriceDate(date);
+			I_C_InvoiceLine invoiceLine = GridTabWrapper.create(mTab, I_C_InvoiceLine.class);
+			pp.setInvoiceLine(invoiceLine, null);
 			pp.setM_PriceList_ID(M_PriceList_ID);
 			int	M_PriceList_Version_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_Version_ID");
 			pp.setM_PriceList_Version_ID(M_PriceList_Version_ID);
-			Timestamp date = (Timestamp)mTab.getValue("DateInvoiced");
-			pp.setPriceDate(date);
 			//
 			PriceEntered = MUOMConversion.convertProductFrom (ctx, M_Product_ID, 
 				C_UOM_To_ID, pp.getPriceStd());
@@ -845,11 +854,15 @@ public class CalloutInvoice extends CalloutEngine
 		int C_BPartner_ID = Env.getContextAsInt(ctx, WindowNo, "C_BPartner_ID");
 		BigDecimal Qty = (BigDecimal)mTab.getValue("QtyOrdered");
 		boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
-		MProductPricing pp = new MProductPricing (M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx, null);
+		IProductPricing pp = Core.getProductPricing();
+		pp.setInitialValues(M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx, null);
+		Timestamp orderDate = (Timestamp)mTab.getValue("DateOrdered");
+		pp.setPriceDate(orderDate);
+		I_C_InvoiceLine invoiceLine = GridTabWrapper.create(mTab, I_C_InvoiceLine.class);
+		pp.setInvoiceLine(invoiceLine, null);
 		//
 		int M_PriceList_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_ID");
 		pp.setM_PriceList_ID(M_PriceList_ID);
-		Timestamp orderDate = (Timestamp)mTab.getValue("DateOrdered");
 		/** PLV is only accurate if PL selected in header */
 		int M_PriceList_Version_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_Version_ID");
 		if ( M_PriceList_Version_ID == 0 && M_PriceList_ID > 0)
@@ -866,7 +879,6 @@ public class CalloutInvoice extends CalloutEngine
 				Env.setContext(ctx, WindowNo, "M_PriceList_Version_ID", M_PriceList_Version_ID );
 		}
 		pp.setM_PriceList_Version_ID(M_PriceList_Version_ID);
-		pp.setPriceDate(orderDate);
 		//
 		Env.setContext(ctx, WindowNo, "EnforcePriceLimit", pp.isEnforcePriceLimit() ? "Y" : "N");
 		Env.setContext(ctx, WindowNo, "DiscountSchema", pp.isDiscountSchema() ? "Y" : "N");

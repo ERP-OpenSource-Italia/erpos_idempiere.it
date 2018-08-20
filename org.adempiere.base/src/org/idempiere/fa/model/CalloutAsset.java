@@ -59,7 +59,11 @@ public class CalloutAsset extends CalloutEngine {
 		{
 			MAsset asset = new MAsset(ctx, (Integer) value, null);
 			if (asset != null)
-			mTab.setValue(MAsset.COLUMNNAME_M_Product_ID, asset.getM_Product_ID());
+				
+			if(asset.getM_Product_ID() > 0)
+				mTab.setValue(MAsset.COLUMNNAME_M_Product_ID, asset.getM_Product_ID());
+			else
+				mTab.setValue(MAsset.COLUMNNAME_M_Product_ID, null);
 		}
 		
 		return "";

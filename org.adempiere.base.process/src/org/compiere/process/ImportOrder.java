@@ -39,6 +39,7 @@ import org.compiere.model.X_I_Order;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Trx;
+import org.compiere.util.Util;
 
 import it.idempiere.base.util.STDUtils;
 
@@ -129,7 +130,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append(" UpdatedBy = COALESCE (UpdatedBy, 0),")
 			  .append(" I_ErrorMsg = ' ',")
 			  .append(" I_IsImported = 'N' ")
-			  .append("WHERE I_IsImported<>'Y' OR I_IsImported IS NULL")
+			  .append("WHERE (I_IsImported<>'Y' OR I_IsImported IS NULL) ").append (clientCheck)
 			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info ("Reset=" + no);
@@ -787,7 +788,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			//F3P: End
 			.append (clientCheck)
 			.append(getDocumentNoFilter()) //F3P: added filter by docNo
-			.append(" ORDER BY C_BPartner_ID, BillTo_ID, C_BPartner_Location_ID, I_Order_ID");
+			.append(" ORDER BY C_BPartner_ID, BillTo_ID, C_BPartner_Location_ID, DateOrdered, DocumentNo, C_DocType_ID, I_Order_ID"); // F3P: fixed ordering
 
 		LinkedList<X_I_Order> lstImportedIOrder = new LinkedList<X_I_Order>(); //F3P from adempiere
 		X_I_Order potentialErrorImp=null;
@@ -901,6 +902,11 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 						// Set Order Source
 						if (imp.getC_OrderSource() != null)
 							order.setC_OrderSource_ID(imp.getC_OrderSource_ID());
+						
+						if (Util.isEmpty(m_docAction,true) == false)
+						{
+							order.setDocAction(m_docAction);
+						}
 	
 						//IDEMPIERE-3313 - ImportOrder does not implement ImportProcess interface
 						ModelValidationEngine.get().fireImportValidate(this, imp, order, ImportValidator.TIMING_BEFORE_IMPORT);
@@ -1084,7 +1090,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		String processMsg = null;
 		boolean bHasError = false;
 		
-		if (m_docAction != null && m_docAction.length() > 0) // F3P: review processing: rollack
+		if (m_docAction != null && m_docAction.length() > 0) // F3P: review processing: rollbackji8 
 		{
 			boolean shouddProcess = false;
 			String orderDocStatus = order.getDocStatus();
@@ -1106,10 +1112,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 				Trx trx = Trx.get(get_TrxName(), false);
 				Savepoint processSavepoint = trx.setSavepoint(null);
 	
-				
 				try
 				{
-					order.setDocAction(m_docAction);
 					if(!order.processIt (m_docAction)) 
 					{
 						log.warning("Order Process Failed: " + order.getDocumentNo() + " - " + order.getProcessMsg());

@@ -715,6 +715,10 @@ public class MInOut extends X_M_InOut implements DocAction
 		.setOrderBy(MInOutLine.COLUMNNAME_Line)
 		.list();
 		//
+		
+		for (MInOutLine iol : list) // Set header info
+			iol.setHeaderInfo(this);
+		
 		m_lines = new MInOutLine[list.size()];
 		list.toArray(m_lines);
 		return m_lines;

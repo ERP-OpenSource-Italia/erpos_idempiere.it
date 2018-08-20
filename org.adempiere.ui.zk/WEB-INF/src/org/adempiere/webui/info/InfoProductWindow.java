@@ -490,43 +490,37 @@ public class InfoProductWindow extends InfoWindow {
 	@Override
 	protected void initParameters() {
 		//F3P INFOPRODUCT_LISTVERSIONS
-		int M_Warehouse_ID = 0,
-			M_PriceList_ID = 0;
-		
-		String listVersions = STDSysConfig.getInfoProductListVersions
-				(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx()));
-		
-		if(listVersions.equals(STDSysConfig.F3P_INFOPRODUCT_LISTVERSIONS_NO_PURCHASE) && 
-				Env.isSOTrx(Env.getCtx(), p_WindowNo) == false)
-		{
-			//nothing to do
-		}
-		else if(listVersions.equals(STDSysConfig.F3P_INFOPRODUCT_LISTVERSIONS_YES) == false)
-		{
-			M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_Warehouse_ID", true);
-			M_PriceList_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_PriceList_ID", true);
-		}
-		else
-		{
-			M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_Warehouse_ID");
-			M_PriceList_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_PriceList_ID");
-		}
-		
-		//int M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_Warehouse_ID");
-		//int M_PriceList_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_PriceList_ID", true); // F3P: evitiamo che scali sul contesto e quindi forzi una selezione su maschere che non hanno listino
-		
-		//if (M_Warehouse_ID == 0)
-			//M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), "#M_Warehouse_ID");
-		//F3P end
-		
-		int M_PriceList_Version_ID = findPLV (M_PriceList_ID);
-		//	Set Warehouse
-		
-		if (M_Warehouse_ID != 0)
-			setWarehouse (M_Warehouse_ID);
-		// 	Set PriceList Version
-		if (M_PriceList_Version_ID != 0)
-			setPriceListVersion (M_PriceList_Version_ID);
+				int M_Warehouse_ID = 0,
+					M_PriceList_ID = 0;
+				
+				String listVersions = STDSysConfig.getInfoProductListVersions
+						(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx()));
+				
+				// F3P: leggiamo i dati dal contesto solo se e' abilitato sale (no purchase) ed e' una vendita, oppure se e' sempre abilitato
+				
+				if((listVersions.equals(STDSysConfig.F3P_INFOPRODUCT_LISTVERSIONS_NO_PURCHASE) && 
+						Env.isSOTrx(Env.getCtx(), p_WindowNo)) ||
+					listVersions.equals(STDSysConfig.F3P_INFOPRODUCT_LISTVERSIONS_YES))
+				{
+					M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_Warehouse_ID", true);
+					M_PriceList_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_PriceList_ID", true);
+				}				
+				
+				//int M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_Warehouse_ID");
+				//int M_PriceList_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_PriceList_ID", true); // F3P: evitiamo che scali sul contesto e quindi forzi una selezione su maschere che non hanno listino
+				
+				//if (M_Warehouse_ID == 0)
+					//M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), "#M_Warehouse_ID");
+				//F3P end
+				
+				int M_PriceList_Version_ID = findPLV (M_PriceList_ID);
+				//	Set Warehouse
+				
+				if (M_Warehouse_ID != 0)
+					setWarehouse (M_Warehouse_ID);
+				// 	Set PriceList Version
+				if (M_PriceList_Version_ID != 0)
+					setPriceListVersion (M_PriceList_Version_ID);
 	}
 	
 	/**

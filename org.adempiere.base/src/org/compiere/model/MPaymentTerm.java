@@ -288,7 +288,7 @@ public class MPaymentTerm extends X_C_PaymentTerm
 	 *	@param C_Invoice_ID id
 	 *	@param trxName transaction
 	 */
-	private void deleteInvoicePaySchedule (int C_Invoice_ID, String trxName)
+	public void deleteInvoicePaySchedule (int C_Invoice_ID, String trxName) // F3P: useful utility, moved to public
 	{
 		Query query = new Query(Env.getCtx(), I_C_InvoicePaySchedule.Table_Name, "C_Invoice_ID=?", trxName);
 		List<MInvoicePaySchedule> ipsList = query.setParameters(C_Invoice_ID).list();

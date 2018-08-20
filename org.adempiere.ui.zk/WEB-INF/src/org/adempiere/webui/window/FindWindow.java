@@ -1613,7 +1613,7 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
                 m_query.addRestriction(getSubCategoryWhereClause(((Integer) parsedValue).intValue()), and, openBrackets);
             }
             //F3P filter special char
-            if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())) && 
+            else if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())) && 
             		MQuery.LIKE.equals(Operator) && parsedValue instanceof String)
         	{
         		String function = FilterQuery.SPECIAL_CHAR_FUNCTION.replaceFirst("[?]", ColumnSQL.toString());

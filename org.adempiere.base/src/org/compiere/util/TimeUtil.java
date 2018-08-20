@@ -41,6 +41,14 @@ import org.compiere.model.MUOMConversion;
  */
 public class TimeUtil
 {
+	/**It works assuming this constants*/
+	/** Days = D */
+	public static final String UOMPERIOD_Days = "D";
+	/** Months = M */
+	public static final String UOMPERIOD_Months = "M";
+	/** Years = Y */
+	public static final String UOMPERIOD_Years = "Y";
+	
 	/**
 	 * 	Get earliest time of a day (truncate)
 	 *  @param time day and time
@@ -1014,6 +1022,65 @@ public class TimeUtil
 		BigDecimal workedtime = MUOMConversion.convert(Env.getCtx(), getHour_UOM_ID(Env.getCtx()), res.getC_UOM_ID(), new BigDecimal(timeWorked));
 		return workedtime;
 	}
+	
+	static public BigDecimal calcWorkingHours(int R_Resource_ID, Timestamp dateFrom, Timestamp dateTo)
+	{
+		BigDecimal workedTime = Env.ZERO;
+		
+		if(TimeUtil.isSameDay(dateFrom, dateTo))
+		{
+			workedTime = diffDateInHours(dateFrom, dateTo);
+		}
+		else
+		{
+			MResource res = new MResource(Env.getCtx(), R_Resource_ID, null);
+			MResourceType mResourceType = res.getResourceType();
+					
+			Calendar calendar = GregorianCalendar.getInstance(); // creates a new calendar instance
+			
+			calendar.setTime(dateFrom);   // assigns calendar to given date 
+			int hoursDateFrom = calendar.get(Calendar.HOUR_OF_DAY); // gets hour in 24h format
+			int minuteDateFrom = calendar.get(Calendar.MINUTE);
+			calendar.setTime(mResourceType.getTimeSlotEnd());
+			int hoursSlotEnd = calendar.get(Calendar.HOUR_OF_DAY);
+			int minuteSlotEnd = calendar.get(Calendar.MINUTE);
+			
+			int diffHours = hoursSlotEnd-hoursDateFrom;
+			if(minuteSlotEnd>minuteDateFrom)
+				diffHours++;
+			if(diffHours > 0)
+				workedTime=workedTime.add(new BigDecimal(diffHours));
+			
+			calendar.setTime(dateTo);
+			int hoursDateTo = calendar.get(Calendar.HOUR_OF_DAY);
+			int minuteDateTo = calendar.get(Calendar.MINUTE);
+			calendar.setTime(mResourceType.getTimeSlotStart());
+			int hoursSlotStart = calendar.get(Calendar.HOUR_OF_DAY);
+			int minuteSlotStart = calendar.get(Calendar.MINUTE);
+			
+			diffHours = hoursDateTo-hoursSlotStart;
+			if(minuteDateTo>minuteSlotStart)
+				diffHours++;
+			
+			if(diffHours > 0)
+				workedTime=workedTime.add(new BigDecimal(diffHours));
+			
+			int nDays = diffDateInHours(dateFrom, dateTo).divide(new BigDecimal(24),0,BigDecimal.ROUND_DOWN).intValue();
+			if(nDays > 1)
+			{
+				int slotHours = mResourceType.getTimeSlotHours();
+				workedTime=workedTime.add(new BigDecimal(slotHours*(nDays-1)));
+			}
+		}
+		
+		return workedTime;
+	}
+	
+	static public BigDecimal diffDateInHours(Timestamp dateFrom, Timestamp dateTo)
+	{
+		long diff= dateTo.getTime()-dateFrom.getTime();
+		return new BigDecimal(diff).divide(new BigDecimal(1000*60*60),0,BigDecimal.ROUND_UP);
+	}
 
 	static public boolean isHoliday(Timestamp day)
 	{
@@ -1072,6 +1139,54 @@ public class TimeUtil
 			return true;
 		else
 			return false;
+	}
+	
+	/**
+	 * Partendo da una data tsStartDate restituisce un timestamp che rappresenta
+	 * la prima data utile successiva definita secondo sUom e nNPeriod. La data viene poi spostata all'ultimo
+	 * del mese se bLastMonthDay e' true.
+	 * 
+	 * @param sUomPeriod
+	 * @param nNPeriod
+	 * @param tsStartDate
+	 * @param bLastMonthDay
+	 * @return
+	 */
+	public static Timestamp getNextDate(String sUomPeriod, int nNPeriod, Timestamp tsStartDate,boolean bLastMonthDay)
+	{				
+		int fieldAdd =  -1;
+		int nLastDay = -1;
+		int actualDay = -1;
+		
+		if(sUomPeriod.equals(UOMPERIOD_Days))
+			fieldAdd = Calendar.DAY_OF_MONTH;
+		else if (sUomPeriod.equals(UOMPERIOD_Months))
+			fieldAdd = Calendar.MONTH;
+		else if (sUomPeriod.equals(UOMPERIOD_Years))
+			fieldAdd = Calendar.YEAR;
+		
+		Calendar cal = Calendar.getInstance();
+		cal.setTimeInMillis(tsStartDate.getTime());
+		if(fieldAdd != Calendar.DAY_OF_MONTH)
+		{
+			actualDay = cal.get(Calendar.DAY_OF_MONTH);
+			cal.set(Calendar.DAY_OF_MONTH, 1);
+		}
+		cal.add(fieldAdd, nNPeriod);
+		
+		if (bLastMonthDay && fieldAdd != Calendar.DAY_OF_MONTH)
+		{
+			nLastDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+			cal.set(Calendar.DAY_OF_MONTH, nLastDay);
+		}
+		else if (fieldAdd != Calendar.DAY_OF_MONTH)
+		{
+			nLastDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+			if(nLastDay >= actualDay)
+				cal.set(Calendar.DAY_OF_MONTH, actualDay);
+		}
+				
+		return new Timestamp(cal.getTimeInMillis());			
 	}
 
 }	//	TimeUtil

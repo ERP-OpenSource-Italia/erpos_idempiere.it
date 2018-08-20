@@ -269,6 +269,10 @@ public class MOrder extends X_C_Order implements DocAction
 	/** Force Creation of order		*/
 	protected boolean			m_forceCreation = false;
 	
+	// F3P: is lines operation  in progress ?
+	private boolean linesOperationInProgress = false;
+
+	
 	/**
 	 * 	Overwrite Client/Org if required
 	 * 	@param AD_Client_ID client
@@ -2566,9 +2570,9 @@ public class MOrder extends X_C_Order implements DocAction
 		{
 			MOrderLine counterLine = counterLines[i];
 			counterLine.setOrder(counter);	//	copies header values (BP, etc.)
-			counterLine.setPrice();
+			//counterLine.setPrice(); F3P Fix not recalculate price for counter document
 			counterLine.setAD_Org_ID(counterAD_Org_ID);
-			counterLine.setTax();
+			//counterLine.setTax(); F3P Fix not recalculate tax for counter document
 			counterLine.saveEx(get_TrxName());
 		}
 		if (log.isLoggable(Level.FINE)) log.fine(counter.toString());
@@ -3199,5 +3203,48 @@ public class MOrder extends X_C_Order implements DocAction
 	{
 		return getC_DocType_ID() > 0 ? getC_DocType_ID() : getC_DocTypeTarget_ID();
 	}
+	
+	// F3P: operations in progress flag
+	
+	public boolean isLinesOpInProgress()
+	{
+		return linesOperationInProgress;
+	}
+	
+	// TODO: should add a new event ?
+
+	public void setLinesOpInProgress(boolean inProgress)
+	{
+		this.linesOperationInProgress = inProgress;
+	}	
+	
+	public void regenTaxLines()
+	{
+		// Delete Taxes
+		StringBuilder msgdb = new StringBuilder("DELETE C_OrderTax WHERE C_Order_ID=").append(getC_Order_ID());
+		DB.executeUpdateEx(msgdb.toString(), get_TrxName());
+			
+		Query qTaxes = new Query(getCtx(), MTax.Table_Name, "C_Tax_ID in (SELECT l.C_Tax_ID FROM C_OrderLine l WHERE l.C_Order_ID = ?)",get_TrxName());
+		qTaxes.setParameters(getC_Order_ID());
+		List<MTax> taxes = qTaxes.list();
+		
+		for(MTax tax:taxes)
+		{
+			// Need one invoice line for every tax to use the tax provider
+			
+			Query qOrderLine = new Query(getCtx(), MOrderLine.Table_Name, "C_Tax_ID = ? and C_Order_ID = ?",get_TrxName());
+			qOrderLine.setParameters(tax.getC_Tax_ID(), getC_Order_ID());
+			
+			MOrderLine line = qOrderLine.first();
+			
+      MTaxProvider provider = new MTaxProvider(tax.getCtx(), tax.getC_TaxProvider_ID(), tax.get_TrxName());
+			ITaxProvider calculator = Core.getTaxProvider(provider);
+			if (calculator == null)
+				throw new AdempiereException(Msg.getMsg(getCtx(), "TaxNoProvider"));
+	    calculator.recalculateTax(provider, line, true);
+		}
+	}
+	
+	// F3P: oper
 
 }	//	MOrder

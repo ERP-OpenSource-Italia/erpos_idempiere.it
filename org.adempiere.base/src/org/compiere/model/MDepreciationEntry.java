@@ -17,8 +17,6 @@ import org.compiere.process.DocumentEngine;
 import org.compiere.util.DB;
 import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
-import org.compiere.util.Trx;
-import org.compiere.util.TrxRunnable;
 import org.idempiere.fa.exceptions.AssetArrayException;
 import org.idempiere.fa.exceptions.AssetException;
 
@@ -74,7 +72,7 @@ implements DocAction, DocOptions	// F3P: added support for ReActivate
 		{
 			return false;
 		}
-		if (!isProcessed() && (newRecord || is_ValueChanged(COLUMNNAME_DateAcct)))
+		if (!isProcessed() && (newRecord || is_ValueChanged(COLUMNNAME_DateAcct) || is_ValueChanged(COLUMNNAME_IsDepExpOutPeriod) || is_ValueChanged(COLUMNNAME_PostingType) ))
 		{
 			selectLines(); 
 		}
@@ -122,18 +120,27 @@ implements DocAction, DocOptions	// F3P: added support for ReActivate
 	{
 		// Reset selected lines:
 		unselectLines();
+		
+		String periodExpression = " = ";
+		
+		// F3P: if out of period is enabled, get all unprocessed up to the acct date
+		
+		if(isDepExpOutPeriod())
+			periodExpression = " <= ";
+		
 		// Select lines:
 		final String sql = "UPDATE " + MDepreciationExp.Table_Name + " SET "
 				+ MDepreciationExp.COLUMNNAME_A_Depreciation_Entry_ID + "=?"
 				+ " WHERE "
 					+ MDepreciationExp.COLUMNNAME_A_Depreciation_Entry_ID + " IS NULL"
 					+ " AND " + MDepreciationExp.COLUMNNAME_Processed + " = 'N'" // F3P: filter to include only non-processed entries
-					+ " AND TRUNC("+MDepreciationExp.COLUMNNAME_DateAcct+",'MONTH') = ?"
+					+ " AND TRUNC("+MDepreciationExp.COLUMNNAME_DateAcct+",'MONTH') " + periodExpression + " ?"
 					+ " AND AD_Client_ID=? AND (AD_Org_ID = ? OR ? = 0)" // F3P: also all org
 					+ " AND A_Asset_ID IN (SELECT a.A_Asset_ID FROM A_Asset a WHERE a.A_Asset_Status = 'AC') " // F3P: Only activates;
+					+ " AND PostingType=?"
 		;
 		Timestamp dateAcct = TimeUtil.trunc(getDateAcct(), TimeUtil.TRUNC_MONTH);
-		int no = DB.executeUpdateEx(sql, new Object[]{get_ID(), dateAcct, getAD_Client_ID(), getAD_Org_ID(), getAD_Org_ID()}, get_TrxName());
+		int no = DB.executeUpdateEx(sql, new Object[]{get_ID(), dateAcct, getAD_Client_ID(), getAD_Org_ID(), getAD_Org_ID(), getPostingType()}, get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Updated #" + no);
 	}
 	

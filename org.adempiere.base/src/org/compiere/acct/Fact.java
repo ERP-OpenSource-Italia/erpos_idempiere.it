@@ -32,7 +32,6 @@ import org.compiere.model.MFactAcct;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 
-import it.idempiere.base.model.LITMDistribution;
 import it.idempiere.base.model.LITMDistributionLine;
 
 /**
@@ -710,8 +709,9 @@ public final class Fact
 		for (int i = 0; i < m_lines.size(); i++)
 		{
 			FactLine dLine = (FactLine)m_lines.get(i);
+			//F3P: aggiunta del parametro AD_Org_ID ricavato del documento
 			MDistribution[] distributions = MDistribution.get (dLine.getAccount(), 
-				m_postingType, m_doc.getC_DocType_ID());
+				m_postingType, m_doc.getC_DocType_ID(), dLine.getAD_Org_ID());
 			//	No Distribution for this line
 			//AZ Goodwill
 			//The above "get" only work in GL Journal because it's using ValidCombination Account
