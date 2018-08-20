@@ -92,6 +92,12 @@ public class STDSysConfig
  	
  	public static final String LIT_CHECK_RELDOC_ON_REOPEN_ORDER = "LIT_CHECK_RELDOC_ON_REOPEN_ORDER";
  	 		
+ 	public static final String F3P_INFOPRODUCT_LISTVERSIONS = "F3P_INFOPRODUCT_LISTVERSIONS";
+ 	
+	public static final String	F3P_INFOPRODUCT_LISTVERSIONS_YES = "Y",
+								F3P_INFOPRODUCT_LISTVERSIONS_NO = "N",
+								F3P_INFOPRODUCT_LISTVERSIONS_NO_PURCHASE = "P";
+ 	
 	public static boolean isCommissionRuleMinorSequence(int AD_Client_ID,int AD_Org_ID)
 	{
 		return MSysConfig.getBooleanValue(LIT_COMMISSION_RULE_MINOR_SEQUENCE , false,AD_Client_ID,AD_Org_ID);
@@ -462,6 +468,11 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(COPY_DOCNO_FROM_WAREHOUSEORDER_TO_INOUT, false, AD_Client_ID, AD_Org_ID);
 	}
 	
+	public static String getInfoProductListVersions(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getValue(F3P_INFOPRODUCT_LISTVERSIONS, F3P_INFOPRODUCT_LISTVERSIONS_YES, AD_Client_ID, AD_Org_ID);
+	}
+	
 	public static final String WAREHOUSELOCATORCHECK_SKIP_INOUTDOCTYPES = "ERPOS_WAREHOUSELOCATORCHECK_SKIP_INOUTDOCTYPES";
 	
 	public static boolean	isInOutDocTypeInWarehouseLocatorCheckSkipList(int C_DocType_ID, int AD_Client_ID, int AD_Org_ID)
@@ -521,5 +532,4 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LIT_CHECK_RELDOC_ON_REOPEN_ORDER, false, AD_Client_ID, AD_Org_ID);
 	}
-	
 }
