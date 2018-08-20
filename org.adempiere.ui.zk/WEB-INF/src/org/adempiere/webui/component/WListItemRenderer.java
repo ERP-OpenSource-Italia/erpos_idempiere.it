@@ -18,6 +18,7 @@
 package org.adempiere.webui.component;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -732,8 +733,8 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	}
 
 	//F3P: IDEMPIERE-3318 - Factory for generating cell renderers
-	public ArrayList<WTableColumn> getTableColumns() {
-		return m_tableColumns;
+	public List<WTableColumn> getTableColumns() {
+		return Collections.unmodifiableList(m_tableColumns);
 	}
 
 	class CellListener implements EventListener<Event> {
