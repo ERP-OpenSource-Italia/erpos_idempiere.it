@@ -476,12 +476,7 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(COPY_DOCNO_FROM_WAREHOUSEORDER_TO_INOUT, false, AD_Client_ID, AD_Org_ID);
 	}
-	
-	public static String getInfoProductListVersions(int AD_Client_ID,int AD_Org_ID)
-	{
-		return MSysConfig.getValue(F3P_INFOPRODUCT_LISTVERSIONS, F3P_INFOPRODUCT_LISTVERSIONS_YES, AD_Client_ID, AD_Org_ID);
-	}
-	
+		
 	public static final String WAREHOUSELOCATORCHECK_SKIP_INOUTDOCTYPES = "ERPOS_WAREHOUSELOCATORCHECK_SKIP_INOUTDOCTYPES";
 	
 	public static boolean	isInOutDocTypeInWarehouseLocatorCheckSkipList(int C_DocType_ID, int AD_Client_ID, int AD_Org_ID)
