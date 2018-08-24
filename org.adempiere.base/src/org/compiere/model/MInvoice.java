@@ -1819,7 +1819,6 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 
 		// Set the definite document number after completed (if needed)
-		// Set the definite document number after completed (if needed)
 		if (isUpdateDocNo()) // F3P: Check if we want to update docNo. This is not good in reopen invoice process
 			setDefiniteDocumentNo();
 
