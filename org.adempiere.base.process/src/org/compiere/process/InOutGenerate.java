@@ -616,12 +616,17 @@ public class InOutGenerate extends SvrProcess
 		//	Create New Shipment
 		if (m_shipment == null)
 		{
-			m_shipment = new MInOut (order, 0, m_movementDate);
-			m_shipment.setM_Warehouse_ID(orderLine.getM_Warehouse_ID());	//	sets Org too
-			if (order.getC_BPartner_ID() != orderLine.getC_BPartner_ID())
-				m_shipment.setC_BPartner_ID(orderLine.getC_BPartner_ID());
-			if (order.getC_BPartner_Location_ID() != orderLine.getC_BPartner_Location_ID())
-				m_shipment.setC_BPartner_Location_ID(orderLine.getC_BPartner_Location_ID());
+			// F3P: moved to separated function to improve overridability
+			
+			// m_shipment = new MInOut (order, 0, m_movementDate);
+			// m_shipment.setM_Warehouse_ID(orderLine.getM_Warehouse_ID());	//	sets Org too
+			// if (order.getC_BPartner_ID() != orderLine.getC_BPartner_ID())
+			//  m_shipment.setC_BPartner_ID(orderLine.getC_BPartner_ID());
+			// if (order.getC_BPartner_Location_ID() != orderLine.getC_BPartner_Location_ID())
+			//  m_shipment.setC_BPartner_Location_ID(orderLine.getC_BPartner_Location_ID());
+
+			m_shipment = createShipment(order, orderLine, m_movementDate);
+			
 			if (!m_shipment.save())
 				throw new IllegalStateException("Could not create Shipment");
 		}
@@ -1043,6 +1048,20 @@ public class InOutGenerate extends SvrProcess
 		
 	}	//	Parameter
 	
+	// F3P: split creation in overridabile function
+	
+	protected MInOut createShipment(MOrder order, MOrderLine orderLine, Timestamp movementDate)
+	{
+		MInOut shipment = new MInOut (order, 0, movementDate);
+				
+		shipment.setM_Warehouse_ID(orderLine.getM_Warehouse_ID());	//	sets Org too
+		if (order.getC_BPartner_ID() != orderLine.getC_BPartner_ID())
+			shipment.setC_BPartner_ID(orderLine.getC_BPartner_ID());
+		if (order.getC_BPartner_Location_ID() != orderLine.getC_BPartner_Location_ID())
+			shipment.setC_BPartner_Location_ID(orderLine.getC_BPartner_Location_ID());
+				
+		return shipment;
+	}	
 	//F3P
 	protected void processSelectionLine(MOrderLine line, String uuid, Map<String,Object> lineAdditionalData, ResultSet rs) throws Exception
 	{
