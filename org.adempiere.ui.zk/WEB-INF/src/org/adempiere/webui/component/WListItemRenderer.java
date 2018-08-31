@@ -69,7 +69,7 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	private EventListener<Event> cellListener;
 
 	//F3P: identifier
-	private String	identifier;
+	private String	cellFactoryIdentifier;
 	
 	/**
 	 * Default constructor.
@@ -94,13 +94,13 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	 * Constructor specifying the column headers.
 	 *
 	 * @param columnNames	vector of column titles.
-	 * @param identifier	identifier
+	 * @param cellFactoryIdentifier	identifier
 	 */
-	public WListItemRenderer(List< ? extends String> columnNames, String identifier) //F3P: identifier
+	public WListItemRenderer(List< ? extends String> columnNames, String cellFactoryIdentifier) //F3P: identifier
 	{
 		super();
 		
-		this.identifier = identifier;
+		this.cellFactoryIdentifier = cellFactoryIdentifier;
 		
 		WTableColumn tableColumn;
 
@@ -222,7 +222,7 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 				for(ICellComponentFactory factory : factories) 
 				{
 					boolean managed = factory.createCellComponent(this, listcell, table, field, rowIndex, columnIndex, 
-							isCellEditable, identifier);
+							isCellEditable, cellFactoryIdentifier);
 					
 					if(managed)
 						break;	
@@ -526,7 +526,7 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 			
 			if (factories != null) {
 				for(ICellComponentFactory factory : factories) {
-					value = factory.getValueForCell(this, tableColumn, row, col, source, identifier);
+					value = factory.getValueForCell(this, tableColumn, row, col, source, cellFactoryIdentifier);
 					if(value != null)
 						break;	
 				}
@@ -758,6 +758,14 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 			}
 		}
 
+	}
+
+	public String getCellFactoryIdentifier() {
+		return cellFactoryIdentifier;
+	}
+
+	public void setCellFactoryIdentifier(String cellFactoryIdentifier) {
+		this.cellFactoryIdentifier = cellFactoryIdentifier;
 	}
 }
 
