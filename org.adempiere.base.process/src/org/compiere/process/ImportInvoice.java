@@ -892,12 +892,18 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 				line.setQty(imp.getQtyOrdered());
 				
 				line.setPrice();
-				
+
 				BigDecimal price = imp.getPriceActual();
 				if (price != null && Env.ZERO.compareTo(price) != 0)
 					line.setPrice(price);
 				else if(m_bNotOverWritePrice) //LS: overwrite price when is 0
 					line.setPrice(price);
+				
+				BigDecimal pricelist = imp.getPriceList();
+				if (pricelist != null && Env.ZERO.compareTo(pricelist) != 0)
+					line.setPriceList(pricelist);
+				else if(m_bNotOverWritePrice) //LS: overwrite price when is 0
+					line.setPriceList(pricelist);
 				
 				if (imp.getC_Tax_ID() != 0)
 					line.setC_Tax_ID(imp.getC_Tax_ID());
