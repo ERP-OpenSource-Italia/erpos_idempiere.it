@@ -18,6 +18,7 @@
 package org.adempiere.webui.component;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +26,7 @@ import java.util.Set;
 
 import org.adempiere.base.Service;
 import org.adempiere.webui.AdempiereWebUI;
+import org.adempiere.webui.Extensions;
 import org.adempiere.webui.event.TableValueChangeEvent;
 import org.adempiere.webui.event.TableValueChangeListener;
 import org.adempiere.webui.factory.ICellComponentFactory;
@@ -201,7 +203,8 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	 * @param columnIndex	The column in which the cell is to be placed.
 	 * @return	The list cell component.
 	 */
-	private Listcell getCellComponent(WListbox table, Object field,
+	// F3P: from private to protected to allow overriding
+	protected Listcell getCellComponent(WListbox table, Object field, 
 									  int rowIndex, int columnIndex)
 	{
 		ListCell listcell = new ListCell();
@@ -742,8 +745,8 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	}
 
 	//F3P: IDEMPIERE-3318 - Factory for generating cell renderers
-	public ArrayList<WTableColumn> getTableColumns() {
-		return m_tableColumns;
+	public List<WTableColumn> getTableColumns() {
+		return Collections.unmodifiableList(m_tableColumns);
 	}
 
 	class CellListener implements EventListener<Event> {

@@ -23,12 +23,16 @@ package org.adempiere.webui;
 import java.util.List;
 
 import org.adempiere.base.Service;
+import org.adempiere.webui.component.WListItemRenderer;
+import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.editor.IEditorPopupMenuItem;
 import org.adempiere.webui.editor.WEditor;
+import org.adempiere.webui.factory.ICellComponentFactory;
 import org.adempiere.webui.factory.IEditorPopupMenuItemFactory;
 import org.adempiere.webui.factory.IFormFactory;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.util.WEditorPopupMenuItems;
+import org.zkoss.zul.Listcell;
 
 /**
  *
@@ -79,4 +83,32 @@ public class Extensions {
 
 		return items;
 	}
+	
+	/** Cell components creators
+	 * 	IDEMPIERE-3318 - Factory for generating cell renderers
+	 * 
+	 * @param editor
+	 * @return the list of items
+	 */
+	
+	public static boolean createCellComponent(WListItemRenderer renderer, Listcell listcell, WListbox table, Object field,
+			int rowIndex, int columnIndex,boolean isCellEditable, String identifier)	
+	{
+		List<ICellComponentFactory> factories = Service.locator().list(ICellComponentFactory.class).getServices();
+		boolean managed = false;
+
+		if (factories != null) {
+			for(ICellComponentFactory factory : factories) 
+			{
+				managed = factory.createCellComponent(renderer, listcell, table, field, rowIndex, columnIndex, 
+						isCellEditable, identifier);
+
+				if(managed)
+					break;
+			}
+		}
+		
+		return managed;
+	}
+
 }
