@@ -16,9 +16,9 @@ import org.zkoss.zul.Listcell;
 
 public class WInfoWindowListItemRenderer extends WListItemRenderer
 {
-	private MInfoColumn[]	gridDisplayedInfoColumns;
-	private ColumnInfo[]	gridDisplayedColumnInfos;
-	private InfoWindow infoWindow;
+	private MInfoColumn[]	gridDisplayedInfoColumns = null;
+	private ColumnInfo[]	gridDisplayedColumnInfos = null;
+	private InfoWindow infoWindow = null;
 
 	public WInfoWindowListItemRenderer(InfoWindow infoWindow)
 	{
