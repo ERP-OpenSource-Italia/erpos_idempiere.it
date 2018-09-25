@@ -7,7 +7,6 @@ import java.net.URL;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -212,6 +211,20 @@ public class DefaultCellComponentFactory implements ICellComponentFactory
 					table.removeEventListener(Events.ON_SELECT, wliRenderer);
 					table.addEventListener(Events.ON_SELECT, wliRenderer);
 				}
+				
+				/* F3P: Rimosso, non sembra piu necessario. Lasciato come riferimento
+				// F3P: Reflect selection status				
+				if(((IDColumn)field).isSelected())
+				{
+					ListItem rowItem = table.getItemAtIndex(rowIndex);
+					table.addItemToSelection(rowItem);
+				}
+				else
+				{
+					ListItem rowItem = table.getItemAtIndex(rowIndex);
+					table.removeItemFromSelection(rowItem);					
+				}
+				*/
 			}
 			else
 			{
