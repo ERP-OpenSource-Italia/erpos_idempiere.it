@@ -7,6 +7,7 @@ import org.adempiere.webui.editor.WebEditorFactory;
 import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.event.ValueChangeListener;
 import org.adempiere.webui.info.InfoWindow;
+import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.model.GridField;
 import org.compiere.model.MInfoColumn;
@@ -15,61 +16,51 @@ import org.zkoss.zul.Listcell;
 
 public class WInfoWindowListItemRenderer extends WListItemRenderer
 {
-	private MInfoColumn[]	infoColumns;
-	private GridField[]	gridFields;
-	private int	gridFieldsOffset = -1; // There are added columns in front of the first real gridField, instead of a fixed +1 we use an offset
+	private MInfoColumn[]	gridDisplayedInfoColumns;
+	private ColumnInfo[]	gridDisplayedColumnInfos;
 	private InfoWindow infoWindow;
 
-	public WInfoWindowListItemRenderer(InfoWindow infoWindow, MInfoColumn[] infoColumns, List<GridField> gridFields)
+	public WInfoWindowListItemRenderer(InfoWindow infoWindow)
 	{
-		this.infoColumns = infoColumns;
-		this.gridFields = gridFields.toArray(new GridField[infoColumns.length]);
 		this.infoWindow = infoWindow;
 	}
 
-	public WInfoWindowListItemRenderer(InfoWindow infoWindow, MInfoColumn[] infoColumns, List<GridField> gridFields, List<? extends String> columnNames)
+	public WInfoWindowListItemRenderer(InfoWindow infoWindow, List<? extends String> columnNames)
 	{
 		super(columnNames);
-		this.infoColumns = infoColumns;
-		this.gridFields = gridFields.toArray(new GridField[infoColumns.length]);
 		this.infoWindow = infoWindow;
 	}
 
-	public WInfoWindowListItemRenderer(InfoWindow infoWindow, MInfoColumn[] infoColumns, List<GridField> gridFields, List<? extends String> columnNames,
+	public WInfoWindowListItemRenderer(InfoWindow infoWindow, List<? extends String> columnNames,
 			String identifier)
 	{
 		super(columnNames, identifier);
-		this.infoColumns = infoColumns;
-		this.gridFields = gridFields.toArray(new GridField[infoColumns.length]);		
 		this.infoWindow = infoWindow;
 	}
 	
-	private void calculateFieldOffest()
+	public void setGridDisplaydInfoColumns(MInfoColumn[] infoColumns, ColumnInfo[] columnInfos)
 	{
-		int colCount = getTableColumns().size();
-		
-		if(colCount > infoColumns.length) // Added columns: selecetion
-			gridFieldsOffset = colCount - infoColumns.length;		
+		this.gridDisplayedInfoColumns = infoColumns;
+		this.gridDisplayedColumnInfos = columnInfos;
 	}
-	
+		
 	@Override
 	protected Listcell getCellComponent(WListbox table, Object field,
 			final int rowIndex, final int columnIndex)
-	{
-		if(gridFieldsOffset < 0) // Just do it once, this assumes this rendered is not shared between grids
-			calculateFieldOffest();
-		
+	{		
+		if(gridDisplayedInfoColumns == null || gridDisplayedColumnInfos == null)
+		{
+			return super.getCellComponent(table, field, rowIndex, columnIndex);
+		}
+				
 		Listcell listcell = null;
 		ListModelTable model = table.getModel();
 		Object obj = model.get(rowIndex);
 		
-		int effectiveFieldIndex = columnIndex - gridFieldsOffset;
-		 				
-		if(effectiveFieldIndex >= 0
-				&& model.isSelected(obj) )
+		MInfoColumn infoColumn = gridDisplayedInfoColumns[columnIndex];
+		
+		if(model.isSelected(obj) && infoColumn != null) // First index may be null
 		{
-			MInfoColumn infoColumn = infoColumns[effectiveFieldIndex];
-			
 			if(infoColumn.isReadOnly() == false 
 					&& columnIndex > 0)
 			{
@@ -84,7 +75,7 @@ public class WInfoWindowListItemRenderer extends WListItemRenderer
 				if(cssClass != null)
 					listCell.setClass(cssClass);
 
-				final GridField gridField = gridFields[effectiveFieldIndex];
+				final GridField gridField = gridDisplayedColumnInfos[columnIndex].getGridField();
 				final WEditor editor = WebEditorFactory.getEditor(gridField, false);
 				
 				// Set editor value
