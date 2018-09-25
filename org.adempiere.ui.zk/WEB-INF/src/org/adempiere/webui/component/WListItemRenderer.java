@@ -26,7 +26,6 @@ import java.util.Set;
 
 import org.adempiere.base.Service;
 import org.adempiere.webui.AdempiereWebUI;
-import org.adempiere.webui.Extensions;
 import org.adempiere.webui.event.TableValueChangeEvent;
 import org.adempiere.webui.event.TableValueChangeListener;
 import org.adempiere.webui.factory.ICellComponentFactory;
