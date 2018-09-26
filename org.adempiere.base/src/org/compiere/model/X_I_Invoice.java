@@ -1305,4 +1305,24 @@ public class X_I_Invoice extends PO implements I_I_Invoice, I_Persistent
 	{
 		return (String)get_Value(COLUMNNAME_UPC);
 	}
+	
+	/** Set List Price.
+	@param PriceList 
+	List Price 
+	 */
+	public void setPriceList (BigDecimal PriceList)
+	{
+		set_Value (COLUMNNAME_PriceList, PriceList);
+	}
+	
+	/** Get List Price.
+		@return List Price 
+	  */
+	public BigDecimal getPriceList () 
+	{
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_PriceList);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
+	}
 }

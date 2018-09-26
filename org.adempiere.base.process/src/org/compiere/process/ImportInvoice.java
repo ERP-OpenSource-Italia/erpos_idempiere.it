@@ -67,6 +67,9 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 	/** F3P: lista delle fatture da rollbackare */
 	private Set<InvoiceForRollback> m_invoiceForRollback = new HashSet<InvoiceForRollback>();
 
+	/** LS: sovrascrive o no il prezzo sulla linea della fattura dal listino prezzi**/
+	private boolean m_bNotOverWritePrice = false;
+	
 	/**
 	 *  Prepare - e.g., get Parameters.
 	 */
@@ -88,6 +91,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 				m_documentNo = (String)para[i].getParameter();
 			else if (name.equals("IsAvoidPartialImport")) //F3P: param added 
 				m_bAvoidPartialImport = "Y".equals(para[i].getParameter());
+			else if (name.equals("IsNotOverWritePrice")) //F3P: param added 
+				m_bNotOverWritePrice = "Y".equals(para[i].getParameter());
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -885,10 +890,21 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 					line.setC_Project_ID(imp.getC_Project_ID());
 				//
 				line.setQty(imp.getQtyOrdered());
+				
 				line.setPrice();
+
 				BigDecimal price = imp.getPriceActual();
 				if (price != null && Env.ZERO.compareTo(price) != 0)
 					line.setPrice(price);
+				else if(m_bNotOverWritePrice) //LS: overwrite price when is 0
+					line.setPrice(price);
+				
+				BigDecimal pricelist = imp.getPriceList();
+				if (pricelist != null && Env.ZERO.compareTo(pricelist) != 0)
+					line.setPriceList(pricelist);
+				else if(m_bNotOverWritePrice) //LS: overwrite price when is 0
+					line.setPriceList(pricelist);
+				
 				if (imp.getC_Tax_ID() != 0)
 					line.setC_Tax_ID(imp.getC_Tax_ID());
 				else
