@@ -324,13 +324,12 @@ public class InOutGenerate extends SvrProcess
 						{
 							int C_OrderLine_ID = rsLS.getInt(MOrderLine.COLUMNNAME_C_OrderLine_ID);
 							BigDecimal bdQty = rsLS.getBigDecimal("Qty");
-							String uuid = rsLS.getString("T_SelectionLine_UU");
-							
+														
 							MOrderLine mOLine = PO.get(getCtx(), MOrderLine.Table_Name, C_OrderLine_ID, get_TrxName());
-							SelectionLineOrderLineWrapper wrapper = new SelectionLineOrderLineWrapper(mOLine, uuid);
+							SelectionLineOrderLineWrapper wrapper = new SelectionLineOrderLineWrapper(mOLine);
 							wrapper.qty = bdQty;
 							
-							processSelectionLine(mOLine, uuid, wrapper.additionalData, rsLS);							
+							processSelectionLine(mOLine, wrapper.additionalData, rsLS);							
 							
 							lstLines.add(wrapper);						
 						}
@@ -599,13 +598,11 @@ public class InOutGenerate extends SvrProcess
 	{
 		SelectionLineOrderLineWrapper orderLineWrapper = null;
 		Map<String, Object> wrapperAdditionalData = null;
-		String selectionLineUuid = null;
 		
 		if(orderLine instanceof SelectionLineOrderLineWrapper)
 		{
 			orderLineWrapper = (SelectionLineOrderLineWrapper)orderLine;
 			wrapperAdditionalData = orderLineWrapper.additionalData;
-			selectionLineUuid = orderLineWrapper.uuid;
 			orderLine = orderLineWrapper.orderLine;
 		}
 				
@@ -643,7 +640,7 @@ public class InOutGenerate extends SvrProcess
 			line.setLine(m_line + orderLine.getLine());
 			
 			//F3P add extension point
-			beforeSaveInOutLine(line, selectionLineUuid, wrapperAdditionalData);
+			beforeSaveInOutLine(line, wrapperAdditionalData);
 			
 			/* F3P: changed to saveEx to avoid silently ignore the real error 
 			if (!line.save())
@@ -655,7 +652,7 @@ public class InOutGenerate extends SvrProcess
 			line.saveEx(get_TrxName());
 			
 			//F3P add extension point
-			afterSaveInOutLine(line, selectionLineUuid, wrapperAdditionalData);
+			afterSaveInOutLine(line, wrapperAdditionalData);
 		
 			if (log.isLoggable(Level.FINE)) log.fine(line.toString());
 			return;
@@ -713,7 +710,7 @@ public class InOutGenerate extends SvrProcess
 			line.setLine(m_line + orderLine.getLine());
 			
 			//F3P add extension point
-			beforeSaveInOutLine(line, selectionLineUuid, wrapperAdditionalData);
+			beforeSaveInOutLine(line, wrapperAdditionalData);
 			
 			/* F3P: changed to saveEx to avoid silently ignore the real error 
 			if (!line.save())
@@ -725,7 +722,7 @@ public class InOutGenerate extends SvrProcess
 			line.saveEx(get_TrxName());
 			
 			//F3P add extension point
-			afterSaveInOutLine(line, selectionLineUuid, wrapperAdditionalData);
+			afterSaveInOutLine(line, wrapperAdditionalData);
 			
 			if (log.isLoggable(Level.FINE)) log.fine("ToDeliver=" + qty + "/" + deliver + " - " + line);
 			toDeliver = toDeliver.subtract(deliver);
@@ -772,10 +769,10 @@ public class InOutGenerate extends SvrProcess
 				    }
 				  */
 				//F3P add extension point
-				beforeSaveInOutLine(line, selectionLineUuid, wrapperAdditionalData);
+				beforeSaveInOutLine(line, wrapperAdditionalData);
 				line.saveEx(get_TrxName());
 				//F3P add extension point
-				afterSaveInOutLine(line, selectionLineUuid, wrapperAdditionalData);
+				afterSaveInOutLine(line, wrapperAdditionalData);
 			}
 		}	
 	}	//	createLine
@@ -1063,17 +1060,17 @@ public class InOutGenerate extends SvrProcess
 		return shipment;
 	}	
 	//F3P
-	protected void processSelectionLine(MOrderLine line, String uuid, Map<String,Object> lineAdditionalData, ResultSet rs) throws Exception
+	protected void processSelectionLine(MOrderLine line, Map<String,Object> lineAdditionalData, ResultSet rs) throws Exception
 	{
 		//Nothing to do
 	}
 	
-	protected void beforeSaveInOutLine(MInOutLine line, String selectionLineUuid, Map<String,Object> selectionLineAdditionalData) throws AdempiereException
+	protected void beforeSaveInOutLine(MInOutLine line, Map<String,Object> selectionLineAdditionalData) throws AdempiereException
 	{
 		//Nothing to do
 	}
 	
-	protected void afterSaveInOutLine(MInOutLine line, String selectionLineUuid, Map<String,Object> selectionLineAdditionalData) throws AdempiereException
+	protected void afterSaveInOutLine(MInOutLine line, Map<String,Object> selectionLineAdditionalData) throws AdempiereException
 	{
 		//Nothing to do
 	}
@@ -1086,15 +1083,12 @@ public class InOutGenerate extends SvrProcess
 		
 		private static final long serialVersionUID = -7385140481126599352L;
 		private MOrderLine	orderLine = null;
-		private String			uuid = null;
 		private BigDecimal	qty = null;
 		private Map<String, Object> additionalData = new HashMap<>(); 
 		
-		public SelectionLineOrderLineWrapper(MOrderLine line,String uuid)
+		public SelectionLineOrderLineWrapper(MOrderLine line)
 		{
-			super(line.getParent());
-			
-			this.uuid = uuid;
+			super(line.getParent());			
 			this.orderLine = line;
 		}
 	}
