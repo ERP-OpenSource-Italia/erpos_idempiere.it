@@ -353,13 +353,18 @@ public class InOutGenerate extends SvrProcess
 				for (int i = 0; i < lines.length; i++)
 				{
 					MOrderLine line = lines[i];
+					MOrderLine wrapperOrLine = null;
 					SelectionLineOrderLineWrapper wrapper = null;
+					
+					// Managed wrapped lines, and raw lines
 					
 					if(line instanceof SelectionLineOrderLineWrapper)
 					{
-						wrapper = (SelectionLineOrderLineWrapper)line;						
+						wrapper = (SelectionLineOrderLineWrapper)line;
 						line = wrapper.orderLine;
 					}
+					else
+						wrapperOrLine = line;
 					
 					if (line.getM_Warehouse_ID() != p_M_Warehouse_ID)
 						continue;
@@ -426,7 +431,7 @@ public class InOutGenerate extends SvrProcess
 							|| toDeliver.signum() != 0))		//	lines w/o product
 					{
 						if (!MOrder.DELIVERYRULE_CompleteOrder.equals(order.getDeliveryRule()))	//	printed later
-							createLine (order, wrapper, toDeliver, null, false);
+							createLine (order, wrapperOrLine, toDeliver, null, false);
 						else
 							logOrderLineInfo(line, " skipped: delivery rule == complete order");  // F3P: Helper for order line-related logs (level info)
 						continue;
@@ -463,7 +468,7 @@ public class InOutGenerate extends SvrProcess
 							+ " (Unconfirmed=" + unconfirmedShippedQty
 							+ ", ToDeliver=" + toDeliver + " - " + line);
 						//	
-						createLine (order, wrapper, toDeliver, storages, false);
+						createLine (order, wrapperOrLine, toDeliver, storages, false);
 					}
 					//	Availability
 					else if (MOrder.DELIVERYRULE_Availability.equals(order.getDeliveryRule())
@@ -478,7 +483,7 @@ public class InOutGenerate extends SvrProcess
 							+ "), ToDeliver=" + toDeliver 
 							+ ", Delivering=" + deliver + " - " + line);
 						//	
-						createLine (order, wrapper, deliver, storages, false);
+						createLine (order, wrapperOrLine, deliver, storages, false);
 					}
 					//	Force
 					else if (MOrder.DELIVERYRULE_Force.equals(order.getDeliveryRule()))
@@ -489,7 +494,7 @@ public class InOutGenerate extends SvrProcess
 							+ "), ToDeliver=" + toDeliver 
 							+ ", Delivering=" + deliver + " - " + line);
 						//	
-						createLine (order, wrapper, deliver, storages, true);
+						createLine (order, wrapperOrLine, deliver, storages, true);
 					}
 					//	Manual
 					else if (MOrder.DELIVERYRULE_Manual.equals(order.getDeliveryRule())) {
