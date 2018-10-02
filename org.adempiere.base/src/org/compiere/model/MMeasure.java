@@ -25,6 +25,7 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 
+import javax.script.Bindings;
 import javax.script.ScriptEngine;
 
 import org.adempiere.apps.graph.GraphColumn;
@@ -613,12 +614,14 @@ public class MMeasure extends X_PA_Measure
 						break;
 					}
 					ScriptEngine engine = rule.getScriptEngine();
-					MRule.setContext(engine, po.getCtx(), 0);
-					engine.put(MRule.ARGUMENTS_PREFIX + "Ctx", po.getCtx());
-					engine.put(MRule.ARGUMENTS_PREFIX + "PO", po);
+					Bindings bindings = engine.createBindings();
+					
+					MRule.setContext(bindings, po.getCtx(), 0);
+					bindings.put(MRule.ARGUMENTS_PREFIX + "Ctx", po.getCtx());
+					bindings.put(MRule.ARGUMENTS_PREFIX + "PO", po);
 					try 
 					{
-						Object value =  engine.eval(rule.getScript());
+						Object value =  engine.eval(rule.getScript(), bindings);
 						amt = (BigDecimal)value;
 					}
 					catch (Exception e)

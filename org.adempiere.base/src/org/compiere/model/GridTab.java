@@ -37,6 +37,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 
+import javax.script.Bindings;
 import javax.script.ScriptEngine;
 import javax.swing.event.EventListenerList;
 
@@ -2950,23 +2951,24 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 					}
 	
 					ScriptEngine engine = rule.getScriptEngine();
+					Bindings bindings = engine.createBindings();
 	
 					// Window context are    W_
 					// Login context  are    G_
-					MRule.setContext(engine, m_vo.ctx, m_vo.WindowNo);
+					MRule.setContext(bindings, m_vo.ctx, m_vo.WindowNo);
 					// now add the callout parameters windowNo, tab, field, value, oldValue to the engine
 					// Method arguments context are A_
-					engine.put(MRule.ARGUMENTS_PREFIX + "WindowNo", m_vo.WindowNo);
-					engine.put(MRule.ARGUMENTS_PREFIX + "Tab", this);
-					engine.put(MRule.ARGUMENTS_PREFIX + "Field", field);
-					engine.put(MRule.ARGUMENTS_PREFIX + "Value", value);
-					engine.put(MRule.ARGUMENTS_PREFIX + "OldValue", oldValue);
-					engine.put(MRule.ARGUMENTS_PREFIX + "Ctx", m_vo.ctx);
+					bindings.put(MRule.ARGUMENTS_PREFIX + "WindowNo", m_vo.WindowNo);
+					bindings.put(MRule.ARGUMENTS_PREFIX + "Tab", this);
+					bindings.put(MRule.ARGUMENTS_PREFIX + "Field", field);
+					bindings.put(MRule.ARGUMENTS_PREFIX + "Value", value);
+					bindings.put(MRule.ARGUMENTS_PREFIX + "OldValue", oldValue);
+					bindings.put(MRule.ARGUMENTS_PREFIX + "Ctx", m_vo.ctx);
 	
 					try
 					{
 						activeCallouts.add(cmd);
-						retValue = engine.eval(rule.getScript()).toString();
+						retValue = engine.eval(rule.getScript(), bindings).toString();
 					}
 					catch (Exception e)
 					{
@@ -3498,23 +3500,24 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		}
 
 		ScriptEngine engine = rule.getScriptEngine();
+		Bindings bindings = engine.createBindings();
 
 		// Window context are    W_
 		// Login context  are    G_
-		MRule.setContext(engine, m_vo.ctx, m_vo.WindowNo);
+		MRule.setContext(bindings, m_vo.ctx, m_vo.WindowNo);
 		// now add the callout parameters windowNo, tab, field, value, oldValue to the engine 
 		// Method arguments context are A_
-		engine.put(MRule.ARGUMENTS_PREFIX + "WindowNo", m_vo.WindowNo);
-		engine.put(MRule.ARGUMENTS_PREFIX + "Tab", this);
-		engine.put(MRule.ARGUMENTS_PREFIX + "Field", null);
-		engine.put(MRule.ARGUMENTS_PREFIX + "Value", null);
-		engine.put(MRule.ARGUMENTS_PREFIX + "OldValue", null);
-		engine.put(MRule.ARGUMENTS_PREFIX + "Ctx", m_vo.ctx);
+		bindings.put(MRule.ARGUMENTS_PREFIX + "WindowNo", m_vo.WindowNo);
+		bindings.put(MRule.ARGUMENTS_PREFIX + "Tab", this);
+		bindings.put(MRule.ARGUMENTS_PREFIX + "Field", null);
+		bindings.put(MRule.ARGUMENTS_PREFIX + "Value", null);
+		bindings.put(MRule.ARGUMENTS_PREFIX + "OldValue", null);
+		bindings.put(MRule.ARGUMENTS_PREFIX + "Ctx", m_vo.ctx);
 
 		Object result = null;
 		try 
 		{
-			result = engine.eval(rule.getScript()).toString();
+			result = engine.eval(rule.getScript(), bindings).toString();
 		}
 		catch (Exception e)
 		{
