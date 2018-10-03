@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
+import javax.script.Bindings;
 import javax.script.ScriptEngine;
 
 import org.adempiere.base.Core;
@@ -221,7 +222,7 @@ public class MRule extends X_AD_Rule
 	 *  @param ctx context
 	 *  @param windowNo window number
 	 */
-	public static void setContext(ScriptEngine engine, Properties ctx, int windowNo) {
+	public static void setContext(Bindings bindings, Properties ctx, int windowNo) {
 		Enumeration<Object> en = ctx.keys();
 		while (en.hasMoreElements())
 		{
@@ -236,13 +237,13 @@ public class MRule extends X_AD_Rule
 			Object value = ctx.get(key);
 			if (value != null) {
 				if (value instanceof Boolean)
-					engine.put(convertKey(key, windowNo), ((Boolean)value).booleanValue());
+					bindings.put(convertKey(key, windowNo), ((Boolean)value).booleanValue());
 				else if (value instanceof Integer)
-					engine.put(convertKey(key, windowNo), ((Integer)value).intValue());
+					bindings.put(convertKey(key, windowNo), ((Integer)value).intValue());
 				else if (value instanceof Double)
-					engine.put(convertKey(key, windowNo), ((Double)value).doubleValue());
+					bindings.put(convertKey(key, windowNo), ((Double)value).doubleValue());
 				else
-					engine.put(convertKey(key, windowNo), value);
+					bindings.put(convertKey(key, windowNo), value);
 			}
 		}
 	}

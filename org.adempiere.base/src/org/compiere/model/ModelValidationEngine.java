@@ -25,6 +25,7 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 
+import javax.script.Bindings;
 import javax.script.ScriptEngine;
 
 import org.adempiere.base.Core;
@@ -241,16 +242,17 @@ public class ModelValidationEngine
 					String error;
 					try {
 						ScriptEngine engine = loginRule.getScriptEngine();
+						Bindings bindings = engine.createBindings();
 
-						MRule.setContext(engine, Env.getCtx(), 0);  // no window
+						MRule.setContext(bindings, Env.getCtx(), 0);  // no window
 						// now add the method arguments to the engine
-						engine.put(MRule.ARGUMENTS_PREFIX + "Ctx", Env.getCtx());
-						engine.put(MRule.ARGUMENTS_PREFIX + "AD_Client_ID", AD_Client_ID);
-						engine.put(MRule.ARGUMENTS_PREFIX + "AD_Org_ID", AD_Org_ID);
-						engine.put(MRule.ARGUMENTS_PREFIX + "AD_Role_ID", AD_Role_ID);
-						engine.put(MRule.ARGUMENTS_PREFIX + "AD_User_ID", AD_User_ID);
+						bindings.put(MRule.ARGUMENTS_PREFIX + "Ctx", Env.getCtx());
+						bindings.put(MRule.ARGUMENTS_PREFIX + "AD_Client_ID", AD_Client_ID);
+						bindings.put(MRule.ARGUMENTS_PREFIX + "AD_Org_ID", AD_Org_ID);
+						bindings.put(MRule.ARGUMENTS_PREFIX + "AD_Role_ID", AD_Role_ID);
+						bindings.put(MRule.ARGUMENTS_PREFIX + "AD_User_ID", AD_User_ID);
 
-						Object retval = engine.eval(loginRule.getScript());
+						Object retval = engine.eval(loginRule.getScript(), bindings);
 						error = (retval == null ? "" : retval.toString());
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -378,15 +380,16 @@ public class ModelValidationEngine
 					String error;
 					try {
 						ScriptEngine engine = rule.getScriptEngine();
+						Bindings bindings = engine.createBindings();
 
-						MRule.setContext(engine, po.getCtx(), 0);  // no window
+						MRule.setContext(bindings, po.getCtx(), 0);  // no window
 						// now add the method arguments to the engine
-						engine.put(MRule.ARGUMENTS_PREFIX + "Ctx", po.getCtx());
-						engine.put(MRule.ARGUMENTS_PREFIX + "PO", po);
-						engine.put(MRule.ARGUMENTS_PREFIX + "Type", changeType);
-						engine.put(MRule.ARGUMENTS_PREFIX + "Event", ModelValidator.tableEventValidators[changeType]);
+						bindings.put(MRule.ARGUMENTS_PREFIX + "Ctx", po.getCtx());
+						bindings.put(MRule.ARGUMENTS_PREFIX + "PO", po);
+						bindings.put(MRule.ARGUMENTS_PREFIX + "Type", changeType);
+						bindings.put(MRule.ARGUMENTS_PREFIX + "Event", ModelValidator.tableEventValidators[changeType]);
 
-						Object retval = engine.eval(rule.getScript());
+						Object retval = engine.eval(rule.getScript(), bindings);
 						error = (retval == null ? "" : retval.toString());
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -542,15 +545,16 @@ public class ModelValidationEngine
 					String error;
 					try {
 						ScriptEngine engine = rule.getScriptEngine();
+						Bindings bindings = engine.createBindings();
 
-						MRule.setContext(engine, po.getCtx(), 0);  // no window
+						MRule.setContext(bindings, po.getCtx(), 0);  // no window
 						// now add the method arguments to the engine
-						engine.put(MRule.ARGUMENTS_PREFIX + "Ctx", po.getCtx());
-						engine.put(MRule.ARGUMENTS_PREFIX + "PO", po);
-						engine.put(MRule.ARGUMENTS_PREFIX + "Type", docTiming);
-						engine.put(MRule.ARGUMENTS_PREFIX + "Event", ModelValidator.documentEventValidators[docTiming]);
+						bindings.put(MRule.ARGUMENTS_PREFIX + "Ctx", po.getCtx());
+						bindings.put(MRule.ARGUMENTS_PREFIX + "PO", po);
+						bindings.put(MRule.ARGUMENTS_PREFIX + "Type", docTiming);
+						bindings.put(MRule.ARGUMENTS_PREFIX + "Event", ModelValidator.documentEventValidators[docTiming]);
 
-						Object retval = engine.eval(rule.getScript());
+						Object retval = engine.eval(rule.getScript(), bindings);
 						error = (retval == null ? "" : retval.toString());
 					} catch (Exception e) {
 						e.printStackTrace();

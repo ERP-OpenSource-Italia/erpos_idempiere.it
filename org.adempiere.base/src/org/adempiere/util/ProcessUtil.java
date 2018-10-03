@@ -26,6 +26,7 @@ import java.sql.ResultSet;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import javax.script.Bindings;
 import javax.script.ScriptEngine;
 
 import org.adempiere.base.Core;
@@ -223,25 +224,26 @@ public final class ProcessUtil {
 			}
 
 			ScriptEngine engine = rule.getScriptEngine();
+			Bindings bindings = engine.createBindings();
 
 			// Window context are    W_
 			// Login context  are    G_
 			// Method arguments context are A_
 			// Parameter context are P_
-			MRule.setContext(engine, ctx, 0);  // no window
+			MRule.setContext(bindings, ctx, 0);  // no window
 			// now add the method arguments to the engine
-			engine.put(MRule.ARGUMENTS_PREFIX + "Ctx", ctx);
+			bindings.put(MRule.ARGUMENTS_PREFIX + "Ctx", ctx);
 			if (trx == null) {
 				trx = Trx.get(Trx.createTrxName(pi.getTitle()+"_"+pi.getAD_PInstance_ID()), true);
 				trx.setDisplayName(ProcessUtil.class.getName()+"_startScriptProcess");
 			}
-			engine.put(MRule.ARGUMENTS_PREFIX + "Trx", trx);
-			engine.put(MRule.ARGUMENTS_PREFIX + "TrxName", trx.getTrxName());
-			engine.put(MRule.ARGUMENTS_PREFIX + "Record_ID", pi.getRecord_ID());
-			engine.put(MRule.ARGUMENTS_PREFIX + "AD_Client_ID", pi.getAD_Client_ID());
-			engine.put(MRule.ARGUMENTS_PREFIX + "AD_User_ID", pi.getAD_User_ID());
-			engine.put(MRule.ARGUMENTS_PREFIX + "AD_PInstance_ID", pi.getAD_PInstance_ID());
-			engine.put(MRule.ARGUMENTS_PREFIX + "Table_ID", pi.getTable_ID());
+			bindings.put(MRule.ARGUMENTS_PREFIX + "Trx", trx);
+			bindings.put(MRule.ARGUMENTS_PREFIX + "TrxName", trx.getTrxName());
+			bindings.put(MRule.ARGUMENTS_PREFIX + "Record_ID", pi.getRecord_ID());
+			bindings.put(MRule.ARGUMENTS_PREFIX + "AD_Client_ID", pi.getAD_Client_ID());
+			bindings.put(MRule.ARGUMENTS_PREFIX + "AD_User_ID", pi.getAD_User_ID());
+			bindings.put(MRule.ARGUMENTS_PREFIX + "AD_PInstance_ID", pi.getAD_PInstance_ID());
+			bindings.put(MRule.ARGUMENTS_PREFIX + "Table_ID", pi.getTable_ID());
 			// Add process parameters
 			ProcessInfoParameter[] para = pi.getParameter();
 			if (para == null) {
@@ -249,33 +251,33 @@ public final class ProcessUtil {
 				para = pi.getParameter();
 			}
 			if (para != null) {
-				engine.put(MRule.ARGUMENTS_PREFIX + "Parameter", pi.getParameter());
+				bindings.put(MRule.ARGUMENTS_PREFIX + "Parameter", pi.getParameter());
 				for (int i = 0; i < para.length; i++)
 				{
 					String name = para[i].getParameterName();
 					if (para[i].getParameter_To() == null) {
 						Object value = para[i].getParameter();
 						if (name.endsWith("_ID") && (value instanceof BigDecimal))
-							engine.put(MRule.PARAMETERS_PREFIX + name, ((BigDecimal)value).intValue());
+							bindings.put(MRule.PARAMETERS_PREFIX + name, ((BigDecimal)value).intValue());
 						else
-							engine.put(MRule.PARAMETERS_PREFIX + name, value);
+							bindings.put(MRule.PARAMETERS_PREFIX + name, value);
 					} else {
 						Object value1 = para[i].getParameter();
 						Object value2 = para[i].getParameter_To();
 						if (name.endsWith("_ID") && (value1 instanceof BigDecimal))
-							engine.put(MRule.PARAMETERS_PREFIX + name + "1", ((BigDecimal)value1).intValue());
+							bindings.put(MRule.PARAMETERS_PREFIX + name + "1", ((BigDecimal)value1).intValue());
 						else
-							engine.put(MRule.PARAMETERS_PREFIX + name + "1", value1);
+							bindings.put(MRule.PARAMETERS_PREFIX + name + "1", value1);
 						if (name.endsWith("_ID") && (value2 instanceof BigDecimal))
-							engine.put(MRule.PARAMETERS_PREFIX + name + "2", ((BigDecimal)value2).intValue());
+							bindings.put(MRule.PARAMETERS_PREFIX + name + "2", ((BigDecimal)value2).intValue());
 						else
-							engine.put(MRule.PARAMETERS_PREFIX + name + "2", value2);
+							bindings.put(MRule.PARAMETERS_PREFIX + name + "2", value2);
 					}
 				}
 			}
-			engine.put(MRule.ARGUMENTS_PREFIX + "ProcessInfo", pi);
+			bindings.put(MRule.ARGUMENTS_PREFIX + "ProcessInfo", pi);
 
-			msg = engine.eval(rule.getScript()).toString();
+			msg = engine.eval(rule.getScript(), bindings).toString();
 			//transaction should rollback if there are error in process
 			if (msg != null && msg.startsWith("@Error@"))
 				success = false;

@@ -35,6 +35,7 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 
+import javax.script.Bindings;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import org.adempiere.base.ILookupFactory;
@@ -1262,25 +1263,26 @@ public class GridField
 			}
 
 			ScriptEngine engine = rule.getScriptEngine();
+			Bindings bindings = engine.createBindings();
 
 			// Window context are    W_
 			// Login context  are    G_
-			MRule.setContext(engine, m_vo.ctx, m_vo.WindowNo);
+			MRule.setContext(bindings, m_vo.ctx, m_vo.WindowNo);
 			// now add the callout parameters windowNo, tab, field, value, oldValue to the engine 
 			// Method arguments context are A_
-			engine.put(MRule.ARGUMENTS_PREFIX + "WindowNo", m_vo.WindowNo);
-			engine.put(MRule.ARGUMENTS_PREFIX + "Tab", getGridTab());
-			engine.put(MRule.ARGUMENTS_PREFIX + "Field", this);
-			engine.put(MRule.ARGUMENTS_PREFIX + "Value", getValue());
-			engine.put(MRule.ARGUMENTS_PREFIX + "OldValue", getOldValue());
-			engine.put(MRule.ARGUMENTS_PREFIX + "Ctx", m_vo.ctx);
+			bindings.put(MRule.ARGUMENTS_PREFIX + "WindowNo", m_vo.WindowNo);
+			bindings.put(MRule.ARGUMENTS_PREFIX + "Tab", getGridTab());
+			bindings.put(MRule.ARGUMENTS_PREFIX + "Field", this);
+			bindings.put(MRule.ARGUMENTS_PREFIX + "Value", getValue());
+			bindings.put(MRule.ARGUMENTS_PREFIX + "OldValue", getOldValue());
+			bindings.put(MRule.ARGUMENTS_PREFIX + "Ctx", m_vo.ctx);
 
 		Object result = null;
 			try 
 			{
 			String script = rule.getScript();
 			if(script != null)
-				result = engine.eval(script);
+				result = engine.eval(script, bindings);
 			}
 		catch (ScriptException se)
 			{

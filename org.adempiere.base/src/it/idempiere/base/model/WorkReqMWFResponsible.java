@@ -22,6 +22,7 @@ import java.sql.SQLException;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import javax.script.Bindings;
 import javax.script.ScriptEngine;
 
 import org.compiere.model.MRule;
@@ -104,26 +105,27 @@ public class WorkReqMWFResponsible extends MWFResponsible
 			if(sRuleType.equals(MRule.RULETYPE_JSR223ScriptingAPIs))
 			{
 				ScriptEngine engine = rule.getScriptEngine();
+				Bindings bindings = engine.createBindings();
 
-				MRule.setContext(engine, ctx, 0);
+				MRule.setContext(bindings, ctx, 0);
 
 				// Window context are    W_
 				// Login context  are    G_
 				// Method arguments context are A_
-				engine.put(MRule.ARGUMENTS_PREFIX + "Ctx", ctx);
+				bindings.put(MRule.ARGUMENTS_PREFIX + "Ctx", ctx);
 				
 				if(process != null)
-					engine.put(MRule.ARGUMENTS_PREFIX + "Process", process);
+					bindings.put(MRule.ARGUMENTS_PREFIX + "Process", process);
 				if(activity != null)
-					engine.put(MRule.ARGUMENTS_PREFIX + "Activity", activity);
+					bindings.put(MRule.ARGUMENTS_PREFIX + "Activity", activity);
 				if(wf != null)
-					engine.put(MRule.ARGUMENTS_PREFIX + "Wf", wf);
+					bindings.put(MRule.ARGUMENTS_PREFIX + "Wf", wf);
 				if(node != null)
-					engine.put(MRule.ARGUMENTS_PREFIX + "WFNode", node);				
+					bindings.put(MRule.ARGUMENTS_PREFIX + "WFNode", node);				
 			
 				try
 				{
-				Object obj = engine.eval(rule.getScript());
+				Object obj = engine.eval(rule.getScript(), bindings);
 				if(obj instanceof Integer)
 					nUserId = (Integer)obj;
 				}

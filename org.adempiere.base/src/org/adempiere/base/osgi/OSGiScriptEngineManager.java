@@ -80,9 +80,7 @@ public class OSGiScriptEngineManager extends ScriptEngineManager{
 	private Map <ScriptEngineManager, ClassLoader> classLoaders;
 	private BundleContext context;
 	
-	/*
 	private static Map<String,OSGiScriptEngine> cacheEngines = new HashMap<>();
-	*/
 	
 	public OSGiScriptEngineManager(BundleContext context){
 		this.context=context;
@@ -149,10 +147,8 @@ public class OSGiScriptEngineManager extends ScriptEngineManager{
 		
 		OSGiScriptEngine scriptEngine = null;
 		
-		/*
 		if(cacheEngines.containsKey(shortName))
 			return cacheEngines.get(shortName);
-		*/
 		
 		//TODO this is a hack to deal with context class loader issues
 		for(ScriptEngineManager manager: classLoaders.keySet()){
@@ -166,10 +162,8 @@ public class OSGiScriptEngineManager extends ScriptEngineManager{
 			}
 		}
 		
-		/*
 		if(scriptEngine != null)
 			cacheEngines.put(shortName, scriptEngine);
-		*/
 		
 		return scriptEngine;
 	}
