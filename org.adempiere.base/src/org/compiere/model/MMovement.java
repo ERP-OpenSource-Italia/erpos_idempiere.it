@@ -24,9 +24,11 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.NegativeInventoryDisallowedException;
 import org.adempiere.exceptions.PeriodClosedException;
 import org.compiere.process.DocAction;
+import org.compiere.process.DocOptions;
 import org.compiere.process.DocumentEngine;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
@@ -48,7 +50,7 @@ import org.compiere.util.Msg;
  *  		<li>FR [ 2214883 ] Remove SQL code and Replace for Query
  *  @version $Id: MMovement.java,v 1.3 2006/07/30 00:51:03 jjanke Exp $
  */
-public class MMovement extends X_M_Movement implements DocAction
+public class MMovement extends X_M_Movement implements DocAction, DocOptions
 {
 	/**
 	 * 
@@ -629,6 +631,12 @@ public class MMovement extends X_M_Movement implements DocAction
 	 * 	Set the definite document number after completed
 	 */
 	private void setDefiniteDocumentNo() {
+		
+		// F3P: If alreaady processed, nothing to do
+		
+		if (this.getProcessedOn().signum() != 0)
+			return;
+		
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		if (dt.isOverwriteDateOnComplete()) {
 			setMovementDate(new Timestamp (System.currentTimeMillis()));
@@ -951,17 +959,69 @@ public class MMovement extends X_M_Movement implements DocAction
 	public boolean reActivateIt()
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
+		
+		// TODO: support reopen with processed confirmation, as of now we dont support it 
+		
+		MMovementConfirm[] confirmations = getConfirmations(true);
+		
+		for(MMovementConfirm confirm:confirmations)
+		{
+			if(confirm.isProcessed())
+			{
+				throw new AdempiereException("@M_MovementConfirm_ID@ @Processed@");
+			}
+		}
+		
 		// Before reActivate
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_BEFORE_REACTIVATE);
 		if (m_processMsg != null)
-			return false;	
+			return false;
+		
+		// Get all transactions, and revert movements based on them
+		
+		final String allTransactionsSQL =  "M_MovementLine_ID IN (SELECT M_MovementLine_ID FROM M_MovementLine WHERE M_Movement_ID = ?)";
+		
+		Query qTransactions = new Query(getCtx(),  MTransaction.Table_Name, allTransactionsSQL, get_TrxName());
+		qTransactions.setParameters(getM_Movement_ID());
+		List<MTransaction> transactions = qTransactions.list();
+		
+		for(MTransaction transaction:transactions)
+		{
+			MLocator mLocator = MLocator.get(getCtx(), transaction.getM_Locator_ID());
+
+			if(!MStorageOnHand.add(getCtx(),mLocator.getM_Warehouse_ID(),
+					transaction.getM_Locator_ID(),
+					transaction.getM_Product_ID(), 
+					transaction.getM_AttributeSetInstance_ID(),
+					transaction.getMovementQty().negate(),transaction.getMovementDate(), get_TrxName()))
+			{
+				MProduct mProduct = MProduct.get(getCtx(), transaction.getM_Product_ID());
+				throw new AdempiereException("@Over_Qty_On_Attribute_Tab@ " + mProduct.getValue());
+			}
+		}
+		
+		// Delete all generated transaction to clean up
+		
+		qTransactions = new Query(getCtx(),  MTransaction.Table_Name,  allTransactionsSQL, get_TrxName());
+		qTransactions.setParameters(getM_Movement_ID());
+		transactions = qTransactions.list();
+		
+		for(MTransaction transaction:transactions)
+			transaction.deleteEx(true);
+				
+		MFactAcct.deleteEx(Table_ID, getM_Movement_ID(), get_TrxName());
+		setPosted(false);
 		
 		// After reActivate
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_REACTIVATE);
 		if (m_processMsg != null)
 			return false;
 		
-		return false;
+		setDocAction(DOCACTION_Complete);
+		setProcessed(false);
+		setIsApproved(false);
+		
+		return true;
 	}	//	reActivateIt
 	
 	
@@ -1043,6 +1103,21 @@ public class MMovement extends X_M_Movement implements DocAction
 			|| DOCSTATUS_Closed.equals(ds)
 			|| DOCSTATUS_Reversed.equals(ds);
 	}	//	isComplete
+	
+	// F3P: Enable reactivate
+	
+	@Override
+	public int customizeValidActions(String docStatus, Object processing, 
+			String orderType, String isSOTrx, int AD_Table_ID, String[] docAction, String[] options, int index)
+	{
+		
+		if(docStatus.equals(DOCSTATUS_Completed))
+		{
+			options[index++] = ACTION_ReActivate;
+		}
+		
+		return index;
+	}	
 	
 }	//	MMovement
 
