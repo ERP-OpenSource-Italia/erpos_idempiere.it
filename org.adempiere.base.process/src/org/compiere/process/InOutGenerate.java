@@ -302,12 +302,9 @@ public class InOutGenerate extends SvrProcess
 				//	Deadlock Prevention - Order by M_Product_ID
 				// F3P: support for T_SelectionLine
 				MOrderLine[] lines = null;
-				Map<String,BigDecimal> mapSelectionLineQty = null;
 				
 				if(p_SelectionLine)
 				{
-					mapSelectionLineQty = new HashMap<String, BigDecimal>();
-					
 					PreparedStatement ptmtSL = null;
 					ResultSet rsLS = null;
 					
