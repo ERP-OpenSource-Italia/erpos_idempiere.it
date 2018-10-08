@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MRole;
 import org.compiere.model.MTable;
 import org.compiere.model.PO;
@@ -34,6 +35,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.TimeUtil;
 import org.compiere.util.Util;
+
+import it.idempiere.base.model.WorkReqMWFResponsible;
 
 
 /**
@@ -411,6 +414,18 @@ public class MWFProcess extends X_AD_WF_Process
 		MWFResponsible resp = MWFResponsible.get(getCtx(), getAD_WF_Responsible_ID());
 		//	(1) User - Directly responsible
 		int AD_User_ID = resp.getAD_User_ID();
+		
+		if(WorkReqMWFResponsible.isRule(resp))
+		{
+			int nRuleId = WorkReqMWFResponsible.getAD_Rule_ID(resp);
+			
+			if(resp.getResponsibleType().equals(WorkReqMWFResponsible.RESPONSIBLETYPE_RuleUser))
+			{
+				AD_User_ID = WorkReqMWFResponsible.evaluateRuleResp(this, null, getWorkflow(), null, getCtx(), nRuleId, getPO());
+			}
+			else
+				throw new AdempiereException("Workflow responsbile support only user rules");
+		}
 		
 		//	Invoker - get Sales Rep or last updater of Document
 		if (AD_User_ID == 0 && resp.isInvoker())

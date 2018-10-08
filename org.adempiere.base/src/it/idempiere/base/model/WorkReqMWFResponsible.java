@@ -143,27 +143,32 @@ public class WorkReqMWFResponsible extends MWFResponsible
 				
 				if(process != null)
 				{
-					Env.setContext(ctxCloned, FAKE_WIN_TAB_NO, FAKE_WIN_TAB_NO, 
+					Env.setContext(ctxCloned, FAKE_WIN_TAB_NO,  
 							MWFProcess.COLUMNNAME_AD_WF_Process_ID, process.get_ID());
 					sTrx = process.get_TrxName();
 				}
 				
 				if(activity != null)
-				{
-					Env.setContext(ctxCloned, FAKE_WIN_TAB_NO, FAKE_WIN_TAB_NO, 
-							MWFActivity.COLUMNNAME_AD_WF_Activity_ID, activity.get_ID());			
-					Env.setContext(ctxCloned, FAKE_WIN_TAB_NO, FAKE_WIN_TAB_NO, 
-							MWFActivity.COLUMNNAME_AD_Table_ID, activity.getAD_Table_ID());
-					Env.setContext(ctxCloned, FAKE_WIN_TAB_NO, FAKE_WIN_TAB_NO, 
-							MWFActivity.COLUMNNAME_Record_ID, activity.getRecord_ID());
 					sTrx = activity.get_TrxName();
-				}
-				//DRuggeri inserire il controllo prendendo le variabili dalla PO
+				
+				//DRuggeri: inserire il controllo prendendo le variabili dalla PO
 				
 				String sSqlNoCtx = rule.getScript();
 			//	if(sSqlNoCtx.contains("@#Table))
 				
-				String sSqlComplete = Env.parseVariable(sSqlNoCtx, po, "", false);//.parseStringWithPo(ctxCloned,sSqlNoCtx,po);
+				// Prima passata: sostituiamo utilizzando l'activity (se valorizzata). Necessario per elaberare Record_ID e AD_Table_ID del record, nel caso siano anche presenti (ma con un altro significato potenzialmente) nel PO.
+				// Nota: allo stato attuale Record_ID e AD_Table_ID sul PO sono di fatto non utilizzabili, AD_WF_Activity_ID e' zero dato che la determinazione viene fatta al salvataggio
+
+				String sSqlComplete = null;
+				
+				if(activity != null)
+					sSqlComplete = Env.parseVariable(sSqlNoCtx, activity, po.get_TrxName(), true);//.parseStringWithPo(ctxCloned,sSqlNoCtx,po);
+				else
+					sSqlComplete = sSqlNoCtx;
+				
+				// Seconda passata: sostituiamo le variabili usando il po
+				if(po != null)
+					sSqlComplete = Env.parseVariable(sSqlComplete, po, po.get_TrxName(), false);//.parseStringWithPo(ctxCloned,sSqlNoCtx,po);
 				
 				PreparedStatement pstmt = DB.prepareStatement(sSqlComplete, sTrx);
 				ResultSet rs = null;
