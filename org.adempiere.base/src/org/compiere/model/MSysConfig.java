@@ -177,6 +177,7 @@ public class MSysConfig extends X_AD_SysConfig
     public static final String ZK_THEME = "ZK_THEME";
     public static final String ZK_LOGO_LARGE_TESTINST = "ZK_LOGO_LARGE_TESTINST"; // F3P: logos for test installation
     public static final String ZK_LOGO_SMALL_TESTINST = "ZK_LOGO_SMALL_TESTINST";    
+    public static final String SEND_EMAIL_TIMEOUT_IN_MILLIS = "SEND_EMAIL_TIMEOUT_IN_MILLIS";
 
 
 	/**
