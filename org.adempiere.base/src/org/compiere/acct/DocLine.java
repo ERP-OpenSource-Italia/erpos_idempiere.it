@@ -493,7 +493,7 @@ public class DocLine
 	 * 	Set C_Period_ID
 	 *	@param C_Period_ID id
 	 */
-	protected void setC_Period_ID (int C_Period_ID)
+	public void setC_Period_ID (int C_Period_ID) // F3P: moved to public, sometime its needed to set it directly
 	{
 		m_C_Period_ID = C_Period_ID;
 	}	//	setC_Period_ID
