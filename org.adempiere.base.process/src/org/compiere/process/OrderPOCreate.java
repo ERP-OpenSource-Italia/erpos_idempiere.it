@@ -31,6 +31,8 @@ import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *	Generate PO from Sales Order
  *	
@@ -111,23 +113,23 @@ public class OrderPOCreate extends SvrProcess
 			throw new AdempiereUserError("You need to restrict selection");
 		//
 		StringBuilder sql = new StringBuilder("SELECT * FROM C_Order o ")
-			.append("WHERE o.IsSOTrx='Y'")
+			.append(" WHERE o.IsSOTrx='Y' ")
 			//	No Duplicates
 			//	" AND o.Link_Order_ID IS NULL"
 			//.append(" AND NOT EXISTS (SELECT * FROM C_OrderLine ol WHERE o.C_Order_ID=ol.C_Order_ID AND ol.Link_OrderLine_ID IS NOT NULL)"); 
-			.append("AND EXISTS (SELECT * FROM C_OrderLine ol WHERE o.C_Order_ID=ol.C_Order_ID AND ol.Link_OrderLine_ID IS NULL)") //F3P: allow to create order from different BP
-			.append("AND o.DocStatus NOT IN ('NA','VO','CL','IN','DR','RE','??')") // F3P: avoid generating from order in invalid status
-			.append(" AND NOT EXISTS (SELECT 'ko' FROM C_DocType dt WHERE dt.C_DocType_ID = o.C_DocTypeTarget_ID AND dt.DocSubTypeSO IN ('ON','OB','RM'))");	// F3P: Avoid generating orders for inappropriate docsubtyes
+			.append(" AND EXISTS (select * from C_OrderLine ol where o.C_Order_ID=ol.C_Order_ID AND ol.Link_OrderLine_ID IS NULL) ") //F3P: allow to create order from different BP
+			.append(" AND o.DocStatus NOT IN ('NA','VO','CL','IN','DR','RE','??') ") // F3P: avoid generating from order in invalid status
+			.append(" AND NOT EXISTS (select 'ko' from C_DocType dt where dt.C_DocType_ID = o.C_DocTypeTarget_ID AND dt.DocSubTypeSO IN ('ON','OB','RM')) ");	// F3P: Avoid generating orders for inappropriate docsubtyes
 		if (p_C_Order_ID != 0)
 			sql.append(" AND o.C_Order_ID=?");
 		else
 		{
 			if (p_C_BPartner_ID != 0)
-				sql.append(" AND o.C_BPartner_ID=?");
+				sql.append(" AND o.C_BPartner_ID=? ");
 			if (p_Vendor_ID != 0)
-				sql.append(" AND EXISTS (SELECT * FROM C_OrderLine ol")
+				sql.append(" AND EXISTS (select * from C_OrderLine ol")
 					.append(" INNER JOIN M_Product_PO po ON (ol.M_Product_ID=po.M_Product_ID) ")
-						.append("WHERE o.C_Order_ID=ol.C_Order_ID AND po.C_BPartner_ID=?)"); 
+						.append("where o.C_Order_ID=ol.C_Order_ID AND po.C_BPartner_ID=?)"); 
 			if (p_DateOrdered_From != null && p_DateOrdered_To != null)
 				sql.append("AND TRUNC(o.DateOrdered, 'DD') BETWEEN ? AND ?");
 			else if (p_DateOrdered_From != null && p_DateOrdered_To == null)
@@ -136,7 +138,7 @@ public class OrderPOCreate extends SvrProcess
 				sql.append("AND TRUNC(o.DateOrdered, 'DD') <= ?");
 		}
 		
-		sql = new StringBuilder(MRole.getDefault().addAccessSQL(sql.toString(), MOrder.Table_Name,MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO));
+		sql = new StringBuilder(MRole.getDefault().addAccessSQL(sql.toString(),"o",MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO));
 
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -233,8 +235,20 @@ public class OrderPOCreate extends SvrProcess
 
 				//	Line
 				int M_Product_ID = rs.getInt(2);
+				
+				boolean verifyReplanish = STDSysConfig.getFilterOrderLineFromReplenishActive(po.getAD_Client_ID(),po.getAD_Org_ID());
+				
 				for (int i = 0; i < soLines.length; i++)
 				{
+					if(verifyReplanish)
+					{
+						int value = DB.getSQLValue(get_TrxName(), "SELECT 1 FROM m_replenish WHERE M_Product_ID = ? AND M_Warehouse_ID = ? AND isActive = 'Y'",soLines[i].getM_Product_ID(),so.getM_Warehouse_ID());
+						if(value > 0)
+						{
+							continue;
+						}
+					}						
+					
 					if (soLines[i].getM_Product_ID() == M_Product_ID)
 					{
 						MOrderLine poLine = new MOrderLine (po);

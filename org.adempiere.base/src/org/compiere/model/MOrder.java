@@ -18,6 +18,7 @@ package org.compiere.model;
 
 import java.io.File;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.Hashtable;
@@ -47,6 +48,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.Util;
 
 import it.idempiere.base.model.LITMBPartnerLocation;
+import it.idempiere.base.model.LITMOrderLine;
 import it.idempiere.base.util.BaseMessages;
 import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
@@ -1778,7 +1780,15 @@ public class MOrder extends X_C_Order implements DocAction
 					if (bom.getDescription() != null)
 						newLine.setDescription(bom.getDescription());
 					newLine.setPrice();
+					
+					LITMOrderLine.setBOM_OrderLine_ID(newLine, line.getC_OrderLine_ID());
+
 					newLine.saveEx(get_TrxName());
+				}
+
+				if(STDSysConfig.isShareDiscountToBomLine(line.getAD_Client_ID(),line.getAD_Org_ID()))
+				{
+					sharePriceToBomOrderLine(line);
 				}
 				
 				//	Convert into Comment Line
@@ -1796,6 +1806,9 @@ public class MOrder extends X_C_Order implements DocAction
 				if (line.getDescription () != null)
 					description += " " + line.getDescription ();
 				line.setDescription (description);
+				
+				LITMOrderLine.setBOM_Product_ID(line, product.getM_Product_ID());
+				
 				line.saveEx(get_TrxName());
 			}	//	for all lines with BOM
 
@@ -1805,6 +1818,92 @@ public class MOrder extends X_C_Order implements DocAction
 		}	//	while count != 0
 		return retValue;
 	}	//	explodeBOM
+
+
+	private void sharePriceToBomOrderLine(MOrderLine line) 
+	{
+		Query mQuery = new Query(line.getCtx(), MOrderLine.Table_Name,"BOM_OrderLine_ID = ?", line.get_TrxName());
+		mQuery.setParameters(line.getC_OrderLine_ID());
+		List<MOrderLine> lOrderLines = mQuery.list();
+		
+		if(lOrderLines.isEmpty() == false)
+		{
+			BigDecimal sumPriceEnteredLine = DB.getSQLValueBD(line.get_TrxName(),"SELECT SUM(PriceEntered*qtyEntered) FROM C_OrderLine WHERE BOM_OrderLine_ID = ?", line.getC_OrderLine_ID());
+			MOrder mOrder = line.getParent();
+			int precision = mOrder.getM_PriceList().getPricePrecision();
+			
+			BigDecimal priceOrderlineBom = line.getPriceEntered();
+			BigDecimal noParts = line.getQtyEntered();
+			
+			BigDecimal maxPrice = Env.ZERO;
+			int C_OrderLine_IDToSetDiff = 0; 
+			
+			sumPriceEnteredLine = sumPriceEnteredLine.divide(noParts,precision,RoundingMode.HALF_UP);
+			
+			BigDecimal conversion = priceOrderlineBom.divide(sumPriceEnteredLine,10,RoundingMode.HALF_UP);
+			BigDecimal sumPriceTotal = Env.ZERO;
+			
+			for(MOrderLine orderLineToModifyPrice : lOrderLines)
+			{
+				BigDecimal qtyRef = orderLineToModifyPrice.getQtyEntered().divide(noParts,10,RoundingMode.HALF_UP);
+				
+				BigDecimal priceEnteredLine = orderLineToModifyPrice.getPriceEntered().multiply(conversion).multiply(qtyRef);
+				BigDecimal priceForAllParts = priceEnteredLine.divide(qtyRef,precision,RoundingMode.HALF_UP);
+				
+				orderLineToModifyPrice.setPriceEntered(priceForAllParts);
+				
+				BigDecimal PriceActual = MUOMConversion.convertProductTo (mOrder.getCtx(), orderLineToModifyPrice.getM_Product_ID(),
+						orderLineToModifyPrice.getC_UOM_ID(), priceForAllParts, precision);
+				
+				orderLineToModifyPrice.setPriceActual(PriceActual);
+				
+				BigDecimal discount = orderLineToModifyPrice.getPriceList().subtract(priceForAllParts)
+						.multiply(Env.ONEHUNDRED)
+						.divide(orderLineToModifyPrice.getPriceList(), precision, BigDecimal.ROUND_HALF_UP);
+				
+				orderLineToModifyPrice.setDiscount(discount);
+				
+				orderLineToModifyPrice.saveEx();
+				
+				BigDecimal priceTotal = priceForAllParts.multiply(qtyRef);
+				sumPriceTotal = sumPriceTotal.add(priceTotal);
+				
+				if(qtyRef.compareTo(Env.ONE) == 0)
+				{
+					if(maxPrice.compareTo(priceTotal) < 0)
+					{
+						maxPrice = priceTotal;
+						C_OrderLine_IDToSetDiff = orderLineToModifyPrice.getC_OrderLine_ID();
+					}
+				}
+			}
+			
+			if(C_OrderLine_IDToSetDiff > 0)
+			{
+				BigDecimal diff = priceOrderlineBom.subtract(sumPriceTotal);
+				
+				MOrderLine lOrderLinesToAddPrice = PO.get(getCtx(), MOrderLine.Table_Name, C_OrderLine_IDToSetDiff, get_TrxName());
+
+				BigDecimal priceEnteredWithDiff = lOrderLinesToAddPrice.getPriceEntered().add(diff);
+				lOrderLinesToAddPrice.setPriceEntered(priceEnteredWithDiff);
+				
+				BigDecimal PriceActual = MUOMConversion.convertProductTo (mOrder.getCtx(), lOrderLinesToAddPrice.getM_Product_ID(),
+						lOrderLinesToAddPrice.getC_UOM_ID(), priceEnteredWithDiff, precision);
+				
+				lOrderLinesToAddPrice.setPriceActual(PriceActual);
+				
+				BigDecimal discount = lOrderLinesToAddPrice.getPriceList().subtract(priceEnteredWithDiff)
+						.multiply(Env.ONEHUNDRED)
+						.divide(lOrderLinesToAddPrice.getPriceList(), precision, BigDecimal.ROUND_HALF_UP);
+				
+				lOrderLinesToAddPrice.setDiscount(discount);
+				
+				lOrderLinesToAddPrice.saveEx();
+			}
+			
+			
+		}
+	}
 
 
 	/**
