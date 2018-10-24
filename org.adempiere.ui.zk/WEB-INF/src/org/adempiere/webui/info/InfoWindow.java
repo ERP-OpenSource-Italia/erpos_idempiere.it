@@ -148,7 +148,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
     
     protected ColumnInfo[] columnInfos;
 	protected TableInfo[] tableInfos;
-	protected MInfoColumn[] infoColumns;	
+	protected MInfoColumn[] infoColumns;
+	protected MInfoColumn gridDisplayedInfoColumns[];
 	protected String queryValue;
 	protected WQuickEntry vqe;
 	
@@ -814,7 +815,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		}
 		
 		columnInfos = list.toArray(new ColumnInfo[0]);
-		MInfoColumn gridDisplayedInfoColumns[] = gridDisplayedIC.toArray(new MInfoColumn[gridDisplayedIC.size()]);
+		gridDisplayedInfoColumns = gridDisplayedIC.toArray(new MInfoColumn[gridDisplayedIC.size()]);
 		
 		if(infoWindowListItemRenderer != null)
 			infoWindowListItemRenderer.setGridDisplaydInfoColumns(gridDisplayedInfoColumns,columnInfos);
@@ -2348,7 +2349,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			val = kdc;
 		}
 		
-		MInfoColumn infoColumn = infoColumns[colIndex - 1];
+		MInfoColumn infoColumn = gridDisplayedInfoColumns[colIndex];
 		boolean changeIsValid = true;
 		String validationSQL = null;
 		
