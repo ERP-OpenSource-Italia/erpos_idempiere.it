@@ -578,4 +578,18 @@ public class STDSysConfig
 	{
 		return MSysConfig.getValue(LIT_PROJ_PHASE_ORDER_DOCSUBTYPESO, MOrder.DocSubTypeSO_Proposal, AD_Client_ID, AD_Org_ID);
 	}
+	
+	public static final String LIT_FILTER_ORDERLINE_FROM_REPLANISH_ACTIVE = "LIT_FILTER_ORDERLINE_FROM_REPLANISH_ACTIVE";
+
+	public static boolean getFilterOrderLineFromReplenishActive(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getBooleanValue(LIT_FILTER_ORDERLINE_FROM_REPLANISH_ACTIVE, false, AD_Client_ID, AD_Org_ID);
+	}
+
+	public static final String LIT_SHARE_DISCOUNT_TO_LINE_NOT_BOM = "LIT_SHARE_DISCOUNT_TO_LINE_NOT_BOM";
+	
+	public static boolean isShareDiscountToBomLine(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getBooleanValue(LIT_SHARE_DISCOUNT_TO_LINE_NOT_BOM, false, AD_Client_ID, AD_Org_ID);
+	}
 }
