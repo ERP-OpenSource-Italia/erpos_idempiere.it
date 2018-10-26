@@ -168,13 +168,9 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	 * use the runProcess web service
 	 */
 	public StandardResponseDocument setDocAction(ModelSetDocActionRequestDocument req) {
-		boolean connected = getCompiereService().isConnected();
-		
-		boolean manageTrx = this.manageTrx;
 		Trx trx=null;
 		try {
-			if (!connected)
-				getCompiereService().connect();
+			getCompiereService().connect();
 			
 			StandardResponseDocument ret = StandardResponseDocument.Factory.newInstance();
 			StandardResponse resp = ret.addNewStandardResponse();
@@ -289,9 +285,6 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if (manageTrx && !trx.commit())
 				return rollbackAndSetError(trx, resp, ret, true, "Cannot commit after docAction");
 	
-			if (manageTrx)
-				trx.close();
-	
 			// resp.setError("");
 			resp.setIsError(false);
 	
@@ -304,9 +297,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 		} finally {
 			if (manageTrx && trx != null)
 				trx.close();
-			
-			if (!connected)
-				getCompiereService().disconnect();
+
+			getCompiereService().disconnect();
 		}
 	}
 
@@ -390,11 +382,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	
 
 	public RunProcessResponseDocument runProcess(ModelRunProcessRequestDocument req) {
-		boolean connected = getCompiereService().isConnected();
-		
 		try {
-			if (!connected)
-				getCompiereService().connect();
+			getCompiereService().connect();
 			
 			RunProcessResponseDocument resbadlogin = RunProcessResponseDocument.Factory.newInstance();
 			RunProcessResponse rbadlogin = resbadlogin.addNewRunProcessResponse();
@@ -430,17 +419,13 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			requestCtx.put(serviceType+"_Summary", response.getRunProcessResponse().getSummary());
 			return response;
 		} finally {
-			if (!connected)
-				getCompiereService().disconnect();
+			getCompiereService().disconnect();
 		}
 	}
 
 	public WindowTabDataDocument getList(ModelGetListRequestDocument req) {
-		boolean connected = getCompiereService().isConnected();
-		
 		try {
-			if (!connected)
-				getCompiereService().connect();
+			getCompiereService().connect();
 			
 			WindowTabDataDocument resdoc = WindowTabDataDocument.Factory.newInstance();
 			WindowTabData res = resdoc.addNewWindowTabData();
@@ -649,20 +634,14 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	
 			return resdoc;
 		} finally {
-			if (!connected)
-				getCompiereService().disconnect();
+			getCompiereService().disconnect();
 		}
 	} // getList
 
 	public StandardResponseDocument deleteData(ModelCRUDRequestDocument req) {
-		boolean connected = getCompiereService().isConnected();
-		
 		Trx trx = null;
-		boolean manageTrx = this.manageTrx;
-		
 		try {
-			if (!connected)
-				getCompiereService().connect();
+			getCompiereService().connect();
 			
 			StandardResponseDocument ret = StandardResponseDocument.Factory.newInstance();
 			StandardResponse resp = ret.addNewStandardResponse();
@@ -727,8 +706,7 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if (manageTrx && trx != null)
 				trx.close();
 			
-			if (!connected)
-				getCompiereService().disconnect();
+			getCompiereService().disconnect();
 		}
 	}
 
@@ -740,15 +718,9 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	}
 
 	public StandardResponseDocument createData(ModelCRUDRequestDocument req) {
-		
-		boolean connected = getCompiereService().isConnected();
-		
 		Trx trx = null;
-		boolean manageTrx = this.manageTrx;
-		
 		try {
-			if (!connected)
-				getCompiereService().connect();
+			getCompiereService().connect();
 			
 	    	StandardResponseDocument ret = StandardResponseDocument.Factory.newInstance();
 	    	StandardResponse resp = ret.addNewStandardResponse();
@@ -849,21 +821,15 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if (manageTrx && trx != null)
 				trx.close();
 			
-			if (!connected)
-				getCompiereService().disconnect();
+			getCompiereService().disconnect();
 				
 		}
 	} // createData
 
 	public StandardResponseDocument createUpdateData(ModelCRUDRequestDocument req) {
-		boolean connected = getCompiereService().isConnected();
-		
 		Trx trx = null;
-		boolean manageTrx = this.manageTrx;
-		
 		try {
-			if (!connected)
-				getCompiereService().connect();
+			getCompiereService().connect();
 			
 			StandardResponseDocument ret = StandardResponseDocument.Factory.newInstance();
 			StandardResponse resp = ret.addNewStandardResponse();
@@ -1058,8 +1024,7 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if (manageTrx && trx != null)
 				trx.close();
 			
-			if (!connected)
-				getCompiereService().disconnect();
+			getCompiereService().disconnect();
 		}
 	} // createUpdateData
 
@@ -1234,14 +1199,9 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	}
 	
 	public StandardResponseDocument updateData(ModelCRUDRequestDocument req){
-		boolean connected = getCompiereService().isConnected();
-		
 		Trx trx = null;
-		boolean manageTrx = this.manageTrx;
-		
 		try {
-			if (!connected)
-				getCompiereService().connect();
+			getCompiereService().connect();
 			
 	    	StandardResponseDocument ret = StandardResponseDocument.Factory.newInstance();
 	    	StandardResponse resp = ret.addNewStandardResponse();
@@ -1294,20 +1254,21 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	    	PO po = table.getPO(recordID, trxName);
 	    	if (po == null)
 	    		return rollbackAndSetError(trx, resp, ret, true, "No Record " + recordID + " in " + tableName);
+	    		    		    	
 	    	POInfo poinfo = POInfo.getPOInfo(ctx, table.getAD_Table_ID());
-	
-	    	DataRow dr = modelCRUD.getDataRow();
 	    	
-	    	StandardResponseDocument retResp = scanFields(dr.getFieldArray(), m_webservicetype, po, poinfo, trx, resp, ret);
-			if (retResp != null)
-				return retResp;
-	
 	    	if(po.get_ColumnIndex("Processed")>=0 && po.get_ValueAsBoolean("Processed")){
 	    		resp.setError("Record is processed and can not be updated");
 	    		resp.setIsError(true);
 	    		return ret;
 	    	}
-	    	
+	    		
+	    	DataRow dr = modelCRUD.getDataRow();
+	    		    		    	
+	    	StandardResponseDocument retResp = scanFields(dr.getFieldArray(), m_webservicetype, po, poinfo, trx, resp, ret);
+			if (retResp != null)
+				return retResp;
+		    	
 	    	if (!po.save())
 	    		return rollbackAndSetError(trx, resp, ret, true, "Cannot save record in " + tableName + ": " + CLogger.retrieveErrorString("no log message"));
 	
@@ -1323,17 +1284,13 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if (manageTrx && trx != null)
 				trx.close();
 			
-			if (!connected)
-				getCompiereService().disconnect();
+			getCompiereService().disconnect();
 		}
 	} // updateData
 
 	public WindowTabDataDocument readData(ModelCRUDRequestDocument req) {
-		boolean connected = getCompiereService().isConnected();
-		
 		try {
-			if (!connected)
-				getCompiereService().connect();
+			getCompiereService().connect();
 			
 			WindowTabDataDocument ret = WindowTabDataDocument.Factory.newInstance();
 			WindowTabData resp = ret.addNewWindowTabData();
@@ -1423,19 +1380,14 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	
 			return ret;
 		} finally {
-			if (!connected)
-				getCompiereService().disconnect();
+			getCompiereService().disconnect();
 		}
 	}
 
 	public WindowTabDataDocument queryData(ModelCRUDRequestDocument req) {
-		boolean connected = getCompiereService().isConnected();
-		
-		boolean manageTrx = this.manageTrx;
 		Trx trx=null;
 		try {
-			if (!connected)
-				getCompiereService().connect();
+			getCompiereService().connect();
 			
 			CompiereService m_cs = getCompiereService();
 			WindowTabDataDocument ret = WindowTabDataDocument.Factory.newInstance();
@@ -1589,8 +1541,7 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if (manageTrx && trx != null)
 				trx.close();
 			
-			if (!connected)
-				getCompiereService().disconnect();
+			getCompiereService().disconnect();
 		}
 	}
 }
