@@ -424,7 +424,7 @@ public class STDUtils {
           
           if (index < 0)
           {
-          	throw new AdempiereException("@not.found@ @AD_Column_ID: @" + columnName + "@");
+          	throw new AdempiereException("@not.found@ @AD_Column_ID@: @" + columnName + "@");
           }
           
           return (T)model.get_Value (index);
