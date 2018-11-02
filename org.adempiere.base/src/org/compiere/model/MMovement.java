@@ -977,34 +977,116 @@ public class MMovement extends X_M_Movement implements DocAction, DocOptions
 		if (m_processMsg != null)
 			return false;
 		
-		// Get all transactions, and revert movements based on them
+		// Get all transactions MovementQtyMA, and revert movements based on them
 		
-		final String allTransactionsSQL =  "M_MovementLine_ID IN (SELECT M_MovementLine_ID FROM M_MovementLine WHERE M_Movement_ID = ?)";
-		
-		Query qTransactions = new Query(getCtx(),  MTransaction.Table_Name, allTransactionsSQL, get_TrxName());
-		qTransactions.setParameters(getM_Movement_ID());
-		List<MTransaction> transactions = qTransactions.list();
-		
-		for(MTransaction transaction:transactions)
+		for(MMovementLine line : getLines(false))
 		{
-			MLocator mLocator = MLocator.get(getCtx(), transaction.getM_Locator_ID());
-
-			if(!MStorageOnHand.add(getCtx(),mLocator.getM_Warehouse_ID(),
-					transaction.getM_Locator_ID(),
-					transaction.getM_Product_ID(), 
-					transaction.getM_AttributeSetInstance_ID(),
-					transaction.getMovementQty().negate(),transaction.getMovementDate(), get_TrxName()))
+			//Stock Movement - Counterpart MOrder.reserveStock
+			MProduct product = line.getProduct();
+			
+			if (product == null || product.isStocked() == false) // Skip if no product, or not stocked
 			{
-				MProduct mProduct = MProduct.get(getCtx(), transaction.getM_Product_ID());
-				throw new AdempiereException("@Over_Qty_On_Attribute_Tab@ " + mProduct.getValue());
+				continue;
+			}
+
+			if(line.getM_AttributeSetInstance_ID() == 0)
+			{
+				final MMovementLineMA lineMAs[] = MMovementLineMA.get (getCtx(), line.getM_MovementLine_ID(), get_TrxName());
+				
+				MLocator mLocator = MLocator.get(getCtx(), line.getM_Locator_ID());
+				
+				MLocator mLocatorTo = MLocator.get(getCtx(), line.getM_LocatorTo_ID());
+				
+				for(MMovementLineMA lineMA:lineMAs)
+				{
+					if(!MStorageOnHand.add(getCtx(),mLocator.getM_Warehouse_ID(),
+							line.getM_Locator_ID(),
+							line.getM_Product_ID(), 
+							lineMA.getM_AttributeSetInstance_ID(),
+							lineMA.getMovementQty(),
+							lineMA.getDateMaterialPolicy(), get_TrxName()))
+					{
+						String lastError = CLogger.retrieveErrorString("");
+						m_processMsg = "Cannot correct Inventory OnHand (MA) - " + lastError;
+
+						throw new AdempiereException(m_processMsg);
+					}
+					
+					if(!MStorageOnHand.add(getCtx(),mLocatorTo.getM_Warehouse_ID(),
+							line.getM_LocatorTo_ID(),
+							line.getM_Product_ID(), 
+							lineMA.getM_AttributeSetInstance_ID(),
+							lineMA.getMovementQty().negate(),
+							lineMA.getDateMaterialPolicy(), get_TrxName()))
+					{
+						String lastError = CLogger.retrieveErrorString("");
+						m_processMsg = "Cannot correct Inventory OnHand (MA) - " + lastError;
+
+						throw new AdempiereException(m_processMsg);
+					}
+				}
+				
+				int no = MMovementLineMA.deleteMovementLineMA(line.getM_MovementLine_ID(), get_TrxName());
+				if (no > 0)
+					if (log.isLoggable(Level.CONFIG)) log.config("Delete old #" + no);
+				
+			}
+			else // No attribute set instance (ignore check for reversal)
+			{
+				Timestamp dateMPolicy= null;
+				MStorageOnHand[] storages = null;
+					
+				storages = MStorageOnHand.getWarehouse(getCtx(), 0,
+							line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(), null,
+							MClient.MMPOLICY_FiFo.equals(product.getMMPolicy()), false,
+							line.getM_Locator_ID(), get_TrxName());
+				
+				for (MStorageOnHand storage : storages) {
+					if (storage.getQtyOnHand().compareTo(line.getMovementQty()) >= 0) {
+						dateMPolicy = storage.getDateMaterialPolicy();
+						break;
+					}
+				}
+
+				if (dateMPolicy == null && storages.length > 0)
+					dateMPolicy = storages[0].getDateMaterialPolicy();
+				
+				MLocator locator = new MLocator (getCtx(), line.getM_Locator_ID(), get_TrxName());
+				
+				if (!MStorageOnHand.add(getCtx(),locator.getM_Warehouse_ID(),
+						line.getM_Locator_ID(),
+						line.getM_Product_ID(), 
+						line.getM_AttributeSetInstance_ID(),
+						line.getMovementQty(),dateMPolicy, get_TrxName()))
+				{
+					String lastError = CLogger.retrieveErrorString("");
+					m_processMsg = "Cannot correct Inventory OnHand (MA) - " + lastError;
+					
+					throw new AdempiereException(m_processMsg);
+				}
+
+				MLocator locatorTo = new MLocator (getCtx(), line.getM_LocatorTo_ID(), get_TrxName());
+				if (!MStorageOnHand.add(getCtx(),locatorTo.getM_Warehouse_ID(),
+						line.getM_LocatorTo_ID(),
+						line.getM_Product_ID(), 
+						line.getM_AttributeSetInstanceTo_ID(),
+						line.getMovementQty().negate(), dateMPolicy, get_TrxName()))
+				{
+					String lastError = CLogger.retrieveErrorString("");
+					m_processMsg = "Cannot correct Inventory OnHand (MA) - " + lastError;
+					
+					throw new AdempiereException(m_processMsg);
+				}
 			}
 		}
 		
 		// Delete all generated transaction to clean up
 		
-		qTransactions = new Query(getCtx(),  MTransaction.Table_Name,  allTransactionsSQL, get_TrxName());
+		final String allTransactionsSQL =  "M_MovementLine_ID IN (SELECT M_MovementLine_ID FROM M_MovementLine WHERE M_Movement_ID = ?)";
+		
+		Query qTransactions = new Query(getCtx(),  MTransaction.Table_Name,  allTransactionsSQL, get_TrxName());
 		qTransactions.setParameters(getM_Movement_ID());
-		transactions = qTransactions.list();
+		List<MTransaction>transactions = qTransactions.list();
 		
 		for(MTransaction transaction:transactions)
 			transaction.deleteEx(true);
