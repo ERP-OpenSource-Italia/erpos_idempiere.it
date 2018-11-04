@@ -250,7 +250,7 @@ public class InOutGenerate extends SvrProcess
 		}
 		//F3P: log error
 		if(error)
-			return "@Errors@";
+			return "@Error@";
 		
 		return generate(pstmt);
 	}	//	doIt
@@ -359,6 +359,7 @@ public class InOutGenerate extends SvrProcess
 					{
 						wrapper = (SelectionLineOrderLineWrapper)line;
 						line = wrapper.orderLine;
+						wrapperOrLine = wrapper;
 					}
 					else
 						wrapperOrLine = line;
@@ -552,16 +553,17 @@ public class InOutGenerate extends SvrProcess
 		{
 			//throw new AdempiereException(e);
 			// F3P: improved log of error
+			
+			sError = e.getLocalizedMessage();
+			
+			if(sError == null)
+				sError = e.getMessage();
+			
+			if(sError == null)
+				sError = e.toString();
+			
 			if(m_shipment != null)
 			{
-				sError = e.getLocalizedMessage();
-				
-				if(sError == null)
-					sError = e.getMessage();
-				
-				if(sError == null)
-					sError = e.toString();
-				
 				addLog(m_shipment.getM_InOut_ID(), m_shipment.getMovementDate(), null, m_shipment.getDocumentNo() + " - @Error@ " + sError);
 			}
 			
@@ -581,7 +583,7 @@ public class InOutGenerate extends SvrProcess
 		}
 		else
 		{
-			return "@Errors@";
+			return "@Error@ " + sError;
 		}
 	}	//	generate
 	
