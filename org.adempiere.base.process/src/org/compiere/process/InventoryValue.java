@@ -105,7 +105,7 @@ public class InventoryValue extends SvrProcess
 			.append(" AD_Client_ID, AD_Org_ID, CostStandard) ")
 			.append("SELECT ").append(getAD_PInstance_ID())
 			.append(", w.M_Warehouse_ID, c.M_Product_ID, c.M_AttributeSetInstance_ID,")
-			.append(" w.AD_Client_ID, w.AD_Org_ID, c.CurrentCostPricec.CurrentCostPrice+COALESCE(C.CurrentCostPriceLL,0) ") // Angelo Dabala' (genied) add CurrentCostPriceLL to standard cost
+			.append(" w.AD_Client_ID, w.AD_Org_ID, c.CurrentCostPrice+COALESCE(C.CurrentCostPriceLL,0) ") // Angelo Dabala' (genied) add CurrentCostPriceLL to standard cost
 			.append("FROM M_Warehouse w")
 			.append(" INNER JOIN AD_ClientInfo ci ON (w.AD_Client_ID=ci.AD_Client_ID)")
 			.append(" INNER JOIN C_AcctSchema acs ON (ci.C_AcctSchema1_ID=acs.C_AcctSchema_ID)")

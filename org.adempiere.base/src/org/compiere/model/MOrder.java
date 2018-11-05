@@ -1819,16 +1819,25 @@ public class MOrder extends X_C_Order implements DocAction
 		return retValue;
 	}	//	explodeBOM
 
-
-	private void sharePriceToBomOrderLine(MOrderLine line) 
+	public static void sharePriceToBomOrderLine(MOrderLine line) 
 	{
 		Query mQuery = new Query(line.getCtx(), MOrderLine.Table_Name,"BOM_OrderLine_ID = ?", line.get_TrxName());
 		mQuery.setParameters(line.getC_OrderLine_ID());
 		List<MOrderLine> lOrderLines = mQuery.list();
 		
+		sharePriceToBomOrderLine(line,lOrderLines,"BOM_OrderLine_ID",true);
+	}
+	
+	/**
+	 * Exclude parent line from list Order lines
+	 * @param line
+	 * @param lOrderLines
+	 */
+	public static void sharePriceToBomOrderLine(MOrderLine line,List<MOrderLine> lOrderLines,String columnname,boolean setDiff) 
+	{
 		if(lOrderLines.isEmpty() == false)
 		{
-			BigDecimal sumPriceEnteredLine = DB.getSQLValueBD(line.get_TrxName(),"SELECT SUM(PriceEntered*qtyEntered) FROM C_OrderLine WHERE BOM_OrderLine_ID = ?", line.getC_OrderLine_ID());
+			BigDecimal sumPriceEnteredLine = DB.getSQLValueBD(line.get_TrxName(),"SELECT SUM(PriceEntered*qtyEntered) FROM C_OrderLine WHERE "+columnname+" = ?",line.getC_OrderLine_ID());
 			MOrder mOrder = line.getParent();
 			int precision = mOrder.getM_PriceList().getPricePrecision();
 			
@@ -1868,7 +1877,7 @@ public class MOrder extends X_C_Order implements DocAction
 				BigDecimal priceTotal = priceForAllParts.multiply(qtyRef);
 				sumPriceTotal = sumPriceTotal.add(priceTotal);
 				
-				if(qtyRef.compareTo(Env.ONE) == 0)
+				if(qtyRef.compareTo(Env.ONE) == 0 && setDiff)
 				{
 					if(maxPrice.compareTo(priceTotal) < 0)
 					{
@@ -1878,11 +1887,11 @@ public class MOrder extends X_C_Order implements DocAction
 				}
 			}
 			
-			if(C_OrderLine_IDToSetDiff > 0)
+			if(setDiff && C_OrderLine_IDToSetDiff > 0)
 			{
 				BigDecimal diff = priceOrderlineBom.subtract(sumPriceTotal);
 				
-				MOrderLine lOrderLinesToAddPrice = PO.get(getCtx(), MOrderLine.Table_Name, C_OrderLine_IDToSetDiff, get_TrxName());
+				MOrderLine lOrderLinesToAddPrice = PO.get(line.getCtx(), MOrderLine.Table_Name, C_OrderLine_IDToSetDiff, line.get_TrxName());
 
 				BigDecimal priceEnteredWithDiff = lOrderLinesToAddPrice.getPriceEntered().add(diff);
 				lOrderLinesToAddPrice.setPriceEntered(priceEnteredWithDiff);
