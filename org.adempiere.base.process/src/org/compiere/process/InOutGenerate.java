@@ -323,7 +323,7 @@ public class InOutGenerate extends SvrProcess
 							BigDecimal bdQty = rsLS.getBigDecimal("Qty");
 														
 							MOrderLine mOLine = PO.get(getCtx(), MOrderLine.Table_Name, C_OrderLine_ID, get_TrxName());
-							SelectionLineOrderLineWrapper wrapper = new SelectionLineOrderLineWrapper(mOLine);
+							SelectionLineOrderLineWrapper wrapper = wrapLine(mOLine);
 							wrapper.qty = bdQty;
 							
 							processSelectionLine(mOLine, wrapper.additionalData, rsLS);							
@@ -352,6 +352,8 @@ public class InOutGenerate extends SvrProcess
 					MOrderLine line = lines[i];
 					MOrderLine wrapperOrLine = null;
 					SelectionLineOrderLineWrapper wrapper = null;
+					int deliverFrom_M_Locator_ID = -1;
+					int deliverM_AttributeSetInstance_ID = line.getM_AttributeSetInstance_ID();
 					
 					// Managed wrapped lines, and raw lines
 					
@@ -360,6 +362,11 @@ public class InOutGenerate extends SvrProcess
 						wrapper = (SelectionLineOrderLineWrapper)line;
 						line = wrapper.orderLine;
 						wrapperOrLine = wrapper;
+						deliverFrom_M_Locator_ID = wrapper.getDeliveryM_Locator_ID();
+						int wrapperM_ASI_ID = wrapper.getDeliveryM_AttributeSetInstance_ID();
+						
+						if(wrapperM_ASI_ID >= 0) // 0 is a valid asi
+							deliverM_AttributeSetInstance_ID = wrapperM_ASI_ID; 
 					}
 					else
 						wrapperOrLine = line;
@@ -439,7 +446,7 @@ public class InOutGenerate extends SvrProcess
 					String MMPolicy = product.getMMPolicy();
 
 					MStorageOnHand[] storages = getStorages(line.getM_Warehouse_ID(),
-							 line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(),
+							 line.getM_Product_ID(), deliverM_AttributeSetInstance_ID, deliverFrom_M_Locator_ID, 
 							 minGuaranteeDate, MClient.MMPOLICY_FiFo.equals(MMPolicy));
 					
 					for (int j = 0; j < storages.length; j++)
@@ -513,11 +520,19 @@ public class InOutGenerate extends SvrProcess
 					{
 						MOrderLine line = lines[i];
 						SelectionLineOrderLineWrapper orderLineWrapper = null;
+						int deliveryFrom_M_Locator_ID = -1;
+						int deliveryM_AttributeSetInstance_ID = line.getM_AttributeSetInstance_ID();
 						
 						if(line instanceof SelectionLineOrderLineWrapper)
 						{
 							orderLineWrapper = (SelectionLineOrderLineWrapper)line;						
 							line = orderLineWrapper.orderLine;
+							deliveryFrom_M_Locator_ID = orderLineWrapper.getDeliveryM_Locator_ID();
+							
+							int wrapperM_ASI_ID = orderLineWrapper.getDeliveryM_AttributeSetInstance_ID();
+							
+							if(wrapperM_ASI_ID >= 0)
+								deliveryM_AttributeSetInstance_ID = wrapperM_ASI_ID; 
 						}
 						
 						if (line.getM_Warehouse_ID() != p_M_Warehouse_ID)
@@ -537,7 +552,7 @@ public class InOutGenerate extends SvrProcess
 						{
 							String MMPolicy = product.getMMPolicy();
 							storages = getStorages(line.getM_Warehouse_ID(), 
-								line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(),
+								line.getM_Product_ID(), deliveryM_AttributeSetInstance_ID, deliveryFrom_M_Locator_ID, 
 								minGuaranteeDate, MClient.MMPOLICY_FiFo.equals(MMPolicy));
 						}
 						//	
@@ -602,12 +617,18 @@ public class InOutGenerate extends SvrProcess
 	{
 		SelectionLineOrderLineWrapper orderLineWrapper = null;
 		Map<String, Object> wrapperAdditionalData = null;
+		int deliverM_AttributeSetInstance_ID = orderLine.getM_AttributeSetInstance_ID();
 		
 		if(orderLine instanceof SelectionLineOrderLineWrapper)
 		{
 			orderLineWrapper = (SelectionLineOrderLineWrapper)orderLine;
 			wrapperAdditionalData = orderLineWrapper.additionalData;
 			orderLine = orderLineWrapper.orderLine;
+			
+			int wrapperM_ASI_ID = orderLineWrapper.getDeliveryM_AttributeSetInstance_ID();
+			
+			if(wrapperM_ASI_ID >= 0)
+				deliverM_AttributeSetInstance_ID = wrapperM_ASI_ID; 
 		}
 				
 		//	Complete last Shipment - can have multiple shipments
@@ -687,7 +708,7 @@ public class InOutGenerate extends SvrProcess
 			int M_Locator_ID = storage.getM_Locator_ID();
 			//
 			MInOutLine line = null;
-			if (orderLine.getM_AttributeSetInstance_ID() == 0)      //      find line with Locator
+			if (deliverM_AttributeSetInstance_ID == 0)      //      find line with Locator
 			{
 				for (int ll = 0; ll < list.size(); ll++)
 				{
@@ -703,6 +724,8 @@ public class InOutGenerate extends SvrProcess
 			{
 				line = new MInOutLine (m_shipment);
 				line.setOrderLine(orderLine, M_Locator_ID, order.isSOTrx() ? deliver : Env.ZERO);
+				line.setM_AttributeSetInstance_ID(deliverM_AttributeSetInstance_ID);
+				
 				line.setQty(deliver);
 				list.add(line);
 			}
@@ -792,11 +815,11 @@ public class InOutGenerate extends SvrProcess
 	 *	@return storages
 	 */
 	private MStorageOnHand[] getStorages(int M_Warehouse_ID, 
-			 int M_Product_ID, int M_AttributeSetInstance_ID,
+			 int M_Product_ID, int M_AttributeSetInstance_ID, int M_Locator_ID, 
 			  Timestamp minGuaranteeDate, boolean FiFo)
 	{
 		m_lastPP = new SParameter(M_Warehouse_ID, 
-		M_Product_ID, M_AttributeSetInstance_ID,
+		M_Product_ID, M_AttributeSetInstance_ID, M_Locator_ID, 
 			minGuaranteeDate, FiFo);
 		//
 		m_lastStorages = m_map.get(m_lastPP); 
@@ -810,6 +833,10 @@ public class InOutGenerate extends SvrProcess
 			/* IDEMPIERE-2668 - filter just locators enabled for shipping */
 			List<MStorageOnHand> m_storagesForShipping = new ArrayList<MStorageOnHand>();
 			for (MStorageOnHand soh : tmpStorages) {
+				
+				if(M_Locator_ID > 0 && soh.getM_Locator_ID() != M_Locator_ID) // F3P: if a locator is provided, accept only storage with this locator
+					continue;
+				
 				MLocator loc = MLocator.get(getCtx(), soh.getM_Locator_ID());
 				MLocatorType lt = null;
 				if (loc.getM_LocatorType_ID() > 0)
@@ -961,15 +988,19 @@ public class InOutGenerate extends SvrProcess
 		 *	@param p_minGuaranteeDate
 		 *	@param p_FiFo
 		 */
+		
+		// F3P: Manage locator
+		
 		protected SParameter (int p_Warehouse_ID, 
-			int p_Product_ID, int p_AttributeSetInstance_ID, 
+			int p_Product_ID, int p_AttributeSetInstance_ID, int p_M_Locator_ID, 
 			Timestamp p_minGuaranteeDate,boolean p_FiFo)
 		{
 			this.M_Warehouse_ID = p_Warehouse_ID;
 			this.M_Product_ID = p_Product_ID;
 			this.M_AttributeSetInstance_ID = p_AttributeSetInstance_ID; 
 			this.minGuaranteeDate = p_minGuaranteeDate;
-			this.FiFo = p_FiFo;	
+			this.FiFo = p_FiFo;
+			this.M_Locator_ID = p_M_Locator_ID;
 		}
 		/** Warehouse		*/
 		public int M_Warehouse_ID;
@@ -984,7 +1015,9 @@ public class InOutGenerate extends SvrProcess
 		/** Mon Guarantee Date	*/
 		public Timestamp minGuaranteeDate;
 		/** FiFo			*/
-		public boolean FiFo;
+		public boolean FiFo;		
+		/** F3P: Locator	*/
+		public int M_Locator_ID;
 
 		/**
 		 * 	Equals
@@ -1001,7 +1034,8 @@ public class InOutGenerate extends SvrProcess
 					&& cmp.M_AttributeSetInstance_ID == M_AttributeSetInstance_ID
 					&& cmp.M_AttributeSet_ID == M_AttributeSet_ID
 					&& cmp.allAttributeInstances == allAttributeInstances
-					&& cmp.FiFo == FiFo;
+					&& cmp.FiFo == FiFo
+					&& cmp.M_Locator_ID == M_Locator_ID;  // F3P: introduce locator
 				if (eq)
 				{
 					if (cmp.minGuaranteeDate == null && minGuaranteeDate == null)
@@ -1026,7 +1060,8 @@ public class InOutGenerate extends SvrProcess
 			long hash = M_Warehouse_ID
 				+ (M_Product_ID * 2)
 				+ (M_AttributeSetInstance_ID * 3)
-				+ (M_AttributeSet_ID * 4);
+				+ (M_AttributeSet_ID * 4)
+				+ (M_Locator_ID * 5); // F3P: introduce locator
 
 			if (allAttributeInstances)
 				hash *= -1;
@@ -1079,6 +1114,11 @@ public class InOutGenerate extends SvrProcess
 		//Nothing to do
 	}
 	
+	public SelectionLineOrderLineWrapper wrapLine(MOrderLine line)
+	{
+		return new SelectionLineOrderLineWrapper(line);
+	}
+	
 	public class SelectionLineOrderLineWrapper extends MOrderLine
 	{
 		/**
@@ -1094,6 +1134,36 @@ public class InOutGenerate extends SvrProcess
 		{
 			super(line.getParent());			
 			this.orderLine = line;
+		}
+		
+		public int getDeliveryM_Locator_ID() // Common use case: set delivery locator
+		{
+			int M_Locator_ID = -1;
+			
+			if(additionalData.containsKey(MInOutLine.COLUMNNAME_M_Locator_ID))
+			{
+				Integer loc = (Integer)additionalData.get(MInOutLine.COLUMNNAME_M_Locator_ID);
+				
+				if(loc != null)
+					M_Locator_ID = loc.intValue();
+			}
+			
+			return M_Locator_ID;
+		}
+		
+		public int getDeliveryM_AttributeSetInstance_ID() // Common use case: set delivery locator
+		{
+			int M_AttributeSetInstance_ID = -1;
+			
+			if(additionalData.containsKey(MInOutLine.COLUMNNAME_M_AttributeSetInstance_ID))
+			{
+				Integer asi = (Integer)additionalData.get(MInOutLine.COLUMNNAME_M_AttributeSetInstance_ID);
+				
+				if(asi != null)
+					M_AttributeSetInstance_ID = asi.intValue();
+			}
+			
+			return M_AttributeSetInstance_ID;
 		}
 	}
 	
