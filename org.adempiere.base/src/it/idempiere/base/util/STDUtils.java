@@ -528,5 +528,21 @@ public class STDUtils {
 		BigDecimal mult = toScale.multiply(propResult);
 	
 		return mult.divide(propScale, scale, RoundingMode.HALF_UP);
-	}	
+	}
+	
+	/** Applica la percentuael e scala il risultato finale
+	 * 
+	 * @param bdValue valore
+	 * @param bdPerc percentaule
+	 * @param scale precisione del risultato
+	 * 
+	 * @return valore in percentuale
+	 */
+	public static BigDecimal percentage(BigDecimal bdValue, BigDecimal bdPerc, int precision)
+	{		
+		BigDecimal m = bdValue.multiply(bdPerc);
+		BigDecimal calculated = m.divide(Env.ONEHUNDRED, precision, RoundingMode.HALF_UP);
+		
+		return calculated;		
+	}
 }

@@ -1551,6 +1551,17 @@ public class MOrder extends X_C_Order implements DocAction
 		if (m_processMsg != null)
 			return DocAction.STATUS_Invalid;
 		
+		// F3P: check gathered feedback
+		
+		StringBuilder info = new StringBuilder();
+		
+		if(FeedbackContainer.getCurrent() != null)
+		{
+			FeedbackContainer.getCurrent().appendInfoFeedback(info);
+		}
+		
+		m_processMsg = info.toString();
+		
 		m_justPrepared = true;
 	//	if (!DOCACTION_Complete.equals(getDocAction()))		don't set for just prepare 
 	//		setDocAction(DOCACTION_Complete);

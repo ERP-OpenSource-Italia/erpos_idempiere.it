@@ -3,17 +3,23 @@
  */
 package org.adempiere.webui.info;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.TreeMap;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.impexp.AbstractExcelExporter;
 import org.adempiere.model.IInfoColumn;
 import org.adempiere.model.MInfoProcess;
 import org.adempiere.model.MInfoRelated;
@@ -40,6 +46,7 @@ import org.adempiere.webui.component.Tabbox;
 import org.adempiere.webui.component.Tabpanel;
 import org.adempiere.webui.component.Tabpanels;
 import org.adempiere.webui.component.Tabs;
+import org.adempiere.webui.component.WInfoWindowListItemRenderer;
 import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.editor.WSearchEditor;
@@ -48,6 +55,8 @@ import org.adempiere.webui.editor.WebEditorFactory;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.event.ValueChangeListener;
+import org.adempiere.webui.event.WTableModelEvent;
+import org.adempiere.webui.factory.ButtonFactory;
 import org.adempiere.webui.grid.WQuickEntry;
 import org.adempiere.webui.panel.InfoPanel;
 import org.adempiere.webui.session.SessionManager;
@@ -62,6 +71,7 @@ import org.compiere.model.AccessSqlParser.TableInfo;
 import org.compiere.model.GridField;
 import org.compiere.model.GridFieldVO;
 import org.compiere.model.GridWindow;
+import org.compiere.model.Lookup;
 import org.compiere.model.MInfoColumn;
 import org.compiere.model.MInfoWindow;
 import org.compiere.model.MLookupFactory;
@@ -76,14 +86,17 @@ import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
+import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
+import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.au.out.AuEcho;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Page;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zk.ui.event.SelectEvent;
 import org.zkoss.zk.ui.event.SwipeEvent;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Center;
@@ -91,7 +104,9 @@ import org.zkoss.zul.Checkbox;
 import org.zkoss.zul.Comboitem;
 import org.zkoss.zul.ComboitemRenderer;
 import org.zkoss.zul.Div;
+import org.zkoss.zul.Filedownload;
 import org.zkoss.zul.ListModelList;
+import org.zkoss.zul.Listitem;
 import org.zkoss.zul.Menuitem;
 import org.zkoss.zul.North;
 import org.zkoss.zul.Separator;
@@ -133,12 +148,24 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
     
     protected ColumnInfo[] columnInfos;
 	protected TableInfo[] tableInfos;
-	protected MInfoColumn[] infoColumns;	
+	protected MInfoColumn[] infoColumns;
+	protected MInfoColumn gridDisplayedInfoColumns[];
 	protected String queryValue;
 	protected WQuickEntry vqe;
 	
 	private List<GridField> gridFields;
 	private Checkbox checkAND;
+	
+	// F3P: Keep original values: when a row is unselected, restore original values
+	
+	private boolean hasEditable = false;
+	private Map<Integer, List<Object>> cacheOriginalValues = new HashMap<>();
+	private Map<Integer, List<Object>> temporarySelectedData = new HashMap<>(); 	
+	private WInfoWindowListItemRenderer infoWindowListItemRenderer = null;
+	
+	// F3P: export 
+	
+	private Button exportButton = null;
 
 	/**
 	 * Menu contail process menu item
@@ -188,7 +215,21 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
    		//Xolali IDEMPIERE-1045
    		contentPanel.addActionListener(new EventListener<Event>() {
    			public void onEvent(Event event) throws Exception {
-   				updateSubcontent();
+   				
+   				int row = -1;
+   				
+   				if(event instanceof SelectEvent<?, ?>)
+   				{
+   					@SuppressWarnings("unchecked")
+						SelectEvent<Listitem, List<Object>> selEvent = (SelectEvent<Listitem, List<Object>>)event;
+   					
+   					if(selEvent.getReference() != null)
+   					{
+   						row = selEvent.getReference().getIndex();
+   					}
+   				}
+   				   				
+   				updateSubcontent(row);
    			}
    		}); //xolali --end-
 
@@ -219,14 +260,21 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			}			
 		}
 		
+		// F3P: add export button
+		
+		initExport();
 	}
 	
-	/**
+	/** 
+	 * 
 	* {@inheritDoc}
 	*/
 	@Override
-	protected void updateSubcontent (){
-		int row = contentPanel.getSelectedRow();
+	protected void updateSubcontent (int row){ // F3P: For multi-selection info, using selected row blocks the dislay to the first selected
+		
+		if(row < 0)
+			row = contentPanel.getSelectedRow();
+
 		if (row >= 0) {
 			for (EmbedWinInfo embed : embeddedWinList) {
 				// default link column is key column
@@ -561,6 +609,36 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				gridFields.add(gridField);
 			}
 			
+			// If we have a process and at least one process and an editable field, change to the info window rendered
+			
+			int processCount = 0;
+			
+			if(infoWindow != null)
+			{
+				MInfoProcess processes[] = infoWindow.getInfoProcess(false);
+				processCount = processes.length;
+			}
+			
+			if(processCount > 0)
+			{
+				for(MInfoColumn infoColumn:infoColumns)
+				{
+					if(infoColumn.isReadOnly() == false)
+					{
+						hasEditable = true;
+						break;
+					}
+				}
+				
+				if(hasEditable)
+				{
+					infoWindowListItemRenderer = new WInfoWindowListItemRenderer(this);
+					contentPanel.setItemRenderer(infoWindowListItemRenderer);
+					contentPanel.setAllowIDColumnForReadWrite(true);
+					infoWindowListItemRenderer.addTableValueChangeListener(contentPanel); // Replicated from WListbox constructor
+				}					
+			}			
+			
 			StringBuilder builder = new StringBuilder(p_whereClause != null ? p_whereClause.trim() : "");
 			String infoWhereClause = infoWindow.getWhereClause();
 			if (infoWhereClause != null && infoWhereClause.indexOf("@") >= 0) {
@@ -674,8 +752,13 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				: tableInfos[0].getTableName();
 					
 		String keySelectClause = keyTableAlias+"."+p_keyColumn;
-		list.add(new ColumnInfo(" ", keySelectClause, IDColumn.class));
+		list.add(new ColumnInfo(" ", keySelectClause, IDColumn.class, true, false, null, p_keyColumn));
 		
+		List<MInfoColumn> gridDisplayedIC = new ArrayList<>();				
+		gridDisplayedIC.add(null); // First column does not have any matching info column		
+		
+		boolean haveNotProcess = !haveProcess; // A field is editabile only if is not readonly and theres a process
+				
 		int i = 0;
 		for(MInfoColumn infoColumn : infoColumns) 
 		{						
@@ -690,7 +773,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					if (infoColumn.getSelectClause().equalsIgnoreCase(keySelectClause))
 						continue;
 					
-					columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, DisplayType.getClass(infoColumn.getAD_Reference_ID(), true));
+					columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, DisplayType.getClass(infoColumn.getAD_Reference_ID(), true), infoColumn.isReadOnly() || haveNotProcess);
 				}
 				else if (DisplayType.isLookup(infoColumn.getAD_Reference_ID()))
 				{
@@ -701,7 +784,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				        editor.setMandatory(false);
 				        editor.setReadWrite(false);
 				        editorMap.put(colSQL, editor);
-						columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, ValueNamePair.class, (String)null);
+						columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, ValueNamePair.class, (String)null, infoColumn.isReadOnly() || haveNotProcess);
 					}
 					else
 					{
@@ -710,11 +793,13 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				}
 				else  
 				{
-					columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, DisplayType.getClass(infoColumn.getAD_Reference_ID(), true));
+					columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, DisplayType.getClass(infoColumn.getAD_Reference_ID(), true), infoColumn.isReadOnly() || haveNotProcess);
 				}
 				columnInfo.setColDescription(infoColumn.get_Translation("Description"));
 				columnInfo.setGridField(gridFields.get(i));
+				columnInfo.setColumnName(infoColumn.getColumnName());
 				list.add(columnInfo);
+				gridDisplayedIC.add(infoColumn);
 				
 				if (keyColumnOfView == infoColumn){
 					if (columnInfo.getColClass().equals(IDColumn.class)) 
@@ -730,6 +815,10 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		}
 		
 		columnInfos = list.toArray(new ColumnInfo[0]);
+		gridDisplayedInfoColumns = gridDisplayedIC.toArray(new MInfoColumn[gridDisplayedIC.size()]);
+		
+		if(infoWindowListItemRenderer != null)
+			infoWindowListItemRenderer.setGridDisplaydInfoColumns(gridDisplayedInfoColumns,columnInfos);
 		
 		prepareTable(columnInfos, infoWindow.getFromClause(), p_whereClause, infoWindow.getOrderByClause());		
 	}
@@ -741,6 +830,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		MLookupInfo lookupInfo = MLookupFactory.getLookupInfo(Env.getCtx(), p_WindowNo, 0, infoColumn.getAD_Reference_ID(), Env.getLanguage(Env.getCtx()), columnName, infoColumn.getAD_Reference_Value_ID(), false, validationCode);
 		String displayColumn = lookupInfo.DisplayColumn;
 		
+		boolean haveNotProcess = !haveProcess; // A field is editabile only if is not readonly and theres a process;
+				
 		int index = infoColumn.getSelectClause().indexOf(".");
 		if (index == infoColumn.getSelectClause().lastIndexOf("."))
 		{
@@ -752,7 +843,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					if (tableInfo.getTableName().equalsIgnoreCase(lookupInfo.TableName))
 					{
 						displayColumn = displayColumn.replace(lookupInfo.TableName+".", tableInfo.getSynonym()+".");
-						ColumnInfo columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), displayColumn, KeyNamePair.class, infoColumn.getSelectClause());
+						ColumnInfo columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), displayColumn, KeyNamePair.class, infoColumn.getSelectClause(), infoColumn.isReadOnly() || haveNotProcess);
 						return columnInfo;
 					}
 					break;
@@ -769,7 +860,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		if (! colSQL.toUpperCase().contains(" AS "))
 			colSQL += " AS " + infoColumn.getColumnName();
         editorMap.put(colSQL, editor);
-		ColumnInfo columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, KeyNamePair.class, (String)null);
+		ColumnInfo columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, KeyNamePair.class, (String)null, infoColumn.isReadOnly() || haveNotProcess);
 		return columnInfo;
 	}
 
@@ -1560,7 +1651,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 	@Override
     protected void executeQuery() {
-    	prepareTable();
+    	prepareTable();    	
+    	cacheOriginalValues.clear(); // F3P: Clear original values     	
     	super.executeQuery();
     }
     
@@ -2077,7 +2169,6 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 		return data;
 	}
-
 	
 	/**
 	 * {@inheritDoc}
@@ -2177,5 +2268,504 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		vqe.setVisible(true);								
 					
 	}
+	
+	// Edit Callback method and original values management
+	
+	public Properties getRowaAsCtx(int row, int editingColumn, Object editingValue)
+	{
+		ListModelTable model = contentPanel.getModel();
+		Properties ctx = new Properties(Env.getCtx()); // Allow session values
+		
+		// Parameter dditors
+		
+		for(WEditor e:editors)
+		{
+			Object val = e.getValue();
+			String column = e.getColumnName();
+			
+			if(val != null)
+			{
+				if(val instanceof Integer)
+					Env.setContext(ctx, 0, column, (Integer)val);
+				else if(val instanceof Timestamp)
+					Env.setContext(ctx, 0, column, (Timestamp)val);
+				else if(val instanceof Boolean)
+					Env.setContext(ctx, 0, column, (Boolean)val);
+				else
+					Env.setContext(ctx, 0, column, val.toString());
+			}
+		}
+		
+		for(int i=0; i < p_layout.length; i++)			
+		{			
+			String column = p_layout[i].getColumnName();
+					
+			Object val = null;
+			
+			if(i != editingColumn)
+				val = model.getValueAt(row, i);
+			else
+				val = editingValue;
+			
+			// Get id from 'complex' types
+			
+			if(val != null)
+			{				
+				if(val instanceof IDColumn)
+				{
+					IDColumn idc = (IDColumn)val;
+					val = idc.getRecord_ID();
+				}
+				else if(val instanceof KeyNamePair)
+				{
+					KeyNamePair knp = (KeyNamePair)val;
+					val = knp.getKey();
+				}
+								
+				if(val instanceof Integer)
+					Env.setContext(ctx, 0, column, (Integer)val);
+				else if(val instanceof Timestamp)
+					Env.setContext(ctx, 0, column, (Timestamp)val);
+				else if(val instanceof Boolean)
+					Env.setContext(ctx, 0, column, (Boolean)val);
+				else
+					Env.setContext(ctx, 0, column, val.toString());
+			}				
+		}
+		
+		return ctx;
+	}
+	
+	public void onCellEditCallback(ValueChangeEvent event, int rowIndex, int colIndex, WEditor editor, GridField field)
+	{		
+		Object val = event.getNewValue();
+	
+		if(val != null && columnInfos[colIndex].getColClass().equals(KeyNamePair.class))
+		{
+			Integer iVal = (Integer)val;
+			String 	display = editor.getDisplay();
+			
+			KeyNamePair kdc = new KeyNamePair(iVal, display);
+			val = kdc;
+		}
+		
+		MInfoColumn infoColumn = gridDisplayedInfoColumns[colIndex];
+		boolean changeIsValid = true;
+		String validationSQL = null;
+		
+		if(!Util.isEmpty(infoColumn.getInputFieldValidation(), true)) // Run validation
+		{
+			changeIsValid = false;
+			
+			Properties ctx = getRowaAsCtx(rowIndex, colIndex, val);
+			
+			String rawSQL = infoColumn.getInputFieldValidation(); 
+			validationSQL = Env.parseContext(ctx, 0, rawSQL, false);
+			
+			try
+			{
+				List<List<Object>> errors = DB.getSQLArrayObjectsEx(null, validationSQL);
+			
+				if(errors != null && errors.size() > 0)
+				{
+					StringBuilder sbError = new StringBuilder();
 
+					for(List<Object> line:errors)
+					{
+						if(line.size() > 0)
+						{
+							if(sbError.length() > 0)
+								sbError.append('\n');
+							
+							sbError.append(line.get(0));
+						}
+					}
+					
+					String msg = Msg.translate(ctx, sbError.toString());
+					FDialog.error(0, this, "ValidationError", msg); // TODO messaggio
+				}
+				else	
+					changeIsValid = true;
+			}
+			catch(Exception e)
+			{
+				log.log(Level.SEVERE, "Error executing validation SQL: " + validationSQL, e);
+				
+				FDialog.error(0, this, "Error", validationSQL); // TODO messaggio
+				changeIsValid = false;
+			}
+		}
+		
+		if(changeIsValid)
+		{		
+			// Editing a row delesects it, make sure it stays selected
+			
+			ListModelTable model = contentPanel.getModel();
+			Object row = model.get(rowIndex);
+			
+			// Since the row object is a collection, we can update it safely, but the hash code will be different from the one stored
+			// in the selection. So we need to remove and re-add the row after to keep the selection in sync
+			
+			model.removeFromSelection(row);
+			contentPanel.setValueAt(val, rowIndex, colIndex);		
+			model.addToSelection(row);
+			
+			Clients.resize(contentPanel);
+		}
+		else
+		{
+			editor.setValue(event.getOldValue());
+		}
+	}
+	
+	protected void restoreOriginalValues(int rowIndex)
+	{
+		Integer viewIdKey = getColumnValue(rowIndex);
+		
+		if(cacheOriginalValues.containsKey(viewIdKey)) // Only cache if not cached to avoid caching subsequent modifications
+		{
+			int 				 colCount = contentPanel.getColumnCount();
+			List<Object> row = cacheOriginalValues.get(viewIdKey);
+			
+			for(int i=1; i < colCount; i++) // Skip first row (selection)
+			{
+				Object val = row.get(i-1);
+				contentPanel.setValueAt(val, rowIndex, i);
+			}
+		}
+	}
+	
+	protected void cacheOriginalValues(int rowIndex)
+	{
+		Integer viewIdKey = getColumnValue(rowIndex);
+		
+		if(cacheOriginalValues.containsKey(viewIdKey) == false) // Only cache if not cached to avoid caching subsequent modifications
+		{
+			int colCount = contentPanel.getColumnCount();
+			List<Object> row = new ArrayList<>();
+			
+			for(int i=1; i < colCount; i++) // Skip first row (selection)
+			{
+				Object val = contentPanel.getValueAt(rowIndex, i);
+				row.add(val);
+			}
+			
+			cacheOriginalValues.put(viewIdKey, row);
+		}
+	}
+		
+	@Override
+	public void tableChanged(WTableModelEvent event)
+	{
+		// Manage cache of values
+		
+		if(hasEditable && event.getColumn() == 0)
+		{
+			for(int row=event.getFirstRow(); row <= event.getLastRow(); row++)
+			{
+				Object col0 = contentPanel.getValueAt(row, 0);
+				
+				if(col0 instanceof IDColumn)
+				{
+					IDColumn idc = (IDColumn)col0;
+					
+					if(idc.isSelected())
+					{
+						cacheOriginalValues(row);
+					}
+					else
+					{
+						restoreOriginalValues(row);
+					}
+				}
+			}
+			
+			Clients.resize(contentPanel);
+		}
+
+		super.tableChanged(event);
+	}
+	
+	@Override
+	public void onQueryCallback(Event event)
+	{
+		super.onQueryCallback(event);
+		
+		enableExportButton();
+	}
+		
+	
+	@Override
+	protected void updateListSelected()
+	{
+		if(hasEditable)
+		{
+			temporarySelectedData = new HashMap<>();
+			
+			// The list contents (rows) will be cleared during query, so we need a backup to restore the in-edit data
+			
+			ListModelTable model = contentPanel.getModel();
+			
+			for(int rowIndex:contentPanel.getSelectedIndices())
+			{
+				Integer keyViewValue = getColumnValue(rowIndex);
+				@SuppressWarnings("unchecked")
+				List<Object> row = (List<Object>)model.get(rowIndex);
+				
+				ArrayList<Object> clonedRow = new ArrayList<>(row);				
+				temporarySelectedData.put(keyViewValue, clonedRow);
+			}
+			
+			for(Entry<Integer, List<Object>> entry: recordSelectedData.entrySet())
+			{
+				ArrayList<Object> clonedRow = new ArrayList<>(entry.getValue());				
+				temporarySelectedData.put(entry.getKey(), clonedRow);
+			}						
+		}		
+
+		super.updateListSelected();
+	}
+
+	@Override
+	protected void restoreSelectedInPage()
+	{
+		super.restoreSelectedInPage();
+		
+		if(temporarySelectedData != null)
+		{
+			temporarySelectedData.clear();
+			temporarySelectedData = null;
+		}		
+	}
+
+
+	@Override
+	public boolean onRestoreSelectedItemIndexInPage(Integer keyViewValue, int rowIndex, Object oRow)
+	{
+		if(hasEditable && temporarySelectedData != null)
+		{
+			
+			cacheOriginalValues(rowIndex);
+			
+			@SuppressWarnings("unchecked")
+			List<Object> row = (List<Object>)oRow;
+			List<Object> originalSelectedRow = temporarySelectedData.get(keyViewValue);
+			ListModelTable model = contentPanel.getModel();
+			
+			// While restoring values we dong want to trigger listeners
+			model.removeTableModelListener(this);
+						
+			for(int i=0; i < gridDisplayedInfoColumns.length; i++)
+			{
+				if(gridDisplayedInfoColumns[i] == null)
+					continue;
+				
+				if(gridDisplayedInfoColumns[i].isReadOnly() == false) // Only replace editable column, in case some other data changed on db
+				{
+					Object obj = originalSelectedRow.get(i);
+					model.setValueAt( obj, rowIndex, i);
+				}				
+			}
+			
+			// Restore isSelected status on IDColumn
+			Object id = (IDColumn)row.get(0);
+			
+			if(id instanceof IDColumn)
+			{
+				IDColumn idc = (IDColumn)id;
+				idc.setSelected(true);
+			}
+			
+			// Restore listners
+			model.addTableModelListener(this);
+		}
+
+		return super.onRestoreSelectedItemIndexInPage(keyViewValue, rowIndex, oRow);
+	}
+	
+	// F3P: Export function
+	
+	protected void initExport()
+	{
+    exportButton = ButtonFactory.createNamedButton("Export", false, true);        
+    exportButton.setId("Export");
+    exportButton.setEnabled(false);       
+    exportButton.addEventListener(Events.ON_CLICK, new XlsExportAction());
+
+    confirmPanel.addComponentsLeft(exportButton);
+	}
+
+	protected void enableExportButton()
+	{
+		if(exportButton == null)
+			return;
+		
+		exportButton.setEnabled(contentPanel.getRowCount() > 0);		
+	}
+	
+	private class XlsExportAction implements EventListener<Event>
+	{		
+		@Override
+		public void onEvent(Event evt) throws Exception
+		{
+			if(evt.getTarget() == exportButton)
+			{
+				XlsExporter exporter = new XlsExporter();
+				
+				exporter.doExport();
+			}
+		}
+	}
+	
+	private class XlsExporter extends AbstractExcelExporter
+	{
+		private ResultSet m_rs = null;
+		private int rowCount = -1;
+		private int currentRow = -1;
+		
+		public void doExport() throws Exception
+		{
+			int originalCount = m_count;
+			
+			String dataSql = buildDataSQL(0, 0);
+			
+			File file = File.createTempFile("Export", ".xls");
+			
+			testCount();
+			
+			rowCount = m_count;
+			m_count = originalCount;				
+			
+			if(rowCount > 0)
+			{
+				PreparedStatement pstmt = null;
+				Trx trx = null;
+				
+				try
+				{
+					String trxName = Trx.createTrxName("InfoPanelLoad:");
+					trx  = Trx.get(trxName, true);
+					trx.setDisplayName(getClass().getName()+"_exportXls");
+					pstmt = DB.prepareStatement(dataSql, trxName);
+					setParameters (pstmt, false);	//	no count
+
+					pstmt.setFetchSize(100);
+					m_rs = pstmt.executeQuery();
+
+					export(file, null);
+				}
+				catch(SQLException e)
+				{
+					log.log(Level.SEVERE, dataSql, e);
+				}
+				finally
+				{
+					DB.close(m_rs, pstmt);
+					trx.close();
+					
+					m_rs = null;
+					currentRow = -1;
+				}
+				
+				AMedia media = null;
+				media = new AMedia(file.getName(), null, "application/vnd.ms-excel", file, true);
+				Filedownload.save(media);
+			}			
+		}
+
+		@Override
+		public boolean isFunctionRow()
+		{
+			return false;
+		}
+
+		@Override
+		public int getColumnCount()
+		{			
+			return columnInfos.length;
+		}
+
+		@Override
+		public int getRowCount()
+		{
+			return rowCount;
+		}
+
+		@Override
+		protected void setCurrentRow(int row)
+		{
+			if(row > currentRow)
+			{
+				try
+				{
+					m_rs.next();
+					currentRow = row;
+				}
+				catch(SQLException e)
+				{
+					throw new AdempiereException(e);
+				}
+			}
+		}
+
+		@Override
+		protected int getCurrentRow()
+		{
+			return currentRow;
+		}
+
+		@Override
+		public boolean isColumnPrinted(int col)
+		{
+			return (columnInfos[col].getGridField() != null);
+		}
+
+		@Override
+		public String getHeaderName(int col)
+		{			
+			return columnInfos[col].getColHeader();
+		}
+
+		@Override
+		public int getDisplayType(int row, int col)
+		{
+			int displayType = -1;
+			GridField gridField = columnInfos[col].getGridField();
+			displayType = gridField.getDisplayType();
+						
+			return displayType;
+		}
+
+		@Override
+		public Object getValueAt(int row, int col)
+		{
+			Object val = null;
+			
+			try
+			{
+				val = m_rs.getObject(col + 1); // Col are zero-based, while resultset col are 1 based
+			}
+			catch(SQLException e)
+			{
+				throw new AdempiereException(e);
+			}
+			
+			GridField gridField = columnInfos[col].getGridField();
+			
+			Lookup lookup = gridField.getLookup();
+
+			if (lookup != null)
+			{
+				val = lookup.getDisplay(val);
+			}
+			
+			return val; 
+		}
+
+		@Override
+		public boolean isPageBreak(int row, int col)
+		{
+			return false;
+		}		
+	}	
 }

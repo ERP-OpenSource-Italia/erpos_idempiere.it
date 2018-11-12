@@ -60,7 +60,7 @@ public class InOutGenerate extends SvrProcess
 {
 	// F3P: SelectionLine query
 	
-	public static final String SQL_SELECTIONLINE = "SELECT ol.C_OrderLine_ID,tl.Qty "
+	public static final String SQL_SELECTIONLINE = "SELECT ol.C_OrderLine_ID,tl.* "
 													+ " FROM T_SelectionLine tl INNER JOIN C_OrderLine ol on (tl.T_SelectionLine_ID = ol.C_OrderLine_ID AND ol.C_Order_ID = ?)"
 													+ " WHERE tl.AD_PInstance_ID = ?"
 													+ " ORDER BY ol.C_BPartner_Location_ID,ol.M_Product_ID,ol.line";
@@ -89,7 +89,7 @@ public class InOutGenerate extends SvrProcess
 	private Timestamp       p_DateShipped = null;
 	
 	// F3P: selection line
-	private boolean p_SelectionLine = false;
+	protected boolean p_SelectionLine = false;
 	private int	DocProcess_AD_Workflow_ID = -1;
 	
 	//F3P: renumber line
@@ -250,7 +250,7 @@ public class InOutGenerate extends SvrProcess
 		}
 		//F3P: log error
 		if(error)
-			return "@Errors@";
+			return "@Error@";
 		
 		return generate(pstmt);
 	}	//	doIt
@@ -302,12 +302,9 @@ public class InOutGenerate extends SvrProcess
 				//	Deadlock Prevention - Order by M_Product_ID
 				// F3P: support for T_SelectionLine
 				MOrderLine[] lines = null;
-				Map<Integer,BigDecimal> mapSelectionLineQty = null;
 				
 				if(p_SelectionLine)
 				{
-					mapSelectionLineQty = new HashMap<Integer, BigDecimal>();
-					
 					PreparedStatement ptmtSL = null;
 					ResultSet rsLS = null;
 					
@@ -324,14 +321,17 @@ public class InOutGenerate extends SvrProcess
 						{
 							int C_OrderLine_ID = rsLS.getInt(MOrderLine.COLUMNNAME_C_OrderLine_ID);
 							BigDecimal bdQty = rsLS.getBigDecimal("Qty");
-							
-							mapSelectionLineQty.put(C_OrderLine_ID, bdQty);
-							
+														
 							MOrderLine mOLine = PO.get(getCtx(), MOrderLine.Table_Name, C_OrderLine_ID, get_TrxName());
-							lstLines.add(mOLine);						
+							SelectionLineOrderLineWrapper wrapper = wrapLine(mOLine);
+							wrapper.qty = bdQty;
+							
+							processSelectionLine(mOLine, wrapper.additionalData, rsLS);							
+							
+							lstLines.add(wrapper);						
 						}
 						
-						lines = lstLines.toArray(new MOrderLine[lstLines.size()]);
+						lines = lstLines.toArray(new SelectionLineOrderLineWrapper[lstLines.size()]);
 					}
 					catch(Exception e)
 					{
@@ -350,6 +350,27 @@ public class InOutGenerate extends SvrProcess
 				for (int i = 0; i < lines.length; i++)
 				{
 					MOrderLine line = lines[i];
+					MOrderLine wrapperOrLine = null;
+					SelectionLineOrderLineWrapper wrapper = null;
+					int deliverFrom_M_Locator_ID = -1;
+					int deliverM_AttributeSetInstance_ID = line.getM_AttributeSetInstance_ID();
+					
+					// Managed wrapped lines, and raw lines
+					
+					if(line instanceof SelectionLineOrderLineWrapper)
+					{
+						wrapper = (SelectionLineOrderLineWrapper)line;
+						line = wrapper.orderLine;
+						wrapperOrLine = wrapper;
+						deliverFrom_M_Locator_ID = wrapper.getDeliveryM_Locator_ID();
+						int wrapperM_ASI_ID = wrapper.getDeliveryM_AttributeSetInstance_ID();
+						
+						if(wrapperM_ASI_ID >= 0) // 0 is a valid asi
+							deliverM_AttributeSetInstance_ID = wrapperM_ASI_ID; 
+					}
+					else
+						wrapperOrLine = line;
+					
 					if (line.getM_Warehouse_ID() != p_M_Warehouse_ID)
 						continue;
 					if (log.isLoggable(Level.FINE)) log.fine("check: " + line);
@@ -357,9 +378,11 @@ public class InOutGenerate extends SvrProcess
 					BigDecimal toDeliver = line.getQtyOrdered()
 						.subtract(line.getQtyDelivered());
 					
-					// F3P: if we are using T_SelectionLine, correct toDeliver
-					if(mapSelectionLineQty != null && mapSelectionLineQty.containsKey(line.getC_OrderLine_ID()))
-						toDeliver = mapSelectionLineQty.get(line.getC_OrderLine_ID());
+					if(wrapper != null)
+					{
+						if(wrapper.qty != null)
+							toDeliver = wrapper.qty;
+					}
 					
 					MProduct product = line.getProduct();
 					//	Nothing to Deliver
@@ -413,7 +436,7 @@ public class InOutGenerate extends SvrProcess
 							|| toDeliver.signum() != 0))		//	lines w/o product
 					{
 						if (!MOrder.DELIVERYRULE_CompleteOrder.equals(order.getDeliveryRule()))	//	printed later
-							createLine (order, line, toDeliver, null, false);
+							createLine (order, wrapperOrLine, toDeliver, null, false);
 						else
 							logOrderLineInfo(line, " skipped: delivery rule == complete order");  // F3P: Helper for order line-related logs (level info)
 						continue;
@@ -423,7 +446,7 @@ public class InOutGenerate extends SvrProcess
 					String MMPolicy = product.getMMPolicy();
 
 					MStorageOnHand[] storages = getStorages(line.getM_Warehouse_ID(),
-							 line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(),
+							 line.getM_Product_ID(), deliverM_AttributeSetInstance_ID, deliverFrom_M_Locator_ID, 
 							 minGuaranteeDate, MClient.MMPOLICY_FiFo.equals(MMPolicy));
 					
 					for (int j = 0; j < storages.length; j++)
@@ -450,7 +473,7 @@ public class InOutGenerate extends SvrProcess
 							+ " (Unconfirmed=" + unconfirmedShippedQty
 							+ ", ToDeliver=" + toDeliver + " - " + line);
 						//	
-						createLine (order, line, toDeliver, storages, false);
+						createLine (order, wrapperOrLine, toDeliver, storages, false);
 					}
 					//	Availability
 					else if (MOrder.DELIVERYRULE_Availability.equals(order.getDeliveryRule())
@@ -465,7 +488,7 @@ public class InOutGenerate extends SvrProcess
 							+ "), ToDeliver=" + toDeliver 
 							+ ", Delivering=" + deliver + " - " + line);
 						//	
-						createLine (order, line, deliver, storages, false);
+						createLine (order, wrapperOrLine, deliver, storages, false);
 					}
 					//	Force
 					else if (MOrder.DELIVERYRULE_Force.equals(order.getDeliveryRule()))
@@ -476,7 +499,7 @@ public class InOutGenerate extends SvrProcess
 							+ "), ToDeliver=" + toDeliver 
 							+ ", Delivering=" + deliver + " - " + line);
 						//	
-						createLine (order, line, deliver, storages, true);
+						createLine (order, wrapperOrLine, deliver, storages, true);
 					}
 					//	Manual
 					else if (MOrder.DELIVERYRULE_Manual.equals(order.getDeliveryRule())) {
@@ -496,21 +519,44 @@ public class InOutGenerate extends SvrProcess
 					for (int i = 0; i < lines.length; i++)
 					{
 						MOrderLine line = lines[i];
+						SelectionLineOrderLineWrapper orderLineWrapper = null;
+						int deliveryFrom_M_Locator_ID = -1;
+						int deliveryM_AttributeSetInstance_ID = line.getM_AttributeSetInstance_ID();
+						
+						if(line instanceof SelectionLineOrderLineWrapper)
+						{
+							orderLineWrapper = (SelectionLineOrderLineWrapper)line;						
+							line = orderLineWrapper.orderLine;
+							deliveryFrom_M_Locator_ID = orderLineWrapper.getDeliveryM_Locator_ID();
+							
+							int wrapperM_ASI_ID = orderLineWrapper.getDeliveryM_AttributeSetInstance_ID();
+							
+							if(wrapperM_ASI_ID >= 0)
+								deliveryM_AttributeSetInstance_ID = wrapperM_ASI_ID; 
+						}
+						
 						if (line.getM_Warehouse_ID() != p_M_Warehouse_ID)
 							continue;
 						MProduct product = line.getProduct();
 						BigDecimal toDeliver = line.getQtyOrdered().subtract(line.getQtyDelivered());
+						
+						if(orderLineWrapper != null)
+						{
+							if(orderLineWrapper.qty != null)
+								toDeliver = orderLineWrapper.qty;
+						}
+						
 						//
 						MStorageOnHand[] storages = null;
 						if (product != null && product.isStocked())
 						{
 							String MMPolicy = product.getMMPolicy();
 							storages = getStorages(line.getM_Warehouse_ID(), 
-								line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(),
+								line.getM_Product_ID(), deliveryM_AttributeSetInstance_ID, deliveryFrom_M_Locator_ID, 
 								minGuaranteeDate, MClient.MMPOLICY_FiFo.equals(MMPolicy));
 						}
 						//	
-						createLine (order, line, toDeliver, storages, false);
+						createLine (order, orderLineWrapper, toDeliver, storages, false);
 					}
 				}
 				// F3P: avoid mix order when there are more than 100 lines
@@ -522,16 +568,17 @@ public class InOutGenerate extends SvrProcess
 		{
 			//throw new AdempiereException(e);
 			// F3P: improved log of error
+			
+			sError = e.getLocalizedMessage();
+			
+			if(sError == null)
+				sError = e.getMessage();
+			
+			if(sError == null)
+				sError = e.toString();
+			
 			if(m_shipment != null)
 			{
-				sError = e.getLocalizedMessage();
-				
-				if(sError == null)
-					sError = e.getMessage();
-				
-				if(sError == null)
-					sError = e.toString();
-				
 				addLog(m_shipment.getM_InOut_ID(), m_shipment.getMovementDate(), null, m_shipment.getDocumentNo() + " - @Error@ " + sError);
 			}
 			
@@ -551,7 +598,7 @@ public class InOutGenerate extends SvrProcess
 		}
 		else
 		{
-			return "@Errors@";
+			return "@Error@ " + sError;
 		}
 	}	//	generate
 	
@@ -568,6 +615,22 @@ public class InOutGenerate extends SvrProcess
 	private void createLine (MOrder order, MOrderLine orderLine, BigDecimal qty, 
 		MStorageOnHand[] storages, boolean force)
 	{
+		SelectionLineOrderLineWrapper orderLineWrapper = null;
+		Map<String, Object> wrapperAdditionalData = null;
+		int deliverM_AttributeSetInstance_ID = orderLine.getM_AttributeSetInstance_ID();
+		
+		if(orderLine instanceof SelectionLineOrderLineWrapper)
+		{
+			orderLineWrapper = (SelectionLineOrderLineWrapper)orderLine;
+			wrapperAdditionalData = orderLineWrapper.additionalData;
+			orderLine = orderLineWrapper.orderLine;
+			
+			int wrapperM_ASI_ID = orderLineWrapper.getDeliveryM_AttributeSetInstance_ID();
+			
+			if(wrapperM_ASI_ID >= 0)
+				deliverM_AttributeSetInstance_ID = wrapperM_ASI_ID; 
+		}
+				
 		//	Complete last Shipment - can have multiple shipments
 		if (m_lastC_BPartner_Location_ID != orderLine.getC_BPartner_Location_ID() )
 			completeShipment();
@@ -575,12 +638,17 @@ public class InOutGenerate extends SvrProcess
 		//	Create New Shipment
 		if (m_shipment == null)
 		{
-			m_shipment = new MInOut (order, 0, m_movementDate);
-			m_shipment.setM_Warehouse_ID(orderLine.getM_Warehouse_ID());	//	sets Org too
-			if (order.getC_BPartner_ID() != orderLine.getC_BPartner_ID())
-				m_shipment.setC_BPartner_ID(orderLine.getC_BPartner_ID());
-			if (order.getC_BPartner_Location_ID() != orderLine.getC_BPartner_Location_ID())
-				m_shipment.setC_BPartner_Location_ID(orderLine.getC_BPartner_Location_ID());
+			// F3P: moved to separated function to improve overridability
+			
+			// m_shipment = new MInOut (order, 0, m_movementDate);
+			// m_shipment.setM_Warehouse_ID(orderLine.getM_Warehouse_ID());	//	sets Org too
+			// if (order.getC_BPartner_ID() != orderLine.getC_BPartner_ID())
+			//  m_shipment.setC_BPartner_ID(orderLine.getC_BPartner_ID());
+			// if (order.getC_BPartner_Location_ID() != orderLine.getC_BPartner_Location_ID())
+			//  m_shipment.setC_BPartner_Location_ID(orderLine.getC_BPartner_Location_ID());
+
+			m_shipment = createShipment(order, orderLine, m_movementDate);
+			
 			if (!m_shipment.save())
 				throw new IllegalStateException("Could not create Shipment");
 		}
@@ -595,8 +663,22 @@ public class InOutGenerate extends SvrProcess
 					.multiply(orderLine.getQtyEntered())
 					.divide(orderLine.getQtyOrdered(), 12, BigDecimal.ROUND_HALF_UP));
 			line.setLine(m_line + orderLine.getLine());
+			
+			//F3P add extension point
+			beforeSaveInOutLine(line, wrapperAdditionalData);
+			
+			/* F3P: changed to saveEx to avoid silently ignore the real error 
 			if (!line.save())
-				throw new IllegalStateException("Could not create Shipment Line");
+		    {
+					throw new IllegalStateException("Could not create Shipment Line");
+		    }
+			 */
+			
+			line.saveEx(get_TrxName());
+			
+			//F3P add extension point
+			afterSaveInOutLine(line, wrapperAdditionalData);
+		
 			if (log.isLoggable(Level.FINE)) log.fine(line.toString());
 			return;
 		}
@@ -626,7 +708,7 @@ public class InOutGenerate extends SvrProcess
 			int M_Locator_ID = storage.getM_Locator_ID();
 			//
 			MInOutLine line = null;
-			if (orderLine.getM_AttributeSetInstance_ID() == 0)      //      find line with Locator
+			if (deliverM_AttributeSetInstance_ID == 0)      //      find line with Locator
 			{
 				for (int ll = 0; ll < list.size(); ll++)
 				{
@@ -642,6 +724,8 @@ public class InOutGenerate extends SvrProcess
 			{
 				line = new MInOutLine (m_shipment);
 				line.setOrderLine(orderLine, M_Locator_ID, order.isSOTrx() ? deliver : Env.ZERO);
+				line.setM_AttributeSetInstance_ID(deliverM_AttributeSetInstance_ID);
+				
 				line.setQty(deliver);
 				list.add(line);
 			}
@@ -651,8 +735,22 @@ public class InOutGenerate extends SvrProcess
 				line.setQtyEntered(line.getMovementQty().multiply(orderLine.getQtyEntered())
 					.divide(orderLine.getQtyOrdered(), 12, BigDecimal.ROUND_HALF_UP));
 			line.setLine(m_line + orderLine.getLine());
+			
+			//F3P add extension point
+			beforeSaveInOutLine(line, wrapperAdditionalData);
+			
+			/* F3P: changed to saveEx to avoid silently ignore the real error 
 			if (!line.save())
-				throw new IllegalStateException("Could not create Shipment Line");
+		    {
+					throw new IllegalStateException("Could not create Shipment Line");
+		    }
+			 */
+			
+			line.saveEx(get_TrxName());
+			
+			//F3P add extension point
+			afterSaveInOutLine(line, wrapperAdditionalData);
+			
 			if (log.isLoggable(Level.FINE)) log.fine("ToDeliver=" + qty + "/" + deliver + " - " + line);
 			toDeliver = toDeliver.subtract(deliver);
 			//      Temp adjustment, actual update happen in MInOut.completeIt - just in memory - not saved
@@ -697,8 +795,11 @@ public class InOutGenerate extends SvrProcess
 							throw new IllegalStateException("Could not create Shipment Line");
 				    }
 				  */
-					
-				 line.saveEx(get_TrxName());
+				//F3P add extension point
+				beforeSaveInOutLine(line, wrapperAdditionalData);
+				line.saveEx(get_TrxName());
+				//F3P add extension point
+				afterSaveInOutLine(line, wrapperAdditionalData);
 			}
 		}	
 	}	//	createLine
@@ -714,11 +815,11 @@ public class InOutGenerate extends SvrProcess
 	 *	@return storages
 	 */
 	private MStorageOnHand[] getStorages(int M_Warehouse_ID, 
-			 int M_Product_ID, int M_AttributeSetInstance_ID,
+			 int M_Product_ID, int M_AttributeSetInstance_ID, int M_Locator_ID, 
 			  Timestamp minGuaranteeDate, boolean FiFo)
 	{
 		m_lastPP = new SParameter(M_Warehouse_ID, 
-		M_Product_ID, M_AttributeSetInstance_ID,
+		M_Product_ID, M_AttributeSetInstance_ID, M_Locator_ID, 
 			minGuaranteeDate, FiFo);
 		//
 		m_lastStorages = m_map.get(m_lastPP); 
@@ -732,6 +833,10 @@ public class InOutGenerate extends SvrProcess
 			/* IDEMPIERE-2668 - filter just locators enabled for shipping */
 			List<MStorageOnHand> m_storagesForShipping = new ArrayList<MStorageOnHand>();
 			for (MStorageOnHand soh : tmpStorages) {
+				
+				if(M_Locator_ID > 0 && soh.getM_Locator_ID() != M_Locator_ID) // F3P: if a locator is provided, accept only storage with this locator
+					continue;
+				
 				MLocator loc = MLocator.get(getCtx(), soh.getM_Locator_ID());
 				MLocatorType lt = null;
 				if (loc.getM_LocatorType_ID() > 0)
@@ -779,7 +884,7 @@ public class InOutGenerate extends SvrProcess
 			{
 				savepoint = trx.setSavepoint("beforeComplete");
 				
-				if(DocProcess_AD_Workflow_ID > 0) // F3P use workflow instead of plain process
+				if(DocAction.ACTION_Complete.equals(p_docAction) && DocProcess_AD_Workflow_ID > 0) // F3P use workflow instead of plain process
 				{
 					ProcessInfo pi = new ProcessInfo("CompleteWF", getProcessInfo().getAD_Process_ID(), 0, m_shipment.getM_InOut_ID());
 					pi.setAD_User_ID (Env.getAD_User_ID(Env.getCtx()));
@@ -883,15 +988,19 @@ public class InOutGenerate extends SvrProcess
 		 *	@param p_minGuaranteeDate
 		 *	@param p_FiFo
 		 */
+		
+		// F3P: Manage locator
+		
 		protected SParameter (int p_Warehouse_ID, 
-			int p_Product_ID, int p_AttributeSetInstance_ID, 
+			int p_Product_ID, int p_AttributeSetInstance_ID, int p_M_Locator_ID, 
 			Timestamp p_minGuaranteeDate,boolean p_FiFo)
 		{
 			this.M_Warehouse_ID = p_Warehouse_ID;
 			this.M_Product_ID = p_Product_ID;
 			this.M_AttributeSetInstance_ID = p_AttributeSetInstance_ID; 
 			this.minGuaranteeDate = p_minGuaranteeDate;
-			this.FiFo = p_FiFo;	
+			this.FiFo = p_FiFo;
+			this.M_Locator_ID = p_M_Locator_ID;
 		}
 		/** Warehouse		*/
 		public int M_Warehouse_ID;
@@ -906,7 +1015,9 @@ public class InOutGenerate extends SvrProcess
 		/** Mon Guarantee Date	*/
 		public Timestamp minGuaranteeDate;
 		/** FiFo			*/
-		public boolean FiFo;
+		public boolean FiFo;		
+		/** F3P: Locator	*/
+		public int M_Locator_ID;
 
 		/**
 		 * 	Equals
@@ -923,7 +1034,8 @@ public class InOutGenerate extends SvrProcess
 					&& cmp.M_AttributeSetInstance_ID == M_AttributeSetInstance_ID
 					&& cmp.M_AttributeSet_ID == M_AttributeSet_ID
 					&& cmp.allAttributeInstances == allAttributeInstances
-					&& cmp.FiFo == FiFo;
+					&& cmp.FiFo == FiFo
+					&& cmp.M_Locator_ID == M_Locator_ID;  // F3P: introduce locator
 				if (eq)
 				{
 					if (cmp.minGuaranteeDate == null && minGuaranteeDate == null)
@@ -948,7 +1060,8 @@ public class InOutGenerate extends SvrProcess
 			long hash = M_Warehouse_ID
 				+ (M_Product_ID * 2)
 				+ (M_AttributeSetInstance_ID * 3)
-				+ (M_AttributeSet_ID * 4);
+				+ (M_AttributeSet_ID * 4)
+				+ (M_Locator_ID * 5); // F3P: introduce locator
 
 			if (allAttributeInstances)
 				hash *= -1;
@@ -970,5 +1083,88 @@ public class InOutGenerate extends SvrProcess
 		}	//	hashCode
 		
 	}	//	Parameter
+	
+	// F3P: split creation in overridabile function
+	
+	protected MInOut createShipment(MOrder order, MOrderLine orderLine, Timestamp movementDate)
+	{
+		MInOut shipment = new MInOut (order, 0, movementDate);
+				
+		shipment.setM_Warehouse_ID(orderLine.getM_Warehouse_ID());	//	sets Org too
+		if (order.getC_BPartner_ID() != orderLine.getC_BPartner_ID())
+			shipment.setC_BPartner_ID(orderLine.getC_BPartner_ID());
+		if (order.getC_BPartner_Location_ID() != orderLine.getC_BPartner_Location_ID())
+			shipment.setC_BPartner_Location_ID(orderLine.getC_BPartner_Location_ID());
+				
+		return shipment;
+	}	
+	//F3P
+	protected void processSelectionLine(MOrderLine line, Map<String,Object> lineAdditionalData, ResultSet rs) throws Exception
+	{
+		//Nothing to do
+	}
+	
+	protected void beforeSaveInOutLine(MInOutLine line, Map<String,Object> selectionLineAdditionalData) throws AdempiereException
+	{
+		//Nothing to do
+	}
+	
+	protected void afterSaveInOutLine(MInOutLine line, Map<String,Object> selectionLineAdditionalData) throws AdempiereException
+	{
+		//Nothing to do
+	}
+	
+	public SelectionLineOrderLineWrapper wrapLine(MOrderLine line)
+	{
+		return new SelectionLineOrderLineWrapper(line);
+	}
+	
+	public class SelectionLineOrderLineWrapper extends MOrderLine
+	{
+		/**
+		 * 
+		 */
+		
+		private static final long serialVersionUID = -7385140481126599352L;
+		private MOrderLine	orderLine = null;
+		private BigDecimal	qty = null;
+		private Map<String, Object> additionalData = new HashMap<>(); 
+		
+		public SelectionLineOrderLineWrapper(MOrderLine line)
+		{
+			super(line.getParent());			
+			this.orderLine = line;
+		}
+		
+		public int getDeliveryM_Locator_ID() // Common use case: set delivery locator
+		{
+			int M_Locator_ID = -1;
+			
+			if(additionalData.containsKey(MInOutLine.COLUMNNAME_M_Locator_ID))
+			{
+				Integer loc = (Integer)additionalData.get(MInOutLine.COLUMNNAME_M_Locator_ID);
+				
+				if(loc != null)
+					M_Locator_ID = loc.intValue();
+			}
+			
+			return M_Locator_ID;
+		}
+		
+		public int getDeliveryM_AttributeSetInstance_ID() // Common use case: set delivery locator
+		{
+			int M_AttributeSetInstance_ID = -1;
+			
+			if(additionalData.containsKey(MInOutLine.COLUMNNAME_M_AttributeSetInstance_ID))
+			{
+				Integer asi = (Integer)additionalData.get(MInOutLine.COLUMNNAME_M_AttributeSetInstance_ID);
+				
+				if(asi != null)
+					M_AttributeSetInstance_ID = asi.intValue();
+			}
+			
+			return M_AttributeSetInstance_ID;
+		}
+	}
 	
 }	//	InOutGenerate

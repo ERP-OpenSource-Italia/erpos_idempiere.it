@@ -82,6 +82,9 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 	private int m_colorColumnIndex = -1;
 	/** Color Column compare data.       */
 	private Object m_colorDataCompare = Env.ZERO;
+	
+	// F3P: support IDColumn for selection
+	private boolean allowIDColumnForReadWrite = false;
 
 	/**
 	 * Default constructor.
@@ -224,9 +227,23 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 	public boolean isCellEditable(int row, int column)
 	{
 		//  if the first column holds a boolean and it is false, it is not editable
+		
+		Object val = getValueAt(row, 0); 
+		
+		//  if the first column holds a boolean and it is false, it is not editable
 		if (column != 0
-			&& (getValueAt(row, 0) instanceof Boolean)
-			&& !((Boolean)getValueAt(row, 0)).booleanValue())
+			&& (val instanceof Boolean)
+			&& !((Boolean)val).booleanValue())
+		{
+			return false;
+		}
+		
+		// F3P: If allowed, use idcolumn as a switch for read/write
+		
+		if(allowIDColumnForReadWrite 
+			&& column != 0
+			&& val instanceof IDColumn 
+			&& ((IDColumn)val).isSelected() == false)
 		{
 			return false;
 		}
@@ -1263,6 +1280,16 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 			}	
 			
 		}
+	}
+
+	public boolean isAllowIDColumnForReadWrite()
+	{
+		return allowIDColumnForReadWrite;
+	}
+
+	public void setAllowIDColumnForReadWrite(boolean allowIDColumnForReadWrite)
+	{
+		this.allowIDColumnForReadWrite = allowIDColumnForReadWrite;
 	}
 
 }

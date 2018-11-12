@@ -7,8 +7,8 @@ import java.net.URL;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Checkbox;
@@ -90,7 +90,7 @@ public class DefaultCellComponentFactory implements ICellComponentFactory
 			}
 			else if (field instanceof Number)
 			{
-				ArrayList<WTableColumn> tableColumns = wliRenderer.getTableColumns();
+				List<WTableColumn> tableColumns = wliRenderer.getTableColumns();
 				
 				if (tableColumns != null && columnIndex < tableColumns.size()
 						&& tableColumns.get(columnIndex).getColumnClass() != null
@@ -165,7 +165,7 @@ public class DefaultCellComponentFactory implements ICellComponentFactory
 			}
 			else if (field instanceof String)
 			{
-				ArrayList<WTableColumn> tableColumns = wliRenderer.getTableColumns();
+				List<WTableColumn> tableColumns = wliRenderer.getTableColumns();
 				
 				if (tableColumns != null && columnIndex < tableColumns.size()
 						&& tableColumns.get(columnIndex).getColumnClass() != null
@@ -211,6 +211,20 @@ public class DefaultCellComponentFactory implements ICellComponentFactory
 					table.removeEventListener(Events.ON_SELECT, wliRenderer);
 					table.addEventListener(Events.ON_SELECT, wliRenderer);
 				}
+				
+				/* F3P: Rimosso, non sembra piu necessario. Lasciato come riferimento
+				// F3P: Reflect selection status				
+				if(((IDColumn)field).isSelected())
+				{
+					ListItem rowItem = table.getItemAtIndex(rowIndex);
+					table.addItemToSelection(rowItem);
+				}
+				else
+				{
+					ListItem rowItem = table.getItemAtIndex(rowIndex);
+					table.removeItemFromSelection(rowItem);					
+				}
+				*/
 			}
 			else
 			{
