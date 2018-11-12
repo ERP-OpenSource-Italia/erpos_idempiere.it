@@ -242,6 +242,10 @@ public class ModelValidationEngine
 					String error;
 					try {
 						ScriptEngine engine = loginRule.getScriptEngine();
+						
+						if(engine == null)
+							log.severe("Null engine: " + loginRule.getAD_Rule_ID() + " (" + loginRule.getValue() + ")");
+						
 						Bindings bindings = engine.createBindings();
 
 						MRule.setContext(bindings, Env.getCtx(), 0);  // no window
