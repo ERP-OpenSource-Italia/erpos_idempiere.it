@@ -436,6 +436,17 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set BP BillTo from BP=" + no);
+		//	Set Bill Location from BPartner
+		sql = new StringBuilder ("UPDATE I_Order o ")
+			  .append("SET BillTo_ID=(SELECT MAX(C_BPartnerRelation_Location_ID) FROM C_BP_Relation rl")
+			  .append(" WHERE rl.C_BPartner_ID=o.C_BPartner_ID AND o.AD_Client_ID=rl.AD_Client_ID")
+			  .append(" AND ((rl.IsBillTo='Y' AND o.IsSOTrx='Y') OR (rl.IsPayFrom='Y' AND o.IsSOTrx='N'))")
+			  .append(") ")
+			  .append("WHERE C_BPartner_ID IS NOT NULL AND BillTo_ID IS NULL")
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (log.isLoggable(Level.FINE)) log.fine("Set BP BillTo from BP=" + no);
 		//	Set Location from BPartner
 		sql = new StringBuilder ("UPDATE I_Order o ")
 			  .append("SET C_BPartner_Location_ID=(SELECT MAX(C_BPartner_Location_ID) FROM C_BPartner_Location l")
