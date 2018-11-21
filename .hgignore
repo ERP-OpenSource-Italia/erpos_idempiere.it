@@ -8,6 +8,8 @@ tmp
 migdiff.txt
 reports/*
 templates/*
+**.launch
+**.orig
 syntax: regexp
 ^adempiere$
 ^org\.adempiere\.install/lib$
