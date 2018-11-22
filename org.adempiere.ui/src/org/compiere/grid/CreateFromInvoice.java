@@ -104,7 +104,7 @@ public abstract class CreateFromInvoice extends CreateFrom
 					.append(" JOIN M_InOut s2 ON (sl.M_InOut_ID=s2.M_InOut_ID) ")
 					.append(" WHERE s2.C_BPartner_ID=? AND s2.IsSOTrx=? AND s2.DocStatus IN ('CL','CO') ")
 					.append(" AND (sl.m_product_id IS NOT NULL OR sl.c_charge_id IS NOT NULL) ")
-					.append(" GROUP BY sl.M_InOut_ID,mi.M_InOutLine_ID,sl.MovementQty ")
+					.append(" GROUP BY sl.M_InOut_ID,sl.M_InOutLine_ID,sl.MovementQty ")
 					.append(" HAVING (sl.MovementQty<>COALESCE( SUM(CASE WHEN sl.M_Product_ID IS NOT NULL THEN COALESCE(mi.Qty,0) WHEN sl.C_Charge_ID IS NOT NULL THEN")
 					.append("(SELECT SUM(cil.QtyInvoiced) FROM C_InvoiceLine cil INNER JOIN C_Invoice ci ON (ci.C_Invoice_ID = cil.C_Invoice_ID)") 
 					.append(" WHERE cil.M_InOutLine_ID = sl.M_InOutLine_ID AND ci.DocStatus IN ('CO','CL')) ELSE 0 END),")
