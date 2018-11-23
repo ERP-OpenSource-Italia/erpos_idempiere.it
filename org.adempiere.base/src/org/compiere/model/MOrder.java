@@ -1595,7 +1595,8 @@ public class MOrder extends X_C_Order implements DocAction
 			}
 		}
 		
-		if (getFreightCostRule().equals(FREIGHTCOSTRULE_FreightIncluded))
+		if (getFreightCostRule().equals(FREIGHTCOSTRULE_FreightIncluded) || 
+				(getFreightCostRule().equals(FREIGHTCOSTRULE_FixPrice) && getFreightAmt().signum() == 0))  // F3P: dont generate zero-amount freight charge, and remove if existing
 		{
 			if (freightLine != null)
 			{
@@ -1612,23 +1613,26 @@ public class MOrder extends X_C_Order implements DocAction
 		}
 		else if (getFreightCostRule().equals(FREIGHTCOSTRULE_FixPrice))
 		{
-			if (freightLine == null)
+			if(getFreightAmt().signum() != 0)
 			{
-				freightLine = new MOrderLine(this);
-			
-				if (ci.getC_ChargeFreight_ID() > 0)
-					freightLine.setC_Charge_ID(ci.getC_ChargeFreight_ID());
-				else if (ci.getM_ProductFreight_ID() > 0)
-					freightLine.setM_Product_ID(ci.getM_ProductFreight_ID());
-				else
-					throw new AdempiereException("Product or Charge for Freight is not defined at Client window > Client Info tab");
+				if (freightLine == null)
+				{
+					freightLine = new MOrderLine(this);
+				
+					if (ci.getC_ChargeFreight_ID() > 0)
+						freightLine.setC_Charge_ID(ci.getC_ChargeFreight_ID());
+					else if (ci.getM_ProductFreight_ID() > 0)
+						freightLine.setM_Product_ID(ci.getM_ProductFreight_ID());
+					else
+						throw new AdempiereException("Product or Charge for Freight is not defined at Client window > Client Info tab");
+				}
+				
+				freightLine.setC_BPartner_Location_ID(getC_BPartner_Location_ID());
+				freightLine.setM_Shipper_ID(getM_Shipper_ID());
+				freightLine.setQty(BigDecimal.ONE);
+				freightLine.setPrice(getFreightAmt());
+				freightLine.saveEx();
 			}
-			
-			freightLine.setC_BPartner_Location_ID(getC_BPartner_Location_ID());
-			freightLine.setM_Shipper_ID(getM_Shipper_ID());
-			freightLine.setQty(BigDecimal.ONE);
-			freightLine.setPrice(getFreightAmt());
-			freightLine.saveEx();
 		}
 		else if (getFreightCostRule().equals(FREIGHTCOSTRULE_Calculated))
 		{
@@ -3356,11 +3360,13 @@ public class MOrder extends X_C_Order implements DocAction
 			
 			MOrderLine line = qOrderLine.first();
 			
-      MTaxProvider provider = new MTaxProvider(tax.getCtx(), tax.getC_TaxProvider_ID(), tax.get_TrxName());
+			MTaxProvider provider = new MTaxProvider(tax.getCtx(), tax.getC_TaxProvider_ID(), tax.get_TrxName());
 			ITaxProvider calculator = Core.getTaxProvider(provider);
 			if (calculator == null)
 				throw new AdempiereException(Msg.getMsg(getCtx(), "TaxNoProvider"));
-	    calculator.recalculateTax(provider, line, true);
+	    
+			// calculator.recalculateTax(provider, line, true);
+			calculator.calculateOrderTaxTotal(provider, this);
 		}
 	}
 	
