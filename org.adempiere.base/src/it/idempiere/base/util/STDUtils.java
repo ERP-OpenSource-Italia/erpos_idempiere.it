@@ -514,20 +514,20 @@ public class STDUtils {
 	
 	/** Calcola il valore propozionale:
 	 * 
-	 * x : toScale = propResult : propScale
+	 * toDivisor : x = fromDivisor : fromDividend
 	 * 
-	 * X = (toScale * propResult) / propScale
+	 * X = (toDivisor * fromDividend) / fromDivisor
 	 * 
 	 * @param toScale
 	 * @param propResult
 	 * @param propScale
 	 * @return
 	 */
-	public BigDecimal proportionallValue(BigDecimal toScale, BigDecimal propResult, BigDecimal propScale, int scale)
+	public static BigDecimal proportionallValue(BigDecimal toDivisor, BigDecimal fromDivisor, BigDecimal fromDividend, int scale)
 	{
-		BigDecimal mult = toScale.multiply(propResult);
+		BigDecimal mult = toDivisor.multiply(fromDividend);
 	
-		return mult.divide(propScale, scale, RoundingMode.HALF_UP);
+		return mult.divide(fromDivisor, scale, RoundingMode.HALF_UP);
 	}
 	
 	/** Applica la percentuael e scala il risultato finale
