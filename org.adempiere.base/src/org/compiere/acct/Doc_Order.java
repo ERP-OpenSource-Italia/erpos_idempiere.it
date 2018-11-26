@@ -143,6 +143,37 @@ public class Doc_Order extends Doc
 		//	Return Array
 		DocLine[] dl = new DocLine[list.size()];
 		list.toArray(dl);
+		
+		// Included Tax - make sure that no difference
+		if (isTaxIncluded()) {
+			for (int i = 0; i < m_taxes.length; i++) {
+				if (m_taxes[i].isIncludedTaxDifference()) {
+					BigDecimal diff = m_taxes[i].getIncludedTaxDifference();
+					for (int j = 0; j < dl.length; j++) {
+						MTax lineTax = MTax.get(getCtx(), dl[j].getC_Tax_ID());
+						MTax[] composingTaxes = null;
+						if (lineTax.isSummary()) {
+							composingTaxes = lineTax.getChildTaxes(false);
+						} else {
+							composingTaxes = new MTax[1];
+							composingTaxes[0] = lineTax;
+						}
+						for (MTax mTax : composingTaxes) {
+							if (mTax.getC_Tax_ID() == m_taxes[i].getC_Tax_ID()) {
+								dl[j].setLineNetAmtDifference(diff);
+								m_taxes[i].addIncludedTax(diff.negate());
+								diff = Env.ZERO;
+								break;
+							}
+						}
+						if (diff.signum() == 0) {
+							break;
+						}
+					} // for all lines
+				} // tax difference
+			} // for all taxes
+		} // Included Tax difference
+		
 		return dl;
 	}	//	loadLines
 
