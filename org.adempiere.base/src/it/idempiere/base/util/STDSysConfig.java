@@ -602,4 +602,11 @@ public class STDSysConfig
 	{
 		return MSysConfig.getValue(LIT_CREATE_FROM_INV_SHIP_DATA_DISPLAY, null, AD_Client_ID, AD_Org_ID);
 	}
+	
+	public static final String LIT_AUTO_OPEN_ATTRIBUTE_ON_INFO = "LIT_AUTO_OPEN_ATTRIBUTE_ON_INFO";
+
+	public static boolean isAutoOpenPAttributeOnInfo(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getBooleanValue(LIT_AUTO_OPEN_ATTRIBUTE_ON_INFO, false, AD_Client_ID, AD_Org_ID);
+	}
 }

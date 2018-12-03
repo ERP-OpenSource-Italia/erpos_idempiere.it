@@ -2060,7 +2060,7 @@ public class MOrder extends X_C_Order implements DocAction
 	 * 	(Re) Create Pay Schedule
 	 *	@return true if valid schedule
 	 */
-	protected boolean createPaySchedule()
+	public boolean createPaySchedule()
 	{
 		if (getC_PaymentTerm_ID() == 0)
 			return false;
