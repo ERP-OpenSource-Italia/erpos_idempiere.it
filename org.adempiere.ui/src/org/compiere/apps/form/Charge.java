@@ -69,6 +69,7 @@ public class Charge
 			+ "FROM C_ElementValue "
 			+ "WHERE AccountType IN ('R','E')"
 			+ " AND IsSummary='N'"
+			+ " AND IsActive='Y'"
 			+ " AND C_Element_ID=? "
 			+ "ORDER BY 2";
 		PreparedStatement pstmt = null;
