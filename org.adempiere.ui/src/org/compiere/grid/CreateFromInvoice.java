@@ -91,8 +91,18 @@ public abstract class CreateFromInvoice extends CreateFrom
 		ArrayList<KeyNamePair> list = new ArrayList<KeyNamePair>();
 
 		//	Display
-		StringBuffer display = new StringBuffer("s.DocumentNo||' - '||")
-			.append(DB.TO_CHAR("s.MovementDate", DisplayType.Date, Env.getAD_Language(Env.getCtx())));
+		/*StringBuffer display = new StringBuffer("s.DocumentNo||' - '||")
+			.append(DB.TO_CHAR("s.MovementDate", DisplayType.Date, Env.getAD_Language(Env.getCtx())));*/
+		String display = STDSysConfig.getCreateFromInvShipDataDisplay(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx()));
+		
+		if(display == null)
+		{
+			StringBuilder sbDisplay = new StringBuilder("s.DocumentNo||' - '||")
+					.append(DB.TO_CHAR("s.MovementDate", DisplayType.Date, Env.getAD_Language(Env.getCtx())));
+			
+			display = sbDisplay.toString(); 
+		}
+		
 		//
 		StringBuilder sql = new StringBuilder("SELECT s.M_InOut_ID,").append(display)
 			.append(" FROM M_InOut s "
