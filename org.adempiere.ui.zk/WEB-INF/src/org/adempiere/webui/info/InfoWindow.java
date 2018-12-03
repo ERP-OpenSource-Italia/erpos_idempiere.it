@@ -59,6 +59,7 @@ import org.adempiere.webui.event.WTableModelEvent;
 import org.adempiere.webui.factory.ButtonFactory;
 import org.adempiere.webui.grid.WQuickEntry;
 import org.adempiere.webui.panel.InfoPanel;
+import org.adempiere.webui.panel.InfoProductPanel;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
@@ -114,6 +115,7 @@ import org.zkoss.zul.South;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Vbox;
 
+import it.idempiere.base.util.BaseEnvHelper;
 import it.idempiere.base.util.FilterQuery;
 import it.idempiere.base.util.STDSysConfig;
 
@@ -257,12 +259,37 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			{
 				prepareTable();
 				processQueryValue();
-			}			
+			}
+			
+			/*if(STDSysConfig.isAutoOpenPAttributeOnInfo(Env.getAD_Client_ID(infoContext),Env.getAD_Org_ID(infoContext))
+					&& this instanceof InfoProductWindow && m_count != 1)
+	        {
+	        	WInfoPAttributeEditor infoPAttributeEditor = null;
+	        	
+	        	for(WEditor editor : editors)
+	        	{
+	        		if(editor instanceof WInfoPAttributeEditor)
+	        		{
+	        			infoPAttributeEditor = (WInfoPAttributeEditor) editor;
+	        			break;
+	        		}
+	        	}
+	        	
+				try 
+				{
+					infoPAttributeEditor.onEvent(new Event(Events.ON_CLICK));
+				}
+				catch (Exception e) 
+				{
+					log.log(Level.SEVERE,"Error on auto open pAttribute",e);
+				}
+	        }*/
 		}
 		
 		// F3P: add export button
 		
 		initExport();
+		
 	}
 	
 	/** 
@@ -497,7 +524,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
    		
 		btMenuProcess.setVisible(ipMenu.getChildren().size() > 0);
 	}
-
+	
 	protected void processQueryValue() {
 		isQueryByUser = true;
 		for (int i = 0; i < identifiers.size(); i++) {
@@ -563,7 +590,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		}
 	}
 	
-	protected boolean loadInfoDefinition() {
+	public boolean loadInfoDefinition() {
 		if (infoWindow != null) {
 			String tableName = null;
 				tableName = MTable.getTableName(Env.getCtx(), infoWindow.getAD_Table_ID());
@@ -597,10 +624,64 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 						vo.lookupInfo.IsValidated = false;
 					}
 				}
+				
 				if (infoColumn.getDisplayLogic() != null)					
 					vo.DisplayLogic =  infoColumn.getDisplayLogic();
+				
 				if (infoColumn.isQueryCriteria() && infoColumn.getDefaultValue() != null)
-					vo.DefaultValue = infoColumn.getDefaultValue();
+				{
+
+					String defStr = null;
+					if (infoColumn.getDefaultValue() != null && infoColumn.getDefaultValue().startsWith("@SQL="))
+					{
+						String sql = infoColumn.getDefaultValue().substring(5);			//	w/o tag
+						//sql = Env.parseContext(m_vo.ctx, m_vo.WindowNo, sql, false, true);	//	replace variables
+						//hengsin, capture unparseable error to avoid subsequent sql exception
+						sql = Env.parseContext(infoContext, p_WindowNo, sql, false, false);	//	replace variables
+						if (sql.equals(""))
+						{
+							log.log(Level.WARNING, "(" + vo.ColumnName + ") - Default SQL variable parse failed: "
+								+ vo.DefaultValue);
+						}
+						else
+						{
+							PreparedStatement stmt = null;
+							ResultSet rs = null;
+							try
+							{
+								stmt = DB.prepareStatement(sql, null);
+								rs = stmt.executeQuery();
+								if (rs.next())
+									defStr = rs.getString(1);
+								else
+								{
+									if (log.isLoggable(Level.INFO))
+										log.log(Level.INFO, "(" + vo.ColumnName + ") - no Result: " + sql);
+								}
+							}
+							catch (SQLException e)
+							{
+								log.log(Level.WARNING, "(" + vo.ColumnName + ") " + sql, e);
+							}
+							finally
+							{
+								DB.close(rs, stmt);
+								rs = null;
+								stmt = null;
+							}
+						}
+						if (defStr != null && defStr.length() > 0)
+						{
+							if (log.isLoggable(Level.FINE)) 
+								log.fine("[SQL] " + vo.ColumnName + "=" + defStr);
+							
+							vo.DefaultValue = defStr;
+						}
+					}	
+					else
+						vo.DefaultValue = infoColumn.getDefaultValue();
+				}
+
 				String desc = infoColumn.get_Translation("Description");
 				vo.Description = desc != null ? desc : "";
 				String help = infoColumn.get_Translation("Help");
@@ -798,6 +879,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				columnInfo.setColDescription(infoColumn.get_Translation("Description"));
 				columnInfo.setGridField(gridFields.get(i));
 				columnInfo.setColumnName(infoColumn.getColumnName());
+				
 				list.add(columnInfo);
 				gridDisplayedIC.add(infoColumn);
 				
@@ -1282,6 +1364,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		if (cbbProcess != null){
 			cbbProcess.setDisabled(true);
 		}
+		
 		// IDEMPIERE-1334 end
 	}
 
@@ -1444,6 +1527,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
         //  Editor
         WEditor editor = null;
+        
         if (mField.getDisplayType() == DisplayType.PAttribute) 
         {
         	editor =  WebEditorFactory.getEditor(mField, false, true, infoContext, p_WindowNo);
@@ -1493,7 +1577,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
         mField.addPropertyChangeListener(editor);
                 
         mField.setValue(mField.getDefaultForPanel(), true);
-
+        
     }   // addSelectionColumn
 
 	protected void addSearchParameter(Label label, Component fieldEditor) {

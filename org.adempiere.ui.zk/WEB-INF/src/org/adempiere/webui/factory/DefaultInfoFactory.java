@@ -38,6 +38,8 @@ import org.compiere.model.Lookup;
 import org.compiere.model.MDocType;
 import org.compiere.model.MInfoWindow;
 import org.compiere.util.Env;
+import org.zkoss.zk.ui.event.Event;
+import org.zkoss.zk.ui.event.Events;
 
 /**
  *
@@ -142,7 +144,9 @@ public class DefaultInfoFactory implements IInfoFactory {
 						
 		if (col.equals("M_Product_ID"))
 		{
+			Env.setContext(Env.getCtx(), lookup.getWindowNo(), Env.TAB_INFO, "Value", queryValue);
 			InfoWindow infoWindow = new InfoProductWindow(lookup.getWindowNo(), tableName, keyColumn, queryValue, true, whereClause, AD_InfoWindow_ID);
+			
 			if (infoWindow.loadedOK())
 				return infoWindow;
 			
@@ -157,6 +161,7 @@ public class DefaultInfoFactory implements IInfoFactory {
 			//	Show Info
 			info = new InfoProductPanel (lookup.getWindowNo(),
 					M_Warehouse_ID, M_PriceList_ID, true, queryValue, whereClause);
+			
 
 			info.setTitle("Product Info");
 		}

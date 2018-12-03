@@ -592,4 +592,11 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LIT_SHARE_DISCOUNT_TO_LINE_NOT_BOM, false, AD_Client_ID, AD_Org_ID);
 	}
+	
+	public static final String LIT_AUTO_OPEN_ATTRIBUTE_ON_INFO = "LIT_AUTO_OPEN_ATTRIBUTE_ON_INFO";
+
+	public static boolean isAutoOpenPAttributeOnInfo(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getBooleanValue(LIT_AUTO_OPEN_ATTRIBUTE_ON_INFO, false, AD_Client_ID, AD_Org_ID);
+	}
 }
