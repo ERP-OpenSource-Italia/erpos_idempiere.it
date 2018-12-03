@@ -66,6 +66,9 @@ implements ImportProcess
 
 	/** Effective						*/
 	private Timestamp		m_DateValue = null;
+	
+	private final String OPERATION_INSERT = "i";
+	private final String OPERATION_UPDATE = "u";
 
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -378,6 +381,7 @@ implements ImportProcess
 
 			while (rs.next())
 			{	
+				String lastOperationType = "";
 				// Remember Value - only first occurance of the value is BP
 				String New_BPValue = rs.getString("Value") ;
 
@@ -406,6 +410,7 @@ implements ImportProcess
 							msglog = new StringBuilder("Insert BPartner - ").append(bp.getC_BPartner_ID());
 							if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
 							noInsert++;
+							lastOperationType=OPERATION_INSERT;
 						}
 						else
 						{
@@ -447,6 +452,7 @@ implements ImportProcess
 							msglog = new StringBuilder("Update BPartner - ").append(bp.getC_BPartner_ID());
 							if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
 							noUpdate++;
+							lastOperationType=OPERATION_UPDATE;
 						}
 						else
 						{
@@ -656,12 +662,17 @@ implements ImportProcess
 				catch(AdempiereException e)
 				{
 					rollback();
-					noInsert--;
+					if (OPERATION_INSERT.equals(lastOperationType)){
+						noInsert--;
+					}else if (OPERATION_UPDATE.equals(lastOperationType)) {
+						noUpdate--;
+					}
 					sql = new StringBuilder ("UPDATE I_BPartner i "
 							+ "SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||")
-					.append("'Cannot Update BP BankAccount, ' "+e.getMessage())
+					.append("'Cannot Update BPartner BankAccount, "+e.getMessage()+"' ")
 					.append("WHERE I_BPartner_ID=").append(impBP.getI_BPartner_ID());
 					DB.executeUpdateEx(sql.toString(), get_TrxName());
+					commitEx();
 					continue;
 				}
 				
