@@ -59,7 +59,6 @@ import org.adempiere.webui.event.WTableModelEvent;
 import org.adempiere.webui.factory.ButtonFactory;
 import org.adempiere.webui.grid.WQuickEntry;
 import org.adempiere.webui.panel.InfoPanel;
-import org.adempiere.webui.panel.InfoProductPanel;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
@@ -115,7 +114,6 @@ import org.zkoss.zul.South;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Vbox;
 
-import it.idempiere.base.util.BaseEnvHelper;
 import it.idempiere.base.util.FilterQuery;
 import it.idempiere.base.util.STDSysConfig;
 
@@ -261,29 +259,6 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				processQueryValue();
 			}
 			
-			/*if(STDSysConfig.isAutoOpenPAttributeOnInfo(Env.getAD_Client_ID(infoContext),Env.getAD_Org_ID(infoContext))
-					&& this instanceof InfoProductWindow && m_count != 1)
-	        {
-	        	WInfoPAttributeEditor infoPAttributeEditor = null;
-	        	
-	        	for(WEditor editor : editors)
-	        	{
-	        		if(editor instanceof WInfoPAttributeEditor)
-	        		{
-	        			infoPAttributeEditor = (WInfoPAttributeEditor) editor;
-	        			break;
-	        		}
-	        	}
-	        	
-				try 
-				{
-					infoPAttributeEditor.onEvent(new Event(Events.ON_CLICK));
-				}
-				catch (Exception e) 
-				{
-					log.log(Level.SEVERE,"Error on auto open pAttribute",e);
-				}
-	        }*/
 		}
 		
 		// F3P: add export button

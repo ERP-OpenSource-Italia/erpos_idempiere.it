@@ -38,8 +38,6 @@ import org.compiere.model.Lookup;
 import org.compiere.model.MDocType;
 import org.compiere.model.MInfoWindow;
 import org.compiere.util.Env;
-import org.zkoss.zk.ui.event.Event;
-import org.zkoss.zk.ui.event.Events;
 
 /**
  *
