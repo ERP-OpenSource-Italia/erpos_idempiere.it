@@ -126,7 +126,7 @@ public class PaySelectionCreateFrom extends SvrProcess
 				.append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS DiscountAmt,")	//	3 ##p4/p5 Currency_To,PayDate
 			.append(" PaymentRule, IsSOTrx, ") // 4..5
 			.append(" currencyConvert(invoiceWriteOff(i.C_Invoice_ID) ")
-			    .append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS WriteOffAmt ")	//	6 ##p6/p7 Currency_To,PayDate
+			    .append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS WriteOffAmt, ")	//	6 ##p6/p7 Currency_To,PayDate
 			.append(" currencyConvert(invoiceOpenNetAmt(i.C_Invoice_ID,i.C_InvoicePaySchedule_ID)-") // F3P: aggiunte clausole per aperto - ritenuta
 					.append("invoiceDiscount(i.C_Invoice_ID,?,i.C_InvoicePaySchedule_ID)") // F3P: p8 PayDate
 					.append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID, i.AD_Client_ID,i.AD_Org_ID) AS LITPayAmt ") // F3P: p8/p9 Currency_To,PayDate
