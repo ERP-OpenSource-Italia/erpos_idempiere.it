@@ -47,6 +47,7 @@ import org.adempiere.webui.component.Tabpanel;
 import org.adempiere.webui.component.Tabpanels;
 import org.adempiere.webui.component.Tabs;
 import org.adempiere.webui.component.WInfoWindowListItemRenderer;
+import org.adempiere.webui.component.WListItemRenderer;
 import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.editor.WSearchEditor;
@@ -114,6 +115,7 @@ import org.zkoss.zul.South;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Vbox;
 
+import it.idempiere.base.model.LITMInfoColumn;
 import it.idempiere.base.util.FilterQuery;
 import it.idempiere.base.util.STDSysConfig;
 
@@ -877,7 +879,33 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		if(infoWindowListItemRenderer != null)
 			infoWindowListItemRenderer.setGridDisplaydInfoColumns(gridDisplayedInfoColumns,columnInfos);
 		
-		prepareTable(columnInfos, infoWindow.getFromClause(), p_whereClause, infoWindow.getOrderByClause());		
+		prepareTable(columnInfos, infoWindow.getFromClause(), p_whereClause, infoWindow.getOrderByClause());	
+		
+		// F3P: fix width of cols
+		
+		WListItemRenderer renderer = (WListItemRenderer)contentPanel.getItemRenderer();
+		int colCount = renderer.getNoColumns();
+		ArrayList<Integer> fixedWidths = new ArrayList<>();
+					
+		for(int c=0; c < colCount; c++)
+		{			
+			MInfoColumn ic = gridDisplayedInfoColumns[c];
+			
+			if(ic != null)
+			{
+				int columnWidth = LITMInfoColumn.getColumnWidth(gridDisplayedInfoColumns[c]);
+				if( columnWidth > 0)
+				{
+					fixedWidths.add(columnWidth);
+				}
+				else
+					fixedWidths.add(null);
+			}
+			else
+				fixedWidths.add(null);
+		}
+		
+		contentPanel.repaint(fixedWidths);
 	}
 
 	protected ColumnInfo createLookupColumnInfo(TableInfo[] tableInfos,
