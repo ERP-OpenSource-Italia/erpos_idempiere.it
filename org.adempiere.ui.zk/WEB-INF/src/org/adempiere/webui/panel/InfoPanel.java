@@ -468,9 +468,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	
 	// F3P: has selection column ? (initialize selection of row)
 	
-	protected static final String SELECTED_COLUMN_NAME = "IsSelected";
-	
+	protected static final String SELECTED_COLUMN_NAME = "IsSelected";	
 	protected boolean hasPreSelectionColumn = false;
+	
+	// F3P: run via process info	
+	private ProcessInfo runViaProcessInfo = null;
 	
 	/**
 	 *  Loaded correctly
@@ -2041,9 +2043,22 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     	final MProcess m_process = MProcess.get(Env.getCtx(), processId);
     	final ProcessInfo m_pi = new ProcessInfo(m_process.getName(), processId);
 		m_pi.setAD_User_ID(Env.getAD_User_ID(Env.getCtx()));
-		m_pi.setAD_Client_ID(Env.getAD_Client_ID(Env.getCtx()));
+		m_pi.setAD_Client_ID(Env.getAD_Client_ID(Env.getCtx()));		
 
 		MPInstance instance = new MPInstance(Env.getCtx(), processId, 0);
+		
+		// F3P: pass record and table from starter process to this process
+		
+		if(runViaProcessInfo != null)
+		{
+			m_pi.getRecord_ID();
+			m_pi.getTable_ID();
+			
+			m_pi.setRecord_ID(runViaProcessInfo.getRecord_ID());
+			m_pi.setTable_ID(runViaProcessInfo.getTable_ID());			
+			instance.setRecord_ID(runViaProcessInfo.getRecord_ID());
+		}
+		
 		instance.saveEx();
 		final int pInstanceID = instance.getAD_PInstance_ID();
 		// Execute Process
@@ -2536,6 +2551,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 
 	public void setGridfield(GridField m_gridfield) {
 		this.m_gridfield = m_gridfield;
+	}
+	
+	// F3P: run via process info
+	
+	public void setRunViaProcessInfo(ProcessInfo pi)
+	{
+		runViaProcessInfo = pi;
 	}
 }	//	Info
 

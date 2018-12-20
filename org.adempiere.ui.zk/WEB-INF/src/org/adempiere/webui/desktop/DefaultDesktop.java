@@ -53,6 +53,7 @@ import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.panel.BroadcastMessageWindow;
 import org.adempiere.webui.panel.HeaderPanel;
 import org.adempiere.webui.panel.HelpController;
+import org.adempiere.webui.panel.InfoPanel;
 import org.adempiere.webui.panel.TimeoutPanel;
 import org.adempiere.webui.session.SessionContextListener;
 import org.adempiere.webui.session.SessionManager;
@@ -870,9 +871,11 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	}
 
 	@Override
-	public void openInfo(int infoId) {
-		super.openInfo(infoId);
+	public InfoPanel openInfo(int infoId) {
+		InfoPanel ip = super.openInfo(infoId);
 		updateHelpContext(X_AD_CtxHelp.CTXTYPE_Info, infoId);
+		
+		return ip;
 	}
 
 	@Override

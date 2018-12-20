@@ -23,7 +23,11 @@ import org.adempiere.webui.ISupportMask;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.Mask;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.desktop.IDesktop;
+import org.adempiere.webui.desktop.TabbedDesktop;
 import org.adempiere.webui.event.DialogEvents;
+import org.adempiere.webui.info.InfoWindow;
+import org.adempiere.webui.panel.InfoPanel;
 import org.adempiere.webui.session.SessionManager;
 import org.compiere.apps.AbstractProcessCtl;
 import org.compiere.apps.IProcessParameter;
@@ -36,6 +40,8 @@ import org.compiere.util.Trx;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
+
+import it.idempiere.base.model.LITMProcess;
 
 /**
  * Ported from org.compiere.apps.ProcessCtl
@@ -191,7 +197,29 @@ public class WProcessCtl extends AbstractProcessCtl {
 				return;
 			}
 		}
-
+		
+		// F3P: Manage info window
+		
+		int AD_InfoWindow_ID = LITMProcess.getAD_InfoWindow_ID_DB((trx == null)?null:trx.getTrxName(), pi.getAD_Process_ID());
+		
+		if(AD_InfoWindow_ID > 0)
+		{
+			IDesktop desktop = SessionManager.getAppDesktop();
+			
+			if(desktop instanceof TabbedDesktop)
+			{				
+				InfoPanel infoPanel = desktop.openInfo(AD_InfoWindow_ID);
+				
+				if(infoPanel != null && infoPanel instanceof InfoWindow)
+				{
+					InfoWindow iw = (InfoWindow)infoPanel;
+					iw.setRunViaProcessInfo(pi);
+				}
+			}
+			
+			return; // Operation complete
+		}
+		
 		//	execute
 		WProcessCtl worker = new WProcessCtl(aProcessUI, WindowNo, pi, trx);
 		worker.run();

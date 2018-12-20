@@ -82,6 +82,9 @@ import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
 import org.compiere.model.X_AD_InfoColumn;
+import org.compiere.process.ProcessInfo;
+import org.compiere.process.ProcessInfoParameter;
+import org.compiere.process.ProcessInfoUtil;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
@@ -119,7 +122,6 @@ import it.idempiere.base.model.LITMInfoColumn;
 import it.idempiere.base.model.LITMInfoWindow;
 import it.idempiere.base.util.FilterQuery;
 import it.idempiere.base.util.STDSysConfig;
-import it.idempiere.base.util.STDUtils;
 
 /**
  * AD_InfoWindow implementation
@@ -171,8 +173,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	private WInfoWindowListItemRenderer infoWindowListItemRenderer = null;
 	private int lastClickedMainContentRow = -1;
 	private String tableSelectionColumn = null;
-	private String tableSelectionColumnUpdate = null; 
-		
+	private String tableSelectionColumnUpdate = null;
+			
 	// F3P: export 
 	
 	private Button exportButton = null;
@@ -291,8 +293,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		
 		// F3P: add export button
 		
-		initExport();
-		
+		initExport();		
 	}
 	
 	/** 
@@ -2907,6 +2908,47 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	{
 		getFullCtxFromSelectedRows(p_WindowNo, Env.getCtx());
 		super.runProcess(processIdObj);
+	}
+	
+	// F3P: run via process info
+
+	@Override
+	public void setRunViaProcessInfo(ProcessInfo pi)
+	{
+		super.setRunViaProcessInfo(pi);
+		
+		// Pre-set filters
+		
+		ProcessInfoParameter[] piParams = pi.getParameter();
+		if (piParams == null)
+		{
+			ProcessInfoUtil.setParameterFromDB(pi);
+			piParams = pi.getParameter();
+		}
+		
+		if(piParams != null)
+		{
+			for (ProcessInfoParameter param : piParams)
+			{				
+				Object value = param.getParameter();
+				
+				if (value == null)
+					continue;
+				
+				String name = param.getParameterName();
+				
+				for(WEditor editor:editors)
+				{
+					if(editor.getColumnName().equals(name))
+					{
+						editor.setValue(value);
+						dynamicDisplay(editor);
+					}
+				}
+			}
+			
+			onUserQuery();
+		}
 	}
 	
 	private class XlsExportAction implements EventListener<Event>
