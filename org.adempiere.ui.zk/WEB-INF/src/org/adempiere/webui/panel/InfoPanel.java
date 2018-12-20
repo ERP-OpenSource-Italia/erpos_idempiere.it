@@ -29,11 +29,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
 
@@ -102,6 +104,8 @@ import org.zkoss.zul.Paging;
 import org.zkoss.zul.event.PagingEvent;
 import org.zkoss.zul.event.ZulEvents;
 import org.zkoss.zul.ext.Sortable;
+
+import it.idempiere.base.util.STDUtils;
 
 /**
  *	Search Information and return selection - Base Class.
@@ -461,6 +465,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected Button btCbbProcess;
 	protected Combobox cbbProcess;
 	protected Button btMenuProcess;
+	
+	// F3P: has selection column ? (initialize selection of row)
+	
+	protected static final String SELECTED_COLUMN_NAME = "IsSelected";
+	
+	protected boolean hasPreSelectionColumn = false;
+	
 	/**
 	 *  Loaded correctly
 	 *  @return true if loaded OK
@@ -570,7 +581,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		}
 	}
 
-	private void readData(ResultSet rs) throws SQLException {
+	protected void readData(ResultSet rs) throws SQLException {
 		int colOffset = 1;  //  columns start with 1
 		List<Object> data = new ArrayList<Object>();
 	
@@ -650,6 +661,22 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         appendDataForParentLink(rs, data, lsReadedColumn);
         
         appendDataForKeyView (rs, data, lsReadedColumn);
+        
+    	// F3P: manage pre-selection
+        
+		if(hasPreSelectionColumn)
+		{
+			Object potentialIDC = data.get(0);
+			
+			if(potentialIDC instanceof IDColumn)
+			{
+				String sSelected = rs.getString(SELECTED_COLUMN_NAME);
+				boolean selected = STDUtils.asBoolean(sSelected);
+				
+				IDColumn idc = (IDColumn)potentialIDC;
+				idc.setSelected(selected);
+			}
+		}
 	}
 	
 	/**
@@ -793,6 +820,36 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
             model.setMultiple(p_multipleSelection);
             contentPanel.setData(model, null);
         }
+        
+        // F3P: align listbox selection to model data
+        // TODO: theres a faster method ?
+        
+        if(hasPreSelectionColumn)
+        {
+	        int rowCount = model.getRowCount();
+	        Set<Listitem> selectedItems = new HashSet<>();
+	        
+	        for(int i=0; i < rowCount; i++)
+	        {
+	        	Object potentialIDC = model.getDataAt(i, 0);
+	        	
+	        	if(potentialIDC instanceof IDColumn)
+	        	{
+	        		IDColumn idc = (IDColumn)potentialIDC;
+	        		if(idc.isSelected())
+	        		{
+	        			Listitem li = contentPanel.getItemAtIndex(i);
+	        			selectedItems.add(li);
+	        		}
+	        	}
+	        }
+	        
+	        if(selectedItems.size() > 0)
+	        	contentPanel.setSelectedItems(selectedItems);
+        }
+        
+        // F3P end
+        
         restoreSelectedInPage();
         updateStatusBar (m_count);
         setStatusSelected ();

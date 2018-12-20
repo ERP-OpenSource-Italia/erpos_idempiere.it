@@ -116,8 +116,10 @@ import org.zkoss.zul.Space;
 import org.zkoss.zul.Vbox;
 
 import it.idempiere.base.model.LITMInfoColumn;
+import it.idempiere.base.model.LITMInfoWindow;
 import it.idempiere.base.util.FilterQuery;
 import it.idempiere.base.util.STDSysConfig;
+import it.idempiere.base.util.STDUtils;
 
 /**
  * AD_InfoWindow implementation
@@ -162,10 +164,15 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	
 	private boolean hasEditable = false;
 	private Map<Integer, List<Object>> cacheOriginalValues = new HashMap<>();
-	private Map<Integer, List<Object>> temporarySelectedData = new HashMap<>(); 	
+	private Map<Integer, List<Object>> temporarySelectedData = new HashMap<>();
+	
+	// F3P: additional data for editabillity end selection persist
+	
 	private WInfoWindowListItemRenderer infoWindowListItemRenderer = null;
 	private int lastClickedMainContentRow = -1;
-	
+	private String tableSelectionColumn = null;
+	private String tableSelectionColumnUpdate = null; 
+		
 	// F3P: export 
 	
 	private Button exportButton = null;
@@ -220,6 +227,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
    			public void onEvent(Event event) throws Exception {
    				
    				int row = -1;
+   				boolean isSelected = false; // F3P: read selection state of row 
    				
    				if(event instanceof SelectEvent<?, ?>)
    				{
@@ -229,8 +237,24 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
    					if(selEvent.getReference() != null)
    					{
    						row = selEvent.getReference().getIndex();
+   						isSelected = selEvent.getReference().isSelected(); 
    					}
    				}
+   				
+   				// F3P: update selection status on DB before refreshing panels
+   				
+   				if(row >= 0 && tableSelectionColumnUpdate != null)
+   				{
+   					Object potentialIDC = contentPanel.getValueAt(row, 0);
+
+   					if(potentialIDC instanceof IDColumn)
+   					{
+   	   					IDColumn idc = (IDColumn)potentialIDC;
+   						Object[] params = {isSelected?"Y":"N", idc.getRecord_ID()};
+   						
+   						DB.executeUpdate(tableSelectionColumnUpdate, params, false, null);
+   					}
+				}
    				   				
    				lastClickedMainContentRow = row; // F3P: Keep track of last clicked row
    				updateSubcontent(row);
@@ -667,6 +691,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				vo.Help = help != null ? help : "";
 				GridField gridField = new GridField(vo);
 				gridFields.add(gridField);
+				
+				// F3P: is pre-selection column ?
+				
+				if(columnName.equals(SELECTED_COLUMN_NAME))
+					hasPreSelectionColumn = true;
 			}
 			
 			// If we have a process and at least one process and an editable field, change to the info window rendered
@@ -712,6 +741,24 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				}
 				builder.append(infoWhereClause);
 				p_whereClause = builder.toString();
+			}
+			
+			// F3P: read selection column
+			
+			if(infoWindow != null)
+			{
+				tableSelectionColumn = LITMInfoWindow.getSelectionColumn(infoWindow);
+				
+				if(tableSelectionColumn != null)
+				{
+					StringBuilder sbUpdate = new StringBuilder("UPDATE ");
+					
+					sbUpdate.append(tableName)
+					.append(" SET ").append(tableSelectionColumn).append(" = ? WHERE ")
+					.append(p_keyColumn).append(" = ?");
+					
+					tableSelectionColumnUpdate = sbUpdate.toString();
+				}
 			}
 			
 			return true;
@@ -771,6 +818,12 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				String s_sqlFrom = embedInfo.getFromClause();
 				/** Where Clause						*/
 				String s_sqlWhere = relatedInfo.getLinkColumnName() + "=?";
+				
+				// F3P: read where clause in addition to fixed filter
+				
+				if(embedInfo.getWhereClause() != null)
+					s_sqlWhere += " AND " + embedInfo.getWhereClause();
+				
 				m_sqlEmbedded = embeddedTbl.prepareTable(s_layoutEmbedded, s_sqlFrom, s_sqlWhere, false, tableName);
 
 				embeddedTbl.setMultiSelection(false);
@@ -2825,7 +2878,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	{
 		getFullCtxFromSelectedRows(p_WindowNo, Env.getCtx());
 		super.runProcess(processIdObj);
-	}	
+	}
 	
 	private class XlsExportAction implements EventListener<Event>
 	{		
