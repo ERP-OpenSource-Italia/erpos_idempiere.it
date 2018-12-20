@@ -690,12 +690,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				String help = infoColumn.get_Translation("Help");
 				vo.Help = help != null ? help : "";
 				GridField gridField = new GridField(vo);
-				gridFields.add(gridField);
-				
-				// F3P: is pre-selection column ?
-				
-				if(columnName.equals(SELECTED_COLUMN_NAME))
-					hasPreSelectionColumn = true;
+				gridFields.add(gridField);				
 			}
 			
 			// If we have a process and at least one process and an editable field, change to the info window rendered
@@ -871,10 +866,12 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		gridDisplayedIC.add(null); // First column does not have any matching info column		
 		
 		boolean haveNotProcess = !haveProcess; // A field is editabile only if is not readonly and theres a process
+		
+		String selectionColumnAppendSelectSQL = null; // F3P: if selection is not visible, force-append it at end of select 
 				
 		int i = 0;
 		for(MInfoColumn infoColumn : infoColumns) 
-		{						
+		{
 			if (infoColumn.isDisplayed(infoContext, p_WindowNo)) 
 			{
 				ColumnInfo columnInfo = null;
@@ -922,6 +919,22 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				}
 			}		
 			i++;
+			
+			// F3P: is pre-selection column ?
+			
+			if(infoColumn.getColumnName().equals(SELECTED_COLUMN_NAME))
+			{
+				hasPreSelectionColumn = true;
+				
+				if(infoColumn.isDisplayed() == false)
+				{
+					String colSQL = infoColumn.getSelectClause();
+					if (! colSQL.toUpperCase().contains(" AS "))
+						colSQL += " AS " + infoColumn.getColumnName();
+					
+					selectionColumnAppendSelectSQL = colSQL; 
+				}
+			}
 		}
 		
 		if (keyColumnOfView == null){
@@ -934,7 +947,23 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		if(infoWindowListItemRenderer != null)
 			infoWindowListItemRenderer.setGridDisplaydInfoColumns(gridDisplayedInfoColumns,columnInfos);
 		
-		prepareTable(columnInfos, infoWindow.getFromClause(), p_whereClause, infoWindow.getOrderByClause());	
+		prepareTable(columnInfos, infoWindow.getFromClause(), p_whereClause, infoWindow.getOrderByClause());
+		
+		// F3P: append selection column if needed
+		
+		if(selectionColumnAppendSelectSQL != null)
+		{
+			int idxFrom = m_sqlMain.indexOf("FROM");
+			
+			String preFrom = m_sqlMain.substring(0, idxFrom);
+			String fromStr = m_sqlMain.substring(idxFrom);
+			
+			StringBuilder sbMainSql = new StringBuilder(preFrom);
+			sbMainSql.append(',').append(selectionColumnAppendSelectSQL)
+				.append(" ").append(fromStr);
+			
+			m_sqlMain = sbMainSql.toString(); 			
+		}
 		
 		// F3P: fix width of cols
 		
