@@ -2051,9 +2051,6 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		
 		if(runViaProcessInfo != null)
 		{
-			m_pi.getRecord_ID();
-			m_pi.getTable_ID();
-			
 			m_pi.setRecord_ID(runViaProcessInfo.getRecord_ID());
 			m_pi.setTable_ID(runViaProcessInfo.getTable_ID());			
 			instance.setRecord_ID(runViaProcessInfo.getRecord_ID());
