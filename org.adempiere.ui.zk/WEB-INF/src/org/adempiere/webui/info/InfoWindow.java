@@ -178,6 +178,10 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	// F3P: export 
 	
 	private Button exportButton = null;
+	
+	// F3P: Zoom from detail tab
+	
+	private Button zoomDetailButton = null;
 
 	/**
 	 * Menu contail process menu item
@@ -291,9 +295,12 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			
 		}
 		
-		// F3P: add export button
+		// F3P: add zoom detail button		
+		initZoomDetail();
+
 		
-		initExport();		
+		// F3P: add export button		
+		initExport();
 	}
 	
 	/** 
@@ -321,6 +328,9 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				refresh(embed);
 			}
 		}
+		
+		// F3P: refresh zoom detail button state		
+		enableZoomDetail();
 	}
 
 	/**
@@ -772,7 +782,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		relatedInfoList = infoWindow.getInfoRelated(true);
 		Tabpanels tabPanels = new Tabpanels();
 		Tabs tabs = new Tabs();
-
+		
 		if (relatedInfoList.length > 0) { // setup the panel
 
 			//embeddedPane.setTitle(Msg.translate(Env.getCtx(), "Related Information"));
@@ -780,8 +790,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			//tabPanels = new Tabpanels();
 			embeddedPane.appendChild(tabPanels);
 			//tabs = new Tabs();
-			embeddedPane.appendChild(tabs);
-
+			embeddedPane.appendChild(tabs);			
 		}
 
 		//	for(int i=0; i <  relatedinfoList.length - 1 ; i++) {
@@ -800,6 +809,19 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 			WListbox embeddedTbl = new WListbox();
 			String m_sqlEmbedded;
+			
+			// F3P: update zoom detail status
+			
+			embeddedTbl.addActionListener(new EventListener<Event>() {
+				@Override
+				public void onEvent(Event event) throws Exception 
+				{
+					if(event instanceof SelectEvent<?, ?>)
+					{
+						enableZoomDetail();
+					}
+				}
+			});
 
 			//MInfoWindow.getInfoWindow(infoRelatedID);
 
@@ -831,7 +853,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 				
 				//Xolali - add embeddedTbl to list, add m_sqlembedded to list
-				EmbedWinInfo ewinInfo = new EmbedWinInfo(embedInfo,embeddedTbl,m_sqlEmbedded,relatedInfo.getLinkColumnName(), relatedInfo.getLinkInfoColumn(), relatedInfo.getParentRelatedColumn_ID());
+				EmbedWinInfo ewinInfo = new EmbedWinInfo(embedInfo,embeddedTbl,m_sqlEmbedded,relatedInfo.getLinkColumnName(), relatedInfo.getLinkInfoColumn(), relatedInfo.getParentRelatedColumn_ID(), -1);
 				embeddedWinList.add(ewinInfo);
 
 				MInfoWindow riw = (MInfoWindow) relatedInfo.getRelatedInfo();
@@ -847,6 +869,20 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				ZKUpdateUtil.setHeight(desktopTabPanel, "100%");
 				desktopTabPanel.appendChild(embeddedTbl);
 				tabPanels.appendChild(desktopTabPanel);
+				
+				// F3P: update zoom detail status
+				
+				tab.addEventListener(Events.ON_SELECT, new EventListener<Event>() {
+					@Override
+					public void onEvent(Event event) throws Exception 
+					{
+						if(event instanceof SelectEvent<?, ?>)
+						{
+							enableZoomDetail();
+						}
+					}
+				});
+
 			}
 
 		}
@@ -2948,6 +2984,79 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			}
 			
 			onUserQuery();
+		}
+	}
+	
+	protected void initZoomDetail()
+	{
+		if(embeddedWinList != null && embeddedWinList.size() > 0)
+		{
+			zoomDetailButton = ButtonFactory.createNamedButton("ZoomAcross", false, true);        
+			zoomDetailButton.setId("ZoomDetail");
+			zoomDetailButton.setEnabled(false);       
+			zoomDetailButton.addEventListener(Events.ON_CLICK, new ZoomDetailAction());
+	
+		    confirmPanel.addComponentsLeft(zoomDetailButton);
+		}
+	}
+	
+	protected void enableZoomDetail()
+	{
+		int selectedTab = embeddedPane.getSelectedIndex();
+		EmbedWinInfo embedWinInfo = embeddedWinList.get(selectedTab);
+		WListbox listbox = (WListbox)embedWinInfo.getInfoTbl();
+		int embedSelectedRow = listbox.getSelectedRow();
+		
+		boolean enabled = embedSelectedRow >= 0;
+		
+		zoomDetailButton.setEnabled( enabled );
+	}
+	
+	private class ZoomDetailAction implements EventListener<Event>
+	{
+		@Override
+		public void onEvent(Event evt) throws Exception
+		{
+			if(evt.getTarget() == zoomDetailButton)
+			{
+				if(embeddedPane.getTabs() != null &&
+						embeddedPane.getSelectedTab() != null)
+				{
+					int selectedIdx = embeddedPane.getSelectedIndex();					
+					EmbedWinInfo embedWinInfo = embeddedWinList.get(selectedIdx);
+					WListbox listbox = (WListbox)embedWinInfo.getInfoTbl();
+					int embedSelectedRow = listbox.getSelectedRow();
+					
+					if(embedSelectedRow >= 0)
+					{
+						Integer recordId = listbox.getSelectedRowKey();
+						
+						if(recordId == null) // Check if first row is the id
+						{
+							Object potentialID = listbox.getValueAt(embedSelectedRow, 0);
+							
+							if(potentialID instanceof IDColumn)
+							{
+								IDColumn idc = (IDColumn)potentialID;
+								recordId = idc.getRecord_ID();
+							}
+							else if(potentialID instanceof KeyNamePair)
+							{
+								KeyNamePair knp = (KeyNamePair)potentialID;
+								recordId = knp.getKey();
+							}
+						}
+						
+				    	if (recordId != null)
+				    	{
+				    		int AD_Table_ID = embedWinInfo.getInfowin().getAD_Table_ID();
+
+				    		if (AD_Table_ID > 0)
+				    			AEnv.zoom(AD_Table_ID, recordId);
+				    	}
+					}
+				}
+			}
 		}
 	}
 	

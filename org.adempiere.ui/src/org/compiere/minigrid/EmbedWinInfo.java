@@ -24,8 +24,10 @@ public class EmbedWinInfo {
 	private MInfoColumn linkInfoColumn;
 	private String linkColumnName;
 	private int parentLinkColumnID;
+	
+	private int keyColumnIndex; // F3P: keep track of key column for zoom
 
-	public EmbedWinInfo(MInfoWindow iw, IMiniTable mt, String isql, String linkName, MInfoColumn linkColumn, int parentLinkColumnID) {
+	public EmbedWinInfo(MInfoWindow iw, IMiniTable mt, String isql, String linkName, MInfoColumn linkColumn, int parentLinkColumnID, int keyColumnIndex) {
 		this.parentLinkColumnID = parentLinkColumnID;
 		infowin=iw;
 		infoTbl=mt;
@@ -70,6 +72,10 @@ public class EmbedWinInfo {
 		}else{
 			return String.class;
 		}
+	}
+
+	public int getKeyColumnIndex() {
+		return keyColumnIndex;
 	}
 
 }
