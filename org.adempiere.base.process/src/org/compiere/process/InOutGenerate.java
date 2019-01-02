@@ -96,7 +96,7 @@ public class InOutGenerate extends SvrProcess
 	private boolean	p_overrideLineNo = false;
 	
 	/**	The current Shipment	*/
-	private MInOut 		m_shipment = null;
+	protected MInOut 		m_shipment = null;
 	/** Number of Shipments	being created	*/
 	private int			m_created = 0;
 	/**	Line Number				*/
@@ -852,11 +852,19 @@ public class InOutGenerate extends SvrProcess
 		return m_lastStorages;
 	}	//	getStorages
 	
+	/**
+	 * 	Complete Shipment (default process action)
+	 */
+	protected void completeShipment()
+	{
+		completeShipment(p_docAction);
+	}
 	
 	/**
 	 * 	Complete Shipment
+	 *  
 	 */
-	private void completeShipment()
+	protected void completeShipment(String docAction)
 	{
 		if (m_shipment != null)
 		{
@@ -884,7 +892,7 @@ public class InOutGenerate extends SvrProcess
 			{
 				savepoint = trx.setSavepoint("beforeComplete");
 				
-				if(DocAction.ACTION_Complete.equals(p_docAction) && DocProcess_AD_Workflow_ID > 0) // F3P use workflow instead of plain process
+				if(DocAction.ACTION_Complete.equals(docAction) && DocProcess_AD_Workflow_ID > 0) // F3P use workflow instead of plain process
 				{
 					ProcessInfo pi = new ProcessInfo("CompleteWF", getProcessInfo().getAD_Process_ID(), 0, m_shipment.getM_InOut_ID());
 					pi.setAD_User_ID (Env.getAD_User_ID(Env.getCtx()));
@@ -895,10 +903,10 @@ public class InOutGenerate extends SvrProcess
 				}
 				else
 				{
-					if (!DocAction.ACTION_None.equals(p_docAction))
+					if (!DocAction.ACTION_None.equals(docAction))
 					{
 						//	Fails if there is a confirmation
-						if (!m_shipment.processIt(p_docAction))
+						if (!m_shipment.processIt(docAction))
 						{
 							log.warning("Failed: " + m_shipment);
 							//
