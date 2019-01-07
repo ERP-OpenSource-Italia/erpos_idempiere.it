@@ -946,6 +946,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 					lineNo += 10;
 					if (imp.getM_Product_ID() != 0)
 						line.setM_Product_ID(imp.getM_Product_ID(), true);
+					if (imp.getC_UOM_ID() != 0)
+						line.setC_UOM_ID(imp.getC_UOM_ID());
 					if (imp.getC_Charge_ID() != 0)
 						line.setC_Charge_ID(imp.getC_Charge_ID());
 					line.setQty(imp.getQtyOrdered());

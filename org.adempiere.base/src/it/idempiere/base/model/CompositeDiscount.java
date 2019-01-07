@@ -20,6 +20,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.Util;
 
 import it.idempiere.base.util.BaseMessages;
+import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
 
 
@@ -171,7 +172,8 @@ public class CompositeDiscount
 
 		BigDecimal bdDiscount = new BigDecimal(100d-discount);
 
-		if(bdDiscount.compareTo(Env.ZERO)==-1)
+		if(STDSysConfig.IsErrorWithNegativeCompositeDiscount(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx()))
+				&& bdDiscount.compareTo(Env.ZERO)==-1)
 		{
 			throw new RuntimeException(" < 0");
 		}

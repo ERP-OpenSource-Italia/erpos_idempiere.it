@@ -599,4 +599,11 @@ public class STDSysConfig
 	{
 		return MSysConfig.getValue(LIT_CREATE_FROM_INV_SHIP_DATA_DISPLAY, null, AD_Client_ID, AD_Org_ID);
 	}
+	
+	public static final String LIT_ERROR_WITHNEGATIVE_COMPOSITEDISCOUNT = "LIT_ERROR_WITHNEGATIVE_COMPOSITEDISCOUNT";
+	
+	public static boolean IsErrorWithNegativeCompositeDiscount(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_ERROR_WITHNEGATIVE_COMPOSITEDISCOUNT, false, AD_Client_ID, AD_Org_ID);
+	}
 }
