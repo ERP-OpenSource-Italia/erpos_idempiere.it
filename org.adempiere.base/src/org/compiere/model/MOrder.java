@@ -1736,13 +1736,15 @@ public class MOrder extends X_C_Order implements DocAction
 		{
 			where = "AND IsActive='Y' AND EXISTS "
 					+ "(SELECT * FROM M_Product p WHERE C_OrderLine.M_Product_ID=p.M_Product_ID"
-					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')";
+					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')"
+					+ " AND NOT EXISTS (SELECT b.C_OrderLine_ID From C_OrderLine b WHERE b.BOM_Orderline_ID = C_OrderLine.C_OrderLine_ID)";
 		}
 		else
 		{
 			where = "AND IsActive='Y' AND EXISTS "
 					+ "(SELECT * FROM M_Product p WHERE C_OrderLine.M_Product_ID=p.M_Product_ID"
-					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N' and p.ProductType='I')";	// F3P: aggiunta verifica che sia di tipo 'item'
+					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N' and p.ProductType='I')"
+					+ " AND NOT EXISTS (SELECT b.C_OrderLine_ID From C_OrderLine b WHERE b.BOM_Orderline_ID = C_OrderLine.C_OrderLine_ID)";	// F3P: aggiunta verifica che sia di tipo 'item'
 		}
 		
 		//F3P end		
