@@ -606,4 +606,11 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LIT_ERROR_WITHNEGATIVE_COMPOSITEDISCOUNT, false, AD_Client_ID, AD_Org_ID);
 	}
+	
+	public static final String LIT_OVERWRITE_DATA_WHEN_EXPLODE_BOM = "LIT_OVERWRITE_DATA_WHEN_EXPLODE_BOM";
+
+	public static boolean isOverwriteDataWhenExplodeBOM(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getBooleanValue(LIT_OVERWRITE_DATA_WHEN_EXPLODE_BOM, true, AD_Client_ID, AD_Org_ID);
+	}
 }

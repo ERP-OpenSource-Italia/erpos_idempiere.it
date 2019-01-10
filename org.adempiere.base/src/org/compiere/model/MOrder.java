@@ -1808,14 +1808,18 @@ public class MOrder extends X_C_Order implements DocAction
 					sharePriceToBomOrderLine(line);
 				}
 				
-				//	Convert into Comment Line
-				line.setM_Product_ID (0);
-				line.setM_AttributeSetInstance_ID (0);
-				line.setPrice (Env.ZERO);
-				line.setPriceLimit (Env.ZERO);
-				line.setPriceList (Env.ZERO);
-				line.setLineNetAmt (Env.ZERO);
-				line.setFreightAmt (Env.ZERO);
+				
+				if(STDSysConfig.isOverwriteDataWhenExplodeBOM(line.getAD_Client_ID(),line.getAD_Org_ID()))
+				{
+					//	Convert into Comment Line
+					line.setM_Product_ID (0);
+					line.setM_AttributeSetInstance_ID (0);
+					line.setPrice (Env.ZERO);
+					line.setPriceLimit (Env.ZERO);
+					line.setPriceList (Env.ZERO);
+					line.setLineNetAmt (Env.ZERO);
+					line.setFreightAmt (Env.ZERO);
+				}
 				//
 				String description = product.getName ();
 				if (product.getDescription () != null)
