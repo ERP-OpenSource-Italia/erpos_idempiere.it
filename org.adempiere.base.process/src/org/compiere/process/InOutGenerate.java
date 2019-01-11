@@ -618,6 +618,7 @@ public class InOutGenerate extends SvrProcess
 		SelectionLineOrderLineWrapper orderLineWrapper = null;
 		Map<String, Object> wrapperAdditionalData = null;
 		int deliverM_AttributeSetInstance_ID = orderLine.getM_AttributeSetInstance_ID();
+		int deliverFrom_M_Locator_ID = 0;
 		
 		if(orderLine instanceof SelectionLineOrderLineWrapper)
 		{
@@ -628,7 +629,10 @@ public class InOutGenerate extends SvrProcess
 			int wrapperM_ASI_ID = orderLineWrapper.getDeliveryM_AttributeSetInstance_ID();
 			
 			if(wrapperM_ASI_ID >= 0)
-				deliverM_AttributeSetInstance_ID = wrapperM_ASI_ID; 
+				deliverM_AttributeSetInstance_ID = wrapperM_ASI_ID;
+			
+			if(orderLineWrapper.getDeliveryM_Locator_ID() > 0)
+				deliverFrom_M_Locator_ID = orderLineWrapper.getDeliveryM_Locator_ID();
 		}
 				
 		//	Complete last Shipment - can have multiple shipments
@@ -656,7 +660,7 @@ public class InOutGenerate extends SvrProcess
 		if (storages == null)
 		{
 			MInOutLine line = new MInOutLine (m_shipment);
-			line.setOrderLine(orderLine, 0, Env.ZERO);
+			line.setOrderLine(orderLine, deliverFrom_M_Locator_ID, Env.ZERO); // F3P: specify locator for non-delivery, to be consistent with the specified one
 			line.setQty(qty);	//	Correct UOM
 			if (orderLine.getQtyEntered().compareTo(orderLine.getQtyOrdered()) != 0)
 				line.setQtyEntered(qty
