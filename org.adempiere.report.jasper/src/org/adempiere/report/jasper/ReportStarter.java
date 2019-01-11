@@ -75,6 +75,7 @@ import org.compiere.util.Util;
 import org.compiere.utils.DigestOfFile;
 
 import it.idempiere.base.util.STDSysConfig;
+import it.idempiere.base.util.STDUtils;
 import it.idempiere.base.util.StartedFromPrintPreview;
 import net.sf.jasperreports.engine.DefaultJasperReportsContext;
 import net.sf.jasperreports.engine.JRException;
@@ -709,8 +710,23 @@ public class ReportStarter implements ProcessCall, ClientProcess
             Connection conn = null;
             JRSwapFileVirtualizer virtualizer = null;
             int maxPages = MSysConfig.getIntValue(MSysConfig.JASPER_SWAP_MAX_PAGES, DEFAULT_SWAP_MAX_PAGES);
+            
+            // F3P: use process trxt ?
+            boolean bUseLocalConnection = STDUtils.asBoolean(params.get("LIT_PRINT_WITH_LOCAL_CONNECTION"));
+            
             try {
-            	conn = getConnection();
+            	
+            	// F3P: use process trxt ?
+            	
+            	if(bUseLocalConnection && trx != null)
+            	{
+            		conn = trx.getConnection();
+            	}
+            	else
+            	{
+            		bUseLocalConnection = false;
+            		conn = getConnection();
+            	}
 
             	String swapPath = System.getProperty("java.io.tmpdir");
 				JRSwapFile swapFile = new JRSwapFile(swapPath, 1024, 1024);
@@ -922,7 +938,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
                 reportResult( AD_PInstance_ID, e.getMessage(), trxName);
                 return false; //F3P end
             }finally {
-            	if (conn != null) {
+            	if (conn != null && bUseLocalConnection == false) { // F3P: Dont close if we are using a shared connection
 					try {
 						conn.close();
 					} catch (SQLException e) {
