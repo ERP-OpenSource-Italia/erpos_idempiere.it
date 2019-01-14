@@ -301,6 +301,15 @@ public class DocLine
 	{
 		return m_ListAmt;
 	}   //  getListAmount
+	
+	/**
+	 *  Line Net Amount
+	 *  @return net amount
+	 */
+	public BigDecimal getNetAmount()
+	{
+		return m_LineNetAmt;
+	}   //  getNetAmount
 
 	/**
 	 * 	Set Line Net Amt Difference
