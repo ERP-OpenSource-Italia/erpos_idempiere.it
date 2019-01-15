@@ -273,11 +273,15 @@ public class InOutGenerate extends SvrProcess
 				MOrder order = new MOrder (getCtx(), rs, get_TrxName());
 				statusUpdate(Msg.getMsg(getCtx(), "Processing") + " " + order.getDocumentInfo());
 				
+				// F3P: ignore shipper on shipment consolidate ?
+				
+				boolean	bIgnoreShipperOnConsolidate = STDSysConfig.isGenInOutIgnoreShipperOnConsolidate(order.getAD_Client_ID(), order.getAD_Org_ID());
+				
 				//	New Header different Shipper, Shipment Location
 				if (!p_ConsolidateDocument 
 					|| (m_shipment != null 
 					&& (m_shipment.getC_BPartner_Location_ID() != order.getC_BPartner_Location_ID()
-						|| m_shipment.getM_Shipper_ID() != order.getM_Shipper_ID() )))
+						|| (bIgnoreShipperOnConsolidate == false && m_shipment.getM_Shipper_ID() != order.getM_Shipper_ID() ))))
 					completeShipment();
 				if (log.isLoggable(Level.FINE)) log.fine("check: " + order + " - DeliveryRule=" + order.getDeliveryRule());
 				//

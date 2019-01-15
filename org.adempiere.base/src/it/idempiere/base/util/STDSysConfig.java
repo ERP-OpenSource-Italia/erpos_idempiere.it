@@ -613,4 +613,11 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LIT_OVERWRITE_DATA_WHEN_EXPLODE_BOM, true, AD_Client_ID, AD_Org_ID);
 	}
+	
+	private static final String LIT_GENINOUT_IGNORESHIPPERONCONSOLIDATE = "LIT_GENINOUT_IGNORESHIPPERONCONSOLIDATE";
+	
+	public static boolean isGenInOutIgnoreShipperOnConsolidate(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_GENINOUT_IGNORESHIPPERONCONSOLIDATE, false, AD_Client_ID, AD_Org_ID);
+	}
 }
