@@ -98,7 +98,7 @@ public class InOutGenerate extends SvrProcess
 	/**	The current Shipment	*/
 	protected MInOut 		m_shipment = null;
 	/** Number of Shipments	being created	*/
-	private int			m_created = 0;
+	protected int			m_created = 0;
 	/**	Line Number				*/
 	private int			m_line = 0;
 	/** Movement Date			*/
