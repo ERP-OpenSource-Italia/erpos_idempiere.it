@@ -1548,7 +1548,11 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			return DocAction.STATUS_Invalid;
 		}
 
-		explodeBOM();
+		if(STDSysConfig.isOverwriteDataWhenExplodeBOM(getAD_Client_ID(),getAD_Org_ID()))
+		{
+			explodeBOM();
+		}
+		
 		if (!calculateTaxTotal())	//	setTotals
 		{
 			m_processMsg = "Error calculating Tax";
