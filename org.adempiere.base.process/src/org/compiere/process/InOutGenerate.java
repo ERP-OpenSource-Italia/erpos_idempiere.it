@@ -167,7 +167,11 @@ public class InOutGenerate extends SvrProcess
 		
 		//F3P: renumber inoutline
 		p_overrideLineNo = STDSysConfig.isOverrideGeneratedInOutLineNo(getAD_Client_ID()); // Spostato qui per evitare l'uso di Env.getCtx, che puo creare problemi in caso di processi eseguiti dal server
-		lineNoIncr = STDSysConfig.getAddLineNoOverride(Env.getAD_Client_ID(getCtx()),Env.getAD_Org_ID(getCtx()));
+		
+		if(p_overrideLineNo)
+			lineNoIncr = STDSysConfig.getAddLineNoOverride(Env.getAD_Client_ID(getCtx()),Env.getAD_Org_ID(getCtx()));
+		else
+			lineNoIncr = 10;
 	}	//	prepare
 
 	/**
