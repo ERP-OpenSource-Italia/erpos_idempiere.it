@@ -585,6 +585,11 @@ public class MOrder extends X_C_Order implements DocAction
 		if(Bill_User_ID > 0)
 			setBill_User_ID(Bill_User_ID);
 		
+		// F3P: Set freightcostrule
+		
+		if(bp.getFreightCostRule() != null)
+			setFreightCostRule(bp.getFreightCostRule());
+		
 		// F3P end
 	}	//	setBPartner
 
