@@ -620,4 +620,11 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LIT_GENINOUT_IGNORESHIPPERONCONSOLIDATE, false, AD_Client_ID, AD_Org_ID);
 	}
+	
+	private static final String LIT_LINENO_INCREMENT = "LIT_LINENO_INCREMENT";
+
+	public static int getAddLineNoOverride(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getIntValue(LIT_LINENO_INCREMENT, 10, AD_Client_ID, AD_Org_ID);
+	}
 }

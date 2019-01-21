@@ -94,7 +94,7 @@ public class InOutGenerate extends SvrProcess
 	
 	//F3P: renumber line
 	private boolean	p_overrideLineNo = false;
-	
+	protected int lineNoIncr = 0;
 	/**	The current Shipment	*/
 	protected MInOut 		m_shipment = null;
 	/** Number of Shipments	being created	*/
@@ -167,7 +167,7 @@ public class InOutGenerate extends SvrProcess
 		
 		//F3P: renumber inoutline
 		p_overrideLineNo = STDSysConfig.isOverrideGeneratedInOutLineNo(getAD_Client_ID()); // Spostato qui per evitare l'uso di Env.getCtx, che puo creare problemi in caso di processi eseguiti dal server
-		
+		lineNoIncr = STDSysConfig.getAddLineNoOverride(Env.getAD_Client_ID(getCtx()),Env.getAD_Org_ID(getCtx()));
 	}	//	prepare
 
 	/**
@@ -885,7 +885,7 @@ public class InOutGenerate extends SvrProcess
 				
 				for(MInOutLine line : lines)
 				{
-					lineNo += 10;
+					lineNo += lineNoIncr;
 					line.setLine(lineNo); 
 					line.saveEx(get_TrxName());
 				}
