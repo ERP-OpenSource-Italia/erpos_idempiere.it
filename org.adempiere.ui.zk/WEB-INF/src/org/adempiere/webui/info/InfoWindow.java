@@ -3000,7 +3000,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	{
 		if(embeddedWinList != null && embeddedWinList.size() > 0)
 		{
-			zoomDetailButton = ButtonFactory.createNamedButton("ZoomAcross", false, true);        
+			zoomDetailButton = ButtonFactory.createNamedButton("ZoomAcross", false, true);  
+			zoomDetailButton.setTooltiptext(Msg.translate(Env.getCtx(), "ZoomRelatedInfo"));
 			zoomDetailButton.setId("ZoomDetail");
 			zoomDetailButton.setEnabled(false);       
 			zoomDetailButton.addEventListener(Events.ON_CLICK, new ZoomDetailAction());
