@@ -599,4 +599,32 @@ public class STDSysConfig
 	{
 		return MSysConfig.getValue(LIT_CREATE_FROM_INV_SHIP_DATA_DISPLAY, null, AD_Client_ID, AD_Org_ID);
 	}
+	
+	public static final String LIT_ERROR_WITHNEGATIVE_COMPOSITEDISCOUNT = "LIT_ERROR_WITHNEGATIVE_COMPOSITEDISCOUNT";
+	
+	public static boolean IsErrorWithNegativeCompositeDiscount(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_ERROR_WITHNEGATIVE_COMPOSITEDISCOUNT, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static final String LIT_OVERWRITE_DATA_WHEN_EXPLODE_BOM = "LIT_OVERWRITE_DATA_WHEN_EXPLODE_BOM";
+
+	public static boolean isOverwriteDataWhenExplodeBOM(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getBooleanValue(LIT_OVERWRITE_DATA_WHEN_EXPLODE_BOM, true, AD_Client_ID, AD_Org_ID);
+	}
+	
+	private static final String LIT_GENINOUT_IGNORESHIPPERONCONSOLIDATE = "LIT_GENINOUT_IGNORESHIPPERONCONSOLIDATE";
+	
+	public static boolean isGenInOutIgnoreShipperOnConsolidate(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_GENINOUT_IGNORESHIPPERONCONSOLIDATE, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	private static final String LIT_LINENO_INCREMENT = "LIT_LINENO_INCREMENT";
+
+	public static int getAddLineNoOverride(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getIntValue(LIT_LINENO_INCREMENT, 10, AD_Client_ID, AD_Org_ID);
+	}
 }

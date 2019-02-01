@@ -243,7 +243,11 @@ public class Doc_Invoice extends Doc
 						}
 					}
 					
-					BigDecimal PriceListTax = tax.calculateTax(PriceList, true, getStdPrecision());
+					//FIX if pricelist has precision > currency.precision, PriceListTax is rounded and new PriceList result wrong
+					//and the difference is put as discount [see docLine.setAmount()] which is wrong (
+					//Now pricelist calculated is coherent with the normal situation of NO tax incl.
+//					BigDecimal PriceListTax = tax.calculateTax(PriceList, true, getStdPrecision());
+					BigDecimal PriceListTax = tax.calculateTax(PriceList, true, invoice.getM_PriceList().getPricePrecision());
 					PriceList = PriceList.subtract(PriceListTax);
 				}
 			}	//	correct included Tax

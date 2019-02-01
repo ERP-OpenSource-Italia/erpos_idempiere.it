@@ -531,6 +531,10 @@ public abstract class CreateFromInvoice extends CreateFrom
 						C_OrderLine_ID = inoutLine.getC_OrderLine_ID();
 						orderLine = new MOrderLine (Env.getCtx(), C_OrderLine_ID, trxName);
 					}
+					
+					//set isInvoiced when generate invoiceline from inoutline
+					inoutLine.setIsInvoiced(true);
+					inoutLine.saveEx();
 				}
 				else if (C_OrderLine_ID > 0)
 				{

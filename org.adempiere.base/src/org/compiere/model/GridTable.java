@@ -2768,14 +2768,27 @@ public class GridTable extends AbstractTableModel
 		if (po != null)
 		{
 			boolean ok = false;
+			
+			/* F3P: po is added to list of object saved from ui, 
+			 * so we can have a way to check if an object is being 
+			 * saved from ui or from a process.
+			 * After po.save() the object will be removed from the list (in finally block).
+			 */
+			
 			try
 			{
+				SavedFromUI.add(po); // F3P: add po
 				ok = po.delete(false);
 			}
 			catch (Throwable t)
 			{
 				log.log(Level.SEVERE, "Delete", t);
 			}
+			finally
+			{
+				SavedFromUI.remove(po);	// F3P: removed even if exception occur
+			}
+			
 			if (!ok)
 			{
 				ValueNamePair vp = CLogger.retrieveError();

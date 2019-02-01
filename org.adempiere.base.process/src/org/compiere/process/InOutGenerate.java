@@ -94,11 +94,11 @@ public class InOutGenerate extends SvrProcess
 	
 	//F3P: renumber line
 	private boolean	p_overrideLineNo = false;
-	
+	protected int lineNoIncr = 0;
 	/**	The current Shipment	*/
-	private MInOut 		m_shipment = null;
+	protected MInOut 		m_shipment = null;
 	/** Number of Shipments	being created	*/
-	private int			m_created = 0;
+	protected int			m_created = 0;
 	/**	Line Number				*/
 	private int			m_line = 0;
 	/** Movement Date			*/
@@ -168,6 +168,10 @@ public class InOutGenerate extends SvrProcess
 		//F3P: renumber inoutline
 		p_overrideLineNo = STDSysConfig.isOverrideGeneratedInOutLineNo(getAD_Client_ID()); // Spostato qui per evitare l'uso di Env.getCtx, che puo creare problemi in caso di processi eseguiti dal server
 		
+		if(p_overrideLineNo)
+			lineNoIncr = STDSysConfig.getAddLineNoOverride(Env.getAD_Client_ID(getCtx()),Env.getAD_Org_ID(getCtx()));
+		else
+			lineNoIncr = 10;
 	}	//	prepare
 
 	/**
@@ -273,11 +277,15 @@ public class InOutGenerate extends SvrProcess
 				MOrder order = new MOrder (getCtx(), rs, get_TrxName());
 				statusUpdate(Msg.getMsg(getCtx(), "Processing") + " " + order.getDocumentInfo());
 				
+				// F3P: ignore shipper on shipment consolidate ?
+				
+				boolean	bIgnoreShipperOnConsolidate = STDSysConfig.isGenInOutIgnoreShipperOnConsolidate(order.getAD_Client_ID(), order.getAD_Org_ID());
+				
 				//	New Header different Shipper, Shipment Location
 				if (!p_ConsolidateDocument 
 					|| (m_shipment != null 
 					&& (m_shipment.getC_BPartner_Location_ID() != order.getC_BPartner_Location_ID()
-						|| m_shipment.getM_Shipper_ID() != order.getM_Shipper_ID() )))
+						|| (bIgnoreShipperOnConsolidate == false && m_shipment.getM_Shipper_ID() != order.getM_Shipper_ID() ))))
 					completeShipment();
 				if (log.isLoggable(Level.FINE)) log.fine("check: " + order + " - DeliveryRule=" + order.getDeliveryRule());
 				//
@@ -618,6 +626,7 @@ public class InOutGenerate extends SvrProcess
 		SelectionLineOrderLineWrapper orderLineWrapper = null;
 		Map<String, Object> wrapperAdditionalData = null;
 		int deliverM_AttributeSetInstance_ID = orderLine.getM_AttributeSetInstance_ID();
+		int deliverFrom_M_Locator_ID = 0;
 		
 		if(orderLine instanceof SelectionLineOrderLineWrapper)
 		{
@@ -628,7 +637,10 @@ public class InOutGenerate extends SvrProcess
 			int wrapperM_ASI_ID = orderLineWrapper.getDeliveryM_AttributeSetInstance_ID();
 			
 			if(wrapperM_ASI_ID >= 0)
-				deliverM_AttributeSetInstance_ID = wrapperM_ASI_ID; 
+				deliverM_AttributeSetInstance_ID = wrapperM_ASI_ID;
+			
+			if(orderLineWrapper.getDeliveryM_Locator_ID() > 0)
+				deliverFrom_M_Locator_ID = orderLineWrapper.getDeliveryM_Locator_ID();
 		}
 				
 		//	Complete last Shipment - can have multiple shipments
@@ -656,7 +668,7 @@ public class InOutGenerate extends SvrProcess
 		if (storages == null)
 		{
 			MInOutLine line = new MInOutLine (m_shipment);
-			line.setOrderLine(orderLine, 0, Env.ZERO);
+			line.setOrderLine(orderLine, deliverFrom_M_Locator_ID, Env.ZERO); // F3P: specify locator for non-delivery, to be consistent with the specified one
 			line.setQty(qty);	//	Correct UOM
 			if (orderLine.getQtyEntered().compareTo(orderLine.getQtyOrdered()) != 0)
 				line.setQtyEntered(qty
@@ -852,11 +864,19 @@ public class InOutGenerate extends SvrProcess
 		return m_lastStorages;
 	}	//	getStorages
 	
+	/**
+	 * 	Complete Shipment (default process action)
+	 */
+	protected void completeShipment()
+	{
+		completeShipment(p_docAction);
+	}
 	
 	/**
 	 * 	Complete Shipment
+	 *  
 	 */
-	private void completeShipment()
+	protected void completeShipment(String docAction)
 	{
 		if (m_shipment != null)
 		{
@@ -869,7 +889,7 @@ public class InOutGenerate extends SvrProcess
 				
 				for(MInOutLine line : lines)
 				{
-					lineNo += 10;
+					lineNo += lineNoIncr;
 					line.setLine(lineNo); 
 					line.saveEx(get_TrxName());
 				}
@@ -884,7 +904,7 @@ public class InOutGenerate extends SvrProcess
 			{
 				savepoint = trx.setSavepoint("beforeComplete");
 				
-				if(DocAction.ACTION_Complete.equals(p_docAction) && DocProcess_AD_Workflow_ID > 0) // F3P use workflow instead of plain process
+				if(DocAction.ACTION_Complete.equals(docAction) && DocProcess_AD_Workflow_ID > 0) // F3P use workflow instead of plain process
 				{
 					ProcessInfo pi = new ProcessInfo("CompleteWF", getProcessInfo().getAD_Process_ID(), 0, m_shipment.getM_InOut_ID());
 					pi.setAD_User_ID (Env.getAD_User_ID(Env.getCtx()));
@@ -895,10 +915,10 @@ public class InOutGenerate extends SvrProcess
 				}
 				else
 				{
-					if (!DocAction.ACTION_None.equals(p_docAction))
+					if (!DocAction.ACTION_None.equals(docAction))
 					{
 						//	Fails if there is a confirmation
-						if (!m_shipment.processIt(p_docAction))
+						if (!m_shipment.processIt(docAction))
 						{
 							log.warning("Failed: " + m_shipment);
 							//

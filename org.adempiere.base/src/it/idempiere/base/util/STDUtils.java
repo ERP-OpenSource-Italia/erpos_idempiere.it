@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
@@ -28,6 +29,7 @@ import org.compiere.model.Query;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
+import org.compiere.util.Util;
 
 /**
  *  Utility applicabili all'implementazione Standard iDempiere
@@ -544,5 +546,40 @@ public class STDUtils {
 		BigDecimal calculated = m.divide(Env.ONEHUNDRED, precision, RoundingMode.HALF_UP);
 		
 		return calculated;		
+	}
+	
+	/** Ottiene una sys config come lista di interi, utilizzando ';' come separatore
+	 * 
+	 * @param Name nome delle sysconfig
+	 * @param defaultValue	valore di default, se contiene ';' viene spezzato in valori
+	 * @param AD_Client_ID client
+	 * @param AD_Org_ID org
+	 * @return lista di valori, vuota se nessun valore presente (non ritorna mai null)
+	 */
+	public static List<Integer> getSysConfigAsIntList(String Name, String defaultValue, int AD_Client_ID, int AD_Org_ID)
+	{
+		String value = MSysConfig.getValue(Name, defaultValue, AD_Client_ID, AD_Org_ID);
+		List<Integer> intValues = new ArrayList<Integer>();
+								
+		if(value != null)
+		{
+			String[] tmplistString = value.split(";");
+			
+			if(tmplistString.length > 0)
+			{
+				for(String tmpString : tmplistString)
+				{
+					tmpString = tmpString.trim();
+					
+					if(Util.isEmpty(tmpString, false) == false)
+					{
+						int iVal = Integer.parseInt(tmpString);
+						intValues.add(iVal);
+					}
+				}
+			}			 
+		}
+			
+		return intValues;
 	}
 }

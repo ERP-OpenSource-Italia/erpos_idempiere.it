@@ -869,13 +869,18 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 						order.setClientOrg (imp.getAD_Client_ID(), imp.getAD_Org_ID());
 						order.setC_DocTypeTarget_ID(imp.getC_DocType_ID());
 						order.setIsSOTrx(imp.isSOTrx());
+						
+						// F3P: set via BPartne for consistency
+						MBPartner mBPartner = MBPartner.get(getCtx(), imp.getC_BPartner_ID());						
+						order.setBPartner(mBPartner);
+						
 						if (imp.getDeliveryRule() != null ) {
 							order.setDeliveryRule(imp.getDeliveryRule());
 						}
 						if (imp.getDocumentNo() != null)
 							order.setDocumentNo(imp.getDocumentNo());
 						//	Ship Partner
-						order.setC_BPartner_ID(imp.getC_BPartner_ID());
+						
 						order.setC_BPartner_Location_ID(imp.getC_BPartner_Location_ID());
 						if (imp.getAD_User_ID() != 0)
 							order.setAD_User_ID(imp.getAD_User_ID());
@@ -946,6 +951,8 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 					lineNo += 10;
 					if (imp.getM_Product_ID() != 0)
 						line.setM_Product_ID(imp.getM_Product_ID(), true);
+					if (imp.getC_UOM_ID() != 0)
+						line.setC_UOM_ID(imp.getC_UOM_ID());
 					if (imp.getC_Charge_ID() != 0)
 						line.setC_Charge_ID(imp.getC_Charge_ID());
 					line.setQty(imp.getQtyOrdered());

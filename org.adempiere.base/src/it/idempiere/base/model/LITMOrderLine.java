@@ -27,7 +27,7 @@ public class LITMOrderLine
 	 	@param orderLine 
 		@return BOM_OrderLine_ID indicates the orderLine that originates the X_C_OrderLine after explodeBOM()
 	 */
-	public static Integer getBOM_OrderLine_ID(X_C_OrderLine orderLine) 
+	public static int getBOM_OrderLine_ID(X_C_OrderLine orderLine) 
 	{
 		Integer ii = (Integer)orderLine.get_Value(COLUMNNAME_BOM_OrderLine_ID);
 		if (ii == null)

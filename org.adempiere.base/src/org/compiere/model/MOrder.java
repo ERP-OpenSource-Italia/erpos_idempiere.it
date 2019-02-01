@@ -585,6 +585,11 @@ public class MOrder extends X_C_Order implements DocAction
 		if(Bill_User_ID > 0)
 			setBill_User_ID(Bill_User_ID);
 		
+		// F3P: Set freightcostrule
+		
+		if(bp.getFreightCostRule() != null)
+			setFreightCostRule(bp.getFreightCostRule());
+		
 		// F3P end
 	}	//	setBPartner
 
@@ -1736,13 +1741,15 @@ public class MOrder extends X_C_Order implements DocAction
 		{
 			where = "AND IsActive='Y' AND EXISTS "
 					+ "(SELECT * FROM M_Product p WHERE C_OrderLine.M_Product_ID=p.M_Product_ID"
-					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')";
+					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')"
+					+ " AND NOT EXISTS (SELECT b.C_OrderLine_ID From C_OrderLine b WHERE b.BOM_Orderline_ID = C_OrderLine.C_OrderLine_ID)";
 		}
 		else
 		{
 			where = "AND IsActive='Y' AND EXISTS "
 					+ "(SELECT * FROM M_Product p WHERE C_OrderLine.M_Product_ID=p.M_Product_ID"
-					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N' and p.ProductType='I')";	// F3P: aggiunta verifica che sia di tipo 'item'
+					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N' and p.ProductType='I')"
+					+ " AND NOT EXISTS (SELECT b.C_OrderLine_ID From C_OrderLine b WHERE b.BOM_Orderline_ID = C_OrderLine.C_OrderLine_ID)";	// F3P: aggiunta verifica che sia di tipo 'item'
 		}
 		
 		//F3P end		
@@ -1806,14 +1813,18 @@ public class MOrder extends X_C_Order implements DocAction
 					sharePriceToBomOrderLine(line);
 				}
 				
-				//	Convert into Comment Line
-				line.setM_Product_ID (0);
-				line.setM_AttributeSetInstance_ID (0);
-				line.setPrice (Env.ZERO);
-				line.setPriceLimit (Env.ZERO);
-				line.setPriceList (Env.ZERO);
-				line.setLineNetAmt (Env.ZERO);
-				line.setFreightAmt (Env.ZERO);
+				
+				if(STDSysConfig.isOverwriteDataWhenExplodeBOM(line.getAD_Client_ID(),line.getAD_Org_ID()))
+				{
+					//	Convert into Comment Line
+					line.setM_Product_ID (0);
+					line.setM_AttributeSetInstance_ID (0);
+					line.setPrice (Env.ZERO);
+					line.setPriceLimit (Env.ZERO);
+					line.setPriceList (Env.ZERO);
+					line.setLineNetAmt (Env.ZERO);
+					line.setFreightAmt (Env.ZERO);
+				}
 				//
 				String description = product.getName ();
 				if (product.getDescription () != null)
