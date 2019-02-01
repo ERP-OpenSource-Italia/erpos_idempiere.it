@@ -369,7 +369,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected String              m_sqlOrder;
 	protected String              m_sqlUserOrder;
 	/**ValueChange listeners       */
-    private ArrayList<ValueChangeListener> listeners = new ArrayList<ValueChangeListener>();
+    protected ArrayList<ValueChangeListener> listeners = new ArrayList<ValueChangeListener>();
 	/** Loading success indicator       */
 	protected boolean	        p_loadedOK = false;
 	/**	SO Zoom Window						*/

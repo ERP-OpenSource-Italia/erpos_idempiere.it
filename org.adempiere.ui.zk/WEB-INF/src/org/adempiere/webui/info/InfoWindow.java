@@ -2141,6 +2141,15 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 						: tableInfos[0].getTableName();
 
 				String keySelectClause = keyTableAlias + "." + p_keyColumn;
+				
+		// F3P: add IDColumn to enable zooming (similar to main window)
+				
+		String infoTableName = info.getAD_Table().getTableName();
+		String infoKeyColumn = infoTableName + "_ID";
+				
+		String pkeySelectClause = keyTableAlias+"."+infoKeyColumn;
+		list.add(new ColumnInfo(" ", pkeySelectClause, IDColumn.class, true, false, null, p_keyColumn));
+
 
 				for (MInfoColumn infoColumn : infoColumns)
 				{
@@ -3002,13 +3011,20 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	
 	protected void enableZoomDetail()
 	{
+		if(zoomDetailButton == null)
+			return;
+		
 		int selectedTab = embeddedPane.getSelectedIndex();
-		EmbedWinInfo embedWinInfo = embeddedWinList.get(selectedTab);
-		WListbox listbox = (WListbox)embedWinInfo.getInfoTbl();
-		int embedSelectedRow = listbox.getSelectedRow();
+		boolean enabled = false;
 		
-		boolean enabled = embedSelectedRow >= 0;
-		
+		if(selectedTab >= 0)
+		{
+			EmbedWinInfo embedWinInfo = embeddedWinList.get(selectedTab);
+			WListbox listbox = (WListbox)embedWinInfo.getInfoTbl();
+			int embedSelectedRow = listbox.getSelectedRow();			
+			enabled = embedSelectedRow >= 0;
+		}
+				
 		zoomDetailButton.setEnabled( enabled );
 	}
 	
@@ -3022,35 +3038,24 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				if(embeddedPane.getTabs() != null &&
 						embeddedPane.getSelectedTab() != null)
 				{
-					int selectedIdx = embeddedPane.getSelectedIndex();					
-					EmbedWinInfo embedWinInfo = embeddedWinList.get(selectedIdx);
+					int selectedEmbedded = embeddedPane.getSelectedIndex();					
+					EmbedWinInfo embedWinInfo = embeddedWinList.get(selectedEmbedded);
 					WListbox listbox = (WListbox)embedWinInfo.getInfoTbl();
 					int embedSelectedRow = listbox.getSelectedRow();
+					int AD_Table_ID = embedWinInfo.getInfowin().getAD_Table_ID();
 					
 					if(embedSelectedRow >= 0)
 					{
 						Integer recordId = listbox.getSelectedRowKey();
 						
-						if(recordId == null) // Check if first row is the id
-						{
-							Object potentialID = listbox.getValueAt(embedSelectedRow, 0);
-							
-							if(potentialID instanceof IDColumn)
-							{
-								IDColumn idc = (IDColumn)potentialID;
-								recordId = idc.getRecord_ID();
-							}
-							else if(potentialID instanceof KeyNamePair)
-							{
-								KeyNamePair knp = (KeyNamePair)potentialID;
-								recordId = knp.getKey();
-							}
-						}
-						
-				    	if (recordId != null)
+				    	if (listeners != null && listeners.size() > 0)
 				    	{
-				    		int AD_Table_ID = embedWinInfo.getInfowin().getAD_Table_ID();
-
+					        ValueChangeEvent event = new ValueChangeEvent(this,"zoomEmbed",
+					        		AD_Table_ID,contentPanel.getSelectedRowKey());
+					        fireValueChange(event);
+				    	}
+				    	else
+				    	{    		
 				    		if (AD_Table_ID > 0)
 				    			AEnv.zoom(AD_Table_ID, recordId);
 				    	}
