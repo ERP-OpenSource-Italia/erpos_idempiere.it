@@ -1821,7 +1821,9 @@ public class MOrder extends X_C_Order implements DocAction
 					line.setM_AttributeSetInstance_ID (0);
 					line.setPrice (Env.ZERO);
 					line.setPriceLimit (Env.ZERO);
-					line.setPriceList (Env.ZERO);
+					line.setDiscount(Env.ONEHUNDRED);
+					//line.setPriceList (Env.ZERO);
+					
 					line.setLineNetAmt (Env.ZERO);
 					line.setFreightAmt (Env.ZERO);
 				}

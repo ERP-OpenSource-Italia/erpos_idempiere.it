@@ -34,6 +34,7 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.LITMInvoiceLine;
 import it.idempiere.base.model.LineDocumentDiscount;
 import it.idempiere.base.util.ProductPricing2Support;
 import it.idempiere.base.util.STDSysConfig;
@@ -309,6 +310,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 			setPriceActual(oLine.getPriceActual());
 			setPriceLimit(oLine.getPriceLimit());
 			setPriceList(oLine.getPriceList());
+			LITMInvoiceLine.setDiscount(this,oLine.getDiscount());
 			//
 			setC_Tax_ID(oLine.getC_Tax_ID());
 			setLineNetAmt(oLine.getLineNetAmt());
@@ -930,7 +932,8 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		{
 			if (!m_priceSet
 				&&  Env.ZERO.compareTo(getPriceActual()) == 0
-				&&  Env.ZERO.compareTo(getPriceList()) == 0)
+				&&  Env.ZERO.compareTo(getPriceList()) == 0
+				&&  Env.ONEHUNDRED.compareTo(LITMInvoiceLine.getDiscount(this)) != 0)
 				setPrice();
 				// IDEMPIERE-1574 Sales Order Line lets Price under the Price Limit when updating
 				//	Check PriceLimit

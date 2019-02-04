@@ -999,7 +999,8 @@ public class MOrderLine extends X_C_OrderLine
 			//	Set Price if Actual = 0
 			if (m_productPrice == null 
 				&&  Env.ZERO.compareTo(getPriceActual()) == 0
-				&&  Env.ZERO.compareTo(getPriceList()) == 0)
+				&&  Env.ZERO.compareTo(getPriceList()) == 0
+				&& Env.ONEHUNDRED.compareTo(getDiscount()) != 0)
 				setPrice();
 			//	Check if on Price list
 			if (m_productPrice == null)
