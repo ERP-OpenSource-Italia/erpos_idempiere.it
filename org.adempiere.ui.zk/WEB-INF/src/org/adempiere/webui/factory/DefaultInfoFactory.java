@@ -179,7 +179,7 @@ public class DefaultInfoFactory implements IInfoFactory {
 		}
 		else	//	General Info
 		{
-			info = create(lookup.getWindowNo(), tableName, keyColumn, queryValue, false, whereClause, AD_InfoWindow_ID, true, field); // FIN: (st) 13/12/17 propagate field
+			info = create(lookup.getWindowNo(), tableName, keyColumn, queryValue, multiSelection, whereClause, AD_InfoWindow_ID, true, field); // FIN: (st) 13/12/17 propagate field
 		}
 		return info;
 	}
