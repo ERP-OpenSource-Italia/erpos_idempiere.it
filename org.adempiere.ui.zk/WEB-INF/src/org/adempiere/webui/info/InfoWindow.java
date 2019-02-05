@@ -827,7 +827,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 			if (embedInfo != null) {
 				ArrayList<ColumnInfo> list = new ArrayList<ColumnInfo>();
-				list = getInfoColumnslayout(embedInfo);
+				list = getInfoColumnslayout(embedInfo).columnInfos;
 				//  Convert ArrayList to Array
 				ColumnInfo[] s_layoutEmbedded  = new ColumnInfo[list.size()];
 				list.toArray(s_layoutEmbedded);
@@ -1003,7 +1003,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		}
 		
 		// F3P: fix width of cols
-		
+		/*
 		WListItemRenderer renderer = (WListItemRenderer)contentPanel.getItemRenderer();
 		int colCount = renderer.getNoColumns();
 		ArrayList<Integer> fixedWidths = new ArrayList<>();
@@ -1027,7 +1027,9 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		}
 		
 		contentPanel.repaint(fixedWidths);
+		*/
 	}
+	
 
 	protected ColumnInfo createLookupColumnInfo(TableInfo[] tableInfos,
 			GridField gridField, MInfoColumn infoColumn) {
@@ -1454,7 +1456,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
         	contentPanel.setStyle("width: 99%; margin: 0px auto;");
         ZKUpdateUtil.setVflex(contentPanel, true);
         contentPanel.setSizedByContent(true);
-        contentPanel.setSpan(true);
+        
+        // F3P: auto span spaces
+        
+        if(LITMInfoWindow.isAutoSpan(infoWindow))
+        	contentPanel.setSpan(true);
         
         North north = new North();
         layout.appendChild(north);
@@ -1863,6 +1869,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
     	cacheOriginalValues.clear(); // F3P: Clear original values   
 		lastClickedMainContentRow = -1; // F3P: clear last clicked row
     	super.executeQuery();
+    	applyFixedColumnWidths(contentPanel, gridDisplayedInfoColumns, false); // F3P: fix width of cols 
     }
     
 	@Override
@@ -2129,7 +2136,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	 * @author xolali IDEMPIERE-1045
 	 * getInfoColumnslayout(MInfoWindow info)
 	 */
-	public ArrayList<ColumnInfo> getInfoColumnslayout(MInfoWindow info){
+	// public ArrayList<ColumnInfo> getInfoColumnslayout(MInfoWindow info){
+	public InfoColumnLayout getInfoColumnslayout(MInfoWindow info){
 
 		AccessSqlParser sqlParser = new AccessSqlParser("SELECT * FROM " + info.getFromClause());
 		TableInfo[] tableInfos = sqlParser.getTableInfo(0);
@@ -2150,6 +2158,9 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		String pkeySelectClause = keyTableAlias+"."+infoKeyColumn;
 		list.add(new ColumnInfo(" ", pkeySelectClause, IDColumn.class, true, false, null, p_keyColumn));
 
+		// F3P: return both column infos and info columns
+		ArrayList<MInfoColumn> displayedInfoColumns = new ArrayList<>();
+		displayedInfoColumns.add(null); // First column matching id column
 
 				for (MInfoColumn infoColumn : infoColumns)
 				{
@@ -2190,11 +2201,17 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 						columnInfo.setColDescription(infoColumn.get_Translation("Description"));
 						columnInfo.setGridField(getGridField(infoColumn));
 						list.add(columnInfo);
+						displayedInfoColumns.add(infoColumn);
 					}
 
 				}
+				
+				// F3P: return both column infos and info columns
+				InfoColumnLayout layout = new InfoColumnLayout();
+				layout.columnInfos = list;
+				layout.displayedInfoColumns = displayedInfoColumns;
 
-				return   list;
+				return   layout;
 	}
 
 	/**
@@ -2264,7 +2281,12 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 		ListModelTable model;
 		ArrayList<ColumnInfo> list = new ArrayList<ColumnInfo>();
-		list = getInfoColumnslayout(info.getInfowin());
+		
+		// F3P: get both infocolumns and displayed column info
+		
+		// list = getInfoColumnslayout(info.getInfowin());
+		InfoColumnLayout infoColumnLayout = getInfoColumnslayout(info.getInfowin());
+		list = infoColumnLayout.columnInfos;
 
 		//  Convert ArrayList to Array
 		ColumnInfo[] s_layoutEmbedded  = new ColumnInfo[list.size()];
@@ -2283,9 +2305,13 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			lines.add(data);
 		}
 		model = new ListModelTable(lines);
-
+		
 		WListbox content = (WListbox) info.getInfoTbl();
-		content.setData(model, null);
+		
+		MInfoColumn[] displayedInfoColumns = infoColumnLayout.displayedInfoColumns.toArray(new MInfoColumn[infoColumnLayout.displayedInfoColumns.size()]);
+		ArrayList<Integer> fixedWidths = applyFixedColumnWidths(content, displayedInfoColumns, true); // F3P: fix width of cols
+		
+		content.setData(model, null, null, fixedWidths);
 	}
 
 	/**
@@ -3029,6 +3055,38 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		zoomDetailButton.setEnabled( enabled );
 	}
 	
+	protected ArrayList<Integer> applyFixedColumnWidths(WListbox listbox, MInfoColumn[] columns, boolean calcWidthsOnly)
+	{
+		// F3P: fix width of cols
+		
+		WListItemRenderer renderer = (WListItemRenderer)listbox.getItemRenderer();
+		int colCount = renderer.getNoColumns();
+		ArrayList<Integer> fixedWidths = new ArrayList<>();
+					
+		for(int c=0; c < colCount; c++)
+		{			
+			MInfoColumn ic = columns[c];
+			
+			if(ic != null)
+			{
+				int columnWidth = LITMInfoColumn.getColumnWidth(columns[c]);
+				if( columnWidth > 0)
+				{
+					fixedWidths.add(columnWidth);
+				}
+				else
+					fixedWidths.add(null);
+			}
+			else
+				fixedWidths.add(null);
+		}
+		
+		if(calcWidthsOnly == false)
+			listbox.repaint(fixedWidths);
+		
+		return fixedWidths;
+	}
+	
 	private class ZoomDetailAction implements EventListener<Event>
 	{
 		@Override
@@ -3230,5 +3288,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		{
 			return false;
 		}		
+	}
+	
+	public static class InfoColumnLayout
+	{
+		public ArrayList<ColumnInfo>	columnInfos;
+		public ArrayList<MInfoColumn>	displayedInfoColumns;		
 	}
 }
