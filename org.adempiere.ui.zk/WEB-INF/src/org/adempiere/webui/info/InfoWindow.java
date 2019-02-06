@@ -841,8 +841,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				
 				if(embedInfo.getWhereClause() != null)
 					s_sqlWhere += " AND " + embedInfo.getWhereClause();
-				
+								
 				m_sqlEmbedded = embeddedTbl.prepareTable(s_layoutEmbedded, s_sqlFrom, s_sqlWhere, false, tableName);
+				
+				if(Util.isEmpty(embedInfo.getOrderByClause(), true) == false)
+					m_sqlEmbedded += " ORDER BY " + embedInfo.getOrderByClause();
 
 				embeddedTbl.setMultiSelection(false);
 
@@ -1001,33 +1004,6 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			
 			m_sqlMain = sbMainSql.toString(); 			
 		}
-		
-		// F3P: fix width of cols
-		/*
-		WListItemRenderer renderer = (WListItemRenderer)contentPanel.getItemRenderer();
-		int colCount = renderer.getNoColumns();
-		ArrayList<Integer> fixedWidths = new ArrayList<>();
-					
-		for(int c=0; c < colCount; c++)
-		{			
-			MInfoColumn ic = gridDisplayedInfoColumns[c];
-			
-			if(ic != null)
-			{
-				int columnWidth = LITMInfoColumn.getColumnWidth(gridDisplayedInfoColumns[c]);
-				if( columnWidth > 0)
-				{
-					fixedWidths.add(columnWidth);
-				}
-				else
-					fixedWidths.add(null);
-			}
-			else
-				fixedWidths.add(null);
-		}
-		
-		contentPanel.repaint(fixedWidths);
-		*/
 	}
 	
 
