@@ -34,7 +34,7 @@ import org.compiere.util.Env;
 public class ProjectGenOrder extends SvrProcess
 {
 	/**	Project ID from project directly		*/
-	private int		m_C_Project_ID = 0;
+	protected int		m_C_Project_ID = 0;
 
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -116,7 +116,7 @@ public class ProjectGenOrder extends SvrProcess
 	 * 	@return valid project
 	 * 	@param trxName transaction
 	 */
-	static protected MProject getProject (Properties ctx, int C_Project_ID, String trxName)
+	public static MProject getProject (Properties ctx, int C_Project_ID, String trxName)
 	{
 		MProject fromProject = new MProject (ctx, C_Project_ID, trxName);
 		if (fromProject.getC_Project_ID() == 0)
