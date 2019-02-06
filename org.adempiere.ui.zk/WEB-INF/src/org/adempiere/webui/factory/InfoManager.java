@@ -59,7 +59,7 @@ public class InfoManager
 		List<IInfoFactory> factoryList = Service.locator().list(IInfoFactory.class).getServices();
 		for(IInfoFactory factory : factoryList)
 		{
-			ip = factory.create(lookup, field, tableName, keyColumn, queryValue, false, whereClause, AD_InfoWindow_ID);
+			ip = factory.create(lookup, field, tableName, keyColumn, queryValue, multiSelection, whereClause, AD_InfoWindow_ID);
 			if (ip != null)
 				break;
 		}

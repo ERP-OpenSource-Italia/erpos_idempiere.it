@@ -199,6 +199,7 @@ public class DefaultCellComponentFactory implements ICellComponentFactory
 					else
 					{
 						listcell.setLabel(field.toString());
+						listcell.setTooltiptext(field.toString()); // F3P: added hover tooltip
 					}
 				}
 			}
@@ -230,6 +231,7 @@ public class DefaultCellComponentFactory implements ICellComponentFactory
 			{
 				listcell.setLabel(field.toString());
 				listcell.setValue(field.toString());
+				listcell.setTooltiptext(field.toString()); // F3P: added hover tooltip
 			}
 		}
 		

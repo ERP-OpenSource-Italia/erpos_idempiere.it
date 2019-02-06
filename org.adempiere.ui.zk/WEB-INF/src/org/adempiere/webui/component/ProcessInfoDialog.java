@@ -37,6 +37,8 @@ import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Image;
 import org.zkoss.zul.Separator;
 
+import it.idempiere.base.model.LITMProcess;
+
 /**
  * 
  * @author milap.doshi
@@ -209,7 +211,13 @@ public class ProcessInfoDialog extends Window implements EventListener<Event> {
 	 * @param needFillLogFromDb if ProcessInfoUtil.setLogFromDB(pi) is called by outer function, 
 	 * just pass false, other pass true to avoid duplicate message 
 	 */
-	public static void showProcessInfo (ProcessInfo pi, int windowNo, final Component comp, boolean needFillLogFromDb) {						
+	public static void showProcessInfo (ProcessInfo pi, int windowNo, final Component comp, boolean needFillLogFromDb) {
+		
+		// F3P: dont show info for InfoWindow processes
+		
+		if(LITMProcess.getAD_InfoWindow_ID_DB(null, pi.getAD_Process_ID()) > 0)
+			return;
+		
 		ProcessInfoDialog dialog = new ProcessInfoDialog(AEnv.getDialogHeader(Env.getCtx(), windowNo),AEnv.getDialogHeader(Env.getCtx(), windowNo), pi, needFillLogFromDb);
 		final ISupportMask supportMask = LayoutUtils.showWindowWithMask(dialog, comp, LayoutUtils.OVERLAP_PARENT);;
 		dialog.addEventListener(DialogEvents.ON_WINDOW_CLOSE, new EventListener<Event>() {

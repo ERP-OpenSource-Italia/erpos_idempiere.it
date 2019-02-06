@@ -488,7 +488,10 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
         {
         	for (int columnIndex = 0; columnIndex < m_tableColumns.size(); columnIndex++)
             {
-        		m_tableColumns.get(columnIndex).setFixedWidth(columnWidths.get(columnIndex));
+        		Integer width = columnWidths.get(columnIndex);
+        		
+        		if(width != null) // F3P: avoid setting zero-width, and use zero as a flag o
+        			m_tableColumns.get(columnIndex).setFixedWidth(width.intValue());
             }
         }
 

@@ -109,7 +109,7 @@ public abstract class TabbedDesktop extends AbstractDesktop {
 	 * @param infoId
 	 */
 	@Override
-	public void openInfo(int infoId) {
+	public InfoPanel openInfo(int infoId) {
 		InfoPanel infoPanel = InfoManager.create(infoId);
 		
 		if (infoPanel != null) {
@@ -123,6 +123,8 @@ public abstract class TabbedDesktop extends AbstractDesktop {
 		} else {
 			FDialog.error(0, "NotValid");
 		}
+		
+		return infoPanel;
 	}
 	
 	/**

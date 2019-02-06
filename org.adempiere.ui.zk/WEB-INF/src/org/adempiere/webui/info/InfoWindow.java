@@ -47,6 +47,7 @@ import org.adempiere.webui.component.Tabpanel;
 import org.adempiere.webui.component.Tabpanels;
 import org.adempiere.webui.component.Tabs;
 import org.adempiere.webui.component.WInfoWindowListItemRenderer;
+import org.adempiere.webui.component.WListItemRenderer;
 import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.editor.WSearchEditor;
@@ -81,6 +82,9 @@ import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
 import org.compiere.model.X_AD_InfoColumn;
+import org.compiere.process.ProcessInfo;
+import org.compiere.process.ProcessInfoParameter;
+import org.compiere.process.ProcessInfoUtil;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
@@ -114,6 +118,8 @@ import org.zkoss.zul.South;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Vbox;
 
+import it.idempiere.base.model.LITMInfoColumn;
+import it.idempiere.base.model.LITMInfoWindow;
 import it.idempiere.base.util.FilterQuery;
 import it.idempiere.base.util.STDSysConfig;
 
@@ -160,12 +166,22 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	
 	private boolean hasEditable = false;
 	private Map<Integer, List<Object>> cacheOriginalValues = new HashMap<>();
-	private Map<Integer, List<Object>> temporarySelectedData = new HashMap<>(); 	
-	private WInfoWindowListItemRenderer infoWindowListItemRenderer = null;
+	private Map<Integer, List<Object>> temporarySelectedData = new HashMap<>();
 	
+	// F3P: additional data for editabillity end selection persist
+	
+	private WInfoWindowListItemRenderer infoWindowListItemRenderer = null;
+	private int lastClickedMainContentRow = -1;
+	private String tableSelectionColumn = null;
+	private String tableSelectionColumnUpdate = null;
+			
 	// F3P: export 
 	
 	private Button exportButton = null;
+	
+	// F3P: Zoom from detail tab
+	
+	private Button zoomDetailButton = null;
 
 	/**
 	 * Menu contail process menu item
@@ -217,6 +233,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
    			public void onEvent(Event event) throws Exception {
    				
    				int row = -1;
+   				boolean isSelected = false; // F3P: read selection state of row 
    				
    				if(event instanceof SelectEvent<?, ?>)
    				{
@@ -226,9 +243,26 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
    					if(selEvent.getReference() != null)
    					{
    						row = selEvent.getReference().getIndex();
+   						isSelected = selEvent.getReference().isSelected(); 
    					}
    				}
+   				
+   				// F3P: update selection status on DB before refreshing panels
+   				
+   				if(row >= 0 && tableSelectionColumnUpdate != null)
+   				{
+   					Object potentialIDC = contentPanel.getValueAt(row, 0);
+
+   					if(potentialIDC instanceof IDColumn)
+   					{
+   	   					IDColumn idc = (IDColumn)potentialIDC;
+   						Object[] params = {isSelected?"Y":"N", idc.getRecord_ID()};
+   						
+   						DB.executeUpdate(tableSelectionColumnUpdate, params, false, null);
+   					}
+				}
    				   				
+   				lastClickedMainContentRow = row; // F3P: Keep track of last clicked row
    				updateSubcontent(row);
    			}
    		}); //xolali --end-
@@ -261,10 +295,12 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			
 		}
 		
-		// F3P: add export button
+		// F3P: add zoom detail button		
+		initZoomDetail();
+
 		
+		// F3P: add export button		
 		initExport();
-		
 	}
 	
 	/** 
@@ -292,6 +328,9 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				refresh(embed);
 			}
 		}
+		
+		// F3P: refresh zoom detail button state		
+		enableZoomDetail();
 	}
 
 	/**
@@ -662,7 +701,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				String help = infoColumn.get_Translation("Help");
 				vo.Help = help != null ? help : "";
 				GridField gridField = new GridField(vo);
-				gridFields.add(gridField);
+				gridFields.add(gridField);				
 			}
 			
 			// If we have a process and at least one process and an editable field, change to the info window rendered
@@ -710,6 +749,24 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				p_whereClause = builder.toString();
 			}
 			
+			// F3P: read selection column
+			
+			if(infoWindow != null)
+			{
+				tableSelectionColumn = LITMInfoWindow.getSelectionColumn(infoWindow);
+				
+				if(tableSelectionColumn != null)
+				{
+					StringBuilder sbUpdate = new StringBuilder("UPDATE ");
+					
+					sbUpdate.append(tableName)
+					.append(" SET ").append(tableSelectionColumn).append(" = ? WHERE ")
+					.append(p_keyColumn).append(" = ?");
+					
+					tableSelectionColumnUpdate = sbUpdate.toString();
+				}
+			}
+			
 			return true;
 		} else {
 			return false;
@@ -725,7 +782,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		relatedInfoList = infoWindow.getInfoRelated(true);
 		Tabpanels tabPanels = new Tabpanels();
 		Tabs tabs = new Tabs();
-
+		
 		if (relatedInfoList.length > 0) { // setup the panel
 
 			//embeddedPane.setTitle(Msg.translate(Env.getCtx(), "Related Information"));
@@ -733,8 +790,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			//tabPanels = new Tabpanels();
 			embeddedPane.appendChild(tabPanels);
 			//tabs = new Tabs();
-			embeddedPane.appendChild(tabs);
-
+			embeddedPane.appendChild(tabs);			
 		}
 
 		//	for(int i=0; i <  relatedinfoList.length - 1 ; i++) {
@@ -753,12 +809,25 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 			WListbox embeddedTbl = new WListbox();
 			String m_sqlEmbedded;
+			
+			// F3P: update zoom detail status
+			
+			embeddedTbl.addActionListener(new EventListener<Event>() {
+				@Override
+				public void onEvent(Event event) throws Exception 
+				{
+					if(event instanceof SelectEvent<?, ?>)
+					{
+						enableZoomDetail();
+					}
+				}
+			});
 
 			//MInfoWindow.getInfoWindow(infoRelatedID);
 
 			if (embedInfo != null) {
 				ArrayList<ColumnInfo> list = new ArrayList<ColumnInfo>();
-				list = getInfoColumnslayout(embedInfo);
+				list = getInfoColumnslayout(embedInfo).columnInfos;
 				//  Convert ArrayList to Array
 				ColumnInfo[] s_layoutEmbedded  = new ColumnInfo[list.size()];
 				list.toArray(s_layoutEmbedded);
@@ -767,7 +836,16 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				String s_sqlFrom = embedInfo.getFromClause();
 				/** Where Clause						*/
 				String s_sqlWhere = relatedInfo.getLinkColumnName() + "=?";
+				
+				// F3P: read where clause in addition to fixed filter
+				
+				if(embedInfo.getWhereClause() != null)
+					s_sqlWhere += " AND " + embedInfo.getWhereClause();
+								
 				m_sqlEmbedded = embeddedTbl.prepareTable(s_layoutEmbedded, s_sqlFrom, s_sqlWhere, false, tableName);
+				
+				if(Util.isEmpty(embedInfo.getOrderByClause(), true) == false)
+					m_sqlEmbedded += " ORDER BY " + embedInfo.getOrderByClause();
 
 				embeddedTbl.setMultiSelection(false);
 
@@ -778,7 +856,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 				
 				//Xolali - add embeddedTbl to list, add m_sqlembedded to list
-				EmbedWinInfo ewinInfo = new EmbedWinInfo(embedInfo,embeddedTbl,m_sqlEmbedded,relatedInfo.getLinkColumnName(), relatedInfo.getLinkInfoColumn(), relatedInfo.getParentRelatedColumn_ID());
+				EmbedWinInfo ewinInfo = new EmbedWinInfo(embedInfo,embeddedTbl,m_sqlEmbedded,relatedInfo.getLinkColumnName(), relatedInfo.getLinkInfoColumn(), relatedInfo.getParentRelatedColumn_ID(), -1);
 				embeddedWinList.add(ewinInfo);
 
 				MInfoWindow riw = (MInfoWindow) relatedInfo.getRelatedInfo();
@@ -794,6 +872,20 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				ZKUpdateUtil.setHeight(desktopTabPanel, "100%");
 				desktopTabPanel.appendChild(embeddedTbl);
 				tabPanels.appendChild(desktopTabPanel);
+				
+				// F3P: update zoom detail status
+				
+				tab.addEventListener(Events.ON_SELECT, new EventListener<Event>() {
+					@Override
+					public void onEvent(Event event) throws Exception 
+					{
+						if(event instanceof SelectEvent<?, ?>)
+						{
+							enableZoomDetail();
+						}
+					}
+				});
+
 			}
 
 		}
@@ -814,10 +906,12 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		gridDisplayedIC.add(null); // First column does not have any matching info column		
 		
 		boolean haveNotProcess = !haveProcess; // A field is editabile only if is not readonly and theres a process
+		
+		String selectionColumnAppendSelectSQL = null; // F3P: if selection is not visible, force-append it at end of select 
 				
 		int i = 0;
 		for(MInfoColumn infoColumn : infoColumns) 
-		{						
+		{
 			if (infoColumn.isDisplayed(infoContext, p_WindowNo)) 
 			{
 				ColumnInfo columnInfo = null;
@@ -865,6 +959,22 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				}
 			}		
 			i++;
+			
+			// F3P: is pre-selection column ?
+			
+			if(infoColumn.getColumnName().equals(SELECTED_COLUMN_NAME))
+			{
+				hasPreSelectionColumn = true;
+				
+				if(infoColumn.isDisplayed() == false)
+				{
+					String colSQL = infoColumn.getSelectClause();
+					if (! colSQL.toUpperCase().contains(" AS "))
+						colSQL += " AS " + infoColumn.getColumnName();
+					
+					selectionColumnAppendSelectSQL = colSQL; 
+				}
+			}
 		}
 		
 		if (keyColumnOfView == null){
@@ -877,8 +987,25 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		if(infoWindowListItemRenderer != null)
 			infoWindowListItemRenderer.setGridDisplaydInfoColumns(gridDisplayedInfoColumns,columnInfos);
 		
-		prepareTable(columnInfos, infoWindow.getFromClause(), p_whereClause, infoWindow.getOrderByClause());		
+		prepareTable(columnInfos, infoWindow.getFromClause(), p_whereClause, infoWindow.getOrderByClause());
+		
+		// F3P: append selection column if needed
+		
+		if(selectionColumnAppendSelectSQL != null)
+		{
+			int idxFrom = m_sqlMain.indexOf("FROM");
+			
+			String preFrom = m_sqlMain.substring(0, idxFrom);
+			String fromStr = m_sqlMain.substring(idxFrom);
+			
+			StringBuilder sbMainSql = new StringBuilder(preFrom);
+			sbMainSql.append(',').append(selectionColumnAppendSelectSQL)
+				.append(" ").append(fromStr);
+			
+			m_sqlMain = sbMainSql.toString(); 			
+		}
 	}
+	
 
 	protected ColumnInfo createLookupColumnInfo(TableInfo[] tableInfos,
 			GridField gridField, MInfoColumn infoColumn) {
@@ -1305,7 +1432,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
         	contentPanel.setStyle("width: 99%; margin: 0px auto;");
         ZKUpdateUtil.setVflex(contentPanel, true);
         contentPanel.setSizedByContent(true);
-        contentPanel.setSpan(true);
+        
+        // F3P: auto span spaces
+        
+        if(LITMInfoWindow.isAutoSpan(infoWindow))
+        	contentPanel.setSpan(true);
         
         North north = new North();
         layout.appendChild(north);
@@ -1711,8 +1842,10 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	@Override
     protected void executeQuery() {
     	prepareTable();    	
-    	cacheOriginalValues.clear(); // F3P: Clear original values     	
+    	cacheOriginalValues.clear(); // F3P: Clear original values   
+		lastClickedMainContentRow = -1; // F3P: clear last clicked row
     	super.executeQuery();
+    	applyFixedColumnWidths(contentPanel, gridDisplayedInfoColumns, false); // F3P: fix width of cols 
     }
     
 	@Override
@@ -1979,7 +2112,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	 * @author xolali IDEMPIERE-1045
 	 * getInfoColumnslayout(MInfoWindow info)
 	 */
-	public ArrayList<ColumnInfo> getInfoColumnslayout(MInfoWindow info){
+	// public ArrayList<ColumnInfo> getInfoColumnslayout(MInfoWindow info){
+	public InfoColumnLayout getInfoColumnslayout(MInfoWindow info){
 
 		AccessSqlParser sqlParser = new AccessSqlParser("SELECT * FROM " + info.getFromClause());
 		TableInfo[] tableInfos = sqlParser.getTableInfo(0);
@@ -1991,6 +2125,18 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 						: tableInfos[0].getTableName();
 
 				String keySelectClause = keyTableAlias + "." + p_keyColumn;
+				
+		// F3P: add IDColumn to enable zooming (similar to main window)
+				
+		String infoTableName = info.getAD_Table().getTableName();
+		String infoKeyColumn = infoTableName + "_ID";
+				
+		String pkeySelectClause = keyTableAlias+"."+infoKeyColumn;
+		list.add(new ColumnInfo(" ", pkeySelectClause, IDColumn.class, true, false, null, p_keyColumn));
+
+		// F3P: return both column infos and info columns
+		ArrayList<MInfoColumn> displayedInfoColumns = new ArrayList<>();
+		displayedInfoColumns.add(null); // First column matching id column
 
 				for (MInfoColumn infoColumn : infoColumns)
 				{
@@ -2031,11 +2177,17 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 						columnInfo.setColDescription(infoColumn.get_Translation("Description"));
 						columnInfo.setGridField(getGridField(infoColumn));
 						list.add(columnInfo);
+						displayedInfoColumns.add(infoColumn);
 					}
 
 				}
+				
+				// F3P: return both column infos and info columns
+				InfoColumnLayout layout = new InfoColumnLayout();
+				layout.columnInfos = list;
+				layout.displayedInfoColumns = displayedInfoColumns;
 
-				return   list;
+				return   layout;
 	}
 
 	/**
@@ -2105,7 +2257,12 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 		ListModelTable model;
 		ArrayList<ColumnInfo> list = new ArrayList<ColumnInfo>();
-		list = getInfoColumnslayout(info.getInfowin());
+		
+		// F3P: get both infocolumns and displayed column info
+		
+		// list = getInfoColumnslayout(info.getInfowin());
+		InfoColumnLayout infoColumnLayout = getInfoColumnslayout(info.getInfowin());
+		list = infoColumnLayout.columnInfos;
 
 		//  Convert ArrayList to Array
 		ColumnInfo[] s_layoutEmbedded  = new ColumnInfo[list.size()];
@@ -2124,9 +2281,13 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			lines.add(data);
 		}
 		model = new ListModelTable(lines);
-
+		
 		WListbox content = (WListbox) info.getInfoTbl();
-		content.setData(model, null);
+		
+		MInfoColumn[] displayedInfoColumns = infoColumnLayout.displayedInfoColumns.toArray(new MInfoColumn[infoColumnLayout.displayedInfoColumns.size()]);
+		ArrayList<Integer> fixedWidths = applyFixedColumnWidths(content, displayedInfoColumns, true); // F3P: fix width of cols
+		
+		content.setData(model, null, null, fixedWidths);
 	}
 
 	/**
@@ -2330,12 +2491,31 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	
 	// Edit Callback method and original values management
 	
-	public Properties getRowaAsCtx(int row, int editingColumn, Object editingValue)
+	/** Get row and params ctx. IF row is < 0, only params are used
+	 * 
+	 * @param row current row, ignored if < 0
+	 * @param editingColumn
+	 * @param editingValue
+	 * @return
+	 */
+	public Properties getRowAndParamsAsCtx(int row, int editingColumn, Object editingValue)
 	{
-		ListModelTable model = contentPanel.getModel();
 		Properties ctx = new Properties(Env.getCtx()); // Allow session values
-		
-		// Parameter dditors
+		return getRowAndParamsAsCtx(row, editingColumn, editingValue, 0, ctx);
+	}
+	
+	/** Get row and params ctx. IF row is < 0, only params are used
+	 * 
+	 * @param row
+	 * @param editingColumn
+	 * @param editingValue
+	 * @param WindowNo
+	 * @param ctx
+	 * @return
+	 */
+	public Properties getRowAndParamsAsCtx(int row, int editingColumn, Object editingValue, int WindowNo, Properties ctx)
+	{
+		// Parameter editors
 		
 		for(WEditor e:editors)
 		{
@@ -2345,19 +2525,52 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			if(val != null)
 			{
 				if(val instanceof Integer)
-					Env.setContext(ctx, 0, column, (Integer)val);
+					Env.setContext(ctx, WindowNo, column, (Integer)val);
 				else if(val instanceof Timestamp)
-					Env.setContext(ctx, 0, column, (Timestamp)val);
+					Env.setContext(ctx, WindowNo, column, (Timestamp)val);
 				else if(val instanceof Boolean)
-					Env.setContext(ctx, 0, column, (Boolean)val);
+					Env.setContext(ctx, WindowNo, column, (Boolean)val);
 				else
-					Env.setContext(ctx, 0, column, val.toString());
+					Env.setContext(ctx, WindowNo, column, val.toString());
+			}
+			else
+			{
+				Env.setContext(ctx, WindowNo, column, (String)null);
 			}
 		}
 		
-		for(int i=0; i < p_layout.length; i++)			
+		if (row >= 0)
+			getTableRowAsCtx(contentPanel, row, editingColumn, editingValue, WindowNo, ctx);
+
+		return ctx;
+	}
+	
+	public void resetTableCtx(WListbox table, int WindowNo, Properties ctx)
+	{
+		ColumnInfo[] layout = table.getLayout(); 
+		
+		for(int i=0; i < layout.length; i++)			
 		{			
-			String column = p_layout[i].getColumnName();
+			String column = layout[i].getColumnName();
+			
+			if(column == null)
+				column = layout[i].getGridField().getColumnName();
+			
+			Env.setContext(ctx, WindowNo, column, (String)null);
+		}
+	}
+	
+	public Properties getTableRowAsCtx(WListbox table, int row, int editingColumn, Object editingValue, int WindowNo, Properties ctx)
+	{
+		ListModelTable model = table.getModel();
+		ColumnInfo[] layout = table.getLayout(); 
+		
+		for(int i=0; i < layout.length; i++)			
+		{			
+			String column = layout[i].getColumnName();
+			
+			if(column == null)
+				column = layout[i].getGridField().getColumnName();
 					
 			Object val = null;
 			
@@ -2382,17 +2595,21 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				}
 								
 				if(val instanceof Integer)
-					Env.setContext(ctx, 0, column, (Integer)val);
+					Env.setContext(ctx, WindowNo, column, (Integer)val);
 				else if(val instanceof Timestamp)
-					Env.setContext(ctx, 0, column, (Timestamp)val);
+					Env.setContext(ctx, WindowNo, column, (Timestamp)val);
 				else if(val instanceof Boolean)
-					Env.setContext(ctx, 0, column, (Boolean)val);
+					Env.setContext(ctx, WindowNo, column, (Boolean)val);
 				else
-					Env.setContext(ctx, 0, column, val.toString());
-			}				
+					Env.setContext(ctx, WindowNo, column, val.toString());
+			}
+			else
+			{
+				Env.setContext(ctx, WindowNo, column, (String)null);
+			}
 		}
 		
-		return ctx;
+		return ctx;		
 	}
 	
 	public void onCellEditCallback(ValueChangeEvent event, int rowIndex, int colIndex, WEditor editor, GridField field)
@@ -2416,7 +2633,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		{
 			changeIsValid = false;
 			
-			Properties ctx = getRowaAsCtx(rowIndex, colIndex, val);
+			Properties ctx = getRowAndParamsAsCtx(rowIndex, colIndex, val);
 			
 			String rawSQL = infoColumn.getInputFieldValidation(); 
 			validationSQL = Env.parseContext(ctx, 0, rawSQL, false);
@@ -2552,7 +2769,6 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		
 		enableExportButton();
 	}
-		
 	
 	@Override
 	protected void updateListSelected()
@@ -2660,6 +2876,228 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			return;
 		
 		exportButton.setEnabled(contentPanel.getRowCount() > 0);		
+	}
+
+	// F3P: fill context before running process 
+	
+	/** Get full ctx from selected rows, including parameters, selected main row, selected row of active embedded tab.
+	 *   This is the order applied, in case of conflicting columns with different values, they are overridden by later ones:
+	 *   
+	 *   1. parameters
+	 *   2. main content row (for mutliselection, the last clicked, if selected, is used. If its not selected, the first selected is used)
+	 *   3. selected embedded row
+	 *
+	 * @param WindowNo
+	 * @param ctx
+	 * @return
+	 */
+	public Properties getFullCtxFromSelectedRows(int WindowNo, Properties ctx)
+	{
+		// 0. Reset embedded tables context. (need to be done before main table is considered)
+		
+		for(int i=0; i < embeddedWinList.size(); i++)
+		{
+			EmbedWinInfo embedWinInfo = embeddedWinList.get(i);
+			WListbox listbox = (WListbox)embedWinInfo.getInfoTbl();
+			resetTableCtx(listbox, p_WindowNo, Env.getCtx());
+		}
+		
+		// 1 & 2: Parameters and selected active row
+		
+		int selectedRow = -1;
+		
+		// *** Context from main content		
+		// Check if last clicked is selected
+		
+		for(int sel:contentPanel.getSelectedIndices())
+		{
+			if(sel == lastClickedMainContentRow)
+			{
+				selectedRow = lastClickedMainContentRow;
+				break;
+			}
+		}
+		
+		if(selectedRow < 0)
+			selectedRow = contentPanel.getSelectedIndex();
+						
+		if(selectedRow >= 0)			
+			getRowAndParamsAsCtx(selectedRow, -1, null, p_WindowNo, Env.getCtx());
+		else
+		{
+			resetTableCtx(contentPanel, p_WindowNo, Env.getCtx());
+			getRowAndParamsAsCtx(-1, -1, null, p_WindowNo, Env.getCtx()); // Only parameters
+		}
+		
+		// 3: embedded tab
+		
+		if(embeddedPane.getTabs() != null &&
+				embeddedPane.getSelectedTab() != null)
+		{
+			int selectedIdx = embeddedPane.getSelectedIndex();
+			EmbedWinInfo embedWinInfo = embeddedWinList.get(selectedIdx);
+			WListbox listbox = (WListbox)embedWinInfo.getInfoTbl();
+			int embedSelectedRow = listbox.getSelectedRow();
+
+			if( embedSelectedRow >= 0)
+			{
+				getTableRowAsCtx(listbox, embedSelectedRow, -1, null, p_WindowNo, Env.getCtx());
+			}
+		}
+	
+		return ctx;
+	}
+	
+	// F3P: overriden to fill context for process
+	
+	@Override
+	protected void runProcess(Object processIdObj) 
+	{
+		getFullCtxFromSelectedRows(p_WindowNo, Env.getCtx());
+		super.runProcess(processIdObj);
+	}
+	
+	// F3P: run via process info
+
+	@Override
+	public void setRunViaProcessInfo(ProcessInfo pi)
+	{
+		super.setRunViaProcessInfo(pi);
+		
+		// Pre-set filters
+		
+		ProcessInfoParameter[] piParams = pi.getParameter();
+		if (piParams == null)
+		{
+			ProcessInfoUtil.setParameterFromDB(pi);
+			piParams = pi.getParameter();
+		}
+		
+		if(piParams != null)
+		{
+			for (ProcessInfoParameter param : piParams)
+			{				
+				Object value = param.getParameter();
+				
+				if (value == null)
+					continue;
+				
+				String name = param.getParameterName();
+				
+				for(WEditor editor:editors)
+				{
+					if(editor.getColumnName().equals(name))
+					{
+						editor.setValue(value);
+						dynamicDisplay(editor);
+					}
+				}
+			}
+			
+			onUserQuery();
+		}
+	}
+	
+	protected void initZoomDetail()
+	{
+		if(embeddedWinList != null && embeddedWinList.size() > 0)
+		{
+			zoomDetailButton = ButtonFactory.createNamedButton("ZoomAcross", false, true);  
+			zoomDetailButton.setTooltiptext(Msg.translate(Env.getCtx(), "ZoomRelatedInfo"));
+			zoomDetailButton.setId("ZoomDetail");
+			zoomDetailButton.setEnabled(false);       
+			zoomDetailButton.addEventListener(Events.ON_CLICK, new ZoomDetailAction());
+	
+		    confirmPanel.addComponentsLeft(zoomDetailButton);
+		}
+	}
+	
+	protected void enableZoomDetail()
+	{
+		if(zoomDetailButton == null)
+			return;
+		
+		int selectedTab = embeddedPane.getSelectedIndex();
+		boolean enabled = false;
+		
+		if(selectedTab >= 0)
+		{
+			EmbedWinInfo embedWinInfo = embeddedWinList.get(selectedTab);
+			WListbox listbox = (WListbox)embedWinInfo.getInfoTbl();
+			int embedSelectedRow = listbox.getSelectedRow();			
+			enabled = embedSelectedRow >= 0;
+		}
+				
+		zoomDetailButton.setEnabled( enabled );
+	}
+	
+	protected ArrayList<Integer> applyFixedColumnWidths(WListbox listbox, MInfoColumn[] columns, boolean calcWidthsOnly)
+	{
+		// F3P: fix width of cols
+		
+		WListItemRenderer renderer = (WListItemRenderer)listbox.getItemRenderer();
+		int colCount = renderer.getNoColumns();
+		ArrayList<Integer> fixedWidths = new ArrayList<>();
+					
+		for(int c=0; c < colCount; c++)
+		{			
+			MInfoColumn ic = columns[c];
+			
+			if(ic != null)
+			{
+				int columnWidth = LITMInfoColumn.getColumnWidth(columns[c]);
+				if( columnWidth > 0)
+				{
+					fixedWidths.add(columnWidth);
+				}
+				else
+					fixedWidths.add(null);
+			}
+			else
+				fixedWidths.add(null);
+		}
+		
+		if(calcWidthsOnly == false)
+			listbox.repaint(fixedWidths);
+		
+		return fixedWidths;
+	}
+	
+	private class ZoomDetailAction implements EventListener<Event>
+	{
+		@Override
+		public void onEvent(Event evt) throws Exception
+		{
+			if(evt.getTarget() == zoomDetailButton)
+			{
+				if(embeddedPane.getTabs() != null &&
+						embeddedPane.getSelectedTab() != null)
+				{
+					int selectedEmbedded = embeddedPane.getSelectedIndex();					
+					EmbedWinInfo embedWinInfo = embeddedWinList.get(selectedEmbedded);
+					WListbox listbox = (WListbox)embedWinInfo.getInfoTbl();
+					int embedSelectedRow = listbox.getSelectedRow();
+					int AD_Table_ID = embedWinInfo.getInfowin().getAD_Table_ID();
+					
+					if(embedSelectedRow >= 0)
+					{
+						Integer recordId = listbox.getSelectedRowKey();
+						
+				    	if (listeners != null && listeners.size() > 0)
+				    	{
+					        ValueChangeEvent event = new ValueChangeEvent(this,"zoomEmbed",
+					        		AD_Table_ID,contentPanel.getSelectedRowKey());
+					        fireValueChange(event);
+				    	}
+				    	else
+				    	{    		
+				    		if (AD_Table_ID > 0)
+				    			AEnv.zoom(AD_Table_ID, recordId);
+				    	}
+					}
+				}
+			}
+		}
 	}
 	
 	private class XlsExportAction implements EventListener<Event>
@@ -2826,5 +3264,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		{
 			return false;
 		}		
-	}	
+	}
+	
+	public static class InfoColumnLayout
+	{
+		public ArrayList<ColumnInfo>	columnInfos;
+		public ArrayList<MInfoColumn>	displayedInfoColumns;		
+	}
 }

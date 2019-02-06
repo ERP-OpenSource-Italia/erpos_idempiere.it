@@ -28,6 +28,7 @@ import java.util.logging.Level;
 import org.adempiere.util.Callback;
 import org.adempiere.util.ContextRunnable;
 import org.adempiere.util.FeedbackContainer;
+import org.adempiere.util.IProcessUI;
 import org.adempiere.util.IProcessUI2;
 import org.adempiere.util.ServerContext;
 import org.adempiere.webui.component.Button;
@@ -44,15 +45,20 @@ import org.adempiere.webui.component.Listbox;
 import org.adempiere.webui.component.Row;
 import org.adempiere.webui.component.Rows;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.desktop.IDesktop;
 import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.editor.WTableDirEditor;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.factory.ButtonFactory;
+import org.adempiere.webui.info.InfoWindow;
+import org.adempiere.webui.panel.InfoPanel;
 import org.adempiere.webui.process.WProcessInfo;
+import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
 import org.adempiere.webui.window.MultiFileDownloadDialog;
 import org.compiere.Adempiere;
+import org.compiere.apps.IProcessParameter;
 import org.compiere.model.Lookup;
 import org.compiere.model.MAttachment;
 import org.compiere.model.MClient;
@@ -101,6 +107,8 @@ import org.zkoss.zul.Hlayout;
 import org.zkoss.zul.Html;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Vlayout;
+
+import it.idempiere.base.model.LITMProcess;
 
 public abstract class AbstractProcessDialog extends Window implements IProcessUI2, EventListener<Event>
 {
@@ -811,7 +819,19 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 	public void runProcess() 
 	{
 		Events.sendEvent(DialogEvents.ON_BEFORE_RUN_PROCESS, this, null);
-		future = Adempiere.getThreadPoolExecutor().submit(new DesktopRunnable(new ProcessDialogRunnable(null), getDesktop()));
+		
+		// F3P: Manage info window (cannot be managed inside thread pool executor)
+		
+		int AD_InfoWindow_ID = LITMProcess.getAD_InfoWindow_ID_DB(null, m_pi.getAD_Process_ID());
+		
+		if(AD_InfoWindow_ID > 0)
+		{
+			WProcessCtl.process(AbstractProcessDialog.this, getWindowNo(), getParameterPanel(), m_pi, null);
+			
+			onComplete();
+		}
+		else
+			future = Adempiere.getThreadPoolExecutor().submit(new DesktopRunnable(new ProcessDialogRunnable(null), getDesktop()));
 	}
 
 	public void runBackgroundJob() 
