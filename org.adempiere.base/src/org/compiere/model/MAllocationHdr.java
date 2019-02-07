@@ -35,6 +35,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *  Payment Allocation Model.
  * 	Allocation Trigger update C_BPartner
@@ -438,18 +440,21 @@ public class MAllocationHdr extends X_C_AllocationHdr implements DocAction
 				m_processMsg = "No Business Partner";
 				return DocAction.STATUS_Invalid;
 			}
-
-			// IDEMPIERE-1850 - validate date against related docs
-			if (line.getC_Invoice_ID() > 0) {
-				if (line.getC_Invoice().getDateAcct().after(getDateAcct())) {
-					m_processMsg = "Wrong allocation date";
-					return DocAction.STATUS_Invalid;
+			
+			if(STDSysConfig.isAllocationDoNotCheckTrxDates(getAD_Client_ID(), getAD_Org_ID()) == false)
+			{
+				// IDEMPIERE-1850 - validate date against related docs
+				if (line.getC_Invoice_ID() > 0) {
+					if (line.getC_Invoice().getDateAcct().after(getDateAcct())) {
+						m_processMsg = "Wrong allocation date";
+						return DocAction.STATUS_Invalid;
+					}
 				}
-			}
-			if (line.getC_Payment_ID() > 0) {
-				if (line.getC_Payment().getDateAcct().after(getDateAcct())) {
-					m_processMsg = "Wrong allocation date";
-					return DocAction.STATUS_Invalid;
+				if (line.getC_Payment_ID() > 0) {
+					if (line.getC_Payment().getDateAcct().after(getDateAcct())) {
+						m_processMsg = "Wrong allocation date";
+						return DocAction.STATUS_Invalid;
+					}
 				}
 			}
 		}

@@ -627,4 +627,12 @@ public class STDSysConfig
 	{
 		return MSysConfig.getIntValue(LIT_LINENO_INCREMENT, 10, AD_Client_ID, AD_Org_ID);
 	}
+	
+	private static final String LIT_ALLOCATION_DONOTCHECTRXDATES = "LIT_ALLOCATION_DONOTCHECTRXDATES";
+	
+	public static boolean isAllocationDoNotCheckTrxDates(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getBooleanValue(LIT_ALLOCATION_DONOTCHECTRXDATES, false, AD_Client_ID, AD_Org_ID);
+	}
+
 }
