@@ -80,6 +80,8 @@ import org.zkoss.zul.Center;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.South;
 
+import it.idempiere.base.model.LITMUser;
+
 /**
  *	EMail Dialog
  *
@@ -374,6 +376,8 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 		setTo(to);
 		setSubject(subject);
 		setMessage(message);
+		
+		isAcknowledgmentReceipt.setChecked(LITMUser.isAcknowledgeEmail(from));
 	}	//	set
 
 	/**
@@ -834,6 +838,25 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 			fMessage.setValue(getMessage() + "\n" + embedImgToEmail(mt, attachment));
 			
 		}
+	}
+	
+	// F3P: added setTo by AD_User_ID
+	
+	public void setTo(MUser mUser)
+	{
+		m_user = mUser;
+		String email = m_user.getEMail();
+		fUser.setValue(mUser.getAD_User_ID());
+		
+		if( Util.isEmpty(email) == false)
+		{
+			setTo(email.trim());
+		}
+	}
+	
+	public void setAcknoledgmentReceipt(boolean bAck)
+	{
+		isAcknowledgmentReceipt.setChecked(bAck);
 	}
 
 }	//	WEMailDialog
