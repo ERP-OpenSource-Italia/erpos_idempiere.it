@@ -441,17 +441,17 @@ public class MAllocationHdr extends X_C_AllocationHdr implements DocAction
 				return DocAction.STATUS_Invalid;
 			}
 			
-			if(STDSysConfig.isAllocationDoNotCheckTrxDates(getAD_Client_ID(), getAD_Org_ID()) == false)
+			if(STDSysConfig.isAllocationCheckTrxDates(getAD_Client_ID(), getAD_Org_ID()))
 			{
 				// IDEMPIERE-1850 - validate date against related docs
 				if (line.getC_Invoice_ID() > 0) {
-					if (line.getC_Invoice().getDateAcct().after(getDateAcct())) {
+					if (line.getC_Invoice().getDateInvoiced().after(getDateTrx())) {
 						m_processMsg = "Wrong allocation date";
 						return DocAction.STATUS_Invalid;
 					}
 				}
 				if (line.getC_Payment_ID() > 0) {
-					if (line.getC_Payment().getDateAcct().after(getDateAcct())) {
+					if (line.getC_Payment().getDateTrx().after(getDateTrx())) {
 						m_processMsg = "Wrong allocation date";
 						return DocAction.STATUS_Invalid;
 					}
