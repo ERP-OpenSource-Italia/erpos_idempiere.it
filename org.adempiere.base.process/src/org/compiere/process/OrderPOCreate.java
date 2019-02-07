@@ -51,7 +51,7 @@ public class OrderPOCreate extends SvrProcess
 	/**	Customer			*/
 	private int			p_C_BPartner_ID;
 	/**	Vendor				*/
-	private int			p_Vendor_ID;
+	protected int			p_Vendor_ID;
 	/**	Sales Order			*/
 	private int			p_C_Order_ID;
 	/** Drop Ship			*/
@@ -188,7 +188,7 @@ public class OrderPOCreate extends SvrProcess
 	 *	@return number of POs created
 	 * @throws Exception 
 	 */
-	private int createPOFromSO (MOrder so) throws Exception
+	protected int createPOFromSO (MOrder so) throws Exception
 	{
 		if (log.isLoggable(Level.INFO)) log.info(so.toString());
 		MOrderLine[] soLines = so.getLines(true, null);

@@ -39,7 +39,7 @@ import it.idempiere.base.util.STDSysConfig;
  */
 public class ProjectPhaseGenOrder  extends SvrProcess
 {
-	private int		m_C_ProjectPhase_ID = 0;
+	protected int		m_C_ProjectPhase_ID = 0;
 
 	/**
 	 *  Prepare - e.g., get Parameters.
