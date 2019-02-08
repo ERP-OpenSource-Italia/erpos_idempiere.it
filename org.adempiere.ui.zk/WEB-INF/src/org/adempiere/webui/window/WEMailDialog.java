@@ -80,6 +80,8 @@ import org.zkoss.zul.Center;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.South;
 
+import it.idempiere.base.model.LITMUser;
+
 /**
  *	EMail Dialog
  *
@@ -157,8 +159,11 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 			
 			fUser = new WSearchEditor(lookup, "AD_User_ID", "", false, false, true);
 			fUser.addValueChangeListener(this);
+			fUser.setMultiselectionInfoWindow(true); // F3P: Multiselection user
+			
 			fCcUser = new WSearchEditor(lookup, "AD_User_ID", "", false, false, true);
-			fCcUser.addValueChangeListener(this);
+			fCcUser.addValueChangeListener(this);			
+			fCcUser.setMultiselectionInfoWindow(true); // F3P: Multiselection CC
 		}
 		catch(Exception ex)
 		{
@@ -374,6 +379,8 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 		setTo(to);
 		setSubject(subject);
 		setMessage(message);
+		
+		isAcknowledgmentReceipt.setChecked(LITMUser.isAcknowledgeEmail(from));
 	}	//	set
 
 	/**
@@ -636,12 +643,28 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 				m_user = MUser.get(Env.getCtx(), AD_User_ID);
 				if (Util.isEmpty(m_user.getEMail())) 
 				{
-					FDialog.error(0, Msg.getMsg(Env.getCtx(), "UserNoEmailAddress"));
+					FDialog.error(0, Msg.getMsg(Env.getCtx(), "UserNoEmailAddress") + ": " + m_user.getName());
 				} 
 				else 
 				{
 					addTo(m_user.getEMail(), true);
 				}
+			}
+			else if(value instanceof Integer[])
+			{
+				Integer[] users = (Integer[])value;
+				for(Integer AD_User_ID:users)
+				{
+					m_user = MUser.get(Env.getCtx(), AD_User_ID);
+					if (Util.isEmpty(m_user.getEMail())) 
+					{
+						FDialog.error(0, Msg.getMsg(Env.getCtx(), "UserNoEmailAddress") + ": " + m_user.getName());
+					} 
+					else 
+					{
+						addTo(m_user.getEMail(), false);
+					}
+				}				
 			}
 		} else {
 			// fCcUser
@@ -651,12 +674,29 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 				m_ccuser = MUser.get(Env.getCtx(), AD_User_ID);
 				if (Util.isEmpty(m_ccuser.getEMail())) 
 				{
-					FDialog.error(0, Msg.getMsg(Env.getCtx(), "UserNoEmailAddress"));
+					FDialog.error(0, Msg.getMsg(Env.getCtx(), "UserNoEmailAddress") + ": " + m_ccuser.getName());
 				}
 				else
 				{
 					addCC(m_ccuser.getEMail(), true);
 				}
+			}
+			else if(value instanceof Integer[])
+			{
+				Integer[] users = (Integer[])value;
+				for(Integer AD_User_ID:users)
+				{
+					m_ccuser = MUser.get(Env.getCtx(), AD_User_ID);
+					
+					if (Util.isEmpty(m_ccuser.getEMail())) 
+					{
+						FDialog.error(0, Msg.getMsg(Env.getCtx(), "UserNoEmailAddress") + ": " + m_ccuser.getName());
+					}
+					else
+					{
+						addCC(m_ccuser.getEMail(), false);
+					}
+				}				
 			}
 		}
 
@@ -834,6 +874,25 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 			fMessage.setValue(getMessage() + "\n" + embedImgToEmail(mt, attachment));
 			
 		}
+	}
+	
+	// F3P: added setTo by AD_User_ID
+	
+	public void setTo(MUser mUser)
+	{
+		m_user = mUser;
+		String email = m_user.getEMail();
+		fUser.setValue(mUser.getAD_User_ID());
+		
+		if( Util.isEmpty(email) == false)
+		{
+			setTo(email.trim());
+		}
+	}
+	
+	public void setAcknoledgmentReceipt(boolean bAck)
+	{
+		isAcknowledgmentReceipt.setChecked(bAck);
 	}
 
 }	//	WEMailDialog

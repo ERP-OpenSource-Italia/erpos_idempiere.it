@@ -90,6 +90,10 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 	private static final String IN_PROGRESS_IMAGE = "~./zk/img/progress3.gif";
 	
 	private ADWindow adwindow;
+	
+	// F3P: in some use case is usefult to open the info window as mutliselection 
+	
+	private boolean isMultiSelection = false;
 
 	public WSearchEditor (GridField gridField)
 	{
@@ -351,7 +355,7 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 		if (m_tableName == null)	//	sets table name & key column
 			getDirectAccessSQL("*");
 		
-		final InfoPanel ip = InfoManager.create(lookup, gridField, m_tableName, m_keyColumnName, getComponent().getText(), false, getWhereClause());
+		final InfoPanel ip = InfoManager.create(lookup, gridField, m_tableName, m_keyColumnName, getComponent().getText(), isMultiSelection, getWhereClause());
 		if (ip != null && ip.loadedOK() && ip.getRowCount() == 1)
 		{
 			Integer key = ip.getFirstRowKey();
@@ -539,7 +543,7 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 		if (m_tableName == null)	//	sets table name & key column
 			getDirectAccessSQL("*");
 
-		final InfoPanel ip = InfoManager.create(lookup, gridField, m_tableName, m_keyColumnName, queryValue, false, whereClause);
+		final InfoPanel ip = InfoManager.create(lookup, gridField, m_tableName, m_keyColumnName, queryValue, isMultiSelection, whereClause);
 		if (ip != null)
 			showInfoPanel(ip);
 	}
@@ -962,5 +966,12 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 			}
 		}
 		
+	}
+	
+	// F3P: set multiselection
+	
+	public void setMultiselectionInfoWindow(boolean bMulti)
+	{
+		this.isMultiSelection = bMulti;
 	}
 }

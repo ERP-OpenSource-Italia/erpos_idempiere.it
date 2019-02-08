@@ -109,11 +109,18 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 	{
 		this(queryValue, windowNo, tableName, keyColumn, isSOTrx, whereClause, true, null);
 	}
-
+	
 	// FIN: (st) 13/12/17 Added constructor with grid field
 	public InfoGeneralPanel(String queryValue, int windowNo,String tableName,String keyColumn, boolean isSOTrx, String whereClause, boolean lookup, GridField gridField)
 	{
-		super(windowNo, tableName, keyColumn, false,whereClause, lookup, 0, gridField); // FIN: st (13/12/17) propagate gridfield
+		this(queryValue, windowNo,tableName,keyColumn, isSOTrx, whereClause, lookup, gridField, false);
+	}
+	
+	// F3P: constructor with multiselection
+	
+	public InfoGeneralPanel(String queryValue, int windowNo,String tableName,String keyColumn, boolean isSOTrx, String whereClause, boolean lookup, GridField gridField, boolean bMulstiselection)
+	{
+		super(windowNo, tableName, keyColumn, bMulstiselection, whereClause, lookup, 0, gridField); // FIN: st (13/12/17) propagate gridfield
 		
 		setTitle(Msg.getMsg(Env.getCtx(), "Info"));
 
