@@ -560,6 +560,8 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 				//	Save payment
 				if (payment.save())
 				{
+					ModelValidationEngine.get().fireImportValidate(this,imp, payment, ImportValidator.TIMING_AFTER_IMPORT);
+					
 					imp.setC_Payment_ID(payment.getC_Payment_ID());
 					imp.setI_IsImported(true);
 					imp.setProcessed(true);
@@ -577,9 +579,6 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 						payment.saveEx();
 					}
 				}
-				
-				ModelValidationEngine.get().fireImportValidate(this,imp, payment, ImportValidator.TIMING_AFTER_IMPORT);
-				
 			}
 		}
 		catch(Exception e)
