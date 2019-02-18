@@ -190,6 +190,20 @@ public class MRMALine extends X_M_RMALine
         	}
         	m_ioLine = null;
         }
+        else // F3P: precision from default currency
+        {
+        	int C_Currency_ID = Env.getContextAsInt(getCtx(), "$C_Currency_ID");
+        	
+        	if(C_Currency_ID < 1)
+        	{
+        		MClientInfo ci = MClientInfo.get(getCtx(), getAD_Client_ID());
+        		int C_AcctSchema1_ID = ci.getC_AcctSchema1_ID();
+        		MAcctSchema schema = MAcctSchema.get(getCtx(), C_AcctSchema1_ID);
+        		C_Currency_ID = schema.getC_Currency_ID();
+        	}
+        	
+        	precision = MCurrency.getStdPrecision(getCtx(), C_Currency_ID);
+        }
     }
 	
     /**
