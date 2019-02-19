@@ -40,6 +40,7 @@ import org.compiere.model.MInvoiceLine;
 import org.compiere.model.MLandedCostAllocation;
 import org.compiere.model.MOrderLandedCostAllocation;
 import org.compiere.model.MTax;
+import org.compiere.model.PO;
 import org.compiere.model.ProductCost;
 import org.compiere.model.X_M_Cost;
 import org.compiere.util.DB;
@@ -167,7 +168,7 @@ public class Doc_Invoice extends Doc
 			MInvoiceLine line = lines[i];
 			if (line.isDescription())
 				continue;
-			DocLine docLine = new DocLine(line, this);
+			DocLine docLine = createDocLine(line, this);
 			//	Qty
 			BigDecimal Qty = line.getQtyInvoiced();
 			boolean cm = getDocumentType().equals(DOCTYPE_ARCredit)
@@ -1186,5 +1187,16 @@ public class Doc_Invoice extends Doc
 		int no = DB.executeUpdate(sql.toString(), getTrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Updated=" + no);
 	}	//	updateProductPO
+	
+	/**Create DocLine
+	 * Added method to be able to customize the standard DocLine methods
+	 * without changing the rest of the code of the Doc_Invoice
+	 * @param po
+	 * @param doc
+	 * @return new DocLine(po,doc)
+	 */
+	protected DocLine createDocLine(PO po, Doc doc){
+		return new DocLine(po,doc);
+	}
 	
 }   //  Doc_Invoice

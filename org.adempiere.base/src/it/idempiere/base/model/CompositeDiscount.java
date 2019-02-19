@@ -3,7 +3,9 @@ package it.idempiere.base.model;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.adempiere.exceptions.AdempiereException;
@@ -125,52 +127,16 @@ public class CompositeDiscount
 	{		
 		if (Util.isEmpty(composite,true))
 			return Env.ZERO;
-
-		composite = composite.trim();
-		composite = composite.replace(',', '.');
-		composite = composite.replaceAll(" ", "");
-
-		double discount = 100;
-		double dToken = 0d;
-
-		int idx=0;
-
-		while (idx < composite.length()) 
+		
+		BigDecimal discount = new BigDecimal("100");
+		BigDecimal cento = new BigDecimal("100");
+		List<BigDecimal> lstToken = tokenizerCompositeDiscount(composite);
+		for(BigDecimal dToken:lstToken)
 		{
-			String token = null;
-
-			int idxPlus = composite.indexOf('+', idx+1),
-					idxMinus = composite.indexOf('-', idx+1);
-
-			if(idxPlus < 0 && idxMinus < 0)
-			{
-				token = composite.substring(idx, composite.length());
-				idx = composite.length();
-			}
-			else if((idxPlus < idxMinus && idxPlus > 0) || idxMinus < 0) // il primo carattere e' un piu
-			{
-				token = composite.substring(idx,idxPlus);
-				idx = idxPlus;
-			}
-			else
-			{
-				token = composite.substring(idx,idxMinus);
-				idx = idxMinus;				
-			}			
-
-			try 
-			{
-				dToken = Double.valueOf(token).doubleValue();
-			}
-			catch (NumberFormatException e) 
-			{
-				throw new RuntimeException(token);
-			}
-
-			discount = discount*(100d-dToken)/100d;
+			discount = discount.multiply(cento.subtract(dToken)).divide(cento);
 		}
-
-		BigDecimal bdDiscount = new BigDecimal(100d-discount);
+		
+		BigDecimal bdDiscount = cento.subtract(discount);
 
 		if(STDSysConfig.IsErrorWithNegativeCompositeDiscount(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx()))
 				&& bdDiscount.compareTo(Env.ZERO)==-1)
@@ -444,5 +410,62 @@ public class CompositeDiscount
 		}
 	}
 
+	/**Da FEGenerateXML.tokenizerCompositeDiscount(String composite)
+	 * Modificata per ritornare una lista di BigDecimal
+	 * @param composite
+	 * @return 
+	 */
+	public static List<BigDecimal> tokenizerCompositeDiscount(String composite)
+	{
+		List<BigDecimal> listDiscount= new ArrayList<BigDecimal>();
+		
+		if (Util.isEmpty(composite,true))
+			return listDiscount;
+		
+		composite = composite.trim();
+		composite = composite.replace(',', '.');
+		composite = composite.replaceAll(" ", "");
+		
+		BigDecimal dToken = null;
+		
+		int idx=0;
+		
+		while (idx < composite.length()) 
+		{
+			String token = null;
+			
+			int idxPlus  = composite.indexOf('+', idx+1),
+			    idxMinus = composite.indexOf('-', idx+1);
+			
+			if(idxPlus < 0 && idxMinus < 0)
+			{
+				token = composite.substring(idx, composite.length());
+				idx = composite.length();
+			}
+			else if((idxPlus < idxMinus && idxPlus > 0) || idxMinus < 0) // il primo carattere e' un piu
+			{
+				token = composite.substring(idx,idxPlus);
+				idx = idxPlus;
+			}
+			else
+			{
+				token = composite.substring(idx,idxMinus);
+				idx = idxMinus;				
+			}			
+			
+			try 
+			{
+				dToken = new BigDecimal(token);
+				listDiscount.add(dToken);
+			}
+			catch (NumberFormatException e) 
+			{
+				throw new RuntimeException(token);
+			}
+			
+		}
+		
+		return listDiscount;
+	}
 	
 }

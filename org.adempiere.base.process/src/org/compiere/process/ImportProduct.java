@@ -517,9 +517,10 @@ public class ImportProduct extends SvrProcess implements ImportProcess
 				{
 					MProduct product = new MProduct(imp);
 					product.setC_TaxCategory_ID(C_TaxCategory_ID);
-					ModelValidationEngine.get().fireImportValidate(this, imp, product, ImportValidator.TIMING_AFTER_IMPORT);
+					ModelValidationEngine.get().fireImportValidate(this, imp, product, ImportValidator.TIMING_BEFORE_IMPORT);
 					if (product.save())
 					{
+						ModelValidationEngine.get().fireImportValidate(this, imp, product, ImportValidator.TIMING_AFTER_IMPORT);
 						M_Product_ID = product.getM_Product_ID();
 						log.finer("Insert Product");
 						noInsert++;
@@ -661,8 +662,9 @@ public class ImportProduct extends SvrProcess implements ImportProcess
 							pp = new MProductPrice (getCtx(), 
 								p_M_PriceList_Version_ID, M_Product_ID, get_TrxName());
 						pp.setPrices(PriceList, PriceStd, PriceLimit);
-						ModelValidationEngine.get().fireImportValidate(this, imp, pp, ImportValidator.TIMING_AFTER_IMPORT);
+						ModelValidationEngine.get().fireImportValidate(this, imp, pp, ImportValidator.TIMING_BEFORE_IMPORT);
 						pp.saveEx();
+						ModelValidationEngine.get().fireImportValidate(this, imp, pp, ImportValidator.TIMING_AFTER_IMPORT);
 					}
 				}
 				
