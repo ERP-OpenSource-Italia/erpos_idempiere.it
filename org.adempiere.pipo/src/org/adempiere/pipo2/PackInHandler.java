@@ -481,8 +481,9 @@ public class PackInHandler extends DefaultHandler {
 				if (!entry.startElement)
 				{
 					Element e = entry.element;
-					StringBuilder s = new StringBuilder(e.qName);
-					s.append(" [");
+					StringBuilder s = new StringBuilder("unresolved element \n \t");
+					s.append(e.qName).append(" :\n")
+					.append("\t\t [");
 					Set<String> keys = e.properties.keySet();
 					int i = 0;
 					for(String key : keys) 
@@ -495,9 +496,10 @@ public class PackInHandler extends DefaultHandler {
 							s.append(value.contents);
 						i++;
 					}
-					s.append("]");
+					s.append("] \n\t");
 					if (e.unresolved != null && e.unresolved.length() > 0)
-						s.append(" unresolved ").append(e.unresolved);
+						s.append(" unresolved column ").append(e.unresolved).append("\n");
+					
 					log.warning(s.toString());
 					packIn.getNotifier().addFailureLine(s.toString());
 				}
