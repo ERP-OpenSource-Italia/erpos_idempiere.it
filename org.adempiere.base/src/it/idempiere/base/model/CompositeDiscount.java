@@ -15,6 +15,7 @@ import org.compiere.model.MOrderLine;
 import org.compiere.model.MPriceList;
 import org.compiere.model.MPriceListVersion;
 import org.compiere.model.MProductPrice;
+import org.compiere.model.MRequisitionLine;
 import org.compiere.model.PO;
 import org.compiere.model.X_M_ProductPriceVendorBreak;
 import org.compiere.util.Env;
@@ -75,11 +76,12 @@ public class CompositeDiscount
 
 		MAP_TABLES.put(MDiscountSchemaLine.Table_Name, mapDiscountSchemaLine);
 
-		Map<String,String> mapOrderInvoiceLine = new HashMap<String, String>();
-		mapOrderInvoiceLine.put(COLUMNNAME_LIT_CompositeDisc, MOrderLine.COLUMNNAME_Discount);
+		Map<String,String> mapOrderInvoiceRequisitionLine = new HashMap<String, String>();
+		mapOrderInvoiceRequisitionLine.put(COLUMNNAME_LIT_CompositeDisc, MOrderLine.COLUMNNAME_Discount);
 
-		MAP_TABLES.put(MOrderLine.Table_Name, mapOrderInvoiceLine);
-		MAP_TABLES.put(MInvoiceLine.Table_Name, mapOrderInvoiceLine);
+		MAP_TABLES.put(MOrderLine.Table_Name, mapOrderInvoiceRequisitionLine);
+		MAP_TABLES.put(MInvoiceLine.Table_Name, mapOrderInvoiceRequisitionLine);
+		MAP_TABLES.put(MRequisitionLine.Table_Name, mapOrderInvoiceRequisitionLine);
 
 		Map<String,String> mapPOPrice = new HashMap<String, String>();
 		mapPOPrice.put(COLUMNNAME_LIT_StdCompositeDisc, COLUMNNAME_LIT_StdDiscount);
