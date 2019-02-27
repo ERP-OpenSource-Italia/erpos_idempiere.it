@@ -600,7 +600,8 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 		addLog (0, null, new BigDecimal (no), "@Errors@");
 		//
 		addLog (0, null, new BigDecimal (noInsert), "@C_Payment_ID@: @Inserted@");
-		return "";
+		StringBuilder msgReturn = new StringBuilder("#").append(noInsert);
+		return msgReturn.toString();
 	}	//	doIt
 
 	@Override
