@@ -11,7 +11,7 @@ import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.model.GridField;
 import org.compiere.model.MInfoColumn;
-import org.compiere.util.KeyNamePair;
+import org.compiere.util.NamePair;
 import org.zkoss.zul.Listcell;
 
 public class WInfoWindowListItemRenderer extends WListItemRenderer
@@ -87,10 +87,10 @@ public class WInfoWindowListItemRenderer extends WListItemRenderer
 					IDColumn idc = (IDColumn)value;
 					value = idc.getRecord_ID();
 				}
-				else if(value instanceof KeyNamePair)
+				else if(value instanceof NamePair)
 				{
-					KeyNamePair knp = (KeyNamePair)value;
-					value = knp.getKey();
+					NamePair knp = (NamePair)value;
+					value = knp.getID();
 				}
 				
 				editor.setValue(value);
