@@ -100,6 +100,7 @@ import org.zkoss.zk.ui.Page;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zk.ui.event.MouseEvent;
 import org.zkoss.zk.ui.event.SelectEvent;
 import org.zkoss.zk.ui.event.SwipeEvent;
 import org.zkoss.zk.ui.util.Clients;
@@ -174,6 +175,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	private int lastClickedMainContentRow = -1;
 	private String tableSelectionColumn = null;
 	private String tableSelectionColumnUpdate = null;
+	private EventListener<Event> listitemClickListener = null;	
 			
 	// F3P: export 
 	
@@ -227,8 +229,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				lookup, AD_InfoWindow_ID);
 		this.m_gridfield = field;
 		this.queryValue = queryValue;
-
-   		//Xolali IDEMPIERE-1045
+		
+   		//Xolali IDEMPIERE-1045		
    		contentPanel.addActionListener(new EventListener<Event>() {
    			public void onEvent(Event event) throws Exception {
    				
@@ -278,7 +280,36 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			if (haveProcess)
 				p_multipleSelection = true;
 		}		
-				
+		
+		// F3P: For mutliselection (excluding always InfoProductWindow) enable update of subcontents without altering selection
+		
+		if((this instanceof InfoProductWindow == false) && p_multipleSelection)
+		{
+			contentPanel.setNonselectableTags("*");
+
+			listitemClickListener = new EventListener<Event>() {
+				@Override
+				public void onEvent(Event event) throws Exception {
+					
+					if(event instanceof MouseEvent)
+					{
+						MouseEvent evt = (MouseEvent)event;
+						Component target = evt.getTarget();
+
+						if(target instanceof Listitem)
+						{
+							Listitem itm = (Listitem)target;
+							int row = itm.getIndex();
+			   				updateSubcontent(row);
+						}
+					}
+				}
+			};
+
+			WListItemRenderer renderer = (WListItemRenderer)contentPanel.getItemRenderer();
+			renderer.addListitemEventListener(Events.ON_CLICK, listitemClickListener);
+		}
+		
 		loadInfoRelatedTabs();
 		if (loadedOK()) {
 			if (isLookup()) {
@@ -3062,7 +3093,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		
 		return fixedWidths;
 	}
-	
+		
 	private class ZoomDetailAction implements EventListener<Event>
 	{
 		@Override
@@ -3271,4 +3302,5 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		public ArrayList<ColumnInfo>	columnInfos;
 		public ArrayList<MInfoColumn>	displayedInfoColumns;		
 	}
+
 }
