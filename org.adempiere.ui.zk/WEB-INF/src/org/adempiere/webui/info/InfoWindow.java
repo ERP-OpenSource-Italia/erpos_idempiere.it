@@ -1629,8 +1629,35 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			}
 		}
 		evalDisplayLogic();
-		initParameters();
+		initParameters();		
+		
+		// F3P: prepare initial context
+		
+		for(WEditor editor : editors)
+		{
+			Object value = editor.getValue();
+			setInfoContext(editor.getColumnName(), value);
+			validateField(editor);
+		}
+		
 		dynamicDisplay(null);
+	}
+	
+	protected void setInfoContext(String columnName, Object value)
+	{
+		if (value == null) {
+			Env.setContext(infoContext, p_WindowNo, columnName, "");
+            Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO, columnName, "");
+		} else if (value instanceof Boolean) {
+			Env.setContext(infoContext, p_WindowNo, columnName, (Boolean)value);
+            Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO, columnName, (Boolean)value);
+		} else if (value instanceof Timestamp) {
+            Env.setContext(infoContext, p_WindowNo, columnName, (Timestamp)value);
+            Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO+"|"+columnName, (Timestamp)value);
+		} else {
+			Env.setContext(infoContext, p_WindowNo, columnName, value.toString());
+            Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO, columnName, value.toString());
+		}
 	}
 
 	protected void evalDisplayLogic() {
@@ -1889,22 +1916,9 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		if (evt != null && evt.getSource() instanceof WEditor)
         {
             WEditor editor = (WEditor)evt.getSource();            
-            if (evt.getNewValue() == null) {
-            	Env.setContext(infoContext, p_WindowNo, editor.getColumnName(), "");
-            	Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO, editor.getColumnName(), "");
-            } else if (evt.getNewValue() instanceof Boolean) {
-            	Env.setContext(infoContext, p_WindowNo, editor.getColumnName(), (Boolean)evt.getNewValue());
-            	Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO, editor.getColumnName(), (Boolean)evt.getNewValue());
-            } else if (evt.getNewValue() instanceof Timestamp) {
-            	Env.setContext(infoContext, p_WindowNo, editor.getColumnName(), (Timestamp)evt.getNewValue());
-            	Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO+"|"+editor.getColumnName(), (Timestamp)evt.getNewValue());
-            } else {
-            	Env.setContext(infoContext, p_WindowNo, editor.getColumnName(), evt.getNewValue().toString());
-            	Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO, editor.getColumnName(), evt.getNewValue().toString());
-            }
+            setInfoContext(editor.getColumnName(), evt.getNewValue()); // F3P: moved set variants to a function
             dynamicDisplay(editor);
-        }
-		
+        }		
 	}
 
 	protected void dynamicDisplay(WEditor editor) {
