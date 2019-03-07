@@ -2306,8 +2306,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			try {
 				data = readData(rs, s_layoutEmbedded);
 			} catch (SQLException e) {
-				//Xolali - Auto-generated catch block
-				e.printStackTrace();
+				throw new AdempiereException(e);
 			}
 			lines.add(data);
 		}
