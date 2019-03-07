@@ -85,6 +85,7 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
+import org.compiere.util.NamePair;
 import org.compiere.util.Trx;
 import org.compiere.util.ValueNamePair;
 import org.zkoss.zk.au.out.AuEcho;
@@ -830,6 +831,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         {
 	        int rowCount = model.getRowCount();
 	        Set<Listitem> selectedItems = new HashSet<>();
+	        Set<Object>   selectedRows = new HashSet<>();
 	        
 	        for(int i=0; i < rowCount; i++)
 	        {
@@ -842,12 +844,17 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	        		{
 	        			Listitem li = contentPanel.getItemAtIndex(i);
 	        			selectedItems.add(li);
+	        			selectedRows.add(model.get(i));
 	        		}
 	        	}
 	        }
 	        
 	        if(selectedItems.size() > 0)
+	        {
+	        	model.setSelection(selectedRows);	  
 	        	contentPanel.setSelectedItems(selectedItems);
+	        	updateListSelected(); 
+	        }
         }
         
         // F3P end
@@ -2225,6 +2232,14 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 						
 						parameters.add(null);
 						parameters.add(knpData.getKey());
+						parameters.add(null);						
+					}
+					else if(data instanceof NamePair)
+					{
+						NamePair npData = (NamePair)data;
+						
+						parameters.add(npData.getID());
+						parameters.add(null);
 						parameters.add(null);						
 					}
 					else
