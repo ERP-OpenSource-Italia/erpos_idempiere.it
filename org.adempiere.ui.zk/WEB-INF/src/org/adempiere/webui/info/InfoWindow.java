@@ -2314,11 +2314,18 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		list.toArray(s_layoutEmbedded);	
 		List<Object> data = new ArrayList<Object>();
 		ArrayList<Object> lines =  new ArrayList<Object>();
+		
+		MInfoColumn[] displayedInfoColumns = infoColumnLayout.displayedInfoColumns
+										.toArray(new MInfoColumn[infoColumnLayout.displayedInfoColumns.size()]);
 
+		// F3P: init running values
+		
+		RunningValues runningValues = new RunningValues(p_layout.length);
+		
 		while (rs.next())
 		{
 			try {
-				data = readData(rs, s_layoutEmbedded);
+				data = readData(rs, s_layoutEmbedded, displayedInfoColumns, runningValues);
 			} catch (SQLException e) {
 				throw new AdempiereException(e);
 			}
@@ -2327,8 +2334,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		model = new ListModelTable(lines);
 		
 		WListbox content = (WListbox) info.getInfoTbl();
-		
-		MInfoColumn[] displayedInfoColumns = infoColumnLayout.displayedInfoColumns.toArray(new MInfoColumn[infoColumnLayout.displayedInfoColumns.size()]);
+				
 		ArrayList<Integer> fixedWidths = applyFixedColumnWidths(content, displayedInfoColumns, true); // F3P: fix width of cols
 		
 		content.setData(model, null, null, fixedWidths);
@@ -2360,12 +2366,14 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		return gridField;
 	}
 
-	protected  ArrayList<Object> readData(ResultSet rs, ColumnInfo[] p_layout) throws SQLException {
-
+	protected  ArrayList<Object> readData(ResultSet rs, ColumnInfo[] p_layout, MInfoColumn[] infoColumns, RunningValues rv) throws SQLException {
+		
 		int colOffset = 1;  //  columns start with 1
 		ArrayList<Object> data = new ArrayList<Object>();
 		for (int col = 0; col < p_layout.length; col++)
 		{
+			MInfoColumn infoColumn = infoColumns[col];
+			
 			Object value = null;
 			Class<?> c = p_layout[col].getColClass();
 			int colIndex = col + colOffset;
@@ -2378,11 +2386,52 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			else if (c == Timestamp.class)
 				value = rs.getTimestamp(colIndex);
 			else if (c == BigDecimal.class)
-				value = rs.getBigDecimal(colIndex);
+			{
+				BigDecimal bdVal = rs.getBigDecimal(colIndex);
+				
+				if(infoColumn != null && LITMInfoColumn.isRunningValue(infoColumn))
+				{
+					if(rv.bdRunningValues[col] != null)
+						bdVal = bdVal.add(rv.bdRunningValues[col]);
+					
+					rv.bdRunningValues[col] = bdVal;
+					value = bdVal;
+				}
+				else
+					value = bdVal; 
+			}
 			else if (c == Double.class)
-				value = new Double(rs.getDouble(colIndex));
+			{				
+				double dVal = rs.getDouble(colIndex);
+				
+				if(infoColumn != null && LITMInfoColumn.isRunningValue(infoColumn))
+				{
+					if(rv.doubleRunningValues[col] != null)
+						dVal += rv.doubleRunningValues[col].doubleValue();
+					
+					Double dValue = new Double(dVal);
+					rv.doubleRunningValues[col] = dValue;
+					value = dValue;
+				}
+				else
+					value = new Double(dVal);
+			}
 			else if (c == Integer.class)
-				value = new Integer(rs.getInt(colIndex));
+			{
+				int iVal = rs.getInt(colIndex);
+				
+				if(infoColumn != null && LITMInfoColumn.isRunningValue(infoColumn))
+				{
+					if(rv.intRunningValues[col] != null)
+						iVal += rv.intRunningValues[col].intValue();
+					
+					Integer iValue = new Integer(iVal);
+					rv.intRunningValues[col] = iValue;
+					value = iValue;
+				}
+				else
+					value = new Integer(iVal);
+			}
 			else if (c == KeyNamePair.class)
 			{
 				if (p_layout[col].isKeyPairCol())
@@ -3314,6 +3363,20 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	{
 		public ArrayList<ColumnInfo>	columnInfos;
 		public ArrayList<MInfoColumn>	displayedInfoColumns;		
+	}
+	
+	public static class RunningValues
+	{
+		protected BigDecimal bdRunningValues[];
+		protected Double doubleRunningValues[];
+		protected Integer intRunningValues[];
+		
+		protected RunningValues(int len) 
+		{
+			bdRunningValues = new BigDecimal[len];
+			doubleRunningValues = new Double[len];
+			intRunningValues = new Integer[len];
+		}
 	}
 
 }

@@ -106,8 +106,6 @@ import org.zkoss.zul.event.PagingEvent;
 import org.zkoss.zul.event.ZulEvents;
 import org.zkoss.zul.ext.Sortable;
 
-import com.sun.jndi.cosnaming.CNNameParser;
-
 import it.idempiere.base.util.STDUtils;
 
 /**
