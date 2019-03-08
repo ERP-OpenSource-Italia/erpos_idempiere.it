@@ -106,6 +106,8 @@ import org.zkoss.zul.event.PagingEvent;
 import org.zkoss.zul.event.ZulEvents;
 import org.zkoss.zul.ext.Sortable;
 
+import com.sun.jndi.cosnaming.CNNameParser;
+
 import it.idempiere.base.util.STDUtils;
 
 /**
@@ -1376,7 +1378,10 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			List<Object> candidateRecord = (List<Object>)contentPanel.getModel().get(rowIndex);
 					
 			if (contentPanel.getModel().isSelected(candidateRecord)){
-				recordSelectedData.put(keyCandidate, candidateRecord);// add or update selected record info				
+				// F3P: we need to keep a clone, because the original list will be cleaned resulting in all nulls
+				List<Object> cloneOfCandidate = new ArrayList<>();
+				cloneOfCandidate.addAll(candidateRecord);
+				recordSelectedData.put(keyCandidate, cloneOfCandidate);// add or update selected record info				
 			}else{
 				if (recordSelectedData.containsKey(keyCandidate)){// unselected record
 					List<Object> recordSelected = recordSelectedData.get(keyCandidate);
@@ -1811,6 +1816,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
             		contentPanel.setSelectedIndex(m_lastSelectedIndex);
 					
             		model.clearSelection();
+            		// clean selected record in cache
+            		recordSelectedData.clear();
 					List<Object> lsSelectedItem = new ArrayList<Object>();
 					lsSelectedItem.add(model.getElementAt(m_lastSelectedIndex));
 					model.setSelection(lsSelectedItem);
