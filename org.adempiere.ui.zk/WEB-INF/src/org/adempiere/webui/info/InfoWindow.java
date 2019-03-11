@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 
@@ -91,6 +92,7 @@ import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
+import org.compiere.util.TrxRunnable;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 import org.zkoss.util.media.AMedia;
@@ -235,7 +237,6 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
    			public void onEvent(Event event) throws Exception {
    				
    				int row = -1;
-   				boolean isSelected = false; // F3P: read selection state of row 
    				
    				if(event instanceof SelectEvent<?, ?>)
    				{
@@ -245,25 +246,39 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
    					if(selEvent.getReference() != null)
    					{
    						row = selEvent.getReference().getIndex();
-   						isSelected = selEvent.getReference().isSelected(); 
    					}
-   				}
-   				
-   				// F3P: update selection status on DB before refreshing panels
-   				
-   				if(row >= 0 && tableSelectionColumnUpdate != null)
-   				{
-   					Object potentialIDC = contentPanel.getValueAt(row, 0);
 
-   					if(potentialIDC instanceof IDColumn)
-   					{
-   	   					IDColumn idc = (IDColumn)potentialIDC;
-   						Object[] params = {isSelected?"Y":"N", idc.getRecord_ID()};
-   						
-   						DB.executeUpdate(tableSelectionColumnUpdate, params, false, null);
-   					}
-				}
-   				   				
+	   				// F3P: update selection status on DB before refreshing panels
+   					
+					final Set<List<Object>> selectedItems = selEvent.getSelectedObjects();
+					final Set<List<Object>> unselectedItems = selEvent.getUnselectedObjects();
+	   				
+	   				if(tableSelectionColumnUpdate != null && 
+	   						(selectedItems.size() > 0 || unselectedItems.size() >0 ))
+	   				{
+	   					Trx.run(new TrxRunnable() {
+							
+							@Override
+							public void run(String trxName) {
+								
+								// Select
+								
+								for(List<Object> row:selectedItems)
+								{
+									updateSelectionColumn(row, true, trxName);
+								}
+
+								// Unselect
+
+								for(List<Object> row:unselectedItems)
+								{
+									updateSelectionColumn(row, false, trxName);
+								}
+							}
+						});
+					}   					
+   				}
+   				   				   				
    				lastClickedMainContentRow = row; // F3P: Keep track of last clicked row
    				updateSubcontent(row);
    			}
@@ -332,6 +347,19 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		
 		// F3P: add export button		
 		initExport();
+	}
+	
+	protected void updateSelectionColumn(List<Object> row, boolean isSelected, String trxName)
+	{
+		Object potentialIDC = row.get(0);
+
+		if(potentialIDC instanceof IDColumn)
+		{
+			IDColumn idc = (IDColumn)potentialIDC;
+			Object[] params = {isSelected?"Y":"N", idc.getRecord_ID()};
+			
+			DB.executeUpdate(tableSelectionColumnUpdate, params, false, trxName);
+		}		
 	}
 	
 	/** 
