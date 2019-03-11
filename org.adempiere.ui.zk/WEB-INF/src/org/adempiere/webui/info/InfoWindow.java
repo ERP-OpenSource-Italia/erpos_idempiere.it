@@ -352,7 +352,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					// get index of link column
 					indexData = p_layout.length + columnDataIndex.get(embed.getParentLinkColumnID());
 				}
-				refresh(contentPanel.getValueAt(row,indexData),embed);
+				refresh(contentPanel.getValueAt(row,indexData),embed, row);
 			}// refresh for all
 		}else{
 			for (EmbedWinInfo embed : embeddedWinList) {
@@ -2239,7 +2239,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	 * @author xolali IDEMPIERE-1045
 	 * refresh(Object obj, EmbedWinInfo relatedInfo)
 	 */
-	protected void refresh(Object obj, EmbedWinInfo relatedInfo)
+	protected void refresh(Object obj, EmbedWinInfo relatedInfo, int row)
 	{
 		StringBuilder sql = new StringBuilder();
 		sql.append(relatedInfo.getInfoSql()); // delete get sql method from MInfoWindow
@@ -2272,7 +2272,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			}
 			
 			rs = pstmt.executeQuery();
-			loadEmbedded(rs, relatedInfo);
+			loadEmbedded(rs, relatedInfo, row);
 		}
 		catch (Exception e)
 		{
@@ -2298,7 +2298,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	 * @author xolali IDEMPIERE-1045
 	 * loadEmbedded(ResultSet rs, EmbedWinInfo info)
 	 */
-	public void loadEmbedded(ResultSet rs, EmbedWinInfo info) throws SQLException{
+	public void loadEmbedded(ResultSet rs, EmbedWinInfo info, int row) throws SQLException{
 
 		ListModelTable model;
 		ArrayList<ColumnInfo> list = new ArrayList<ColumnInfo>();
@@ -2320,12 +2320,13 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 		// F3P: init running values
 		
-		RunningValues runningValues = new RunningValues(p_layout.length);
+		Number runningValues[] = new Number[p_layout.length];
+		Properties queryCtx = getRowAndParamsAsCtx(row, -1, null);
 		
 		while (rs.next())
 		{
 			try {
-				data = readData(rs, s_layoutEmbedded, displayedInfoColumns, runningValues);
+				data = readData(rs, s_layoutEmbedded, displayedInfoColumns, runningValues, queryCtx);
 			} catch (SQLException e) {
 				throw new AdempiereException(e);
 			}
@@ -2366,7 +2367,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		return gridField;
 	}
 
-	protected  ArrayList<Object> readData(ResultSet rs, ColumnInfo[] p_layout, MInfoColumn[] infoColumns, RunningValues rv) throws SQLException {
+	protected  ArrayList<Object> readData(ResultSet rs, ColumnInfo[] p_layout, MInfoColumn[] infoColumns, Number[] runningValues, Properties queryCtx) throws SQLException {
 		
 		int colOffset = 1;  //  columns start with 1
 		ArrayList<Object> data = new ArrayList<Object>();
@@ -2391,10 +2392,25 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				
 				if(infoColumn != null && LITMInfoColumn.isRunningValue(infoColumn))
 				{
-					if(rv.bdRunningValues[col] != null)
-						bdVal = bdVal.add(rv.bdRunningValues[col]);
+					if(runningValues[col] != null)
+					{
+						bdVal = bdVal.add((BigDecimal)runningValues[col]);
+					}
+					else
+					{
+						String ivSql = LITMInfoColumn.getRrunningValueSQL(infoColumn);
+						
+						if(Util.isEmpty(ivSql, true) == false) // Get initial value
+						{
+							String sql = Env.parseContext(queryCtx, 0, ivSql, false);
+							BigDecimal bdIV = DB.getSQLValueBDEx(null, sql);
+							
+							if(bdIV != null)
+								bdVal = bdVal.add(bdIV);
+						}
+					}
 					
-					rv.bdRunningValues[col] = bdVal;
+					runningValues[col] = bdVal;
 					value = bdVal;
 				}
 				else
@@ -2406,11 +2422,26 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				
 				if(infoColumn != null && LITMInfoColumn.isRunningValue(infoColumn))
 				{
-					if(rv.doubleRunningValues[col] != null)
-						dVal += rv.doubleRunningValues[col].doubleValue();
+					if(runningValues[col] != null)
+					{
+						dVal += runningValues[col].doubleValue();
+					}
+					else
+					{
+						String ivSql = LITMInfoColumn.getRrunningValueSQL(infoColumn);
+						
+						if(Util.isEmpty(ivSql, true) == false) // Get initial value
+						{
+							String sql = Env.parseContext(queryCtx, 0, ivSql, false);
+							BigDecimal bdIV = DB.getSQLValueBDEx(null, sql);
+							
+							if(bdIV != null)
+								dVal += bdIV.doubleValue();
+						}
+					}
 					
 					Double dValue = new Double(dVal);
-					rv.doubleRunningValues[col] = dValue;
+					runningValues[col] = dValue;
 					value = dValue;
 				}
 				else
@@ -2422,11 +2453,24 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				
 				if(infoColumn != null && LITMInfoColumn.isRunningValue(infoColumn))
 				{
-					if(rv.intRunningValues[col] != null)
-						iVal += rv.intRunningValues[col].intValue();
+					if(runningValues[col] != null)
+					{
+						iVal += runningValues[col].intValue();
+					}
+					else
+					{
+						String ivSql = LITMInfoColumn.getRrunningValueSQL(infoColumn);
+						
+						if(Util.isEmpty(ivSql, true) == false) // Get initial value
+						{
+							String sql = Env.parseContext(queryCtx, 0, ivSql, false);
+							int iIV = DB.getSQLValueEx(null, sql);							
+							iVal += iIV;
+						}
+					}
 					
 					Integer iValue = new Integer(iVal);
-					rv.intRunningValues[col] = iValue;
+					runningValues[col] = iValue;
 					value = iValue;
 				}
 				else
@@ -3363,20 +3407,5 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	{
 		public ArrayList<ColumnInfo>	columnInfos;
 		public ArrayList<MInfoColumn>	displayedInfoColumns;		
-	}
-	
-	public static class RunningValues
-	{
-		protected BigDecimal bdRunningValues[];
-		protected Double doubleRunningValues[];
-		protected Integer intRunningValues[];
-		
-		protected RunningValues(int len) 
-		{
-			bdRunningValues = new BigDecimal[len];
-			doubleRunningValues = new Double[len];
-			intRunningValues = new Integer[len];
-		}
-	}
-
+	}	
 }
