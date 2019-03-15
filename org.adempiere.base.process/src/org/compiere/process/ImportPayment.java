@@ -19,6 +19,7 @@ package org.compiere.process;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Savepoint;
 import java.util.Properties;
 import java.util.logging.Level;
 
@@ -31,6 +32,8 @@ import org.compiere.model.X_I_Payment;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
+import org.compiere.util.Trx;
+
 
 /**
  * 	Import Payments
@@ -471,6 +474,7 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		int noInsert = 0;
+		int processErr = 0;
 		try
 		{
 			pstmt = DB.prepareStatement(sql.toString(), get_TrxName());
@@ -568,13 +572,38 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 					imp.saveEx();
 					noInsert++;
 
+					//GM: Set DOCSTATUS_Invalid if non Completed
 					if (payment != null && m_docAction != null && m_docAction.length() > 0)
 					{
-						payment.setDocAction(m_docAction);
-						if(!payment.processIt (m_docAction)) {
-							log.warning("Payment Process Failed: " + payment + " - " + payment.getProcessMsg());
-							throw new IllegalStateException("Payment Process Failed: " + payment + " - " + payment.getProcessMsg());
-							
+						Trx trx = Trx.get(get_TrxName(), false);
+						Savepoint processSavepoint = trx.setSavepoint(null);
+						StringBuilder errMsg= null;
+						try
+						{
+							if(!payment.processIt (m_docAction)) 
+							{
+								errMsg = new StringBuilder("Order Process Failed: ")
+										.append(payment.getDocumentNo()).append(" - ")
+										.append(payment.getProcessMsg());
+								throw new IllegalStateException("Payment Process Failed: " + payment + " - " + payment.getProcessMsg());
+							}
+						}
+						catch(Exception e)
+						{
+							log.warning(e.getMessage());
+						}
+						finally
+						{
+							if(errMsg != null)
+								trx.rollback(processSavepoint);
+
+							trx.releaseSavepoint(processSavepoint);
+							processSavepoint = null;
+						}					
+
+						if(errMsg != null){
+							payment.setDocStatus(MPayment.DOCSTATUS_Invalid);	
+							processErr++;
 						}
 						payment.saveEx();
 					}
@@ -598,7 +627,8 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 			.append("WHERE I_IsImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		addLog (0, null, new BigDecimal (no), "@Errors@");
-		//
+		//GM: Error on process
+		addLog (0, null, new BigDecimal(processErr), "@Errors@: @Process@");
 		addLog (0, null, new BigDecimal (noInsert), "@C_Payment_ID@: @Inserted@");
 		StringBuilder msgReturn = new StringBuilder("#").append(noInsert);
 		return msgReturn.toString();
