@@ -28,7 +28,6 @@ import java.util.logging.Level;
 import org.adempiere.util.Callback;
 import org.adempiere.util.ContextRunnable;
 import org.adempiere.util.FeedbackContainer;
-import org.adempiere.util.IProcessUI;
 import org.adempiere.util.IProcessUI2;
 import org.adempiere.util.ServerContext;
 import org.adempiere.webui.component.Button;
@@ -45,20 +44,16 @@ import org.adempiere.webui.component.Listbox;
 import org.adempiere.webui.component.Row;
 import org.adempiere.webui.component.Rows;
 import org.adempiere.webui.component.Window;
-import org.adempiere.webui.desktop.IDesktop;
 import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.editor.WTableDirEditor;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.factory.ButtonFactory;
-import org.adempiere.webui.info.InfoWindow;
-import org.adempiere.webui.panel.InfoPanel;
 import org.adempiere.webui.process.WProcessInfo;
-import org.adempiere.webui.session.SessionManager;
+import org.adempiere.webui.util.UIFeedbackNotifier;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
 import org.adempiere.webui.window.MultiFileDownloadDialog;
 import org.compiere.Adempiere;
-import org.compiere.apps.IProcessParameter;
 import org.compiere.model.Lookup;
 import org.compiere.model.MAttachment;
 import org.compiere.model.MClient;
@@ -968,6 +963,23 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 	{
 		hideBusyDialog();
 		updateUI();		
+		
+		ProcessInfo pi = getProcessInfo();
+		if(pi != null)
+		{
+			FeedbackContainer feedbackContainer = pi.getFeedbackContainer();
+			if(feedbackContainer != null)
+			{
+				final UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getMaskComponent(), feedbackContainer, new Callback<UIFeedbackNotifier>()
+				{
+					public void onCallback(UIFeedbackNotifier notifier) 
+					{			
+					};
+				});
+				
+				notifier.processFeedback();
+			}
+		}
 	}
 	
 	public abstract void hideBusyDialog();

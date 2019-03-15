@@ -17,6 +17,7 @@ public class UIFeedbackNotifier
 	private final Component					component;
 	
 	private final List<FeedbackRequest>		warnings;
+	private final List<FeedbackRequest>		notices;
 	private final List<FeedbackRequest>		questions;
 	private FeedbackRequest								currentRequest = null;
 
@@ -27,6 +28,7 @@ public class UIFeedbackNotifier
 		this.windowNo = WindowNo;
 		this.component = component;
 		
+		this.notices = container.getByType(FeedbackRequest.TYPE_NOTICE);
 		this.warnings = container.getByType(FeedbackRequest.TYPE_WARNING);
 		this.questions = container.getByType(FeedbackRequest.TYPE_ASK);		
 	}
@@ -53,6 +55,11 @@ public class UIFeedbackNotifier
 			currentRequest = warnings.remove(0);
 		}
 		
+		if(currentRequest == null && notices.size() > 0)
+		{
+			currentRequest = notices.remove(0);
+		}
+		
 		if(currentRequest != null) // No more request, invoke callback
 		{
 			if(currentRequest.getTitle() == null)
@@ -61,6 +68,10 @@ public class UIFeedbackNotifier
 			if(currentRequest.getType() == FeedbackRequest.TYPE_ASK)
 			{
 				FDialog.ask(windowNo, component, currentRequest.getTitle(), null, currentRequest.getMessage(), new AskCallback());
+			}
+			else if(currentRequest.getType() == FeedbackRequest.TYPE_NOTICE)
+			{
+				FDialog.warn(windowNo,component,  null, currentRequest.getMessage(), currentRequest.getTitle(), new NoticeCallback());
 			}
 			else
 			{
@@ -99,5 +110,13 @@ public class UIFeedbackNotifier
 		}
 	}
 
+	private class NoticeCallback implements Callback<Integer>
+	{
+		@Override
+		public void onCallback(Integer result)
+		{
+			processFeedbackInt(null);			
+		}
+	}
 
 }

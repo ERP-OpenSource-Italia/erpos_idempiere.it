@@ -29,6 +29,7 @@ import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.PeriodClosedException;
+import org.adempiere.util.FeedbackContainer;
 import org.adempiere.util.IProcessUI;
 import org.adempiere.util.PaymentUtil;
 import org.compiere.process.DocAction;
@@ -2111,6 +2112,13 @@ public class MPayment extends X_C_Payment
 		{
 			m_processMsg = valid;
 			return DocAction.STATUS_Invalid;
+		}
+		
+		// F3P: check gathered feedback
+		
+		if(FeedbackContainer.getCurrent() != null)
+		{
+			FeedbackContainer.getCurrent().appendInfoFeedback(new StringBuilder(m_processMsg));
 		}
 
 		//
