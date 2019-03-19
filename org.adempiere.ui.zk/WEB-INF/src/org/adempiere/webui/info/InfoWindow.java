@@ -703,14 +703,15 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				
 				if (infoColumn.isQueryCriteria() && infoColumn.getDefaultValue() != null)
 				{
+					int tabNo = (m_gridfield != null && m_gridfield.getGridTab() != null) ? m_gridfield.getGridTab().getTabNo() : -1;
 
 					String defStr = null;
 					if (infoColumn.getDefaultValue() != null && infoColumn.getDefaultValue().startsWith("@SQL="))
 					{
 						String sql = infoColumn.getDefaultValue().substring(5);			//	w/o tag
 						//sql = Env.parseContext(m_vo.ctx, m_vo.WindowNo, sql, false, true);	//	replace variables
-						//hengsin, capture unparseable error to avoid subsequent sql exception
-						sql = Env.parseContext(infoContext, p_WindowNo, sql, false, false);	//	replace variables
+						//hengsin, capture unparseable error to avoid subsequent sql exception						
+						sql = Env.parseContext(infoContext, p_WindowNo, tabNo, sql, false, false);	//	replace variables
 						if (sql.equals(""))
 						{
 							log.log(Level.WARNING, "(" + vo.ColumnName + ") - Default SQL variable parse failed: "
@@ -752,7 +753,14 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 						}
 					}	
 					else
+					{
 						vo.DefaultValue = infoColumn.getDefaultValue();
+						
+						if(vo.DefaultValue.indexOf('@') >= 0)
+						{
+							vo.DefaultValue = Env.parseContext(infoContext, p_WindowNo, tabNo, vo.DefaultValue, false, false);	//	replace variables
+						}						
+					}
 				}
 
 				String desc = infoColumn.get_Translation("Description");

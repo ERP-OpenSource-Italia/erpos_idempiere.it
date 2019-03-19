@@ -113,7 +113,7 @@ public class DefaultInfoFactory implements IInfoFactory {
 	                    multiSelection, whereClause, lookup);
 	    	}
         } else {
-        	info = new InfoWindow(WindowNo, tableName, keyColumn, value, multiSelection, whereClause, AD_InfoWindow_ID, lookup);
+        	info = new InfoWindow(WindowNo, tableName, keyColumn, value, multiSelection, whereClause, AD_InfoWindow_ID, lookup, gridField);
         	if (!info.loadedOK()) {
 	            info = new InfoGeneralPanel (value, WindowNo,
 	                tableName, keyColumn,
