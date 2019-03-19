@@ -283,7 +283,8 @@ public class InventoryCountCreate extends SvrProcess
 		// TODO???? This is not working --- must create one line and multiple MA
 		if (m_line != null 
 			&& m_line.getM_Locator_ID() == M_Locator_ID
-			&& m_line.getM_Product_ID() == M_Product_ID)
+			&& m_line.getM_Product_ID() == M_Product_ID
+			&& m_line.getM_AttributeSetInstance_ID() == M_AttributeSetInstance_ID)
 		{
 			if (QtyOnHand.signum() == 0)
 				return 0;
@@ -303,7 +304,7 @@ public class InventoryCountCreate extends SvrProcess
 				if (!ma.save())
 					log.warning("Could not save " + ma);
 			}
-			m_line.setM_AttributeSetInstance_ID(0);
+			//m_line.setM_AttributeSetInstance_ID(0);
 			m_line.setQtyBook(m_line.getQtyBook().add(QtyOnHand));
 			m_line.setQtyCount(m_line.getQtyCount().add(QtyOnHand));
 			m_line.saveEx();
