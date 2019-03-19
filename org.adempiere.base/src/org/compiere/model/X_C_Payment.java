@@ -1980,6 +1980,8 @@ public class X_C_Payment extends PO implements I_C_Payment, I_Persistent
 	public static final String TENDERTYPE_Account = "T";
 	/** Cash = X */
 	public static final String TENDERTYPE_Cash = "X";
+	/** Riba = R */
+	public static final String TENDERTYPE_Riba = "R";
 	/** Set Tender type.
 		@param TenderType 
 		Method of Payment

@@ -332,6 +332,11 @@ public class MPaySelectionCheck extends X_C_PaySelectionCheck
 					payment.setTenderType(X_C_Payment.TENDERTYPE_Account);
 					payment.setC_BankAccount_ID(check.getParent().getC_BankAccount_ID());
 				}
+				else if (check.getPaymentRule().equals(X_C_Payment.TENDERTYPE_Riba))
+				{
+					payment.setTenderType(X_C_Payment.TENDERTYPE_Riba);
+					payment.setC_BankAccount_ID(check.getParent().getC_BankAccount_ID());
+				}
 				// F3P end
 				else
 				{

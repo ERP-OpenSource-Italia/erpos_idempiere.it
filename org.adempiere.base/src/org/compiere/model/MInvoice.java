@@ -35,6 +35,7 @@ import org.adempiere.exceptions.BPartnerNoAddressException;
 import org.adempiere.exceptions.DBException;
 import org.adempiere.exceptions.PeriodClosedException;
 import org.adempiere.model.ITaxProvider;
+import org.adempiere.util.FeedbackContainer;
 import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.DocAction;
@@ -2248,6 +2249,14 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		MInvoice counter = createCounterDoc();
 		if (counter != null)
 			info.append(" - @CounterDoc@: @C_Invoice_ID@=").append(counter.getDocumentNo());
+		
+		
+		// F3P: check gathered feedback
+		
+		if(FeedbackContainer.getCurrent() != null)
+		{
+			FeedbackContainer.getCurrent().appendInfoFeedback(info);
+		}
 
 		m_processMsg = info.toString().trim();
 		setProcessed(true);
