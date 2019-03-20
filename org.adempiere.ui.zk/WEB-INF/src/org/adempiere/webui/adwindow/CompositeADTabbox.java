@@ -182,7 +182,7 @@ public class CompositeADTabbox extends AbstractADTabbox
 							gatherFor = IEventTopics.PO_BEFORE_NEW;
 				  	
 			  		FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);
-			  		UIFeedbackNotifier notifier = new UIFeedbackNotifier(tabPanel.getGridTab().getWindowNo(), getComponent(), container, new Callback<UIFeedbackNotifier>()
+			  		UIFeedbackNotifier notifier = new UIFeedbackNotifier(tabPanel.getGridTab().getWindowNo(), getComponent(), container,false, new Callback<UIFeedbackNotifier>()
 			  		{
 			  			public void onCallback(UIFeedbackNotifier notifier) {
 			  				boolean bSave = onDetailSaveEvent(tabPanel);

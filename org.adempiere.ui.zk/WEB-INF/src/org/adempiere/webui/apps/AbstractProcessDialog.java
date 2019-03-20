@@ -970,7 +970,7 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			FeedbackContainer feedbackContainer = pi.getFeedbackContainer();
 			if(feedbackContainer != null)
 			{
-				final UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getMaskComponent(), feedbackContainer, new Callback<UIFeedbackNotifier>()
+				final UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getMaskComponent(), feedbackContainer,true, new Callback<UIFeedbackNotifier>()
 				{
 					public void onCallback(UIFeedbackNotifier notifier) 
 					{			

@@ -2243,7 +2243,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 	  				gatherFor = IEventTopics.PO_BEFORE_NEW;
 		  	
 		  		final FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);
-		  		final UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getComponent(), container, new Callback<UIFeedbackNotifier>()
+		  		final UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getComponent(), container,false, new Callback<UIFeedbackNotifier>()
 		  		{
 		  			public void onCallback(UIFeedbackNotifier notifier) {
 		  				
@@ -2870,7 +2870,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 							if(gatherFor != null)
 							{
 								final FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);
-								final UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getComponent(), container, new Callback<UIFeedbackNotifier>()
+								final UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getComponent(), container,false, new Callback<UIFeedbackNotifier>()
 								{
 					  			public void onCallback(UIFeedbackNotifier notifier) {
 					  				executeButtonProcess(wButton, startWOasking, table_ID, recordIdParam, isProcessMandatory, container);

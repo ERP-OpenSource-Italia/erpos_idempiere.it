@@ -1,5 +1,6 @@
 package org.adempiere.webui.util;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.adempiere.exceptions.AdempiereException;
@@ -20,17 +21,26 @@ public class UIFeedbackNotifier
 	private final List<FeedbackRequest>		notices;
 	private final List<FeedbackRequest>		questions;
 	private FeedbackRequest								currentRequest = null;
-
-	public UIFeedbackNotifier(int WindowNo, Component component, FeedbackContainer container, Callback<UIFeedbackNotifier> callAfterFeedback)
+	
+	public UIFeedbackNotifier(int WindowNo, Component component, FeedbackContainer container,boolean isAfter, Callback<UIFeedbackNotifier> callAfterFeedback)
 	{
 		this.container = container;
 		this.callAfterFeedback = callAfterFeedback;
 		this.windowNo = WindowNo;
 		this.component = component;
 		
-		this.notices = container.getByType(FeedbackRequest.TYPE_NOTICE);
-		this.warnings = container.getByType(FeedbackRequest.TYPE_WARNING);
-		this.questions = container.getByType(FeedbackRequest.TYPE_ASK);		
+		if(isAfter)
+		{
+			this.notices = container.getByType(FeedbackRequest.TYPE_NOTICE);
+			this.warnings =new ArrayList<FeedbackRequest>();
+			this.questions = new ArrayList<FeedbackRequest>();
+		}
+		else
+		{
+			this.warnings = container.getByType(FeedbackRequest.TYPE_WARNING);
+			this.questions = container.getByType(FeedbackRequest.TYPE_ASK);
+			this.notices = new ArrayList<FeedbackRequest>();
+		}
 	}
 	
 	public void processFeedback()
