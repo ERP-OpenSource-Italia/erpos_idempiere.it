@@ -315,6 +315,10 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 						{
 							Listitem itm = (Listitem)target;
 							int row = itm.getIndex();
+							
+							m_lastSelectedIndex = row;
+							lastClickedMainContentRow = row;
+							
 			   				updateSubcontent(row);
 						}
 					}
@@ -3080,8 +3084,13 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		int selectedRow = -1;
 		
 		// *** Context from main content		
-		// Check if last clicked is selected
 		
+		
+		if(lastClickedMainContentRow >= 0)
+			selectedRow = lastClickedMainContentRow;
+
+		/* Always use last clicked
+		// Check if last clicked is selected
 		for(int sel:contentPanel.getSelectedIndices())
 		{
 			if(sel == lastClickedMainContentRow)
@@ -3090,6 +3099,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				break;
 			}
 		}
+		*/
 		
 		if(selectedRow < 0)
 			selectedRow = contentPanel.getSelectedIndex();

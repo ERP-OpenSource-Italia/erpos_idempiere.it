@@ -392,7 +392,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	private boolean m_useDatabasePaging = false;
 	private BusyDialog progressWindow;
 	// in case double click to item. this store clicked item (maybe it's un-select item)
-	private int m_lastSelectedIndex = -1;
+	protected int m_lastSelectedIndex = -1;
 	protected GridField m_gridfield;
 
 	/**
@@ -1811,30 +1811,35 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
             	}
             	if (contentPanel.isMultiple() && m_lastSelectedIndex >= 0) {
 					
-            		contentPanel.setSelectedIndex(m_lastSelectedIndex);
-					
-            		model.clearSelection();
-            		// clean selected record in cache
-            		recordSelectedData.clear();
-					List<Object> lsSelectedItem = new ArrayList<Object>();
-					lsSelectedItem.add(model.getElementAt(m_lastSelectedIndex));
-					model.setSelection(lsSelectedItem);
-					
-					int m_keyColumnIndex = contentPanel.getKeyColumnIndex();
-					for (int i = 0; i < contentPanel.getRowCount(); i++) {
-						// Find the IDColumn Key
-						Object data = contentPanel.getModel().getValueAt(i, m_keyColumnIndex);
-						if (data instanceof IDColumn) {
-							IDColumn dataColumn = (IDColumn) data;
-	
-							if (i == m_lastSelectedIndex) {
-								dataColumn.setSelected(true);
-							}
-							else {
-								dataColumn.setSelected(false);
+            		// F3P: for a mutliselection panel, dont reset selection unless its a lookup
+            		
+            		if(contentPanel.isMultiple() && isLookup())
+            		{
+	            		contentPanel.setSelectedIndex(m_lastSelectedIndex);
+						
+	            		model.clearSelection();
+	            		// clean selected record in cache
+	            		recordSelectedData.clear();
+						List<Object> lsSelectedItem = new ArrayList<Object>();
+						lsSelectedItem.add(model.getElementAt(m_lastSelectedIndex));
+						model.setSelection(lsSelectedItem);
+						
+						int m_keyColumnIndex = contentPanel.getKeyColumnIndex();
+						for (int i = 0; i < contentPanel.getRowCount(); i++) {
+							// Find the IDColumn Key
+							Object data = contentPanel.getModel().getValueAt(i, m_keyColumnIndex);
+							if (data instanceof IDColumn) {
+								IDColumn dataColumn = (IDColumn) data;
+		
+								if (i == m_lastSelectedIndex) {
+									dataColumn.setSelected(true);
+								}
+								else {
+									dataColumn.setSelected(false);
+								}
 							}
 						}
-					}
+            		}
             	}
             	onDoubleClick();
             	contentPanel.repaint();
@@ -2352,7 +2357,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		}
 		else
 		{
-			zoom();
+			if(m_lastSelectedIndex >= 0)
+			{
+				Integer key = contentPanel.getRowKeyAt (m_lastSelectedIndex);
+				zoom(key);				
+			}
+			else
+				zoom();
 		}
 
 	}
@@ -2361,10 +2372,17 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     {
     	enableButtons();
     }
-
+    
+    // F3P: added zoom by id variant and compatibility function 
+    
     public void zoom()
-    {    	
+    {
     	Integer recordId = contentPanel.getSelectedRowKey();
+    	zoom(recordId);
+    }
+
+    public void zoom(Integer recordId)
+    {    	    	
     	// prevent NPE when double click is raise but no recore is selected
     	if (recordId == null)
     		return;
