@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 
@@ -91,6 +92,7 @@ import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
+import org.compiere.util.TrxRunnable;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 import org.zkoss.util.media.AMedia;
@@ -100,6 +102,7 @@ import org.zkoss.zk.ui.Page;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zk.ui.event.MouseEvent;
 import org.zkoss.zk.ui.event.SelectEvent;
 import org.zkoss.zk.ui.event.SwipeEvent;
 import org.zkoss.zk.ui.util.Clients;
@@ -174,6 +177,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	private int lastClickedMainContentRow = -1;
 	private String tableSelectionColumn = null;
 	private String tableSelectionColumnUpdate = null;
+	private EventListener<Event> listitemClickListener = null;	
 			
 	// F3P: export 
 	
@@ -227,13 +231,12 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				lookup, AD_InfoWindow_ID);
 		this.m_gridfield = field;
 		this.queryValue = queryValue;
-
-   		//Xolali IDEMPIERE-1045
+		
+   		//Xolali IDEMPIERE-1045		
    		contentPanel.addActionListener(new EventListener<Event>() {
    			public void onEvent(Event event) throws Exception {
    				
    				int row = -1;
-   				boolean isSelected = false; // F3P: read selection state of row 
    				
    				if(event instanceof SelectEvent<?, ?>)
    				{
@@ -243,25 +246,39 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
    					if(selEvent.getReference() != null)
    					{
    						row = selEvent.getReference().getIndex();
-   						isSelected = selEvent.getReference().isSelected(); 
    					}
-   				}
-   				
-   				// F3P: update selection status on DB before refreshing panels
-   				
-   				if(row >= 0 && tableSelectionColumnUpdate != null)
-   				{
-   					Object potentialIDC = contentPanel.getValueAt(row, 0);
 
-   					if(potentialIDC instanceof IDColumn)
-   					{
-   	   					IDColumn idc = (IDColumn)potentialIDC;
-   						Object[] params = {isSelected?"Y":"N", idc.getRecord_ID()};
-   						
-   						DB.executeUpdate(tableSelectionColumnUpdate, params, false, null);
-   					}
-				}
-   				   				
+	   				// F3P: update selection status on DB before refreshing panels
+   					
+					final Set<List<Object>> selectedItems = selEvent.getSelectedObjects();
+					final Set<List<Object>> unselectedItems = selEvent.getUnselectedObjects();
+	   				
+	   				if(tableSelectionColumnUpdate != null && 
+	   						(selectedItems.size() > 0 || unselectedItems.size() >0 ))
+	   				{
+	   					Trx.run(new TrxRunnable() {
+							
+							@Override
+							public void run(String trxName) {
+								
+								// Select
+								
+								for(List<Object> row:selectedItems)
+								{
+									updateSelectionColumn(row, true, trxName);
+								}
+
+								// Unselect
+
+								for(List<Object> row:unselectedItems)
+								{
+									updateSelectionColumn(row, false, trxName);
+								}
+							}
+						});
+					}   					
+   				}
+   				   				   				
    				lastClickedMainContentRow = row; // F3P: Keep track of last clicked row
    				updateSubcontent(row);
    			}
@@ -278,7 +295,40 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			if (haveProcess)
 				p_multipleSelection = true;
 		}		
-				
+		
+		// F3P: For mutliselection (excluding always InfoProductWindow) enable update of subcontents without altering selection
+		
+		if((this instanceof InfoProductWindow == false) && p_multipleSelection)
+		{
+			contentPanel.setNonselectableTags("*");
+
+			listitemClickListener = new EventListener<Event>() {
+				@Override
+				public void onEvent(Event event) throws Exception {
+					
+					if(event instanceof MouseEvent)
+					{
+						MouseEvent evt = (MouseEvent)event;
+						Component target = evt.getTarget();
+
+						if(target instanceof Listitem)
+						{
+							Listitem itm = (Listitem)target;
+							int row = itm.getIndex();
+							
+							m_lastSelectedIndex = row;
+							lastClickedMainContentRow = row;
+							
+			   				updateSubcontent(row);
+						}
+					}
+				}
+			};
+
+			WListItemRenderer renderer = (WListItemRenderer)contentPanel.getItemRenderer();
+			renderer.addListitemEventListener(Events.ON_CLICK, listitemClickListener);
+		}
+		
 		loadInfoRelatedTabs();
 		if (loadedOK()) {
 			if (isLookup()) {
@@ -303,6 +353,19 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		initExport();
 	}
 	
+	protected void updateSelectionColumn(List<Object> row, boolean isSelected, String trxName)
+	{
+		Object potentialIDC = row.get(0);
+
+		if(potentialIDC instanceof IDColumn)
+		{
+			IDColumn idc = (IDColumn)potentialIDC;
+			Object[] params = {isSelected?"Y":"N", idc.getRecord_ID()};
+			
+			DB.executeUpdate(tableSelectionColumnUpdate, params, false, trxName);
+		}		
+	}
+	
 	/** 
 	 * 
 	* {@inheritDoc}
@@ -321,7 +384,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					// get index of link column
 					indexData = p_layout.length + columnDataIndex.get(embed.getParentLinkColumnID());
 				}
-				refresh(contentPanel.getValueAt(row,indexData),embed);
+				refresh(contentPanel.getValueAt(row,indexData),embed, row);
 			}// refresh for all
 		}else{
 			for (EmbedWinInfo embed : embeddedWinList) {
@@ -644,14 +707,15 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				
 				if (infoColumn.isQueryCriteria() && infoColumn.getDefaultValue() != null)
 				{
+					int tabNo = (m_gridfield != null && m_gridfield.getGridTab() != null) ? m_gridfield.getGridTab().getTabNo() : -1;
 
 					String defStr = null;
 					if (infoColumn.getDefaultValue() != null && infoColumn.getDefaultValue().startsWith("@SQL="))
 					{
 						String sql = infoColumn.getDefaultValue().substring(5);			//	w/o tag
 						//sql = Env.parseContext(m_vo.ctx, m_vo.WindowNo, sql, false, true);	//	replace variables
-						//hengsin, capture unparseable error to avoid subsequent sql exception
-						sql = Env.parseContext(infoContext, p_WindowNo, sql, false, false);	//	replace variables
+						//hengsin, capture unparseable error to avoid subsequent sql exception						
+						sql = Env.parseContext(infoContext, p_WindowNo, tabNo, sql, false, false);	//	replace variables
 						if (sql.equals(""))
 						{
 							log.log(Level.WARNING, "(" + vo.ColumnName + ") - Default SQL variable parse failed: "
@@ -693,7 +757,14 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 						}
 					}	
 					else
+					{
 						vo.DefaultValue = infoColumn.getDefaultValue();
+						
+						if(vo.DefaultValue.indexOf('@') >= 0)
+						{
+							vo.DefaultValue = Env.parseContext(infoContext, p_WindowNo, tabNo, vo.DefaultValue, false, false);	//	replace variables
+						}						
+					}
 				}
 
 				String desc = infoColumn.get_Translation("Description");
@@ -1598,8 +1669,35 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			}
 		}
 		evalDisplayLogic();
-		initParameters();
+		initParameters();		
+		
+		// F3P: prepare initial context
+		
+		for(WEditor editor : editors)
+		{
+			Object value = editor.getValue();
+			setInfoContext(editor.getColumnName(), value);
+			validateField(editor);
+		}
+		
 		dynamicDisplay(null);
+	}
+	
+	protected void setInfoContext(String columnName, Object value)
+	{
+		if (value == null) {
+			Env.setContext(infoContext, p_WindowNo, columnName, "");
+            Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO, columnName, "");
+		} else if (value instanceof Boolean) {
+			Env.setContext(infoContext, p_WindowNo, columnName, (Boolean)value);
+            Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO, columnName, (Boolean)value);
+		} else if (value instanceof Timestamp) {
+            Env.setContext(infoContext, p_WindowNo, columnName, (Timestamp)value);
+            Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO+"|"+columnName, (Timestamp)value);
+		} else {
+			Env.setContext(infoContext, p_WindowNo, columnName, value.toString());
+            Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO, columnName, value.toString());
+		}
 	}
 
 	protected void evalDisplayLogic() {
@@ -1858,22 +1956,9 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		if (evt != null && evt.getSource() instanceof WEditor)
         {
             WEditor editor = (WEditor)evt.getSource();            
-            if (evt.getNewValue() == null) {
-            	Env.setContext(infoContext, p_WindowNo, editor.getColumnName(), "");
-            	Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO, editor.getColumnName(), "");
-            } else if (evt.getNewValue() instanceof Boolean) {
-            	Env.setContext(infoContext, p_WindowNo, editor.getColumnName(), (Boolean)evt.getNewValue());
-            	Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO, editor.getColumnName(), (Boolean)evt.getNewValue());
-            } else if (evt.getNewValue() instanceof Timestamp) {
-            	Env.setContext(infoContext, p_WindowNo, editor.getColumnName(), (Timestamp)evt.getNewValue());
-            	Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO+"|"+editor.getColumnName(), (Timestamp)evt.getNewValue());
-            } else {
-            	Env.setContext(infoContext, p_WindowNo, editor.getColumnName(), evt.getNewValue().toString());
-            	Env.setContext(infoContext, p_WindowNo, Env.TAB_INFO, editor.getColumnName(), evt.getNewValue().toString());
-            }
+            setInfoContext(editor.getColumnName(), evt.getNewValue()); // F3P: moved set variants to a function
             dynamicDisplay(editor);
-        }
-		
+        }		
 	}
 
 	protected void dynamicDisplay(WEditor editor) {
@@ -2194,7 +2279,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	 * @author xolali IDEMPIERE-1045
 	 * refresh(Object obj, EmbedWinInfo relatedInfo)
 	 */
-	protected void refresh(Object obj, EmbedWinInfo relatedInfo)
+	protected void refresh(Object obj, EmbedWinInfo relatedInfo, int row)
 	{
 		StringBuilder sql = new StringBuilder();
 		sql.append(relatedInfo.getInfoSql()); // delete get sql method from MInfoWindow
@@ -2227,7 +2312,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			}
 			
 			rs = pstmt.executeQuery();
-			loadEmbedded(rs, relatedInfo);
+			loadEmbedded(rs, relatedInfo, row);
 		}
 		catch (Exception e)
 		{
@@ -2253,7 +2338,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	 * @author xolali IDEMPIERE-1045
 	 * loadEmbedded(ResultSet rs, EmbedWinInfo info)
 	 */
-	public void loadEmbedded(ResultSet rs, EmbedWinInfo info) throws SQLException{
+	public void loadEmbedded(ResultSet rs, EmbedWinInfo info, int row) throws SQLException{
 
 		ListModelTable model;
 		ArrayList<ColumnInfo> list = new ArrayList<ColumnInfo>();
@@ -2269,22 +2354,28 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		list.toArray(s_layoutEmbedded);	
 		List<Object> data = new ArrayList<Object>();
 		ArrayList<Object> lines =  new ArrayList<Object>();
+		
+		MInfoColumn[] displayedInfoColumns = infoColumnLayout.displayedInfoColumns
+										.toArray(new MInfoColumn[infoColumnLayout.displayedInfoColumns.size()]);
 
+		// F3P: init running values
+		
+		Number runningValues[] = new Number[p_layout.length];
+		Properties queryCtx = getRowAndParamsAsCtx(row, -1, null);
+		
 		while (rs.next())
 		{
 			try {
-				data = readData(rs, s_layoutEmbedded);
+				data = readData(rs, s_layoutEmbedded, displayedInfoColumns, runningValues, queryCtx);
 			} catch (SQLException e) {
-				//Xolali - Auto-generated catch block
-				e.printStackTrace();
+				throw new AdempiereException(e);
 			}
 			lines.add(data);
 		}
 		model = new ListModelTable(lines);
 		
 		WListbox content = (WListbox) info.getInfoTbl();
-		
-		MInfoColumn[] displayedInfoColumns = infoColumnLayout.displayedInfoColumns.toArray(new MInfoColumn[infoColumnLayout.displayedInfoColumns.size()]);
+				
 		ArrayList<Integer> fixedWidths = applyFixedColumnWidths(content, displayedInfoColumns, true); // F3P: fix width of cols
 		
 		content.setData(model, null, null, fixedWidths);
@@ -2316,12 +2407,14 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		return gridField;
 	}
 
-	protected  ArrayList<Object> readData(ResultSet rs, ColumnInfo[] p_layout) throws SQLException {
-
+	protected  ArrayList<Object> readData(ResultSet rs, ColumnInfo[] p_layout, MInfoColumn[] infoColumns, Number[] runningValues, Properties queryCtx) throws SQLException {
+		
 		int colOffset = 1;  //  columns start with 1
 		ArrayList<Object> data = new ArrayList<Object>();
 		for (int col = 0; col < p_layout.length; col++)
 		{
+			MInfoColumn infoColumn = infoColumns[col];
+			
 			Object value = null;
 			Class<?> c = p_layout[col].getColClass();
 			int colIndex = col + colOffset;
@@ -2334,11 +2427,95 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			else if (c == Timestamp.class)
 				value = rs.getTimestamp(colIndex);
 			else if (c == BigDecimal.class)
-				value = rs.getBigDecimal(colIndex);
+			{
+				BigDecimal bdVal = rs.getBigDecimal(colIndex);
+				
+				if(infoColumn != null && LITMInfoColumn.isRunningValue(infoColumn))
+				{
+					if(runningValues[col] != null)
+					{
+						bdVal = bdVal.add((BigDecimal)runningValues[col]);
+					}
+					else
+					{
+						String ivSql = LITMInfoColumn.getRrunningValueSQL(infoColumn);
+						
+						if(Util.isEmpty(ivSql, true) == false) // Get initial value
+						{
+							String sql = Env.parseContext(queryCtx, 0, ivSql, false);
+							BigDecimal bdIV = DB.getSQLValueBDEx(null, sql);
+							
+							if(bdIV != null)
+								bdVal = bdVal.add(bdIV);
+						}
+					}
+					
+					runningValues[col] = bdVal;
+					value = bdVal;
+				}
+				else
+					value = bdVal; 
+			}
 			else if (c == Double.class)
-				value = new Double(rs.getDouble(colIndex));
+			{				
+				double dVal = rs.getDouble(colIndex);
+				
+				if(infoColumn != null && LITMInfoColumn.isRunningValue(infoColumn))
+				{
+					if(runningValues[col] != null)
+					{
+						dVal += runningValues[col].doubleValue();
+					}
+					else
+					{
+						String ivSql = LITMInfoColumn.getRrunningValueSQL(infoColumn);
+						
+						if(Util.isEmpty(ivSql, true) == false) // Get initial value
+						{
+							String sql = Env.parseContext(queryCtx, 0, ivSql, false);
+							BigDecimal bdIV = DB.getSQLValueBDEx(null, sql);
+							
+							if(bdIV != null)
+								dVal += bdIV.doubleValue();
+						}
+					}
+					
+					Double dValue = new Double(dVal);
+					runningValues[col] = dValue;
+					value = dValue;
+				}
+				else
+					value = new Double(dVal);
+			}
 			else if (c == Integer.class)
-				value = new Integer(rs.getInt(colIndex));
+			{
+				int iVal = rs.getInt(colIndex);
+				
+				if(infoColumn != null && LITMInfoColumn.isRunningValue(infoColumn))
+				{
+					if(runningValues[col] != null)
+					{
+						iVal += runningValues[col].intValue();
+					}
+					else
+					{
+						String ivSql = LITMInfoColumn.getRrunningValueSQL(infoColumn);
+						
+						if(Util.isEmpty(ivSql, true) == false) // Get initial value
+						{
+							String sql = Env.parseContext(queryCtx, 0, ivSql, false);
+							int iIV = DB.getSQLValueEx(null, sql);							
+							iVal += iIV;
+						}
+					}
+					
+					Integer iValue = new Integer(iVal);
+					runningValues[col] = iValue;
+					value = iValue;
+				}
+				else
+					value = new Integer(iVal);
+			}
 			else if (c == KeyNamePair.class)
 			{
 				if (p_layout[col].isKeyPairCol())
@@ -2907,8 +3084,13 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		int selectedRow = -1;
 		
 		// *** Context from main content		
-		// Check if last clicked is selected
 		
+		
+		if(lastClickedMainContentRow >= 0)
+			selectedRow = lastClickedMainContentRow;
+
+		/* Always use last clicked
+		// Check if last clicked is selected
 		for(int sel:contentPanel.getSelectedIndices())
 		{
 			if(sel == lastClickedMainContentRow)
@@ -2917,6 +3099,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				break;
 			}
 		}
+		*/
 		
 		if(selectedRow < 0)
 			selectedRow = contentPanel.getSelectedIndex();
@@ -3062,7 +3245,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		
 		return fixedWidths;
 	}
-	
+		
 	private class ZoomDetailAction implements EventListener<Event>
 	{
 		@Override
@@ -3270,5 +3453,5 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	{
 		public ArrayList<ColumnInfo>	columnInfos;
 		public ArrayList<MInfoColumn>	displayedInfoColumns;		
-	}
+	}	
 }

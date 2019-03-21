@@ -37,6 +37,7 @@ import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zk.ui.sys.ComponentsCtrl;
 import org.zkoss.zul.ListModel;
 import org.zkoss.zul.Listbox;
 import org.zkoss.zul.Listcell;
@@ -71,6 +72,8 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 
 	//F3P: identifier
 	private String	cellFactoryIdentifier;
+	
+	private List<ListitemEventListener> listitemListeners = null;
 	
 	/**
 	 * Default constructor.
@@ -141,6 +144,17 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	public void render(Listitem item, Object data, int index) throws Exception
 	{
 		render((ListItem)item, data, index);
+		
+		// F3P: after render add listeners
+		
+		if(listitemListeners != null && listitemListeners.size() > 0)
+		{
+			for(ListitemEventListener lile:listitemListeners)
+			{
+				item.addEventListener(lile.event, lile.listener);
+			}
+		}
+			
 	}
 
 	/**
@@ -189,6 +203,8 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 			if (m_tableColumns != null && m_tableColumns.size() == colIndex)
 				break;
 		}
+		
+		ComponentsCtrl.applyForward(item, "onDoubleClick=onDoubleClicked");
 
 		return;
 	}
@@ -771,6 +787,30 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 
 	public void setCellFactoryIdentifier(String cellFactoryIdentifier) {
 		this.cellFactoryIdentifier = cellFactoryIdentifier;
+	}
+	
+	// F3P: Listners to be added to list items
+	
+	public void addListitemEventListener(String evtnm, EventListener<Event> listener)
+	{
+		ListitemEventListener lile = new ListitemEventListener(evtnm,listener);
+		
+		if(listitemListeners == null)
+			listitemListeners = new ArrayList<>();
+		
+		listitemListeners.add(lile);		
+	}
+	
+	private static class ListitemEventListener
+	{
+		private ListitemEventListener(String evnm, EventListener<Event> listener)
+		{
+			this.event = evnm;
+			this.listener = listener;
+		}
+				
+		private String event;
+		private EventListener<Event> listener;
 	}
 }
 

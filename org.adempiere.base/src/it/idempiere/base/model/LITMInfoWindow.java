@@ -27,16 +27,16 @@ public class LITMInfoWindow {
 	}
 	
 	/** Set Is Auto Span
-	@param inOut 
-	@param isUpdateDocNo  */
+	@param info window 
+	@param isAutoSpan  */
 	public static void setIsAutoSpan (X_AD_InfoWindow infoWindow,boolean isAutoSpan)
 	{
 		infoWindow.set_ValueOfColumn(COLUMNNAME_IsAutoSpan, Boolean.valueOf(isAutoSpan));
 	}
 
 	/** Is Auto Span
-	@param inOut 
-	@return IsUpdateDocNo
+	@param info window
+	@return IsAutoSpan
 	 */
 	public static boolean isAutoSpan (X_AD_InfoWindow infoWindow) 
 	{
