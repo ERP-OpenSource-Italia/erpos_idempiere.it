@@ -1081,6 +1081,34 @@ public class TimeUtil
 		long diff= dateTo.getTime()-dateFrom.getTime();
 		return new BigDecimal(diff).divide(new BigDecimal(1000*60*60),0,BigDecimal.ROUND_UP);
 	}
+	
+	static public BigDecimal diffDateInDays(Timestamp dateFrom, Timestamp dateTo)
+	{
+		long diff= dateTo.getTime()-dateFrom.getTime();
+		return new BigDecimal(diff).divide(new BigDecimal(86400000),0,BigDecimal.ROUND_UP);
+	}
+	
+	static public int diffDateInYears(Timestamp dateFrom, Timestamp dateTo)
+	{
+		Calendar calendarFrom = Calendar.getInstance();
+		Calendar calendarTo = Calendar.getInstance();
+		
+		calendarFrom.setTimeInMillis(dateFrom.getTime());
+		calendarTo.setTimeInMillis(dateTo.getTime());
+		
+		int yearFrom = calendarFrom.get(Calendar.YEAR);
+		int yearTo = calendarTo.get(Calendar.YEAR);
+		
+		int yearDifference = yearTo-yearFrom;
+		
+		calendarTo.set(Calendar.YEAR,yearFrom);
+		
+		if(calendarTo.before(calendarFrom))
+			yearDifference--;
+		
+		return yearDifference;
+	}
+
 
 	static public boolean isHoliday(Timestamp day)
 	{
