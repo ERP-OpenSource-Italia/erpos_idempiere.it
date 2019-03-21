@@ -1406,6 +1406,29 @@ public class MInOut extends X_M_InOut implements DocAction
 	            }
 	
 				if (log.isLoggable(Level.INFO)) log.info("Line=" + sLine.getLine() + " - Qty=" + sLine.getMovementQty());
+				
+				// F3P: shipped qty on order line may already be nettified of this shipment qty (inout reopen), we can check using match pos
+				
+				BigDecimal orderLineMovementQtyDelta = Env.ZERO;
+				
+				if(oLine != null)
+				{
+					if(isSOTrx() || isReversal() == false)
+					{
+						orderLineMovementQtyDelta = sLine.getMovementQty();
+					}
+					else
+					{
+						MMatchPO mMPOs[] = MMatchPO.get(getCtx(), oLine.getC_OrderLine_ID(), get_TrxName());
+						
+						if(mMPOs != null && mMPOs.length > 0)
+						{
+							for(MMatchPO mpo:mMPOs)
+								orderLineMovementQtyDelta = orderLineMovementQtyDelta.add(mpo.getQty());
+						}					
+					}
+				}
+
 	
 				//	Stock Movement - Counterpart MOrder.reserveStock
 				if (product != null
@@ -1454,7 +1477,26 @@ public class MInOut extends X_M_InOut implements DocAction
 					{
 						overReceipt = sLine.getQtyOverReceipt();
 					}
-					BigDecimal orderedQtyToUpdate = sLine.getMovementQty().subtract(overReceipt);
+					BigDecimal orderedQtyToUpdate = null;
+					
+					if(oLine == null)
+					{
+						orderedQtyToUpdate = sLine.getMovementQty().subtract(overReceipt);
+					}
+					else
+					{
+						// F3P: calc. update using delivered and ordered, capped to reserved qty (to result in zero reserved)
+
+						BigDecimal newReserved = oLine.getQtyOrdered().subtract(oLine.getQtyDelivered().add(orderLineMovementQtyDelta));
+						BigDecimal deltaReserved = newReserved.subtract(oLine.getQtyReserved());
+						
+						// orderedQtyToUpdate must be negated, since it gets negated again
+						
+						if(newReserved.signum() == oLine.getQtyOrdered().signum())
+							orderedQtyToUpdate = deltaReserved.negate();
+						else
+							orderedQtyToUpdate = oLine.getQtyReserved();
+					}
 					//
 					if (sLine.getM_AttributeSetInstance_ID() == 0)
 					{
@@ -1573,9 +1615,14 @@ public class MInOut extends X_M_InOut implements DocAction
 				//	Correct Order Line
 				if (product != null && oLine != null)		//	other in VMatch.createMatchRecord
 				{
-					//F3P set QtyReserved only if oLine.qtyOrdered > 0
-					if(oLine.getQtyOrdered().signum() > 0)
-						oLine.setQtyReserved(oLine.getQtyReserved().subtract(sLine.getMovementQty().subtract(sLine.getQtyOverReceipt())));
+					//F3P set QtyReserved only if oLine.qtyOrdered > 0 (with minimun value check)
+					
+					BigDecimal bdNewReserved = oLine.getQtyOrdered().subtract(oLine.getQtyDelivered().add(orderLineMovementQtyDelta));
+					
+					if(bdNewReserved.signum() != oLine.getQtyOrdered().signum())
+						bdNewReserved = Env.ZERO;
+
+					oLine.setQtyReserved(bdNewReserved);
 				}
 	
 				//	Update Sales Order Line

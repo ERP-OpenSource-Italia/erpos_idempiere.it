@@ -1992,6 +1992,15 @@ public class MOrder extends X_C_Order implements DocAction
 			BigDecimal difference = target
 				.subtract(line.getQtyReserved())
 				.subtract(line.getQtyDelivered()); 
+						
+			// F3P: sign of newReserved must be coherent with sign of getOrdered, else we must cap it to zero ( reserved - difference = 0) 
+			
+			BigDecimal newReserved = line.getQtyReserved().add(difference);
+			
+			if(line.getQtyOrdered().signum() != newReserved.signum())
+				difference = line.getQtyReserved().negate();
+			
+			// F3P end
 
 			if (difference.signum() == 0 || line.getQtyOrdered().signum() < 0)
 			{
