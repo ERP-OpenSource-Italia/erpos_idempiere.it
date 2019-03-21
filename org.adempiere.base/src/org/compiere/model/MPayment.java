@@ -2116,7 +2116,7 @@ public class MPayment extends X_C_Payment
 		
 		// F3P: check gathered feedback
 		
-		if(FeedbackContainer.getCurrent() != null)
+		if(FeedbackContainer.getCurrent() != null && m_processMsg != null)
 		{
 			FeedbackContainer.getCurrent().appendInfoFeedback(new StringBuilder(m_processMsg));
 		}
