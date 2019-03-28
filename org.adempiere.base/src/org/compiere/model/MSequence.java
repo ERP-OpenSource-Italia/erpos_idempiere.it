@@ -124,7 +124,12 @@ public class MSequence extends X_AD_Sequence
 			+ "FROM AD_Sequence "
 			+ "WHERE Name=?"
 			+ " AND IsActive='Y' AND IsTableID='Y' AND IsAutoSequence='Y' ";
-
+			//fin
+			if(adempiereSys)
+				selectSQL += " FOR UPDATE OF CurrentNextSys";
+			else
+				selectSQL += " FOR UPDATE OF CurrentNext";
+			//
 		}
 		if (!DB.isOracle() && !DB.isPostgreSQL())
 			selectSQL = DB.getDatabase().convertStatement(selectSQL);
@@ -384,7 +389,8 @@ public class MSequence extends X_AD_Sequence
 					+ "AND s.IsActive='Y' AND s.IsTableID='N' AND s.IsAutoSequence='Y' "
 					+ "ORDER BY s.AD_Client_ID DESC";
 		}
-		if (DB.isPostgreSQL())
+		//fin
+		if (DB.isOracle() == false)
 		{
 			if ( ( isStartNewYear || isUseOrgLevel ) && !adempiereSys ) {
 				selectSQL = selectSQL + " FOR UPDATE OF y";
@@ -392,6 +398,20 @@ public class MSequence extends X_AD_Sequence
 				selectSQL = selectSQL + " FOR UPDATE OF s";
 			}
 		}
+		else
+		{
+			if ( ( isStartNewYear || isUseOrgLevel ) && !adempiereSys ) {
+				selectSQL = selectSQL + " FOR UPDATE OF y.";
+			} else {
+				selectSQL = selectSQL + " FOR UPDATE OF s.";
+			}
+			
+			if(adempiereSys)
+				selectSQL = selectSQL + "CurrentNextSys";
+			else
+				selectSQL = selectSQL + "CurrentNext";
+		}
+		//		
 		if (!DB.isOracle() && !DB.isPostgreSQL())
 			selectSQL = DB.getDatabase().convertStatement(selectSQL);
 		Connection conn = null;
@@ -523,11 +543,16 @@ public class MSequence extends X_AD_Sequence
 		}
 		catch (Exception e)
 		{
+			//fin acg: errore piu' parlante, indico la sequenza
+			String name = "";
+			if(seq.getName() != null)
+				name = seq.getName();
+			
 			s_log.log(Level.SEVERE, "(DocType) [" + trxName + "]", e);
 			if (DBException.isTimeout(e))
-				throw new AdempiereException("GenerateDocumentNoTimeOut", e);
+				throw new AdempiereException("GenerateDocumentNoTimeOut" + " - Sequenza " + name, e);
 			else
-				throw new AdempiereException("GenerateDocumentNoError", e);
+				throw new AdempiereException("GenerateDocumentNoError"  + " - Sequenza " + name, e);
 		}
 		finally
 		{
