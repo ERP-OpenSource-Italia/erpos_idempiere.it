@@ -303,7 +303,8 @@ public abstract class CreateFrom implements ICreateFrom
 	 */
 	public static boolean isShowOnlyServiceOrder()
 	{
-		return STDSysConfig.isShowOnlyServiceOrder();
+		//LS search at least by ad_client_id to manage multi client installations (like other SysConfigs) 
+		return STDSysConfig.isShowOnlyServiceOrder(Env.getAD_Client_ID(Env.getCtx()));
 	}
 	
 	// F3P: functions to filter data sql queries
