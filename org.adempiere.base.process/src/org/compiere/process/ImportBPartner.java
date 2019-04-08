@@ -542,9 +542,9 @@ implements ImportProcess
 							continue;
 						}
 					}
-				}
 
-				Old_BPValue = New_BPValue ;
+					Old_BPValue = New_BPValue ;
+				}
 
 				//	****	Create/Update Contact	****
 				MUser user = null;
