@@ -394,7 +394,13 @@ public class STDSysConfig
 	 */
 	public static boolean isShowOnlyServiceOrder()
 	{
-		return MSysConfig.getBooleanValue(F3P_CREATEFROMORDER_ONLYSERVICE, false);
+		//LS backward compatibility
+		return isShowOnlyServiceOrder(0);
+	}
+	//LS search at least by ad_client_id to manage multi client installations (like other SysConfigs)
+	public static boolean isShowOnlyServiceOrder(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(F3P_CREATEFROMORDER_ONLYSERVICE, false, AD_Client_ID);
 	}
 	
 	public static boolean isFAAdditionAllowAccDeprAlways(int AD_Client_ID,int AD_Org_ID)
