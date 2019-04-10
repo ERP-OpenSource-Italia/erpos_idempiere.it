@@ -40,7 +40,7 @@ public final class ThemeManager {
 		
 		if(Adempiere.isTestInstallation()) // F3P: search for specific test installation logo
 		{
-			String largeLogo = MSysConfig.getValue(MSysConfig.ZK_LOGO_LARGE_TESTINST, null);
+			String largeLogo = MSysConfig.getValue(MSysConfig.ZK_LOGO_LARGE_TESTINST, "/theme/default/images/login-logo.png");
 			
 			if(largeLogo != null)
 				return largeLogo;
@@ -61,7 +61,7 @@ public final class ThemeManager {
 		if(Adempiere.isTestInstallation())
 		{
 			def = ITheme.THEME_PATH_PREFIX+theme+ITheme.HEADER_LOGO_TESTINSTALLATION_IMAGE;
-			url = MSysConfig.getValue(MSysConfig.ZK_LOGO_SMALL_TESTINST, null);
+			url = MSysConfig.getValue(MSysConfig.ZK_LOGO_SMALL_TESTINST, "/theme/default/images/header-logo-testinst.png");
 		}
 		
 		if(url == null)
