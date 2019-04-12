@@ -14,6 +14,9 @@
 
 package org.adempiere.webui.editor.grid.selection;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -31,6 +34,7 @@ import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.model.GridTabVO;
 import org.compiere.model.GridWindow;
+import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
@@ -49,6 +53,24 @@ import org.zkoss.zul.ext.Selectable;
 public class WGridTabMultiSelectionEditor extends WEditor implements ContextMenuListener
 {
 	private static final String[] LISTENER_EVENTS = {Events.ON_SELECT};
+	
+	//LS query
+	
+	private static final String SQL_COLUMN_NAME = "SELECT tab.AD_Tab_ID, tab.ad_window_id "
+			+ "FROM AD_Column c "
+			+ " INNER JOIN AD_Table t ON (c.AD_Table_ID=t.AD_Table_ID) "
+			+ " INNER JOIN AD_Tab tab ON (t.AD_Window_ID=tab.AD_Window_ID AND tab.AD_Table_ID=t.AD_Table_ID) "
+			+ "WHERE c.columnname = ? AND c.IsKey='Y' "
+			+ "ORDER BY tab.tablevel ";
+	private static final String SQL_REFERENCE_VALUE = "SELECT tab.AD_Tab_ID, tab.ad_window_id "
+			+ "FROM AD_Column c "
+			+ " INNER JOIN AD_Table t ON (c.AD_Table_ID=t.AD_Table_ID) "
+			+ " INNER JOIN AD_Ref_Table rt ON (rt.AD_Table_ID=t.AD_Table_ID AND c.AD_Column_ID = rt.AD_Key) "
+			+ " INNER JOIN AD_Tab tab ON (coalesce(rt.AD_Window_ID, t.AD_Window_ID)=tab.AD_Window_ID AND tab.AD_Table_ID=t.AD_Table_ID) "
+			+ "WHERE rt.AD_Reference_ID = ? AND c.IsKey='Y' "
+			+ "ORDER BY tab.tablevel ";
+	
+	//LS
 
     private Object oldValue;
 
@@ -96,10 +118,63 @@ public class WGridTabMultiSelectionEditor extends WEditor implements ContextMenu
 		{
 			((Textbox)getComponent()).setReadonly(true);
 		}
-		else if (gridField != null && gridField.getGridTab() != null)
+		else if (gridField != null)
 		{
-			int AD_Tab_ID = gridField.getIncluded_Tab_ID();
-			GridWindow gridWindow = gridField.getGridTab().getGridWindow();
+			int AD_Tab_ID = 0, AD_Window_ID = 0;
+			GridWindow gridWindow;
+			
+			if (gridField.getGridTab() != null)
+			{
+				AD_Tab_ID = gridField.getIncluded_Tab_ID();
+				gridWindow = gridField.getGridTab().getGridWindow();
+			}
+			//LS enable multiselction 'style' for process params
+			else
+			{
+					
+				PreparedStatement pstmt = null;
+				ResultSet rs = null;
+				
+				try
+				{
+					
+					if (gridField.getVO().AD_Reference_Value_ID > 0){
+						pstmt = DB.prepareStatement(SQL_REFERENCE_VALUE, null);
+						pstmt.setInt(1, gridField.getVO().AD_Reference_Value_ID);
+					}else{
+						pstmt = DB.prepareStatement(SQL_COLUMN_NAME, null);
+						pstmt.setString(1, gridField.getVO().ColumnName);
+					}
+					
+					rs = pstmt.executeQuery();
+
+					if (rs.next())
+					{
+						AD_Tab_ID = rs.getInt(1);
+						AD_Window_ID = rs.getInt(2);
+					}
+					
+				}
+				catch (SQLException e)
+				{
+//					log.log(Level.SEVERE, sql, e);
+				}
+				finally
+				{
+					DB.close(rs, pstmt);
+					rs = null;
+					pstmt = null;
+				}
+				
+				if (AD_Tab_ID == 0 || AD_Window_ID == 0){
+					return;
+				}
+				
+				gridWindow = GridWindow.get(Env.getCtx(), 0, AD_Window_ID);
+			}
+			
+			//LS end
+			
 			int count = gridWindow.getTabCount();
 			GridTabSelectionListView listView = (GridTabSelectionListView) getComponent();
 			for(int i = 0; i < count; i++)

@@ -142,7 +142,8 @@ public class GridTabSelectionListView extends Borderlayout
 				int AD_Field_ID = Integer.parseInt(fieldIdStr);
 				for(GridField gridField : tmpFields) {
 					if (gridField.getAD_Field_ID() == AD_Field_ID) {
-						fieldList.add(gridField);
+						if (isVisibleField(gridField)) //LS show only identifiers
+							fieldList.add(gridField);
 						break;
 					}
 				}
@@ -155,11 +156,25 @@ public class GridTabSelectionListView extends Borderlayout
 				}
 			}
 		} else {
-			gridField = tmpFields;
+			//LS show only identifiers
+//			gridField = tmpFields;
+			List<GridField> fieldList = new ArrayList<GridField>();
+			for (GridField gf : tmpFields) {
+				if (isVisibleField(gf))
+					fieldList.add(gf);
+				
+			}
+			gridField = fieldList.toArray(new GridField[0]);
+			//LS end
 		}
 		numColumns = gridField.length;
 	}
 	
+	//LS show only identifiers
+	public boolean isVisibleField(GridField gridField) {
+		return gridField.getVO().IsIdentifier;
+	}
+
 	/**
 	 * 
 	 * @return boolean
