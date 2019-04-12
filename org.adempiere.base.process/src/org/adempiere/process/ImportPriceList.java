@@ -158,6 +158,25 @@ public class ImportPriceList extends SvrProcess implements ImportProcess
 			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		log.fine("Set Product from Value=" + no);
+		
+		sql = new StringBuilder("UPDATE I_PriceList ")
+				  .append("SET M_Product_ID=(SELECT MAX(M_Product_ID) FROM C_BPartner_Product bpp ")
+				  .append(" WHERE bpp.C_BPartner_ID = I_PriceList.C_BPartner_ID AND I_PriceList.ProductValue=bpp.VendorProductNo ")
+				  .append(" AND I_PriceList.AD_Client_ID=bpp.AD_Client_ID ) ")
+				  .append(" WHERE M_Product_ID IS NULL AND ProductValue IS NOT NULL AND C_BPartner_ID IS NOT NULL ")
+				  .append(" AND I_IsImported<>'Y' ").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set Product from C_BPartner_Product=" + no);
+		
+		sql = new StringBuilder("UPDATE I_PriceList ")
+				  .append(" SET M_Product_ID=(SELECT MAX(M_Product_ID) FROM M_Product_PO ppo ")
+				  .append(" WHERE ppo.C_BPartner_ID = I_PriceList.C_BPartner_ID AND I_PriceList.ProductValue=ppo.VendorProductNo ")
+				  .append(" AND I_PriceList.AD_Client_ID=ppo.AD_Client_ID ) ")
+				  .append(" WHERE M_Product_ID IS NULL AND ProductValue IS NOT NULL AND C_BPartner_ID IS NOT NULL ")
+				  .append(" AND I_IsImported<>'Y' ").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set Product from C_BPartner_Product=" + no);
+			
 		sql = new StringBuilder ("UPDATE I_PriceList ")
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Product, ' ")
 			  .append("WHERE M_Product_ID IS NULL AND (ProductValue IS NOT NULL)")
