@@ -57,6 +57,7 @@ public class ImportPriceList extends SvrProcess implements ImportProcess
 	private boolean			p_importPriceList  = true;
 	private boolean			p_importPriceStd = true;
 	private boolean			p_importPriceLimit = true;
+	private boolean			p_forceCreateProductPrice = false;
 	
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -77,6 +78,8 @@ public class ImportPriceList extends SvrProcess implements ImportProcess
 				p_importPriceStd = "Y".equals(para[i].getParameter());
 			else if (name.equals("IsImportPriceLimit"))
 				p_importPriceLimit = "Y".equals(para[i].getParameter());
+			else if (name.equals("IsForceCreateProductPrice"))
+				p_forceCreateProductPrice = "Y".equals(para[i].getParameter());
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -161,7 +164,7 @@ public class ImportPriceList extends SvrProcess implements ImportProcess
 		
 		sql = new StringBuilder("UPDATE I_PriceList ")
 				  .append("SET M_Product_ID=(SELECT MAX(M_Product_ID) FROM C_BPartner_Product bpp ")
-				  .append(" WHERE bpp.C_BPartner_ID = I_PriceList.C_BPartner_ID AND I_PriceList.ProductValue=bpp.VendorProductNo ")
+				  .append(" WHERE bpp.C_BPartner_ID = I_PriceList.C_BPartner_ID AND lower(I_PriceList.ProductValue)=lower(bpp.VendorProductNo) ")
 				  .append(" AND I_PriceList.AD_Client_ID=bpp.AD_Client_ID ) ")
 				  .append(" WHERE M_Product_ID IS NULL AND ProductValue IS NOT NULL AND C_BPartner_ID IS NOT NULL ")
 				  .append(" AND I_IsImported<>'Y' ").append (clientCheck);
@@ -170,7 +173,7 @@ public class ImportPriceList extends SvrProcess implements ImportProcess
 		
 		sql = new StringBuilder("UPDATE I_PriceList ")
 				  .append(" SET M_Product_ID=(SELECT MAX(M_Product_ID) FROM M_Product_PO ppo ")
-				  .append(" WHERE ppo.C_BPartner_ID = I_PriceList.C_BPartner_ID AND I_PriceList.ProductValue=ppo.VendorProductNo ")
+				  .append(" WHERE ppo.C_BPartner_ID = I_PriceList.C_BPartner_ID AND lower(I_PriceList.ProductValue)=lower(ppo.VendorProductNo) ")
 				  .append(" AND I_PriceList.AD_Client_ID=ppo.AD_Client_ID ) ")
 				  .append(" WHERE M_Product_ID IS NULL AND ProductValue IS NOT NULL AND C_BPartner_ID IS NOT NULL ")
 				  .append(" AND I_IsImported<>'Y' ").append (clientCheck);
@@ -403,7 +406,8 @@ public class ImportPriceList extends SvrProcess implements ImportProcess
 				// @TODO: C_UOM is intended for future USE - not useful at this moment
 				
 				// If bpartner then insert/update into M_ProductPriceVendorBreak, otherwise insert/update M_ProductPrice
-				if (imp.getC_BPartner_ID() > 0) {
+				if (imp.getC_BPartner_ID() > 0
+						&& p_forceCreateProductPrice == false) {
 					// M_ProductPriceVendorBreak
 					int M_ProductPriceVendorBreak_ID = DB.getSQLValue(get_TrxName(), 
 							"SELECT M_ProductPriceVendorBreak_ID " +
