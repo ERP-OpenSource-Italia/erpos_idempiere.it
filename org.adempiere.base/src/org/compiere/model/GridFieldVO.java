@@ -248,6 +248,8 @@ public class GridFieldVO implements Serializable
 					vo.AD_FieldStyle_ID = rs.getInt (i);
 				else if (columnName.equalsIgnoreCase("PA_DashboardContent_ID"))
 					vo.PA_DashboardContent_ID = rs.getInt (i);
+				else if (columnName.equalsIgnoreCase("IsIdentifier"))
+					vo.IsIdentifier = "Y".equals(rs.getString(i));
 			}
 			if (vo.Header == null)
 				vo.Header = vo.ColumnName;
@@ -729,6 +731,8 @@ public class GridFieldVO implements Serializable
 	
 	public int PA_DashboardContent_ID = 0;
 	
+	public boolean IsIdentifier = false; //LS added attribute, may be useful
+	
 	/**
 	 *  Set Context including contained elements
 	 *  @param newCtx new context
@@ -861,6 +865,7 @@ public class GridFieldVO implements Serializable
 		clone.AD_FieldStyle_ID = AD_FieldStyle_ID;
 		clone.AD_LabelStyle_ID = AD_LabelStyle_ID;
 		clone.PA_DashboardContent_ID = PA_DashboardContent_ID;
+		clone.IsIdentifier = IsIdentifier;
 		
 		//	Lookup
 		clone.ValidationCode = ValidationCode;

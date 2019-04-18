@@ -42,6 +42,10 @@ public class InventoryValue extends SvrProcess
 	private Timestamp   p_DateValue;
 	/** Warehouse               */
 	private int         p_M_Warehouse_ID;
+	/** Organization			*/
+	private int         p_AD_Org_ID;
+	/**	Fiscal Warehouse		*/
+	private String		p_LIT_IsFiscalWarehouse;
 	/** Currency                */
 	private int         p_C_Currency_ID;
 	/** Optional Cost Element	*/
@@ -64,6 +68,10 @@ public class InventoryValue extends SvrProcess
 				p_DateValue = (Timestamp)para[i].getParameter();
 			else if (name.equals("M_Warehouse_ID"))
 				p_M_Warehouse_ID = para[i].getParameterAsInt();
+			else if (name.equals("AD_Org_ID"))
+				p_AD_Org_ID = para[i].getParameterAsInt();
+			else if (name.equals("LIT_IsFiscalWarehouse"))
+				p_LIT_IsFiscalWarehouse = (String) para[i].getParameter();
 			else if (name.equals("C_Currency_ID"))
 				p_C_Currency_ID = para[i].getParameterAsInt();
 			else if (name.equals("M_CostElement_ID"))
@@ -110,8 +118,20 @@ public class InventoryValue extends SvrProcess
 			.append(" INNER JOIN AD_ClientInfo ci ON (w.AD_Client_ID=ci.AD_Client_ID)")
 			.append(" INNER JOIN C_AcctSchema acs ON (ci.C_AcctSchema1_ID=acs.C_AcctSchema_ID)")
 			.append(" INNER JOIN M_Cost c ON (acs.C_AcctSchema_ID=c.C_AcctSchema_ID AND acs.M_CostType_ID=c.M_CostType_ID AND c.AD_Org_ID IN (0, w.AD_Org_ID))")
-			.append(" INNER JOIN M_CostElement ce ON (c.M_CostElement_ID=ce.M_CostElement_ID AND ce.CostingMethod='S' AND ce.CostElementType='M') ")
-			.append("WHERE w.M_Warehouse_ID=").append(p_M_Warehouse_ID);
+			.append(" INNER JOIN M_CostElement ce ON (c.M_CostElement_ID=ce.M_CostElement_ID AND ce.CostingMethod='S' AND ce.CostElementType='M') ");
+			
+		if (p_M_Warehouse_ID != 0)
+		{
+			sql.append("WHERE w.M_Warehouse_ID=").append(p_M_Warehouse_ID);
+		}
+		else
+		{
+			sql.append("WHERE w.AD_Org_ID=").append(p_AD_Org_ID);
+			
+			if(p_LIT_IsFiscalWarehouse!=null)
+				sql.append(" AND w.LIT_IsFiscalWarehouse='").append(p_LIT_IsFiscalWarehouse).append("'");
+		}
+		
 		int noInsertStd = DB.executeUpdateEx(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Inserted Std=" + noInsertStd);
 		//IDEMPIERE-2500 - This may be invalid check. Removing still some one not admit reason
@@ -131,9 +151,21 @@ public class InventoryValue extends SvrProcess
 				.append("FROM M_Warehouse w")
 				.append(" INNER JOIN AD_ClientInfo ci ON (w.AD_Client_ID=ci.AD_Client_ID)")
 				.append(" INNER JOIN C_AcctSchema acs ON (ci.C_AcctSchema1_ID=acs.C_AcctSchema_ID)")
-				.append(" INNER JOIN M_Cost c ON (acs.C_AcctSchema_ID=c.C_AcctSchema_ID AND acs.M_CostType_ID=c.M_CostType_ID AND c.AD_Org_ID IN (0, w.AD_Org_ID)) ")
-				.append("WHERE w.M_Warehouse_ID=").append(p_M_Warehouse_ID)
-				.append(" AND c.M_CostElement_ID=").append(p_M_CostElement_ID)
+				.append(" INNER JOIN M_Cost c ON (acs.C_AcctSchema_ID=c.C_AcctSchema_ID AND acs.M_CostType_ID=c.M_CostType_ID AND c.AD_Org_ID IN (0, w.AD_Org_ID)) ");
+
+			if(p_M_Warehouse_ID != 0)
+				{
+				sql.append("WHERE w.M_Warehouse_ID=").append(p_M_Warehouse_ID);
+				}
+			else
+			{
+				sql.append("WHERE w.AD_Org_ID=").append(p_AD_Org_ID);
+				
+				if(p_LIT_IsFiscalWarehouse!=null)
+					sql.append(" AND w.LIT_IsFiscalWarehouse='").append(p_LIT_IsFiscalWarehouse).append("'");
+			}
+			
+				sql.append(" AND c.M_CostElement_ID=").append(p_M_CostElement_ID)
 				.append(" AND NOT EXISTS (SELECT * FROM T_InventoryValue iv ")
 					.append("WHERE iv.AD_PInstance_ID=").append(getAD_PInstance_ID())
 					.append(" AND iv.M_Warehouse_ID=w.M_Warehouse_ID")
