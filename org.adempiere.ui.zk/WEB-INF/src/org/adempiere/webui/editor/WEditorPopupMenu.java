@@ -32,6 +32,7 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
@@ -75,10 +76,10 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
     private Menuitem newItem;
     private Menuitem updateItem; // Elaine 2009/02/16 - update record   
 	private Menuitem showLocationItem;
-	
+		
 	private WEditor				  editor = null;
 	private WEditorPopupMenuItems extensionsItems = null;
-    
+	
     private ArrayList<ContextMenuListener> menuListeners = new ArrayList<ContextMenuListener>();
 
     public WEditorPopupMenu(boolean zoom, boolean requery, boolean preferences)
@@ -339,6 +340,9 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
         
         List<IEditorPopupMenuItem> extItems = extensionsItems.getNonStandardItems();
         
+        // F3P: manage 'on open' on menu items
+        this.addEventListener(Events.ON_OPEN, this);
+        
         for(IEditorPopupMenuItem item:extItems)
         {
         	Menuitem menuItem = new Menuitem();
@@ -379,6 +383,25 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
             {
                 listener.onMenu(menuEvent);
             }
+        }
+        else if(Events.ON_OPEN.equals(event.getName())) // F3P: manage 'on open'
+        {
+        	for(Component cmp:getChildren())
+        	{
+        		if(cmp instanceof Menuitem)
+        		{
+        			Menuitem mi = (Menuitem)cmp;
+        			String miEvt = (String)mi.getAttribute(EVENT_ATTRIBUTE);
+        			
+        			if(miEvt != null)
+        			{
+        				IEditorPopupMenuItem item = extensionsItems.getByEvent(miEvt);
+        				
+        				if(item != null)
+        					item.onOpenItem(editor, mi);
+        			}
+        		}
+        	}
         }
     }
 }

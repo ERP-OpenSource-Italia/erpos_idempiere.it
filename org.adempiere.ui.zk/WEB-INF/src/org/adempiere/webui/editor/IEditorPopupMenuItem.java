@@ -13,7 +13,10 @@
  *****************************************************************************/
 package org.adempiere.webui.editor;
 
+import org.zkoss.zul.Menuitem;
+
 /** Item to be displayed on popup menu of editors
+ *  Items are shared, the MUST BE stateless. 
  * 
  * @author Silvano Trinchero, www.freepath.it
  *
@@ -44,4 +47,9 @@ public interface IEditorPopupMenuItem {
 	 *  @param the editor
 	 */
 	public void onEvent(WEditor editor);
+	
+	/** Callback function invoked when the menu is getting opened
+	 *  @param the editor
+	 */
+	public void onOpenItem(WEditor editor, Menuitem mi);
 }
