@@ -325,7 +325,8 @@ public class RequisitionPOCreate extends SvrProcess
 			|| (p_ConsolidateByDatePromised == true && m_order.getDatePromised().compareTo(rLine.getDateRequired()) != 0) // FR [ 3471930 ] If consolidation by date promised is true, then consider it
 			// FR [ 3471930 ] Due to the changes to the previous line, we need to check if two lines differ by date and avoid consolidating them
 			|| (m_orderLine.getDatePromised().compareTo(rLine.getDateRequired()) != 0) 
-			|| (m_M_Warehouse_ID != rLine.getM_Requisition().getM_Warehouse_ID()) //F3P: rottura ordine per magazzino
+			|| (m_M_Warehouse_ID != rLine.getM_Requisition().getM_Warehouse_ID()//F3P: rottura ordine per magazzino
+			|| (rLine.get_ValueAsInt("PP_OrderNode_ID") > 0)) 
 			)
 		{
 			newLine(rLine);
