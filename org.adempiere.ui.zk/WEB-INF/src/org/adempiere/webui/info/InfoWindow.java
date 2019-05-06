@@ -167,7 +167,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	
 	// F3P: Keep original values: when a row is unselected, restore original values
 	
-	private boolean hasEditable = false;
+	protected boolean hasEditable = false;
 	private Map<Integer, List<Object>> cacheOriginalValues = new HashMap<>();
 	private Map<Integer, List<Object>> temporarySelectedData = new HashMap<>();
 	
@@ -178,6 +178,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	private String tableSelectionColumn = null;
 	private String tableSelectionColumnUpdate = null;
 	private EventListener<Event> listitemClickListener = null;	
+	private boolean forceAllowEditable;
+	private boolean	addCheckAND;
 			
 	// F3P: export 
 	
@@ -213,8 +215,22 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	 */
 	public InfoWindow(int WindowNo, String tableName, String keyColumn, String queryValue, 
 			boolean multipleSelection, String whereClause, int AD_InfoWindow_ID, boolean lookup) {
-		this(WindowNo, tableName, keyColumn, queryValue, multipleSelection, whereClause, AD_InfoWindow_ID, lookup, null);		
+		this(WindowNo, tableName, keyColumn, queryValue, multipleSelection, whereClause, AD_InfoWindow_ID, lookup, null, false, true);		
 	}
+	
+	/**
+	 * @param WindowNo
+	 * @param tableName
+	 * @param keyColumn
+	 * @param multipleSelection
+	 * @param whereClause
+	 * @param lookup
+	 */
+	public InfoWindow(int WindowNo, String tableName, String keyColumn, String queryValue, 
+			boolean multipleSelection, String whereClause, int AD_InfoWindow_ID, boolean lookup, GridField field) {
+		this(WindowNo, tableName, keyColumn, queryValue, multipleSelection, whereClause, AD_InfoWindow_ID, lookup, null, false, true);		
+	}
+	
 
 	/**
 	 * @param WindowNo
@@ -224,13 +240,16 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	 * @param whereClause
 	 * @param lookup
 	 * @param gridfield
+	 * @param forceAllowEditable
 	 */
 	public InfoWindow(int WindowNo, String tableName, String keyColumn, String queryValue, 
-			boolean multipleSelection, String whereClause, int AD_InfoWindow_ID, boolean lookup, GridField field) {
+			boolean multipleSelection, String whereClause, int AD_InfoWindow_ID, boolean lookup, GridField field, boolean forceAllowEditable, boolean addCheckAND) {
 		super(WindowNo, tableName, keyColumn, multipleSelection, whereClause,
 				lookup, AD_InfoWindow_ID);
 		this.m_gridfield = field;
 		this.queryValue = queryValue;
+		this.forceAllowEditable = forceAllowEditable;
+		this.addCheckAND = addCheckAND;
 		
    		//Xolali IDEMPIERE-1045		
    		contentPanel.addActionListener(new EventListener<Event>() {
@@ -785,7 +804,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				processCount = processes.length;
 			}
 			
-			if(processCount > 0)
+			if(processCount > 0 || forceAllowEditable)
 			{
 				for(MInfoColumn infoColumn:infoColumns)
 				{
@@ -976,7 +995,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		List<MInfoColumn> gridDisplayedIC = new ArrayList<>();				
 		gridDisplayedIC.add(null); // First column does not have any matching info column		
 		
-		boolean haveNotProcess = !haveProcess; // A field is editabile only if is not readonly and theres a process
+		boolean isEditableDisabled = (!haveProcess && !forceAllowEditable); // A field is editabile only if is not readonly and theres a process
 		
 		String selectionColumnAppendSelectSQL = null; // F3P: if selection is not visible, force-append it at end of select 
 				
@@ -994,7 +1013,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					if (infoColumn.getSelectClause().equalsIgnoreCase(keySelectClause))
 						continue;
 					
-					columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, DisplayType.getClass(infoColumn.getAD_Reference_ID(), true), infoColumn.isReadOnly() || haveNotProcess);
+					columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, DisplayType.getClass(infoColumn.getAD_Reference_ID(), true), infoColumn.isReadOnly() || isEditableDisabled);
 				}
 				else if (DisplayType.isLookup(infoColumn.getAD_Reference_ID()))
 				{
@@ -1005,7 +1024,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				        editor.setMandatory(false);
 				        editor.setReadWrite(false);
 				        editorMap.put(colSQL, editor);
-						columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, ValueNamePair.class, (String)null, infoColumn.isReadOnly() || haveNotProcess);
+						columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, ValueNamePair.class, (String)null, infoColumn.isReadOnly() || isEditableDisabled);
 					}
 					else
 					{
@@ -1014,7 +1033,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				}
 				else  
 				{
-					columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, DisplayType.getClass(infoColumn.getAD_Reference_ID(), true), infoColumn.isReadOnly() || haveNotProcess);
+					columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, DisplayType.getClass(infoColumn.getAD_Reference_ID(), true), infoColumn.isReadOnly() || isEditableDisabled);
 				}
 				columnInfo.setColDescription(infoColumn.get_Translation("Description"));
 				columnInfo.setGridField(gridFields.get(i));
@@ -1658,14 +1677,19 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		
 		if (checkAND == null) {
 			if (parameterGrid.getRows() != null && parameterGrid.getRows().getFirstChild() != null) {
-				Row row = (Row) parameterGrid.getRows().getFirstChild();
-				int col = row.getChildren().size();
-				while (col < 6) {
-					row.appendChild(new Space());
-					col++;
-				}
 				createAndCheckbox();
-				row.appendChild(checkAND);
+				
+				if(addCheckAND)
+				{
+					Row row = (Row) parameterGrid.getRows().getFirstChild();
+					int col = row.getChildren().size();
+					while (col < 6) {
+						row.appendChild(new Space());
+						col++;
+					}
+
+					row.appendChild(checkAND);
+				}				
 			}
 		}
 		evalDisplayLogic();
@@ -1794,12 +1818,14 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
         else
         {
         	panel = (Row) parameterGrid.getRows().getLastChild();
-        	if (panel.getChildren().size() == 6)
+        	if (panel.getChildren().size() == 6D)
         	{
         		if (parameterGrid.getRows().getChildren().size() == 1) 
         		{
         			createAndCheckbox();
-					panel.appendChild(checkAND);
+        			
+        			if(addCheckAND)
+        				panel.appendChild(checkAND);
         		}
         		else
         		{
