@@ -527,6 +527,7 @@ public class InOutGenerate extends SvrProcess
 					for (int i = 0; i < lines.length; i++)
 					{
 						MOrderLine line = lines[i];
+						MOrderLine wrapperOrLine = null;
 						SelectionLineOrderLineWrapper orderLineWrapper = null;
 						int deliveryFrom_M_Locator_ID = -1;
 						int deliveryM_AttributeSetInstance_ID = line.getM_AttributeSetInstance_ID();
@@ -535,6 +536,7 @@ public class InOutGenerate extends SvrProcess
 						{
 							orderLineWrapper = (SelectionLineOrderLineWrapper)line;						
 							line = orderLineWrapper.orderLine;
+							wrapperOrLine = orderLineWrapper;
 							deliveryFrom_M_Locator_ID = orderLineWrapper.getDeliveryM_Locator_ID();
 							
 							int wrapperM_ASI_ID = orderLineWrapper.getDeliveryM_AttributeSetInstance_ID();
@@ -542,6 +544,8 @@ public class InOutGenerate extends SvrProcess
 							if(wrapperM_ASI_ID >= 0)
 								deliveryM_AttributeSetInstance_ID = wrapperM_ASI_ID; 
 						}
+						else
+							wrapperOrLine = line;
 						
 						if (line.getM_Warehouse_ID() != p_M_Warehouse_ID)
 							continue;
@@ -564,7 +568,7 @@ public class InOutGenerate extends SvrProcess
 								minGuaranteeDate, MClient.MMPOLICY_FiFo.equals(MMPolicy));
 						}
 						//	
-						createLine (order, orderLineWrapper, toDeliver, storages, false);
+						createLine (order, wrapperOrLine, toDeliver, storages, false);
 					}
 				}
 				// F3P: avoid mix order when there are more than 100 lines
