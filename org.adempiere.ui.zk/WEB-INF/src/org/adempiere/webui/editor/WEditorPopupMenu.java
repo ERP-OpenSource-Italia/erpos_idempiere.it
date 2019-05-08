@@ -26,7 +26,10 @@ import org.adempiere.webui.event.ContextMenuEvent;
 import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.WEditorPopupMenuItems;
+import org.compiere.model.GridField;
 import org.compiere.model.Lookup;
+import org.compiere.model.MLookup;
+import org.compiere.model.MLookupInfo;
 import org.compiere.model.MRole;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -37,6 +40,8 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Menuitem;
+
+import it.adempiere.webui.quickentry.QuickEntryExtendedInfo;
 
 /**
  *
@@ -163,6 +168,18 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
     	    		}
     			}
     		} else {
+    			
+        		// F3P: extended quick entry
+
+    			final QuickEntryExtendedInfo quExt = QuickEntryExtendedInfo.get(editor, lookup);
+
+    			if(quExt.hasExtendedInfo() && quExt.getAD_Window_ID() > 0)
+    			{
+    				winID = winIDPO = quExt.getAD_Window_ID();
+    			}
+        		
+        		// F3P end
+    			
     			int cnt = DB.getSQLValueEx(null,
     					"SELECT COUNT(*) "
     							+ "FROM   AD_Field f "

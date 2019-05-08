@@ -38,6 +38,7 @@ import org.compiere.model.MLookup;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.model.MTable;
+import org.compiere.model.MWindow;
 import org.compiere.model.PO;
 import org.compiere.util.CLogger;
 import org.compiere.util.DisplayType;
@@ -53,6 +54,8 @@ import org.zkoss.zul.Hlayout;
 import org.zkoss.zul.Separator;
 import org.zkoss.zul.Span;
 import org.zkoss.zul.Vlayout;
+
+import it.idempiere.base.util.BaseEnvHelper;
 
 /**
  * Quick Entry Window
@@ -115,6 +118,14 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 		}
 
 		Env.setContext(Env.getCtx(), m_WindowNo, QUICK_ENTRY_MODE, "Y");
+				
+		// F3P: propagate context from source window
+		BaseEnvHelper.copyWindowEnv(Env.getCtx(), parent_WindowNo, m_WindowNo);
+		
+		// F3P: so trx from window definition
+		MWindow mWindow = MWindow.get(Env.getCtx(), AD_Window_ID);
+		Env.setContext(Env.getCtx(), m_WindowNo, MWindow.COLUMNNAME_IsSOTrx, mWindow.isSOTrx());
+		
 		initPOs();
 
 	}	//	WQuickEntry
@@ -548,4 +559,11 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 		return quickFields.size();
 	}// size of quickfields
 
+	// F3P: exposed window no
+	
+	public int getWindowNo()
+	{
+		return m_WindowNo;
+	}
+	
 } // WQuickEntry

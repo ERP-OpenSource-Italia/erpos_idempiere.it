@@ -25,6 +25,7 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
@@ -301,5 +302,42 @@ public class BaseEnvHelper
 		}
 		
 		return param.toString();
+	}
+	
+	
+	
+	/** Copia il contesto di una finestra su una finestra destinazione.
+	 *  Copia 'senza tab' sia in sorgente che in destinazione 
+	 *  
+	 * @param ctx contesto
+	 * @param sourceWinNo
+	 * @param destWinNo
+	 */
+	public static void copyWindowEnv(Properties ctx, int sourceWinNo, int destWinNo)
+	{
+		if (ctx == null)
+			throw new IllegalArgumentException ("Require Context");
+		
+		String ctxPrefix = sourceWinNo+"|";
+		
+		// We need to clone the ctx to avoid concurrent modification exceptions
+		Properties clone = new Properties();
+		clone.putAll(ctx);
+		
+		for(Entry<Object,Object> entry:clone.entrySet())
+		{
+			String tag = entry.getKey().toString();
+			
+			if (tag.startsWith(ctxPrefix))
+			{
+				String potentialTag = tag.substring(ctxPrefix.length()); 
+				
+				if(potentialTag.indexOf('|') <= 0) // Contiene tab, non ci interessa
+				{
+					String value =  entry.getValue().toString();
+					Env.setContext(ctx, destWinNo, potentialTag, value);
+				}				
+			}
+		}		
 	}
 }
