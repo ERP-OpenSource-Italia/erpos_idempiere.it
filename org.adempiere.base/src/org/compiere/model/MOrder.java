@@ -170,12 +170,16 @@ public class MOrder extends X_C_Order implements DocAction
 			setDocStatus(DOCSTATUS_Drafted);
 			setDocAction (DOCACTION_Prepare);
 			//
-			setDeliveryRule (DELIVERYRULE_Availability);
-			setFreightCostRule (FREIGHTCOSTRULE_FreightIncluded);
-			setInvoiceRule (INVOICERULE_Immediate);
-			setPaymentRule(PAYMENTRULE_OnCredit);
+			
+			// F3P: moved in before save, and filled with BP data if still empty 
+			
+			// setDeliveryRule (DELIVERYRULE_Availability);
+			// setFreightCostRule (FREIGHTCOSTRULE_FreightIncluded);
+			// setInvoiceRule (INVOICERULE_Immediate);
+			// setPaymentRule(PAYMENTRULE_OnCredit);
 			setPriorityRule (PRIORITYRULE_Medium);
-			setDeliveryViaRule (DELIVERYVIARULE_Pickup);
+			// setDeliveryViaRule (DELIVERYVIARULE_Pickup);
+			
 			//
 			setIsDiscountPrinted (false);
 			setIsSelected (false);
@@ -196,8 +200,11 @@ public class MOrder extends X_C_Order implements DocAction
 			setProcessing(false);
 			setPosted(false);
 
-			setDateAcct (new Timestamp(System.currentTimeMillis()));
-			setDatePromised (new Timestamp(System.currentTimeMillis()));
+			
+			// F3P: moved in before save, and filled with BP data if still empty 
+			
+//			setDateAcct (new Timestamp(System.currentTimeMillis()));
+//			setDatePromised (new Timestamp(System.currentTimeMillis()));
 			setDateOrdered (new Timestamp(System.currentTimeMillis()));
 
 			setFreightAmt (Env.ZERO);
@@ -1038,7 +1045,7 @@ public class MOrder extends X_C_Order implements DocAction
 	 *	@return save
 	 */
 	protected boolean beforeSave (boolean newRecord)
-	{
+	{		
 		//	Client/Org Check
 		if (getAD_Org_ID() == 0)
 		{
@@ -1109,6 +1116,102 @@ public class MOrder extends X_C_Order implements DocAction
 		}
 		if (getBill_Location_ID() == 0)
 			setBill_Location_ID(getC_BPartner_Location_ID());
+		
+		// F3P: check if BP-dependant values removed from constructor are still empty (we need BP set, so as soon as is initialized)
+		
+		if(newRecord)
+		{
+			boolean setBPFlags = false; // IF we set at least one value, we reset to flags to BP value (admittedly borderline behaviour)
+			MBPartner bPartner = null;
+			MBPartner billBPartner = null;
+			
+			if(getDeliveryRule() == null)
+			{
+				if(bPartner == null)
+					bPartner = MBPartner.get(getCtx(), getC_BPartner_ID());
+				
+				if(bPartner.getDeliveryRule() != null)
+					setDeliveryRule(bPartner.getDeliveryRule());
+				else
+					setDeliveryRule(DELIVERYRULE_Availability);				
+				
+				setBPFlags = true;
+			}
+			
+			if(getFreightCostRule() == null)
+			{
+				if(bPartner == null)
+					bPartner = MBPartner.get(getCtx(), getC_BPartner_ID());
+				
+				if(bPartner.getFreightCostRule() != null)
+					setFreightCostRule(bPartner.getFreightCostRule());
+				else
+					setFreightCostRule(FREIGHTCOSTRULE_FreightIncluded);
+					
+				setBPFlags = true;
+			}
+			
+			if(getDeliveryViaRule() == null)
+			{
+				if(bPartner == null)
+					bPartner = MBPartner.get(getCtx(), getC_BPartner_ID());
+				
+				if(bPartner.getDeliveryViaRule() != null)
+					setDeliveryViaRule(bPartner.getDeliveryViaRule());
+				else
+					setDeliveryViaRule(DELIVERYVIARULE_Pickup);
+				
+				setBPFlags = true;
+			}			
+			
+			if(getInvoiceRule() == null)
+			{
+				if(billBPartner == null)
+					billBPartner = MBPartner.get(getCtx(), getBill_BPartner_ID());
+				
+				if(billBPartner.getInvoiceRule() != null)
+					setInvoiceRule(billBPartner.getInvoiceRule());
+				else
+					setInvoiceRule(INVOICERULE_Immediate);
+				
+				setBPFlags = true;
+			}
+
+			if(getPaymentRule() == null)
+			{
+				if(billBPartner == null)
+					billBPartner = MBPartner.get(getCtx(), getBill_BPartner_ID());
+				
+				if(billBPartner.getPaymentRule() != null)
+					setPaymentRule(billBPartner.getPaymentRule());
+				else
+					setPaymentRule(PAYMENTRULE_OnCredit);
+				
+				setBPFlags = true;
+			}
+			
+			if(setBPFlags)
+			{
+				if(bPartner == null)
+					bPartner = MBPartner.get(getCtx(), getC_BPartner_ID());
+				
+				if(billBPartner == null)
+					billBPartner = MBPartner.get(getCtx(), getBill_BPartner_ID());
+				
+				setIsDiscountPrinted(billBPartner.isDiscountPrinted());
+				setSendEMail(bPartner.isSendEMail());
+			}
+			
+			// Dates
+			
+			if(getDateAcct() == null)
+				setDateAcct(getDateOrdered());
+			
+			if(getDatePromised() == null)
+				setDatePromised(getDateOrdered());
+		}
+		
+		// F3P end
 
 		//	Default Price List
 		if (getM_PriceList_ID() == 0)
