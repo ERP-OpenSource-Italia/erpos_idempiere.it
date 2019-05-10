@@ -39,6 +39,8 @@ import org.compiere.util.KeyNamePair;
 import org.compiere.util.Login;
 import org.zkoss.util.Locales;
 import org.zkoss.web.Attributes;
+import org.zkoss.zk.ui.Execution;
+import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
@@ -82,6 +84,33 @@ public class LoginWindow extends FWindow implements EventListener<Event>
 
     private void initComponents()
     {
+		Execution ex = Executions.getCurrent();
+		
+		String remoteUser = ex.getRemoteUser();
+		System.out.println("Checking SSO, remote user: " + remoteUser);
+		
+    	for(String header:ex.getHeaderNames())
+    	{
+    		System.out.println("Checking SSO, got header: " + header);
+    		
+    		/*
+    		if(header.equals(ssoUserNameHeader))
+    		{
+    			ssoUser = ex.getHeader(header);
+    			
+        		if(log.isLoggable(Level.INFO))
+        			System.out.println("Found SSO user: " + ssoUser);
+    		}
+    		else if(ssoIdpHeader != null && header.equals(ssoIdpHeader))
+    		{
+    			ssoIdP = ex.getHeader(header);
+    			
+        		if(log.isLoggable(Level.INFO))
+        			System.out.println("Found SSO IdP: " + ssoIdP);
+    		}
+    		*/
+    	}
+    	
         createLoginPanel();
     }
 
