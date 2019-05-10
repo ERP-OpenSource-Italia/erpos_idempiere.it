@@ -2093,8 +2093,16 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
     /**
      * @see ToolbarListener#onSave()
      */
+    
     @Override
     public void onSave()
+    {
+    	onSave(null);
+    }
+    
+	// F3P: after save callback
+        
+    public void onSave(final Callback<Boolean> afterSaveCallbak)
     {
     	final IADTabpanel dirtyTabpanel = adTabbox.getDirtyADTabpanel();
 		onSave(true, false, new Callback<Boolean>() {
@@ -2111,16 +2119,28 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		    				adTabbox.getSelectedDetailADTabpanel().getGridTab() != null )
 		    			adTabbox.getSelectedDetailADTabpanel().getGridTab().dataRefreshAll(true, true);
 		    	}
-				if (dirtyTabpanel != null) {
-					if (dirtyTabpanel == adTabbox.getSelectedDetailADTabpanel())
-						Clients.scrollIntoView(dirtyTabpanel);
-					focusToTabpanel(dirtyTabpanel);
-				} else {
-					focusToActivePanel();
+				
+				if(afterSaveCallbak != null)
+				{
+					// F3P: invoke after save
+					
+					if(afterSaveCallbak != null)
+						afterSaveCallbak.onCallback(result);					
 				}
+				else
+				{
+					if (dirtyTabpanel != null) {
+						if (dirtyTabpanel == adTabbox.getSelectedDetailADTabpanel())
+							Clients.scrollIntoView(dirtyTabpanel);
+						focusToTabpanel(dirtyTabpanel);
+					} else {
+						focusToActivePanel();
+					}
+				}
+				
 			}
 		});
-    }
+    }    
 
     private void onSave(final boolean onSaveEvent, final boolean onNavigationEvent, final Callback<Boolean> callback) {
     	final Callback<Boolean> postCallback = new Callback<Boolean>() {
