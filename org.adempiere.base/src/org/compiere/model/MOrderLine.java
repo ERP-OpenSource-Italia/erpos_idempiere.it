@@ -672,8 +672,14 @@ public class MOrderLine extends X_C_OrderLine
 	public int getC_Project_ID()
 	{
 		int ii = super.getC_Project_ID ();
-		if (ii == 0)
-			ii = getParent().getC_Project_ID();
+		if (ii == 0) // F3P: invoice generation calls this a lot, and 'getParent' is quite heavy, optimized. Still a very partial optimization
+		{
+			if(m_parent != null)
+				return getParent().getC_Project_ID();
+			else
+				ii = DB.getSQLValue(get_TrxName(), "SELECT C_Project_ID FROM C_Order WHERE C_ORder_ID = ?", getC_Order_ID());
+		}
+
 		return ii;
 	}	//	getC_Project_ID
 	
