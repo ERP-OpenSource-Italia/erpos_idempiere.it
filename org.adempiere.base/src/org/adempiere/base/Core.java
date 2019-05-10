@@ -50,7 +50,6 @@ import org.compiere.util.Env;
 import org.compiere.util.PaymentExport;
 import org.compiere.util.ReplenishInterface;
 import org.compiere.util.WhereClauseAndParams;
-import org.osgi.framework.FrameworkUtil;
 
 /**
  * This is a facade class for the Service Locator.
@@ -67,6 +66,9 @@ import org.osgi.framework.FrameworkUtil;
 public class Core {
 
 	private final static CLogger s_log = CLogger.getCLogger(Core.class);
+	
+	// F3P: for performance reasons we need to cache the engine manager.
+	private static OSGiScriptEngineManager s_scriptEngineManager = null;  
 
 	/**
 	 * @return list of active resource finder
@@ -417,9 +419,10 @@ public class Core {
 	 */
 	public static ScriptEngine getScriptEngine(String engineName)
 	{
-		OSGiScriptEngineManager osgiFactory = new OSGiScriptEngineManager( FrameworkUtil.getBundle(Core.class).getBundleContext());
-		ScriptEngine engine = osgiFactory.getEngineByName(engineName);
-
+		if(s_scriptEngineManager == null)
+			s_scriptEngineManager = new OSGiScriptEngineManager();
+		
+		ScriptEngine engine = s_scriptEngineManager.getEngineByName(engineName);
 		return engine;
 	}
 	
