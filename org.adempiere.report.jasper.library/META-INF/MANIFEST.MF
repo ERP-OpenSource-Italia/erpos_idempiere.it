@@ -54,7 +54,8 @@ Bundle-ClassPath: lib/batik-anim-1.8.jar,
  lib/xmlgraphics-commons-1.5.jar,
  lib/xmpcore-5.1.1.jar,
  .,
- lib/bcprov-jdk14-139.jar
+ lib/bcprov-jdk14-139.jar,
+ lib/javase-3.3.1.jar
 Export-Package: net.sf.jasperreports.ant,
  net.sf.jasperreports.charts,
  net.sf.jasperreports.charts.base,
