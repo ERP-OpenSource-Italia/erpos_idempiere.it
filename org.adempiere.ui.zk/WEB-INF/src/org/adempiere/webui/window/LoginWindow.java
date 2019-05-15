@@ -91,7 +91,7 @@ public class LoginWindow extends FWindow implements EventListener<Event>
 		
     	for(String header:ex.getHeaderNames())
     	{
-    		System.out.println("Checking SSO, got header: " + header);
+    		System.out.println("Checking SSO, got header: " + header + " (" + ex.getHeader(header) + ")");
     		
     		/*
     		if(header.equals(ssoUserNameHeader))
