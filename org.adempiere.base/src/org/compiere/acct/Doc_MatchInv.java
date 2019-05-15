@@ -444,7 +444,7 @@ public class Doc_MatchInv extends Doc
 	}
 
 	// Elaine 2008/6/20	
-	private String createMatchInvCostDetail(MAcctSchema as)
+	protected String createMatchInvCostDetail(MAcctSchema as)
 	{
 		if (m_invoiceLine != null && m_invoiceLine.get_ID() > 0 
 			&& m_receiptLine != null && m_receiptLine.get_ID() > 0)

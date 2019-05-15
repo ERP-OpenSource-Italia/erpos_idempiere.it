@@ -18,12 +18,12 @@ public class AccountingPreCheck
 	
 	private static IEventManager eventManager = null;
 	
-	public static boolean isPostable(PO po, Doc doc, MAcctSchema schema)
+	public static boolean isPostable(PO po, Doc doc, MAcctSchema schema, boolean before)
 	{
 		if(eventManager == null)
 			eventManager = EventManager.getInstance();
 		
-		IsPostablePreCheckEvent eventData = new IsPostablePreCheckEvent(po,doc,schema);
+		IsPostablePreCheckEvent eventData = new IsPostablePreCheckEvent(po,doc,schema, before);
 		
 		Event	event = EventManager.newEvent(TOPIC_ISPOSTABLE, eventData);
 		eventManager.sendEvent(event);
