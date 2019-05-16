@@ -50,6 +50,10 @@
 		<get src="${url.file.jp.lib}/xml-apis-ext-1.3.04.jar" dest="lib/xml-apis-ext-1.3.04.jar" usetimestamp="true" verbose="true" retries="5" />
 		<get src="${url.file.jp.lib}/xmlgraphics-commons-1.5.jar" dest="lib/xmlgraphics-commons-1.5.jar" usetimestamp="true" verbose="true" retries="5" />
 		<get src="${url.file.jp.lib}/xmpcore-5.1.1.jar" dest="lib/xmpcore-5.1.1.jar" usetimestamp="true" verbose="true" retries="5" />
-		<get src="${url.file.jp.lib}/bcprov-jdk14-139.jar" dest="lib/bcprov-jdk14-139.jar" usetimestamp="true" verbose="true" retries="5" />		
+		<get src="${url.file.jp.lib}/bcprov-jdk14-139.jar" dest="lib/bcprov-jdk14-139.jar" usetimestamp="true" verbose="true" retries="5" />
+		<get
+					src="${url.maven2.lib}/maven2/com/google/zxing/javase/3.3.1/javase-3.3.1.jar"
+					dest="lib/javase-3.3.1.jar" usetimestamp="true"
+					verbose="true" retries="5" />	
 	</target>
 </project>
