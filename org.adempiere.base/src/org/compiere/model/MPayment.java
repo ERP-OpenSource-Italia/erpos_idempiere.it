@@ -2851,20 +2851,23 @@ public class MPayment extends X_C_Payment
 		if(m_processMsg != null)
 			return false;
 		
-		// Remove Allocations and un-link payment
+		// Remove Allocations and un-link payment (we need to make the payment non-processed before deleting allocation to avoid errors in reverting bp open balance
+		
+		setProcessed(false);
+		saveEx();
 		
 		MAllocationHdr[] mAllocationHdrs = MAllocationHdr.getOfPayment(getCtx(), getC_Payment_ID(), get_TrxName());
-		
-		for(MAllocationHdr mAllocationHdr:mAllocationHdrs)
+		if (mAllocationHdrs != null  && mAllocationHdrs.length != 0)
 		{
-			mAllocationHdr.deleteEx(true,get_TrxName());
-		}
-				
-		// Update BP Status
-		
-		if (getC_BPartner_ID() != 0 && getC_Invoice_ID() == 0 && getC_Charge_ID() == 0)
+			for(MAllocationHdr mAllocationHdr:mAllocationHdrs)
+			{
+				mAllocationHdr.deleteEx(true,get_TrxName());
+			}
+		}		
+		else if (getC_BPartner_ID() != 0) // Update BP Status
 		{
 			MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), get_TrxName());
+			DB.getDatabase().forUpdate(bp, 0);
 			//	Update total balance to include this payment 
 			BigDecimal payAmt = MConversionRate.convertBase(getCtx(), getPayAmt(), 
 				getC_Currency_ID(), getDateAcct(), getC_ConversionType_ID(), getAD_Client_ID(), getAD_Org_ID());
@@ -2886,7 +2889,7 @@ public class MPayment extends X_C_Payment
 			bp.setTotalOpenBalance(newBalance);
 			bp.setSOCreditStatus();
 			bp.saveEx();
-		}		
+		}
 		
 		// Delete accounting
 		
@@ -2897,7 +2900,6 @@ public class MPayment extends X_C_Payment
 		setDocStatus(DOCSTATUS_Drafted);
 		setDocAction(DOCACTION_Complete);
 		setIsApproved(false);
-		setProcessed(false);
 		setPosted(false);
 		setIsAllocated(false);
 

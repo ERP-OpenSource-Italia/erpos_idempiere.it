@@ -28,7 +28,6 @@ import javax.script.ScriptEngineManager;
 import javax.script.SimpleBindings;
 
 import org.adempiere.base.Service;
-import org.osgi.framework.BundleContext;
 
 /**
  * This class acts as a delegate for all the available ScriptEngineManagers. Unluckily, the standard did not
@@ -78,14 +77,12 @@ import org.osgi.framework.BundleContext;
 public class OSGiScriptEngineManager extends ScriptEngineManager{
 	private Bindings bindings;
 	private Map <ScriptEngineManager, ClassLoader> classLoaders;
-	private BundleContext context;
 	
 	private static Map<String,OSGiScriptEngine> cacheEngines = new HashMap<>();
 	
-	public OSGiScriptEngineManager(BundleContext context){
-		this.context=context;
+	public OSGiScriptEngineManager(){
 		bindings=new SimpleBindings();
-		this.classLoaders=findManagers(context);
+		this.classLoaders=findManagers();
 	}
 	/**
 	 * This method is the only one that is visible and not part of the ScriptEngineManager class.
@@ -106,7 +103,7 @@ public class OSGiScriptEngineManager extends ScriptEngineManager{
 	 *
 	 */
 	public void reloadManagers(){
-		this.classLoaders=findManagers(context);
+		this.classLoaders=findManagers();
 	}
 	
 	public Object get(String key) {
@@ -208,7 +205,7 @@ public class OSGiScriptEngineManager extends ScriptEngineManager{
 
 	}
 
-	private Map<ScriptEngineManager, ClassLoader> findManagers(BundleContext context) {
+	private Map<ScriptEngineManager, ClassLoader> findManagers() {
 
 		Map<ScriptEngineManager, ClassLoader> managers=new HashMap<ScriptEngineManager, ClassLoader>();
 
