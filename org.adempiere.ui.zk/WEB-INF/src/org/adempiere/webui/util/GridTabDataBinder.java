@@ -159,6 +159,7 @@ public class GridTabDataBinder implements ValueChangeListener {
 					saveMultipleRecords(Env.getCtx(), gridTab.getTableName(), e.getPropertyName(), recordId, newValues, trx.getTrxName());
 					trx.commit();
 					gridTab.dataRefreshAll();
+					gridTab.refreshParentTabs(); // F3P: refresh parent tab, since it may be changed
 				}
 				catch(Exception ex)
 				{

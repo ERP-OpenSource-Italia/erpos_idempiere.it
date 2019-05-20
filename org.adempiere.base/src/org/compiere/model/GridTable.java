@@ -3837,7 +3837,15 @@ public class GridTable extends AbstractTableModel
 	}	//	setFieldVFormat	
 
 	// verify if the current record has changed
-	public boolean hasChanged(int row) {
+	
+	public boolean hasChanged(int row) 
+	{
+		return hasChanged(row, false);
+	}
+	
+	// F3P: added option to allow reload if change is from the same user (model validator changed it while saving child or related record)
+	
+	public boolean hasChanged(int row, boolean reloadIfImplicitChange) {
 		// not so aggressive (it can has still concurrency problems)
 		// compare Updated, IsProcessed
 		if (getKeyID(row) > 0) {
@@ -3858,13 +3866,15 @@ public class GridTable extends AbstractTableModel
 				
 			// end			
 			
+			// F3P: add updatedby to allow for same user check
+			
 			String columns = null;
 			if (hasUpdated && hasProcessed) {
-				columns = new String("Updated, Processed");
+				columns = new String("Updated, Processed, UpdatedBy");
 			} else if (hasUpdated) {
-				columns = new String("Updated");
+				columns = new String("Updated, UpdatedBy");
 			} else if (hasProcessed) {
-				columns = new String("Processed");
+				columns = new String("Processed, UpdatedBy");
 			} else {
 				// no columns updated or processed to compare
 				return false;
@@ -3880,6 +3890,9 @@ public class GridTable extends AbstractTableModel
 	    	PreparedStatement pstmt = null;
 	    	ResultSet rs = null;
 	    	String sql = "SELECT " + columns + " FROM " + m_tableName + " WHERE " + m_tableName + "_ID=?";
+	    	
+	    	int updatedBy = -1; // F3P: add updatedby to allow for same user check
+	    	
 	    	try
 	    	{
 	    		pstmt = DB.prepareStatement(sql, get_TrxName());
@@ -3891,6 +3904,8 @@ public class GridTable extends AbstractTableModel
 	    				dbUpdated = rs.getTimestamp(idx++);
 	    			if (hasProcessed)
 	    				dbProcessedS = rs.getString(idx++);
+	    			
+	    			updatedBy = rs.getInt("UpdatedBy"); // F3P: add updatedby to allow for same user check
 	    		}
 	    		else
 	    			if (log.isLoggable(Level.INFO)) log.info("No Value " + sql);
@@ -3905,6 +3920,8 @@ public class GridTable extends AbstractTableModel
 	    		rs = null; pstmt = null;
 	    	}
 	    	
+	    	boolean isChanged = false;
+	    	
 	    	if (hasUpdated) {
 				Timestamp memUpdated = null;
 				memUpdated = (Timestamp) getOldValue(row, colUpdated);
@@ -3912,10 +3929,10 @@ public class GridTable extends AbstractTableModel
 					memUpdated = (Timestamp) getValueAt(row, colUpdated);
 
 				if (memUpdated != null && ! memUpdated.equals(dbUpdated))
-					return true;
+					isChanged = true;
 	    	}
 	    	
-	    	if (hasProcessed) {
+	    	if (isChanged == false && hasProcessed) {
 				Boolean memProcessed = null;
 				memProcessed = (Boolean) getOldValue(row, colProcessed);
 				if (memProcessed == null){
@@ -3929,7 +3946,20 @@ public class GridTable extends AbstractTableModel
 				if (dbProcessedS == null || !dbProcessedS.equals("Y")) // F3P: null check added, no record result in NPE
 					dbProcessed = Boolean.FALSE;
 				if (memProcessed != null && ! memProcessed.equals(dbProcessed))
-					return true;
+					isChanged = true;
+	    	}
+	    	
+	    	if(isChanged)
+	    	{
+	    		int currentUser = Env.getAD_User_ID(m_ctx);
+	    		
+	    		if(updatedBy == currentUser && needSave() == false) // Implcit change
+	    		{
+	    			dataRefresh(row);
+	    			isChanged = false;
+	    		}
+	    		
+	    		return isChanged;
 	    	}
 		}
 
