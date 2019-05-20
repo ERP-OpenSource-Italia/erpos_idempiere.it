@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 
+import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 import javax.servlet.http.HttpServletRequest;
 
@@ -117,6 +118,8 @@ import org.zkoss.zul.Toolbarbutton;
 import org.zkoss.zul.Vbox;
 import org.zkoss.zul.impl.Utils;
 import org.zkoss.zul.impl.XulElement;
+
+import it.adempiere.webui.mail.MailExtension;
 
 
 /**
@@ -906,10 +909,17 @@ public class ZkReportViewer extends Window implements EventListener<Event>, ITab
 		{
 			log.log(Level.SEVERE, "", e);
 		}
-
+		
+		DataSource dsAttachments[] = {new FileDataSource(attachment)};
+		
+		MailExtension.openMailClient(Msg.getMsg(Env.getCtx(), "SendMail"), from, to, 
+					subject, message, dsAttachments, m_WindowNo, 0);
+		
+		/*
 		WEMailDialog dialog = new WEMailDialog (Msg.getMsg(Env.getCtx(), "SendMail"),
 			from, to, subject, message, new FileDataSource(attachment));
 		AEnv.showWindow(dialog);
+		*/
 	}	//	cmd_sendMail
 
 	/**

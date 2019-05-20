@@ -34,6 +34,7 @@ Import-Package: javax.activation,
 DynamicImport-Package: action.images
 Bundle-ClassPath: org-adempiere-base-ui-zk-custom.jar, org-adempiere-base-ui-zk-extension.jar,.
 Export-Package: fi.jawsy.jawwa.zk.atmosphere,
+ it.adempiere.webui.mail,
  metainfo.zk,
  org.adempiere.webui,
  org.adempiere.webui.acct,

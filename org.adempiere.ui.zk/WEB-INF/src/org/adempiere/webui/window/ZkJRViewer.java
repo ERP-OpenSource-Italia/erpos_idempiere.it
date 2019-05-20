@@ -6,11 +6,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.logging.Level;
 
+import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.webui.LayoutUtils;
-import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Listbox;
 import org.adempiere.webui.component.Tabpanel;
 import org.adempiere.webui.component.ToolBarButton;
@@ -44,6 +44,7 @@ import org.zkoss.zul.Separator;
 import org.zkoss.zul.Tab;
 import org.zkoss.zul.Toolbar;
 
+import it.adempiere.webui.mail.MailExtension;
 import net.sf.jasperreports.engine.DefaultJasperReportsContext;
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JasperPrint;
@@ -259,14 +260,23 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 				return;
 			}
 		}
+		
 		String to = "";
 		MUser from = MUser.get(Env.getCtx(), Env.getAD_User_ID(Env.getCtx()));
 		String subject = m_title;
+		
+		// F3P: integrated MailExtension
+		DataSource dsAttachments[] = {new FileDataSource(attachment)};
+				
+		MailExtension.openMailClient(Msg.getMsg(Env.getCtx(), "SendMail"), from, to, 
+					subject, "", dsAttachments, m_WindowNo, 0);
+		
+		/*
 
 		WEMailDialog dialog = new WEMailDialog (Msg.getMsg(Env.getCtx(), "SendMail"),
 			from, to, subject, "", new FileDataSource(attachment));
 		AEnv.showWindow(dialog);
-
+		*/
 	}	//	cmd_sendMail
 
 	public void onEvent(Event event) throws Exception {
