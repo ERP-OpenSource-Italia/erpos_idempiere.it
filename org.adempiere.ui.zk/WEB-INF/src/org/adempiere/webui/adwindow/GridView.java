@@ -784,6 +784,10 @@ public class GridView extends Vbox implements EventListener<Event>, IdSpace, IFi
 	private void onSelectedRowChange(int index) {
 		if (updateModelIndex(index)) {
 			updateListIndex();
+			
+			// F3P: refresh parent on navigate
+			if(gridTab.getParentTab() != null)
+				gridTab.refreshParentTabs();
 		}
 	}
 
