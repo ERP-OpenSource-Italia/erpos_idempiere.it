@@ -55,6 +55,8 @@ import org.idempiere.adInterface.x10.StandardResponseDocument;
 import org.idempiere.adinterface.CompiereService;
 import org.idempiere.webservices.fault.IdempiereServiceFault;
 
+import it.idempiere.base.util.STDSysConfig;
+
 
 
 /**
@@ -367,6 +369,33 @@ public class AbstractService {
 
 		if (sql.toLowerCase().indexOf(" where ") == -1)
 			throw new AdempiereException("Invalid SQL: Query do not have any filetering criteria");
+		
+		// F3P: if we are using compatibility mode, the query may contain '@', and there is no way around it.
+		// So in compatibility mode we pre-check if the number of '@' is balanced, if not we are not trying to resolve via ctx
+		// Note: if we have two unrelated '@' it will still not work...
+		
+		Boolean bCompMode = STDSysConfig.getWebServiceCompatibilityMode(po.getAD_Client_ID(), po.getAD_Org_ID());
+		
+		if(bCompMode != null && bCompMode.booleanValue())
+		{
+			int count = 0;
+			
+			for(int i=0; i < sql.length(); i++)
+			{
+				char chr = sql.charAt(i);
+				
+				if(chr == '@')
+					count++;
+			}
+			
+			if(count % 2 != 0 ) // odd number
+			{
+				return sql;
+			}
+		}
+		
+		// F3P end
+				
 
 		StringBuilder sqlBuilder = new StringBuilder();
 

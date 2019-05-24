@@ -214,6 +214,7 @@ public class CompositeADTabbox extends AbstractADTabbox
 					return false;
 				} 
 				tabPanel.getGridTab().dataRefreshAll(true, true);
+				tabPanel.getGridTab().refreshParentTabs(); // F3P: refresh parent tabs
 				return true;
 			}
 

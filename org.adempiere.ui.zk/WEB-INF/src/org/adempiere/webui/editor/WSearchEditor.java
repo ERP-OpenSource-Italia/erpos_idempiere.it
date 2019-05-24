@@ -47,9 +47,11 @@ import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.window.WFieldRecordInfo;
 import org.compiere.model.GridField;
+import org.compiere.model.GridTab;
 import org.compiere.model.Lookup;
 import org.compiere.model.MLookup;
 import org.compiere.model.MLookupFactory;
+import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.model.X_AD_CtxHelp;
 import org.compiere.util.CLogger;
@@ -64,6 +66,8 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
+
+import it.adempiere.webui.quickentry.QuickEntryExtendedInfo;
 
 /**
  * Search Editor for web UI.
@@ -460,13 +464,22 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 	{
 		if(!getComponent().isEnabled())
 			return;
-
+		
+		// F3P: extended info
+		final QuickEntryExtendedInfo quExt = QuickEntryExtendedInfo.get(this, lookup);
+		
 		int zoomWindowId = gridField != null ? lookup.getZoom(Env.isSOTrx(Env.getCtx(), gridField.getWindowNo())) : lookup.getZoom(Env.isSOTrx(Env.getCtx()));
+		
+		// F3P: override window
+		
+		if(quExt.hasExtendedInfo() && quExt.getAD_Window_ID() > 0)
+			zoomWindowId = quExt.getAD_Window_ID();
+			
 		final WQuickEntry vqe = new WQuickEntry (lookup.getWindowNo(), zoomWindowId);
 		if (vqe.getQuickFields()<=0)
 			return;
 		int Record_ID = 0;
-
+		
 		//  if update, get current value
 		if (!newRecord)
 		{
@@ -475,9 +488,9 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 			else if (value != null && "".compareTo(value.toString())!= 0)
 				Record_ID = Integer.parseInt(value.toString());
 		}
-
+		
 		vqe.loadRecord (Record_ID);
-
+		
 		final int finalRecord_ID = Record_ID;
 		vqe.addEventListener(DialogEvents.ON_WINDOW_CLOSE, new EventListener<Event>() {
 			@Override
@@ -499,6 +512,48 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 				setValue(new Integer(result));
 				actionCombo (new Integer(result));      //  data binding
 				lookup.refresh();
+				
+				// F3P: Quizk entry save and zoom
+				
+				if(quExt.hasExtendedInfo() && quExt.isSaveRecord() &&
+						gridField != null && gridField.getGridTab() != null)
+				{
+					GridTab tab = gridField.getGridTab();
+					tab.dataSave(false);
+					tab.dataRefresh();
+				}
+
+				if(quExt.hasExtendedInfo() && quExt.isZoomAfterCreate())
+				{
+					if(quExt.getZoomAD_Window_ID() > 0)
+					{
+			        	MQuery zoomQuery = new MQuery();   //  ColumnName might be changed in MTab.validateQuery
+			        	String column = lookup.getColumnName();
+
+			        	//strip off table name, fully qualify name doesn't work when zoom into detail tab
+			        	if (column.indexOf(".") > 0)
+			        	{
+			        		int p = column.indexOf(".");
+			        		String tableName = column.substring(0, p);
+			        		column = column.substring(column.indexOf(".")+1);
+			        		zoomQuery.setZoomTableName(tableName);
+			        		zoomQuery.setZoomColumnName(column);            	
+			        	}
+			        	else
+			        	{
+			        		zoomQuery.setZoomColumnName(column);
+			        		zoomQuery.setZoomTableName(column.substring(0, column.length() - 3));
+			        	}
+			        	
+			        	zoomQuery.setZoomValue(getValue());
+			        	zoomQuery.addRestriction(column, MQuery.EQUAL, value);
+			        	zoomQuery.setRecordCount(1);    //  guess
+
+			        	AEnv.zoom(quExt.getZoomAD_Window_ID(), zoomQuery);
+					}
+					else
+						AEnv.actionZoom(lookup, getValue()); // Verificare che rispetti la finestra di zoom specificata
+				}
 
 				//setValue(getValue());				
 			}

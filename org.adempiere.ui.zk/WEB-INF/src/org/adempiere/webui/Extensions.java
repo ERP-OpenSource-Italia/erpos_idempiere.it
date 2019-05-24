@@ -20,6 +20,7 @@
  *****************************************************************************/
 package org.adempiere.webui;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.adempiere.base.Service;
@@ -68,8 +69,11 @@ public class Extensions {
 	 */
 	public static WEditorPopupMenuItems getEditorPopupMenuItems(WEditor editor,boolean zoom, boolean requery, boolean preferences, boolean newRecord, boolean updateRecord, boolean showLocation)
 	{
-		List<IEditorPopupMenuItemFactory> factories = Service.locator().list(IEditorPopupMenuItemFactory.class).getServices();
+		List<IEditorPopupMenuItemFactory> factories = Service.locator().list(IEditorPopupMenuItemFactory.class).getServices();		
 		WEditorPopupMenuItems items = new WEditorPopupMenuItems();
+		
+		// Factories are in order of ranking, but 'items' are overriding giving priority to last added. So we revert the factories order to keep the logic intact (override by reverse ranking order)
+		Collections.reverse(factories);
 		
 		if(factories != null)
 		{

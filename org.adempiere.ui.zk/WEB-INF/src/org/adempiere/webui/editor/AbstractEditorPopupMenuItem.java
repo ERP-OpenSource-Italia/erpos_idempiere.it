@@ -17,6 +17,7 @@ import org.adempiere.webui.theme.ThemeManager;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+import org.zkoss.zul.Menuitem;
 
 /**
  * Abstract implementation IEditorPopupMenuItem, generalizing common behaviours
@@ -60,4 +61,8 @@ public abstract class AbstractEditorPopupMenuItem implements IEditorPopupMenuIte
 		return label;
 	}
 
+	@Override
+	public void onOpenItem(WEditor editor, Menuitem mi) {
+		// Nothing to do
+	}
 }
