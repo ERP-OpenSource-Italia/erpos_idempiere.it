@@ -618,6 +618,14 @@ public class MOrder extends X_C_Order implements DocAction
 		{
 			MOrderLine line = new MOrderLine (this);
 			PO.copyValues(fromLines[i], line, getAD_Client_ID(), getAD_Org_ID());
+			
+			// F3P: price is list is not allowed to be copied, when generating counter document we need to manually copy it
+			
+			if(counter)
+			{
+				line.setPriceList(fromLines[i].getPriceList());
+			}
+			
 			line.setC_Order_ID(getC_Order_ID());
 			//
 			line.setQtyDelivered(Env.ZERO);
