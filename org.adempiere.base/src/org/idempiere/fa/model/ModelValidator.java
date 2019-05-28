@@ -12,6 +12,7 @@ import org.compiere.model.I_C_InvoiceLine;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MAssetAddition;
 import org.compiere.model.MAssetDisposed;
+import org.compiere.model.MAssetGroup;
 import org.compiere.model.MClient;
 import org.compiere.model.MInvoice;
 import org.compiere.model.MInvoiceLine;
@@ -184,9 +185,18 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 			*/
 			int product_id = SetGetUtil.get_AttrValueAsInt(m, MInvoiceLine.COLUMNNAME_M_Product_ID);
 			if (product_id > 0) {
-				MProduct prod = MProduct.get(m.getCtx(), product_id);
+				MProduct prod = MProduct.get(m.getCtx(), product_id);				
 				isAsset = (prod != null && prod.get_ID() > 0 && prod.isCreateAsset());
 				assetGroup_ID = prod!=null ? prod.getA_Asset_Group_ID() : 0;
+				
+				if(assetGroup_ID == 0) // F3P: should never happen, but in case no asset group = no asset
+					isAsset = false;
+				
+				if(isAsset) // F3P: For invoices, we are interested only on asset of type 'fixed asset'
+				{
+					MAssetGroup ag = MAssetGroup.get(m.getCtx(), prod.getA_Asset_Group_ID());					
+					isAsset = ag.isFixedAsset();					
+				}
 			}
 				
 			// end modification by @win
