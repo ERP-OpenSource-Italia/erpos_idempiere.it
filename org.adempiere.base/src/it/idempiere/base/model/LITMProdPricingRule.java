@@ -12,8 +12,8 @@ import org.compiere.model.MRole;
 import org.compiere.model.MRule;
 import org.compiere.util.DB;
 
-/** Classe di supporto alle regole di applicazione prezzo. La classe effettiva e' customizzazioen italiana,
- *  ma siccome deve essere usata nel core aggiungiamo una classi di supporto per evitare di dover aggiugnere factory al core
+/** Classe di supporto alle regole di applicazione prezzo. La classe effettiva e' customizzazione italiana,
+ *  ma siccome deve essere usata nel core aggiungiamo una classe di supporto per evitare di dover aggiungere factory al core
  * 
  * @author strinchero
  *
