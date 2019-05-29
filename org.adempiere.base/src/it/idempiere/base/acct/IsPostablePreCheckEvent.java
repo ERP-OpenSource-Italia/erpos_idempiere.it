@@ -17,13 +17,15 @@ public class IsPostablePreCheckEvent implements Serializable
 	private PO			po;
 	private Doc			doc;
 	private MAcctSchema acctSchema;
+	private boolean	isBeforePost;
 	
-	public IsPostablePreCheckEvent(PO po,Doc doc,MAcctSchema schema)
+	public IsPostablePreCheckEvent(PO po,Doc doc,MAcctSchema schema, boolean isBeforePost)
 	{
 		this.po = po;
 		this.doc = doc;
 		this.acctSchema = schema;
 		this.trxName = po.get_TrxName();
+		this.isBeforePost = isBeforePost;
 	}
 	
 	public PO getPo()
@@ -57,5 +59,9 @@ public class IsPostablePreCheckEvent implements Serializable
 	public void setTrxName(String trxName)
 	{
 		this.trxName = trxName;
+	}
+
+	public boolean isBeforePost() {
+		return isBeforePost;
 	}
 }

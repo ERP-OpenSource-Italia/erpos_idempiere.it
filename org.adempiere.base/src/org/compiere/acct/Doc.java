@@ -791,7 +791,7 @@ public abstract class Doc
 		
 		// F3P: if the document is not accountable, due to italian-specific logic, consider it as posted, but without generating facts and triggering model validators
 		
-		boolean isLitPostable = AccountingPreCheck.isPostable(p_po, this, m_as);
+		boolean isLitPostable = AccountingPreCheck.isPostable(p_po, this, m_as, true);
 		
 		if(isLitPostable == false)
 		{
@@ -811,6 +811,17 @@ public abstract class Doc
 			p_Error = validatorMsg;
 			return STATUS_Error;
 		}
+		
+		// F3P: if the document is not accountable, due to italian-specific logic, clear generated facts
+		
+		boolean isLitPostableAfter = AccountingPreCheck.isPostable(p_po, this, m_as, false);
+		
+		if(isLitPostableAfter == false)
+		{
+			facts.clear();
+		}
+		
+		// F3P end
 
 		for (int f = 0; f < facts.size(); f++)
 		{
