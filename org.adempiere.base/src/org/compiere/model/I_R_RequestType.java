@@ -208,15 +208,6 @@ public interface I_R_RequestType
 	  */
 	public boolean isDefault();
 
-    /** Column name IsEmailWhenChanged */
-    public static final String COLUMNNAME_IsEmailWhenChanged = "IsEmailWhenChanged";
-
-	/** Set Is Email When Changed	  */
-	public void setIsEmailWhenChanged (boolean IsEmailWhenChanged);
-
-	/** Get Is Email When Changed	  */
-	public boolean isEmailWhenChanged();
-
     /** Column name IsEMailWhenDue */
     public static final String COLUMNNAME_IsEMailWhenDue = "IsEMailWhenDue";
 

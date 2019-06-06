@@ -275,28 +275,7 @@ public class X_R_RequestType extends PO implements I_R_RequestType, I_Persistent
 			return "Y".equals(oo);
 		}
 		return false;
-	}
-
-	/** Set Is Email When Changed.
-		@param IsEmailWhenChanged Is Email When Changed	  */
-	public void setIsEmailWhenChanged (boolean IsEmailWhenChanged)
-	{
-		set_Value (COLUMNNAME_IsEmailWhenChanged, Boolean.valueOf(IsEmailWhenChanged));
-	}
-
-	/** Get Is Email When Changed.
-		@return Is Email When Changed	  */
-	public boolean isEmailWhenChanged () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsEmailWhenChanged);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
+	}	
 
 	/** Set EMail when Due.
 		@param IsEMailWhenDue 
