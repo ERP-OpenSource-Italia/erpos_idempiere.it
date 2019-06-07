@@ -26,10 +26,7 @@ import org.adempiere.webui.event.ContextMenuEvent;
 import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.WEditorPopupMenuItems;
-import org.compiere.model.GridField;
 import org.compiere.model.Lookup;
-import org.compiere.model.MLookup;
-import org.compiere.model.MLookupInfo;
 import org.compiere.model.MRole;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -167,6 +164,22 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
     	    			break;
     	    		}
     			}
+    			
+    			// F3P: check possible new condition to enable back new
+    			
+    			final QuickEntryExtendedInfo quExt = QuickEntryExtendedInfo.get(editor, lookup);
+
+    			if(quExt.hasExtendedInfo() && quExt.getAD_Window_ID() > 0)
+    			{
+    				int newWinID = quExt.getAD_Window_ID();
+    				
+    				Boolean canAccessNew = MRole.getDefault().getWindowAccess(newWinID);
+    	    		if (canAccessNew != null && canAccessNew) {
+    	    	    	this.newEnabled = true;    	    			
+    	    		}
+    			}
+    			
+    			// F3P end
     		} else {
     			
         		// F3P: extended quick entry
