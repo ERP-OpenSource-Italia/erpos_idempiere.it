@@ -1473,6 +1473,14 @@ public class MOrder extends X_C_Order implements DocAction
 	 */
 	public String prepareIt()
 	{
+//		Lines
+			MOrderLine[] lines = getLines(true, MOrderLine.COLUMNNAME_M_Product_ID);
+			if (lines.length == 0)
+			{
+				m_processMsg = "@NoLines@";
+				return DocAction.STATUS_Invalid;
+			}
+			
 		if (log.isLoggable(Level.INFO)) log.info(toString());
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_BEFORE_PREPARE);
 		if (m_processMsg != null)
@@ -1498,13 +1506,7 @@ public class MOrder extends X_C_Order implements DocAction
 				return DocAction.STATUS_Invalid;
 		}
 
-		//	Lines
-		MOrderLine[] lines = getLines(true, MOrderLine.COLUMNNAME_M_Product_ID);
-		if (lines.length == 0)
-		{
-			m_processMsg = "@NoLines@";
-			return DocAction.STATUS_Invalid;
-		}
+		
 				
 		// Bug 1564431
 		if (getDeliveryRule() != null && getDeliveryRule().equals(MOrder.DELIVERYRULE_CompleteOrder)) 
