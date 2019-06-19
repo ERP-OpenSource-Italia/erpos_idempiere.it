@@ -401,6 +401,8 @@ public class MPInstance extends X_AD_PInstance
 			String sql = "SELECT * FROM AD_PInstance "
 					+ " WHERE AD_Process_ID=? AND AD_User_ID=? AND IsActive='Y' AND AD_Client_ID=? AND Name IS NULL" 
 					+ " ORDER BY Created DESC";
+			sql = DB.getDatabase().addPagingSQL(sql, 1, 1000); // F3P: as a sort of optimization, limit maximum instance to be processed (limiting to lastruncount removes too many duplicates). TODO: add to sysconfig ?
+			
 			PreparedStatement pstmt = null;
 			ResultSet rs = null;
 			int cnt = 0;
