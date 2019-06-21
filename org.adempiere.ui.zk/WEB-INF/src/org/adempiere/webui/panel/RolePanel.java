@@ -25,6 +25,7 @@ package org.adempiere.webui.panel;
 
 import java.sql.Timestamp;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.servlet.http.HttpSession;
 
@@ -100,7 +101,11 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
 	protected String			m_userName;
     /** Password					*/
 	protected KeyNamePair[]	m_clientKNPairs;
-    
+	
+    /** SSO Orgs				*/
+	protected Set<Integer> 	m_adOrgs; // FIN: (st) 20/09/2017 Orgs to use as filter
+	protected boolean		m_isSso; // FIN: (st) 20/09/2017 sso flag
+	    
 	protected UserPreference m_userpreference=null;
 
 	protected boolean m_show = true;
@@ -122,13 +127,15 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
 
 	private static final String ON_DEFER_LOGOUT = "onDeferLogout";
 
-	public RolePanel(Properties ctx, LoginWindow loginWindow, String userName, boolean show, KeyNamePair[] clientsKNPairs) {
+	public RolePanel(Properties ctx, LoginWindow loginWindow, String userName, boolean show, KeyNamePair[] clientsKNPairs, Set<Integer> adOrgs, boolean isSso) { // FIN: (st) 20/09/2017 Orgs to use as filter
     	this.wndLogin = loginWindow;
     	m_ctx = ctx;
     	m_userName = userName;    	
     	login = new Login(ctx);
     	m_show = show;
         m_clientKNPairs = clientsKNPairs;
+        m_adOrgs = adOrgs;
+        m_isSso = isSso;        
         
         if( m_clientKNPairs.length == 1  &&  !m_show ){
         	Env.setContext(m_ctx, "#AD_Client_ID", (String) m_clientKNPairs[0].getID());
@@ -367,6 +374,9 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
             if (lstClient.getSelectedIndex() == -1 && lstClient.getItemCount() > 0) {
             	m_show = true; // didn't find default client
             	lstClient.setSelectedIndex(0);
+            	
+            	if(m_isSso)
+            		m_show = false; // FIN: (st) 20/09/2017 hide if sso
             }
         }
         //
@@ -426,11 +436,15 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
             MRole.getDefault(m_ctx, true);
             
     		// If we have only one role, we can hide the combobox - metas-2009_0021_AP1_G94
-    		if (m_clientKNPairs.length == 1 && lstRole.getItemCount() == 1 && ! MSysConfig.getBooleanValue(MSysConfig.ALogin_ShowOneRole, true))
+    		if (m_clientKNPairs.length == 1 && lstRole.getItemCount() == 1 && 
+    				(! MSysConfig.getBooleanValue(MSysConfig.ALogin_ShowOneRole, true) || m_isSso)) // FIN: (st) 20/09/2017 make sure if we have only one role and is sso we hide it
     		{
     			lstRole.setSelectedIndex(0);
     			lblRole.setVisible(false);
     			lstRole.setVisible(false);
+    			
+    			if(m_isSso)	// FIN: (st) 20/09/2017 hide if sso
+    				m_show = false;
     		}
     		else
     		{
@@ -471,7 +485,27 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
                     	lstOrganisation.setSelectedItem(ci);
 
                 }
-                if (lstOrganisation.getSelectedIndex() == -1 && lstOrganisation.getItemCount() > 0) {
+                
+                // FIN: (st) 20/09/2017 use sso organization as default
+                int itemCount = lstOrganisation.getItemCount();
+                boolean bSelected = false;
+                if(m_adOrgs != null && itemCount > 0 && m_adOrgs.size() > 0)
+                {
+                	for(int i=0; i < itemCount; i++)
+                	{
+                		ComboItem ci = (ComboItem)lstOrganisation.getItemAtIndex(i);
+                		int AD_Org_ID = Integer.parseInt(ci.getValue());
+                		if(m_adOrgs.contains(AD_Org_ID))
+                		{
+                			lstOrganisation.setSelectedIndex(i);
+                			bSelected = true;
+                			m_show = false;
+                		}                		
+                	}
+                }
+                // FIN end
+                
+                if (bSelected == false && (lstOrganisation.getSelectedIndex() == -1 && lstOrganisation.getItemCount() > 0)) { // FIN: (st) 20/09/2017 added check for already selected
                 	m_show = true; // didn't find default organisation
                 	lstOrganisation.setSelectedIndex(0);
                 }
@@ -510,6 +544,9 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
                 if (lstWarehouse.getSelectedIndex() == -1 && lstWarehouse.getItemCount() > 0) {
                 	m_show = true; // didn't find default warehouse
                 	lstWarehouse.setSelectedIndex(0);
+                	
+                	if(m_isSso)
+                		m_show = false; // FIN: (st) 20/09/2017 force false in sso scenario
                 }
             }
             //

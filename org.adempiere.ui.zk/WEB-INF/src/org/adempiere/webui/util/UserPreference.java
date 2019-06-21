@@ -22,6 +22,7 @@ import org.compiere.model.Query;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.Language;
+import org.compiere.util.Util;
 
 /**
  *
@@ -119,8 +120,12 @@ public final class UserPreference implements Serializable {
 						preference = new MUserPreference(Env.getCtx(), preference.getAD_Preference_ID(), null);
 					}
 				}
-				preference.setValue(value);
-				preference.saveEx();
+				
+				if(Util.isEmpty(value) == false) // FIN: dont save empty prefs, it will risult in an error
+				{
+					preference.setValue(value);
+					preference.saveEx();
+				}
 			}
 		}
 	}
