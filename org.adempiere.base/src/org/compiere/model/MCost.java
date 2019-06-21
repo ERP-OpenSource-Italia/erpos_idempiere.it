@@ -221,6 +221,9 @@ public class MCost extends X_M_Cost
 			{
 				materialCostEach = getSeedCosts(product, M_ASI_ID,
 						as, Org_ID, costingMethod, C_OrderLine_ID);
+				
+				if(materialCostEach==null)
+					materialCostEach = Env.ZERO;
 			}			
 		}
 
