@@ -18,12 +18,15 @@
 package org.adempiere.webui;
 
 import java.lang.ref.WeakReference;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.logging.Level;
 
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
@@ -41,6 +44,8 @@ import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.BrowserToken;
 import org.adempiere.webui.util.UserPreference;
+import org.compiere.model.MColumn;
+import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.model.MSession;
 import org.compiere.model.MSysConfig;
@@ -49,6 +54,7 @@ import org.compiere.model.MTable;
 import org.compiere.model.MUser;
 import org.compiere.model.MUserPreference;
 import org.compiere.util.CLogger;
+import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Language;
 import org.compiere.util.Msg;
@@ -68,6 +74,8 @@ import org.zkoss.zk.ui.sys.DesktopCache;
 import org.zkoss.zk.ui.sys.SessionCtrl;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Window;
+
+import it.idempiere.base.util.STDUtils;
 
 /**
  *
@@ -113,6 +121,9 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 	private static final String CLIENT_INFO = "client.info";
 	
 	private static boolean eventThreadEnabled = false;
+	
+	// Query param prefix
+	private static String QUERYPARAM_PREFIX = "q_";
 
 	private ConcurrentMap<String, String[]> m_URLParameters;
 
@@ -297,7 +308,89 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     		}
     		int recordID = getPrmInt("Record_ID");
     		if (tableID > 0) {
-    			AEnv.zoom(tableID, recordID);
+    			
+    			if(recordID > 0)
+    				AEnv.zoom(tableID, recordID);
+    			else // F3P: if record id is missing, try to build a query
+    			{    				
+    				MTable mTable = MTable.get(Env.getCtx(), tableID);
+    				MQuery query = null;
+    				boolean isSOTrx = true;
+    				
+    				for(Entry<String,String[]> entry:m_URLParameters.entrySet())
+    	    		{
+    	    			String paramName = entry.getKey();
+    	    			
+    	    			if(paramName.startsWith(QUERYPARAM_PREFIX))
+    	    			{
+    	    				String columnName = paramName.substring(QUERYPARAM_PREFIX.length()); // remove 'q_'
+    	    				MColumn mCol = mTable.getColumn(columnName);
+    	    				    	    				
+    	    				if(mCol != null)
+    	    				{    	    					
+    	    					String[] values = entry.getValue();
+    	    					String value = null;
+    	    					if(values != null && values.length > 0)
+    	    						value = values[0];
+    	    					
+    	    					if(value != null)
+    	    					{        	    					
+        	    					Object code = null;
+        	    					int displayType = mCol.getAD_Reference_ID();
+        	    					
+        	    					try
+        	    					{
+        	    						if(DisplayType.isID(displayType))
+        	    							code = Integer.parseInt(value);
+        	    						else if(DisplayType.isNumeric(displayType))
+        	    							code = new BigDecimal(value);
+        	    						else if(DisplayType.isDate(displayType)) // Dates are not support filter
+        	    						{
+        	    							logger.log(Level.SEVERE, "Query param " + paramName + " is a date, not a supported type");        	    							
+        	    						}
+        	    						else // All others are treated as string
+        	    						{
+        	    							code = value;
+        	    						}
+        	    					}
+        	    					catch(Exception e)
+        	    					{
+        	    						logger.log(Level.SEVERE, "Error reading " + paramName + " as numeric", e);
+        	    						code = null;
+        	    					}
+        	    					
+        	    					if(code != null)
+        	    					{
+        	    						if(query == null)
+        	    							query = new MQuery(tableID);
+        	    							
+        	    						if(mCol.getColumnName().equals("IsSOTrx"))
+        	    							isSOTrx = STDUtils.asBoolean(code); 
+        	    						        	    						
+        	    						query.addRestriction(mCol.getColumnName(), MQuery.EQUAL, code);
+        	    					}
+    	    					}
+    	    				}
+    	    				else
+    	    				{
+    	    					logger.warning("Zoom query param: " + paramName + " (" + columnName + ") does not match a column");
+    	    				}
+    	    			}
+    	    		}
+    				
+    				if(query != null)
+    				{
+    					int windowID = getPrmInt("AD_Window_ID"); // using a query we can support a known window
+    					
+    					if(windowID < 1)    						
+    						windowID = isSOTrx?mTable.getAD_Window_ID():mTable.getPO_Window_ID();
+    					
+    					if(windowID > 0)
+    					{
+    						AEnv.zoom(windowID, query);
+    					}
+    				}
+    			}
     		}
     	}
     	m_URLParameters = null;
