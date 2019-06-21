@@ -152,7 +152,18 @@ public class ProcessInfoDialog extends Window implements EventListener<Event> {
 				summary = Msg.parseTranslation(Env.getCtx(), summary);
 			
 			if (summary != null && summary.trim().length() > 0 && !summary.trim().equalsIgnoreCase("Report")){
-				pnlMessage.appendChild(new Text(summary));
+				
+				Text tSummary = new Text();
+				
+				// F3P: allow html in summary using #HTML# marker. Cannot be @HTML@ because summary is processed by context
+				if(summary.indexOf("#HTML#") > 0)
+				{
+					summary = summary.replaceAll("#HTML#", "");
+					tSummary.setEncode(false);	
+				}
+				tSummary.setValue(summary);
+				
+				pnlMessage.appendChild(tSummary);
 			}
 		}
 				

@@ -174,11 +174,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	// F3P: additional data for editabillity end selection persist
 	
 	private WInfoWindowListItemRenderer infoWindowListItemRenderer = null;
-	private int lastClickedMainContentRow = -1;
+	protected int lastClickedMainContentRow = -1;
 	private String tableSelectionColumn = null;
 	private String tableSelectionColumnUpdate = null;
-	private EventListener<Event> listitemClickListener = null;	
-	private boolean forceAllowEditable;
+	protected EventListener<Event> listitemClickListener = null;	
+	protected boolean forceAllowEditable;
 	private boolean	addCheckAND;
 			
 	// F3P: export 
@@ -315,7 +315,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				p_multipleSelection = true;
 		}		
 		
-		// F3P: For mutliselection (excluding always InfoProductWindow) enable update of subcontents without altering selection
+		// F3P: For mutliselection (excluding always InfoProductWindow, wich needs a custom version) enable update of subcontents without altering selection
 		
 		if((this instanceof InfoProductWindow == false) && p_multipleSelection)
 		{

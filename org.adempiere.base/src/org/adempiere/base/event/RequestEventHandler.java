@@ -46,6 +46,8 @@ import org.osgi.service.cm.ConfigurationException;
 import org.osgi.service.cm.ManagedService;
 import org.osgi.service.event.Event;
 
+import it.idempiere.base.model.LITMRequestType;
+
 /**
  * Request event handler
  * @author Nur Yasmin
@@ -262,6 +264,14 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 	 */
 	private void sendNotices(MRequest r, ArrayList<String> list)
 	{
+		MRequestType rt = r.getRequestType();
+		String mailWhenChangedType = LITMRequestType.getIsEmailWhenChanged(rt);
+		
+		// F3P: notificaions not required
+		
+		if(LITMRequestType.ISEMAILWHENCHANGEDTYPE_DontNotify.equals(mailWhenChangedType))
+			return;
+		
 		//	Subject
 		String subject = Msg.translate(r.getCtx(), "R_Request_ID") 
 			+ " " + Msg.getMsg(r.getCtx(), "Updated") + ": " + r.getDocumentNo();
@@ -326,12 +336,31 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 			from = null;
 		//
 		ArrayList<Integer> userList = new ArrayList<Integer>();
-		final String sql = "SELECT u.AD_User_ID, u.NotificationType, u.EMail, u.Name, MAX(r.AD_Role_ID) "
-			+ "FROM RV_RequestUpdates_Only ru"
-			+ " INNER JOIN AD_User u ON (ru.AD_User_ID=u.AD_User_ID OR u.AD_User_ID=?)"
-			+ " LEFT OUTER JOIN AD_User_Roles r ON (u.AD_User_ID=r.AD_User_ID) "
-			+ "WHERE ru.R_Request_ID=? "
-			+ "GROUP BY u.AD_User_ID, u.NotificationType, u.EMail, u.Name";
+		final String sql;
+		
+		// F3P: change query based on notification type
+		
+		if(LITMRequestType.ISEMAILWHENCHANGEDTYPE_Notify.equals(mailWhenChangedType))
+		{
+			sql = "SELECT u.AD_User_ID, u.NotificationType, u.EMail, u.Name, MAX(r.AD_Role_ID) "
+					+ "FROM RV_RequestUpdates_Only ru"
+					+ " INNER JOIN AD_User u ON (ru.AD_User_ID=u.AD_User_ID OR u.AD_User_ID=?)"
+					+ " LEFT OUTER JOIN AD_User_Roles r ON (u.AD_User_ID=r.AD_User_ID) "
+					+ "WHERE ru.R_Request_ID=? "
+					+ "GROUP BY u.AD_User_ID, u.NotificationType, u.EMail, u.Name"; 
+		}
+		else
+		{
+			// F3P: compatible query selecting only responsible user
+			
+			sql = "SELECT u.AD_User_ID, u.NotificationType, u.EMail, u.Name, MAX(r.AD_Role_ID) "
+					+ "FROM R_Request rq "
+					+ " INNER JOIN AD_User u ON (rq.SalesRep_ID = u.AD_User_ID AND u.AD_User_ID=?)"
+					+ " LEFT OUTER JOIN AD_User_Roles r ON (u.AD_User_ID=r.AD_User_ID) "
+					+ "WHERE rq.R_Request_ID=? "
+					+ "GROUP BY u.AD_User_ID, u.NotificationType, u.EMail, u.Name";
+		}
+
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		

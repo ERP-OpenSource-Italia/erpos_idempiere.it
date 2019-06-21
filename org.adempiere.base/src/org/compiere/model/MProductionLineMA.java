@@ -61,14 +61,17 @@ public class MProductionLineMA extends X_M_ProductionLineMA {
 	}
 	
 	public static MProductionLineMA get( MProductionLine parent, int asi, Timestamp dateMPolicy )  {
-		String where = " M_ProductionLine_ID = ? AND M_AttributeSetInstance_ID = ? ";
+		
+		// F3P: fix double create during reverse
+		
+		String where = " M_ProductionLine_ID = ? AND (M_AttributeSetInstance_ID = ? OR ? = 0)";
 		if(dateMPolicy==null){
 			dateMPolicy = new Timestamp(new Date().getTime());
 		}
 		where = where + "AND DateMaterialPolicy = trunc(cast(? as date))";
 		
 		MProductionLineMA lineMA = MTable.get(parent.getCtx(), MProductionLineMA.Table_Name).createQuery(where, parent.get_TrxName())
-		.setParameters(parent.getM_ProductionLine_ID(), asi,dateMPolicy).first();
+		.setParameters(parent.getM_ProductionLine_ID(), asi, asi, dateMPolicy).first();
 		
 		if (lineMA != null)
 			return lineMA;

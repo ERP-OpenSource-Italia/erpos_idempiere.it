@@ -724,8 +724,11 @@ public class MProduction extends X_M_Production implements DocAction {
 		for (int i = 0; i < sLines.length; i++)
 		{		
 			//	We need to copy MA
+			// F3P: We need to copy ALL MA, they are created even for getM_AttributeSetInstance_ID() == 0 (this is different from other documents)
+			/*
 			if (sLines[i].getM_AttributeSetInstance_ID() == 0)
 			{
+			*/
 				MProductionLineMA mas[] = MProductionLineMA.get(getCtx(), sLines[i].get_ID(), get_TrxName());
 				for (int j = 0; j < mas.length; j++)
 				{
@@ -734,7 +737,9 @@ public class MProduction extends X_M_Production implements DocAction {
 						mas[j].getMovementQty().negate(),mas[j].getDateMaterialPolicy());
 					ma.saveEx(get_TrxName());					
 				}
+			/*
 			}
+			*/
 		}
 
 		if (!reversal.processIt(DocAction.ACTION_Complete))

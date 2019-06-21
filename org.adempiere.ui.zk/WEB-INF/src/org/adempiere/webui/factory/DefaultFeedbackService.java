@@ -13,15 +13,16 @@
  *****************************************************************************/
 package org.adempiere.webui.factory;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.activation.DataSource;
 import javax.xml.bind.DatatypeConverter;
 
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.apps.FeedbackRequestWindow;
-import org.adempiere.webui.component.Window;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.util.FeedbackManager;
-import org.adempiere.webui.window.WEMailDialog;
 import org.compiere.model.MSystem;
 import org.compiere.model.MUser;
 import org.compiere.util.ByteArrayDataSource;
@@ -32,7 +33,8 @@ import org.zkoss.zk.au.out.AuScript;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.util.Clients;
-import org.zkoss.zul.Window.Mode;
+
+import it.adempiere.webui.mail.MailExtension;
 
 /**
  * @author hengsin
@@ -104,6 +106,36 @@ public class DefaultFeedbackService implements IFeedbackService {
 		protected void showEmailDialog(byte[] imageBytes) {
 			DataSource ds = FeedbackManager.getLogAttachment(errorOnly);
 			
+			List<DataSource> attachments = new ArrayList<>();
+			attachments.add(ds);
+			
+			String sTo = "";
+
+			MSystem system = MSystem.get(Env.getCtx());
+			if (!Util.isEmpty(system.getSupportEMail())) 
+			{
+				sTo = system.getSupportEMail();
+			}
+			
+			if (imageBytes != null && imageBytes.length > 0) {
+				ByteArrayDataSource screenShot = new ByteArrayDataSource(imageBytes, "image/png");
+				screenShot.setName("screenshot.png");
+				
+				attachments.add(screenShot);
+			}
+			
+			// F3P: integrated MailExtension
+			
+			DataSource[] dsAttachments = attachments.toArray(new DataSource[attachments.size()]);
+			
+			MailExtension.openMailClient(Msg.getMsg(Env.getCtx(), "SendMail"),
+					MUser.get(Env.getCtx()), sTo, 
+					getFeedbackSubject(), "", 
+					false, dsAttachments, 0, 0);
+			
+			/* F3P: support for outbound client
+			 * 
+			 * 
 			WEMailDialog dialog = new WEMailDialog(
 				Msg.getMsg(Env.getCtx(), "EMailSupport"),
 				MUser.get(Env.getCtx()),
@@ -124,6 +156,7 @@ public class DefaultFeedbackService implements IFeedbackService {
 				dialog.addAttachment(screenShot, true);
 			}
 			dialog.focus();
+			*/
 		}
 	}
 	

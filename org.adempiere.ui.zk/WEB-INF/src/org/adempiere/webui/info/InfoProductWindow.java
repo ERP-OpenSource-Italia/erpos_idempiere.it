@@ -23,6 +23,7 @@ import org.adempiere.webui.component.Tabpanel;
 import org.adempiere.webui.component.Tabpanels;
 import org.adempiere.webui.component.Tabs;
 import org.adempiere.webui.component.Textbox;
+import org.adempiere.webui.component.WListItemRenderer;
 import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.event.DialogEvents;
@@ -38,11 +39,15 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zk.ui.event.MouseEvent;
+import org.zkoss.zk.ui.event.SelectEvent;
 import org.zkoss.zk.ui.event.SwipeEvent;
 import org.zkoss.zul.Center;
+import org.zkoss.zul.Listitem;
 import org.zkoss.zul.South;
 
 import it.idempiere.base.util.STDSysConfig;
@@ -380,29 +385,87 @@ public class InfoProductWindow extends InfoWindow {
 		
 		contentPanel.addActionListener(new EventListener<Event>() {
 			public void onEvent(Event event) throws Exception {
-				int row = contentPanel.getSelectedRow();
-				if (row >= 0) {
-					int M_Warehouse_ID = getSelectedWarehouseId();
+				
+				// F3P: check for select event
+				
+				if(event instanceof SelectEvent<?, ?>)
+				{
+					int row = contentPanel.getSelectedRow();
+					if (row >= 0) {
+						int M_Warehouse_ID = getSelectedWarehouseId();
 
-					int M_PriceList_Version_ID = getSelectedPriceListVersionId();
+						int M_PriceList_Version_ID = getSelectedPriceListVersionId();
 
-					for(int i = 0; i < columnInfos.length; i++) {
-						if (columnInfos[i].getGridField() != null && columnInfos[i].getGridField().getColumnName().equals("Value")) {
-							refresh(M_Warehouse_ID, M_PriceList_Version_ID);
-		        			contentBorderLayout.getSouth().setOpen(true);
-		        			break;
+						for(int i = 0; i < columnInfos.length; i++) {
+							if (columnInfos[i].getGridField() != null && columnInfos[i].getGridField().getColumnName().equals("Value")) {
+								refresh(M_Warehouse_ID, M_PriceList_Version_ID);
+			        			contentBorderLayout.getSouth().setOpen(true);
+			        			break;
+							}
 						}
-					}
-					
-					Object value = contentPanel.getValueAt(row, findColumnIndex("IsInstanceAttribute"));
-					if (value != null && value.toString().equals("true")) {
-						m_PAttributeButton.setEnabled(true);
-					} else {
-						m_PAttributeButton.setEnabled(false);
-					}
+						
+						Object value = contentPanel.getValueAt(row, findColumnIndex("IsInstanceAttribute"));
+						if (value != null && value.toString().equals("true")) {
+							m_PAttributeButton.setEnabled(true);
+						} else {
+							m_PAttributeButton.setEnabled(false);
+						}
+					}					
 				}
 			}
 		});
+		
+		// F3P: For mutliselection enable update of subcontents without altering selection
+		
+		if(p_multipleSelection)
+		{
+			contentPanel.setNonselectableTags("*");
+
+			listitemClickListener = new EventListener<Event>() {
+				@Override
+				public void onEvent(Event event) throws Exception {
+					
+					if(event instanceof MouseEvent)
+					{
+						MouseEvent evt = (MouseEvent)event;
+						Component target = evt.getTarget();
+
+						if(target instanceof Listitem)
+						{
+							Listitem itm = (Listitem)target;
+							int row = itm.getIndex();
+							
+							if (row >= 0) {
+								int M_Warehouse_ID = getSelectedWarehouseId();
+
+								int M_PriceList_Version_ID = getSelectedPriceListVersionId();
+
+								for(int i = 0; i < columnInfos.length; i++) {
+									if (columnInfos[i].getGridField() != null && columnInfos[i].getGridField().getColumnName().equals("Value")) {
+										refresh(M_Warehouse_ID, M_PriceList_Version_ID, row);
+					        			contentBorderLayout.getSouth().setOpen(true);
+					        			break;
+									}
+								}
+								
+								Object value = contentPanel.getValueAt(row, findColumnIndex("IsInstanceAttribute"));
+								if (value != null && value.toString().equals("true")) {
+									m_PAttributeButton.setEnabled(true);
+								} else {
+									m_PAttributeButton.setEnabled(false);
+								}
+							}										
+							
+							m_lastSelectedIndex = row;
+							lastClickedMainContentRow = row;
+						}
+					}
+				}
+			};
+
+			WListItemRenderer renderer = (WListItemRenderer)contentPanel.getItemRenderer();
+			renderer.addListitemEventListener(Events.ON_CLICK, listitemClickListener);
+		}		
 		
 		warehouseTbl.addActionListener(new EventListener<Event>() {
 			public void onEvent(Event event) throws Exception {
@@ -623,9 +686,23 @@ public class InfoProductWindow extends InfoWindow {
 	/**
 	 * 	Refresh Query
 	 */
+	
+	// F3P: compatbility function
 	protected void refresh(int M_Warehouse_ID, int M_PriceList_Version_ID)
 	{
-		int m_M_Product_ID = getSelectedRowKey();
+		refresh(M_Warehouse_ID, M_PriceList_Version_ID, -1);
+	}
+	
+	// F3P: added row to decouble refresh from selection
+	protected void refresh(int M_Warehouse_ID, int M_PriceList_Version_ID, int row)
+	{
+		int m_M_Product_ID = -1;
+		
+		if(row < 0)
+			m_M_Product_ID = getSelectedRowKey();
+		else
+			m_M_Product_ID = contentPanel.getRowKeyAt (row);
+		
 		String sql = m_sqlWarehouse;
 		if (log.isLoggable(Level.FINEST)) log.finest(sql);
 		PreparedStatement pstmt = null;

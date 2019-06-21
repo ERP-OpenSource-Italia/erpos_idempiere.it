@@ -573,7 +573,7 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	    		}
 	    		
 	    		sql += " FROM " + table.getTableName() + " WHERE IsActive='Y'";
-	    		sql = role.addAccessSQL(sql, table.getTableName(), true, true);
+	    		sql = role.addAccessSQL(sql, table.getTableName(), true, false); // F3P: changed to 'read', to include list defined on client 0 (most of the standard ones)
 	    		sql += filter;
 	    		if (rt.getWhereClause() != null && rt.getWhereClause().length() > 0)
 	    			sql += " AND " + rt.getWhereClause();

@@ -1050,7 +1050,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				GridTab parentTab = m_window.getTab(i);
 				if (parentTab.m_vo.TabLevel == level-1) {
 					// this is parent tab
-					if (parentTab.m_mTable.hasChanged(parentTab.m_currentRow)) {
+					if (parentTab.m_mTable.hasChanged(parentTab.m_currentRow, true)) { // F3P: allow parent auto-reload
 						// return error stating that current record has changed and it cannot be saved
 						msg = Msg.getMsg(Env.getCtx(), "ParentRecordModified") + ": " + parentTab.getName();
 						log.saveError("ParentRecordModified", msg, false);

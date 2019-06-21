@@ -16,6 +16,8 @@
  *****************************************************************************/
 package org.compiere.process;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,10 +34,12 @@ import org.compiere.model.MProduct;
 import org.compiere.model.MProductPO;
 import org.compiere.model.MRequisition;
 import org.compiere.model.MRequisitionLine;
+import org.compiere.model.PO;
 import org.compiere.model.POResultSet;
 import org.compiere.model.Query;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
+import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
 /**
@@ -103,6 +107,11 @@ public class RequisitionPOCreate extends SvrProcess
 	
 	private int m_M_Warehouse_ID = 0; //F3P: Gestione rottura per magazzino
 	
+	/**	Manual Selection		*/
+	protected boolean 	 	p_Selection = false;
+	
+	protected List<MOrder> m_orders_generated = new ArrayList<>();
+	
 	
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -133,6 +142,8 @@ public class RequisitionPOCreate extends SvrProcess
 				p_PriorityRule = (String)para[i].getParameter();
 			else if (name.equals("AD_User_ID"))
 				p_AD_User_ID = para[i].getParameterAsInt();
+			else if (name.equals("Selection"))
+				p_Selection = "Y".equals(para[i].getParameter());
 			else if (name.equals("M_Product_ID"))
 				p_M_Product_ID = para[i].getParameterAsInt();
 			else if (name.equals("M_Product_Category_ID"))
@@ -161,136 +172,197 @@ public class RequisitionPOCreate extends SvrProcess
 	 */
 	protected String doIt() throws Exception
 	{
-		//	Specific
-		if (p_M_Requisition_ID != 0)
+		if(p_Selection)
 		{
-			if (log.isLoggable(Level.INFO)) log.info("M_Requisition_ID=" + p_M_Requisition_ID);
-			MRequisition req = new MRequisition(getCtx(), p_M_Requisition_ID, get_TrxName());
-			if (!MRequisition.DOCSTATUS_Completed.equals(req.getDocStatus()))
+			String sql = "SELECT req.M_RequisitionLine_ID "
+					+ " FROM M_RequisitionLine req "
+					+ " JOIN T_Selection s on (req.M_RequisitionLine_ID = s.t_selection_ID) "
+					+ " LEFT JOIN T_Selection_InfoWindow iwdp on (iwdp.T_Selection_ID = s.T_Selection_ID and iwdp.AD_PInstance_ID = s.AD_PInstance_ID and iwdp.COLUMNNAME = 'DateRequired') "
+					+ " LEFT JOIN T_Selection_InfoWindow iwqty on (iwqty.T_Selection_ID = s.T_Selection_ID and iwqty.AD_PInstance_ID = s.AD_PInstance_ID and iwqty.COLUMNNAME = 'Qty')"
+					+ " LEFT JOIN T_Selection_InfoWindow iwdsc on (iwdsc.T_Selection_ID = s.T_Selection_ID and iwdsc.AD_PInstance_ID = s.AD_PInstance_ID and iwdsc.COLUMNNAME = 'Description')"
+					+ " WHERE s.AD_PInstance_ID = ? ";
+			
+			PreparedStatement pstmt = null;
+			ResultSet rs = null;
+			boolean error= false;
+			try
 			{
-				throw new AdempiereUserError("@DocStatus@ = " + req.getDocStatus());
-			}
-			MRequisitionLine[] lines = req.getLines();
-			for (int i = 0; i < lines.length; i++)
-			{
-				if (lines[i].getC_OrderLine_ID() == 0)
+				pstmt = DB.prepareStatement(sql, get_TrxName());
+				pstmt.setInt(1, getAD_PInstance_ID());
+				rs = pstmt.executeQuery();
+				while (rs.next())
 				{
-					process (lines[i]);
+					int Record_ID = rs.getInt(1);
+					
+					MRequisitionLine mReqLine = PO.get(getCtx(), MRequisitionLine.Table_Name, Record_ID, get_TrxName());
+					
+					process(mReqLine);
+					
+				}
+				
+				closeOrder();
+			}
+			catch (Exception e)
+			{
+				error = true;
+				log.log(Level.SEVERE, sql, e);
+				addLog(e.getMessage());
+			}
+			finally
+			{
+				DB.close(rs, pstmt);
+				rs = null;
+				pstmt = null;
+			}
+			
+			if(m_orders_generated != null && m_orders_generated.isEmpty()==false && error ==false)
+			{
+				for(MOrder order:m_orders_generated)
+				{
+					addLog(order.get_ID(), order.getDateOrdered(),null, "", order.get_Table_ID(), order.get_ID());
 				}
 			}
-			closeOrder();
-			return "";
-		}	//	single Requisition
-		
-		//	
-		if (log.isLoggable(Level.INFO)) log.info("AD_Org_ID=" + p_AD_Org_ID
-			+ ", M_Warehouse_ID=" + p_M_Warehouse_ID
-			+ ", DateDoc=" + p_DateDoc_From + "/" + p_DateDoc_To
-			+ ", DateRequired=" + p_DateRequired_From + "/" + p_DateRequired_To
-			+ ", PriorityRule=" + p_PriorityRule
-			+ ", AD_User_ID=" + p_AD_User_ID
-			+ ", M_Product_ID=" + p_M_Product_ID
-			+ ", ConsolidateDocument=" + p_ConsolidateDocument
-			+ ", ConsolidateByDatePromised=" + p_ConsolidateByDatePromised); // FR [ 3471930 ] added param to log, minor typo in ConsolidateDocument line
-		
-		ArrayList<Object> params = new ArrayList<Object>();
-		StringBuilder whereClause = new StringBuilder("C_OrderLine_ID IS NULL");
-		if (p_AD_Org_ID > 0)
-		{
-			whereClause.append(" AND AD_Org_ID=?");
-			params.add(p_AD_Org_ID);
 		}
-		if (p_M_Product_ID > 0)
+		else 
 		{
-			whereClause.append(" AND M_Product_ID=?");
-			params.add(p_M_Product_ID);
-		}
-		else if (p_M_Product_Category_ID > 0)
-		{
-			whereClause.append(" AND EXISTS (SELECT 1 FROM M_Product p WHERE M_RequisitionLine.M_Product_ID=p.M_Product_ID")
-				.append(" AND p.M_Product_Category_ID=?)");
-			params.add(p_M_Product_Category_ID);
-		}
-		
-		if (p_C_BP_Group_ID > 0)
-		{
-			whereClause.append(" AND (")
-			.append("M_RequisitionLine.C_BPartner_ID IS NULL")
-			.append(" OR EXISTS (SELECT 1 FROM C_BPartner bp WHERE M_RequisitionLine.C_BPartner_ID=bp.C_BPartner_ID AND bp.C_BP_Group_ID=?)")
-			.append(")");
-			params.add(p_C_BP_Group_ID);
-		}
-		
-		//
-		//	Requisition Header
-		whereClause.append(" AND EXISTS (SELECT 1 FROM M_Requisition r WHERE M_RequisitionLine.M_Requisition_ID=r.M_Requisition_ID")
-			.append(" AND r.DocStatus=?");
-		params.add(MRequisition.DOCSTATUS_Completed);
-		if (p_M_Warehouse_ID > 0)
-		{
-			whereClause.append(" AND r.M_Warehouse_ID=?");
-			params.add(p_M_Warehouse_ID);
-		}
-		if (p_DateDoc_From != null)
-		{
-			whereClause.append(" AND r.DateDoc >= ?");
-			params.add(p_DateDoc_From);
-		}
-		if (p_DateDoc_To != null)
-		{
-			whereClause.append(" AND r.DateDoc <= ?");
-			params.add(p_DateDoc_To);
-		}
-		if (p_DateRequired_From != null)
-		{
-			whereClause.append(" AND r.DateRequired >= ?");
-			params.add(p_DateRequired_From);
-		}
-		if (p_DateRequired_To != null)
-		{
-			whereClause.append(" AND r.DateRequired <= ?");
-			params.add(p_DateRequired_To);
-		}
-		if (p_PriorityRule != null)
-		{
-			whereClause.append(" AND r.PriorityRule >= ?");
-			params.add(p_PriorityRule);
-		}
-		if (p_AD_User_ID > 0)
-		{
-			whereClause.append(" AND r.AD_User_ID=?");
-			params.add(p_AD_User_ID);
-		}
-		whereClause.append(")"); // End Requisition Header
-		//
-		// ORDER BY clause
-		StringBuilder orderClause = new StringBuilder();
-		if (!p_ConsolidateDocument)
-		{
-			orderClause.append("M_Requisition_ID, ");
-		}
-		orderClause.append("(SELECT DateRequired FROM M_Requisition r WHERE M_RequisitionLine.M_Requisition_ID=r.M_Requisition_ID),");
-		orderClause.append("M_Product_ID, C_Charge_ID, M_AttributeSetInstance_ID");
-		
-		POResultSet<MRequisitionLine> rs = new Query(getCtx(), MRequisitionLine.Table_Name, whereClause.toString(), get_TrxName())
-											.setParameters(params)
-											.setOrderBy(orderClause.toString())
-											.setClient_ID()
-											.scroll();
-		try
-		{
-			while (rs.hasNext())
+			if (p_M_Requisition_ID != 0)
 			{
-				process(rs.next());
+				if (log.isLoggable(Level.INFO)) log.info("M_Requisition_ID=" + p_M_Requisition_ID);
+				MRequisition req = new MRequisition(getCtx(), p_M_Requisition_ID, get_TrxName());
+				if (!MRequisition.DOCSTATUS_Completed.equals(req.getDocStatus()))
+				{
+					throw new AdempiereUserError("@DocStatus@ = " + req.getDocStatus());
+				}
+				MRequisitionLine[] lines = req.getLines();
+				for (int i = 0; i < lines.length; i++)
+				{
+					if (lines[i].getC_OrderLine_ID() == 0)
+					{
+						process (lines[i]);
+					}
+				}
+				closeOrder();
+				return "";
+			}	//	single Requisition
+			
+			//	
+			if (log.isLoggable(Level.INFO)) log.info("AD_Org_ID=" + p_AD_Org_ID
+				+ ", M_Warehouse_ID=" + p_M_Warehouse_ID
+				+ ", DateDoc=" + p_DateDoc_From + "/" + p_DateDoc_To
+				+ ", DateRequired=" + p_DateRequired_From + "/" + p_DateRequired_To
+				+ ", PriorityRule=" + p_PriorityRule
+				+ ", AD_User_ID=" + p_AD_User_ID
+				+ ", M_Product_ID=" + p_M_Product_ID
+				+ ", ConsolidateDocument=" + p_ConsolidateDocument
+				+ ", ConsolidateByDatePromised=" + p_ConsolidateByDatePromised); // FR [ 3471930 ] added param to log, minor typo in ConsolidateDocument line
+			
+			ArrayList<Object> params = new ArrayList<Object>();
+			StringBuilder whereClause = new StringBuilder("C_OrderLine_ID IS NULL");
+			if (p_AD_Org_ID > 0)
+			{
+				whereClause.append(" AND AD_Org_ID=?");
+				params.add(p_AD_Org_ID);
 			}
+			if (p_M_Product_ID > 0)
+			{
+				whereClause.append(" AND M_Product_ID=?");
+				params.add(p_M_Product_ID);
+			}
+			else if (p_M_Product_Category_ID > 0)
+			{
+				whereClause.append(" AND EXISTS (SELECT 1 FROM M_Product p WHERE M_RequisitionLine.M_Product_ID=p.M_Product_ID")
+					.append(" AND p.M_Product_Category_ID=?)");
+				params.add(p_M_Product_Category_ID);
+			}
+			
+			if (p_C_BP_Group_ID > 0)
+			{
+				whereClause.append(" AND (")
+				.append("M_RequisitionLine.C_BPartner_ID IS NULL")
+				.append(" OR EXISTS (SELECT 1 FROM C_BPartner bp WHERE M_RequisitionLine.C_BPartner_ID=bp.C_BPartner_ID AND bp.C_BP_Group_ID=?)")
+				.append(")");
+				params.add(p_C_BP_Group_ID);
+			}
+			
+			//
+			//	Requisition Header
+			whereClause.append(" AND EXISTS (SELECT 1 FROM M_Requisition r WHERE M_RequisitionLine.M_Requisition_ID=r.M_Requisition_ID")
+				.append(" AND r.DocStatus=?");
+			params.add(MRequisition.DOCSTATUS_Completed);
+			if (p_M_Warehouse_ID > 0)
+			{
+				whereClause.append(" AND r.M_Warehouse_ID=?");
+				params.add(p_M_Warehouse_ID);
+			}
+			if (p_DateDoc_From != null)
+			{
+				whereClause.append(" AND r.DateDoc >= ?");
+				params.add(p_DateDoc_From);
+			}
+			if (p_DateDoc_To != null)
+			{
+				whereClause.append(" AND r.DateDoc <= ?");
+				params.add(p_DateDoc_To);
+			}
+			if (p_DateRequired_From != null)
+			{
+				whereClause.append(" AND r.DateRequired >= ?");
+				params.add(p_DateRequired_From);
+			}
+			if (p_DateRequired_To != null)
+			{
+				whereClause.append(" AND r.DateRequired <= ?");
+				params.add(p_DateRequired_To);
+			}
+			if (p_PriorityRule != null)
+			{
+				whereClause.append(" AND r.PriorityRule >= ?");
+				params.add(p_PriorityRule);
+			}
+			if (p_AD_User_ID > 0)
+			{
+				whereClause.append(" AND r.AD_User_ID=?");
+				params.add(p_AD_User_ID);
+			}
+			whereClause.append(")"); // End Requisition Header
+			//
+			// ORDER BY clause
+			StringBuilder orderClause = new StringBuilder();
+			if (!p_ConsolidateDocument)
+			{
+				orderClause.append("M_Requisition_ID, ");
+			}
+			orderClause.append("(SELECT DateRequired FROM M_Requisition r WHERE M_RequisitionLine.M_Requisition_ID=r.M_Requisition_ID),");
+			orderClause.append("M_Product_ID, C_Charge_ID, M_AttributeSetInstance_ID");
+			
+			POResultSet<MRequisitionLine> rs = new Query(getCtx(), MRequisitionLine.Table_Name, whereClause.toString(), get_TrxName())
+					.setParameters(params)
+					.setOrderBy(orderClause.toString())
+					.setClient_ID()
+					.scroll();
+			 
+			try
+			{
+				while (rs.hasNext())
+				{
+					process(rs.next());
+				}
+			}
+			finally
+			{
+				DB.close(rs); rs = null;
+			}
+				
+			closeOrder();
 		}
-		finally
-		{
-			DB.close(rs); rs = null;
-		}
-		closeOrder();
+		
 		return "";
 	}	//	doit
+	
+	protected void generatePOFromRequisition(POResultSet<MRequisitionLine> rs) throws Exception
+	{
+			
+	}
 	
 	private int 		m_M_Requisition_ID = 0;
 	private int 		m_M_Product_ID = 0;
@@ -388,6 +460,8 @@ public class RequisitionPOCreate extends SvrProcess
 			
 			//	Prepare Save
 			m_order.saveEx();
+			m_orders_generated.add(m_order);
+			
 			// Put to cache
 			m_cacheOrders.put(key, m_order);
 		}
