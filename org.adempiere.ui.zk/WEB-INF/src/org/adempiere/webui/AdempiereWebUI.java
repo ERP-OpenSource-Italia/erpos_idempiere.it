@@ -53,6 +53,7 @@ import org.compiere.model.MSystem;
 import org.compiere.model.MTable;
 import org.compiere.model.MUser;
 import org.compiere.model.MUserPreference;
+import org.compiere.model.MZoomCondition;
 import org.compiere.util.CLogger;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
@@ -382,8 +383,10 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     				{
     					int windowID = getPrmInt("AD_Window_ID"); // using a query we can support a known window
     					
-    					if(windowID < 1)    						
-    						windowID = isSOTrx?mTable.getAD_Window_ID():mTable.getPO_Window_ID();
+    					if(windowID < 1)
+    					{
+    						windowID = Env.getZoomWindowID(query);
+    					}
     					
     					if(windowID > 0)
     					{
