@@ -53,7 +53,6 @@ import org.compiere.model.MSystem;
 import org.compiere.model.MTable;
 import org.compiere.model.MUser;
 import org.compiere.model.MUserPreference;
-import org.compiere.model.MZoomCondition;
 import org.compiere.util.CLogger;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
@@ -75,8 +74,6 @@ import org.zkoss.zk.ui.sys.DesktopCache;
 import org.zkoss.zk.ui.sys.SessionCtrl;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Window;
-
-import it.idempiere.base.util.STDUtils;
 
 /**
  *
@@ -316,7 +313,6 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     			{    				
     				MTable mTable = MTable.get(Env.getCtx(), tableID);
     				MQuery query = null;
-    				boolean isSOTrx = true;
     				
     				for(Entry<String,String[]> entry:m_URLParameters.entrySet())
     	    		{
@@ -364,10 +360,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
         	    					{
         	    						if(query == null)
         	    							query = new MQuery(tableID);
-        	    							
-        	    						if(mCol.getColumnName().equals("IsSOTrx"))
-        	    							isSOTrx = STDUtils.asBoolean(code); 
-        	    						        	    						
+
         	    						query.addRestriction(mCol.getColumnName(), MQuery.EQUAL, code);
         	    					}
     	    					}
