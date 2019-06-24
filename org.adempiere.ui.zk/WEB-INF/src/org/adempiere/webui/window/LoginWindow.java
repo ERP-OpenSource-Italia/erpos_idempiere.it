@@ -118,21 +118,21 @@ public class LoginWindow extends FWindow implements EventListener<Event>
         	for(String header:ex.getHeaderNames())
         	{
         		if(log.isLoggable(Level.INFO))
-        			System.out.println("Checking SSO, got header: " + header);
+        			log.info("Checking SSO, got header: " + header);
         		
         		if(header.equals(ssoUserNameHeader))
         		{
         			ssoUser = ex.getHeader(header);
         			
             		if(log.isLoggable(Level.INFO))
-            			System.out.println("Found SSO user: " + ssoUser);
+            			log.info("Found SSO user: " + ssoUser);
         		}
         		else if(ssoIdpHeader != null && header.equals(ssoIdpHeader))
         		{
         			ssoIdP = ex.getHeader(header);
         			
             		if(log.isLoggable(Level.INFO))
-            			System.out.println("Found SSO IdP: " + ssoIdP);
+            			log.info("Found SSO IdP: " + ssoIdP);
         		}
         	}
         	
