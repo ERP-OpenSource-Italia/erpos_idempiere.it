@@ -90,6 +90,9 @@ public class RequisitionPOCreate extends SvrProcess
 	//F3P: gestione fornitori
 	/** BP			*/
 	private int 		p_C_BPartner_ID = 0;
+	
+	/** BP Filtro			*/
+	private int 		p_Vendor_ID = 0;
 	//end
 
 	/** Consolidate			*/
@@ -159,6 +162,8 @@ public class RequisitionPOCreate extends SvrProcess
 			//F3P: gestione fornitori
 			else if (name.equals("C_BPartner_ID"))
 				p_C_BPartner_ID = para[i].getParameterAsInt();
+			else if (name.equals("Vendor_ID"))
+				p_Vendor_ID = para[i].getParameterAsInt();
 			//end
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
@@ -289,6 +294,12 @@ public class RequisitionPOCreate extends SvrProcess
 			whereClause.append(" AND EXISTS (SELECT 1 FROM M_Requisition r WHERE M_RequisitionLine.M_Requisition_ID=r.M_Requisition_ID")
 				.append(" AND r.DocStatus=?");
 			params.add(MRequisition.DOCSTATUS_Completed);
+			
+			if (p_Vendor_ID > 0)
+			{
+				whereClause.append(" AND coalesce(M_RequisitionLine.C_BPartner_ID,r.C_BPartner_ID) = ? ");
+				params.add(p_Vendor_ID);
+			}
 			if (p_M_Warehouse_ID > 0)
 			{
 				whereClause.append(" AND r.M_Warehouse_ID=?");
