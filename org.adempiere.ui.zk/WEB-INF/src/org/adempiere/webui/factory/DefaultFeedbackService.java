@@ -129,7 +129,7 @@ public class DefaultFeedbackService implements IFeedbackService {
 			DataSource[] dsAttachments = attachments.toArray(new DataSource[attachments.size()]);
 			
 			MailExtension.openMailClient(Msg.getMsg(Env.getCtx(), "SendMail"),
-					MUser.get(Env.getCtx()), sTo, 
+					MUser.get(Env.getCtx()), sTo, -1,
 					getFeedbackSubject(), "", 
 					false, dsAttachments, 0, 0);
 			
