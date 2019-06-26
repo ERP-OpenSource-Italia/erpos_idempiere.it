@@ -75,8 +75,6 @@ import org.zkoss.zk.ui.sys.SessionCtrl;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Window;
 
-import it.idempiere.base.util.STDUtils;
-
 /**
  *
  * @author  <a href="mailto:agramdass@gmail.com">Ashley G Ramdass</a>
@@ -315,7 +313,6 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     			{    				
     				MTable mTable = MTable.get(Env.getCtx(), tableID);
     				MQuery query = null;
-    				boolean isSOTrx = true;
     				
     				for(Entry<String,String[]> entry:m_URLParameters.entrySet())
     	    		{
@@ -363,10 +360,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
         	    					{
         	    						if(query == null)
         	    							query = new MQuery(tableID);
-        	    							
-        	    						if(mCol.getColumnName().equals("IsSOTrx"))
-        	    							isSOTrx = STDUtils.asBoolean(code); 
-        	    						        	    						
+
         	    						query.addRestriction(mCol.getColumnName(), MQuery.EQUAL, code);
         	    					}
     	    					}
@@ -382,8 +376,10 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     				{
     					int windowID = getPrmInt("AD_Window_ID"); // using a query we can support a known window
     					
-    					if(windowID < 1)    						
-    						windowID = isSOTrx?mTable.getAD_Window_ID():mTable.getPO_Window_ID();
+    					if(windowID < 1)
+    					{
+    						windowID = Env.getZoomWindowID(query);
+    					}
     					
     					if(windowID > 0)
     					{
