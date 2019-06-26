@@ -36,6 +36,7 @@ public interface IOutboundMailClient
 	 * @param sUITitle			title to use for the ui element
 	 * @param from					'from' mail address
 	 * @param sTo						'to' mail address
+	 * @param to_AD_User_ID		'to' ad_user
 	 * @param sSubject			subject of the mail
 	 * @param sContent			mail content
 	 * @param fAttachments	mail attachments
@@ -45,5 +46,5 @@ public interface IOutboundMailClient
 	 * @param clientType		type of adempiere client (see ClientType)
 	 * @throws AdempiereException
 	 */
-	void openMailClient(String sUITitle,MUser from, String sTo, String sSubject, String sContent, boolean bIsMessageHTML, DataSource[] dsAttachments,int WindowNo,int TabNo,MUser mLoggedUser) throws AdempiereException;
+	void openMailClient(String sUITitle,MUser from, String sTo, int to_AD_User_ID, String sSubject, String sContent, boolean bIsMessageHTML, DataSource[] dsAttachments,int WindowNo,int TabNo,MUser mLoggedUser) throws AdempiereException;
 }

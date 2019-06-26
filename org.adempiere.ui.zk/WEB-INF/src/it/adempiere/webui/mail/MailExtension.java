@@ -62,11 +62,11 @@ public class MailExtension {
 	 * 	  
 	 * @see it.adempiere.webui.mail.IOutboundMailClient#sendMail(java.lang.Object, java.lang.String, org.compiere.model.MUser, java.lang.String, java.lang.String, java.lang.String, java.io.File, boolean, int, int, it.adempiere.webui.mail.IOutboundMailClient.ClientType)
 	 */
-	public static void openMailClient(String sUITitle, MUser from, String sTo,
+	public static void openMailClient(String sUITitle, MUser from, String sTo, int to_AD_User_ID,
 			String sSubject, String sContent, DataSource[] fAttachments, int WindowNo,
 			int TabNo) throws AdempiereException
 	{
-		openMailClient(sUITitle, from, sTo, sSubject, sContent, false, fAttachments, WindowNo, TabNo);
+		openMailClient(sUITitle, from, sTo, to_AD_User_ID, sSubject, sContent, false, fAttachments, WindowNo, TabNo);
 	}
 	
 	/**
@@ -74,14 +74,14 @@ public class MailExtension {
 	 * 	  
 	 * @see it.adempiere.webui.mail.IOutboundMailClient#sendMail(java.lang.Object, java.lang.String, org.compiere.model.MUser, java.lang.String, java.lang.String, java.lang.String, boolean, java.io.File, int, int, it.adempiere.webui.mail.IOutboundMailClient.ClientType)
 	 */
-	public static void openMailClient(String sUITitle, MUser from, String sTo,
+	public static void openMailClient(String sUITitle, MUser from, String sTo, int to_AD_User_ID,
 			String sSubject, String sContent,boolean bIsMessageHTML, DataSource[] dsAttachments, int WindowNo,
 			int TabNo) throws AdempiereException
 	{
 		MUser				mCurrentUser = MUser.get(Env.getCtx()); 			
 		IOutboundMailClient	omClient = getOutboundMailClient(mCurrentUser);
 		
-		omClient.openMailClient(sUITitle, from, sTo, sSubject, sContent, bIsMessageHTML, dsAttachments, WindowNo, TabNo, mCurrentUser);
+		omClient.openMailClient(sUITitle, from, sTo, to_AD_User_ID, sSubject, sContent, bIsMessageHTML, dsAttachments, WindowNo, TabNo, mCurrentUser);
 	}	
 	
 	/**
@@ -89,7 +89,7 @@ public class MailExtension {
 	 * 	  
 	 * @see it.adempiere.webui.mail.IOutboundMailClient#sendMail(java.lang.Object, java.lang.String, org.compiere.model.MUser, java.lang.String, java.lang.String, java.lang.String, boolean, java.io.File, int, int, it.adempiere.webui.mail.IOutboundMailClient.ClientType)
 	 */
-	public static void openMailClient(String sUITitle, MUser from, String sTo,
+	public static void openMailClient(String sUITitle, MUser from, String sTo, int to_AD_User_ID,
 			String sSubject, String sContent, DataSource dsAttachment, int WindowNo,
 			int TabNo, String clientType) throws AdempiereException
 	{
@@ -98,6 +98,6 @@ public class MailExtension {
 		if(dsAttachment != null)
 			dsAttachments = new DataSource[]{dsAttachment};
 		
-		openMailClient(sUITitle, from, sTo, sSubject, sContent, dsAttachments, WindowNo, TabNo);
+		openMailClient(sUITitle, from, sTo, to_AD_User_ID, sSubject, sContent, dsAttachments, WindowNo, TabNo);
 	}	
 }
