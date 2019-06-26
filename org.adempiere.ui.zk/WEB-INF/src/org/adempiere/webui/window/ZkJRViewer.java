@@ -268,7 +268,7 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 		// F3P: integrated MailExtension
 		DataSource dsAttachments[] = {new FileDataSource(attachment)};
 				
-		MailExtension.openMailClient(Msg.getMsg(Env.getCtx(), "SendMail"), from, to, 
+		MailExtension.openMailClient(Msg.getMsg(Env.getCtx(), "SendMail"), from, to, -1,
 					subject, "", dsAttachments, m_WindowNo, 0);
 		
 		/*
