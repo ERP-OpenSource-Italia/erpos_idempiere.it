@@ -358,8 +358,9 @@ public class MRMALine extends X_M_RMALine
         	
             if (newRecord || is_ValueChanged(COLUMNNAME_M_InOutLine_ID))
             {
-                String whereClause = "M_RMA_ID=" + getM_RMA_ID() + " AND M_InOutLine_ID=" + getM_InOutLine_ID() + " AND M_RMALine_ID!=" + getM_RMALine_ID();
-
+                String whereClause = "M_RMA_ID=" + getM_RMA_ID() + " AND M_InOutLine_ID=" + getM_InOutLine_ID() + " AND M_RMALine_ID!=" + getM_RMALine_ID()
+                		+" AND A_Asset_ID="	+ get_ValueAsInt("A_Asset_ID");
+                
                 int lineIds[] = MRMALine.getAllIDs(MRMALine.Table_Name, whereClause, this.get_TrxName());
                 
                 if (lineIds.length > 0)
