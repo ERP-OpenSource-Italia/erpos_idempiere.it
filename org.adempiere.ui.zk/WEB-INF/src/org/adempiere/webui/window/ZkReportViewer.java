@@ -912,7 +912,7 @@ public class ZkReportViewer extends Window implements EventListener<Event>, ITab
 		
 		DataSource dsAttachments[] = {new FileDataSource(attachment)};
 		
-		MailExtension.openMailClient(Msg.getMsg(Env.getCtx(), "SendMail"), from, to, 
+		MailExtension.openMailClient(Msg.getMsg(Env.getCtx(), "SendMail"), from, to, -1,
 					subject, message, dsAttachments, m_WindowNo, 0);
 		
 		/*
