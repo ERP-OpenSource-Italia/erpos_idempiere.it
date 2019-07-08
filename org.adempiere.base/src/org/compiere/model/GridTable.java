@@ -550,7 +550,7 @@ public class GridTable extends AbstractTableModel
 	 *  @param index index
 	 *  @return GridField
 	 */
-	protected GridField getField (int index)
+	public GridField getField (int index)
 	{
 		if (index < 0 || index >= m_fields.size())
 			return null;

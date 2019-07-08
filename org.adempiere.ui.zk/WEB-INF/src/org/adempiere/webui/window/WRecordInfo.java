@@ -21,10 +21,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
+import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Vector;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.apps.AEnv;
@@ -32,8 +34,11 @@ import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Listbox;
 import org.adempiere.webui.component.SimpleListModel;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.factory.ButtonFactory;
+import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.model.DataStatusEvent;
+import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.model.GridTable;
 import org.compiere.model.MChangeLog;
@@ -53,12 +58,17 @@ import org.compiere.util.NamePair;
 import org.compiere.util.Util;
 import org.zkoss.zhtml.Pre;
 import org.zkoss.zhtml.Text;
+import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zk.ui.util.Clients;
+import org.zkoss.zul.A;
 import org.zkoss.zul.Borderlayout;
+import org.zkoss.zul.Button;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.Div;
+import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Listhead;
 import org.zkoss.zul.Listheader;
 import org.zkoss.zul.North;
@@ -82,7 +92,7 @@ public class WRecordInfo extends Window implements EventListener<Event>
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -8325604065202356483L;
+	private static final long serialVersionUID = -7436682051825360216L;
 
 	/**
 	 *	Record Info
@@ -98,8 +108,9 @@ public class WRecordInfo extends Window implements EventListener<Event>
 		this.setBorder("normal");
 		this.setSizable(true);
 		this.setClosable(true);
+		this.setMaximizable(true);
 		this.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "recordInfo");
-		this.setSclass("popup-dialog");
+		this.setSclass("popup-dialog record-info-dialog");
 		
 		try
 		{
@@ -123,6 +134,10 @@ public class WRecordInfo extends Window implements EventListener<Event>
 	private Vector<Vector<String>>	m_data = new Vector<Vector<String>>();
 	/** Info			*/
 	private StringBuffer	m_info = new StringBuffer();
+	/** Permalink			*/
+	private A				m_permalink = new A();
+	
+	private Button			m_shareLink = ButtonFactory.createNamedButton("Copy", false, true);
 
 	/** Date Time Format		*/
 	private SimpleDateFormat	m_dateTimeFormat = DisplayType.getDateFormat
@@ -184,7 +199,22 @@ public class WRecordInfo extends Window implements EventListener<Event>
 		South south = new South();
 		south.setSclass("dialog-footer");
 		south.setParent(layout);
-		south.appendChild(confirmPanel);
+		//
+		m_permalink.setTarget("_blank");
+		m_permalink.setLabel(Msg.getMsg(Env.getCtx(), "Permalink"));
+		m_permalink.setTooltiptext(Msg.getMsg(Env.getCtx(), "Permalink_tooltip"));
+		Hbox hbox = new Hbox();
+		hbox.setWidth("100%");
+		south.appendChild(hbox);
+		ZKUpdateUtil.setHflex(m_permalink, "true");
+		hbox.appendChild(m_permalink);
+		
+		ZKUpdateUtil.setHflex(m_permalink, "true");
+		hbox.appendChild(m_shareLink);
+		m_shareLink.addEventListener(Events.ON_CLICK, this);
+		
+		ZKUpdateUtil.setHflex(confirmPanel, "true");
+		hbox.appendChild(confirmPanel);
 		
 		confirmPanel.addActionListener(Events.ON_CLICK, this);
 	}	//	jbInit
@@ -222,43 +252,70 @@ public class WRecordInfo extends Window implements EventListener<Event>
 		
 		//get uuid
 		GridTable gridTable = null;
+		String tabName = null;
 		if (dse.getSource() instanceof GridTab) 
 		{
 			GridTab gridTab = (GridTab) dse.getSource();
 			gridTable = gridTab.getTableModel();
+			tabName = gridTab.getName();
 		}
 		else if (dse.getSource() instanceof GridTable)
 		{
-			gridTable = (GridTable) dse.getSource();			
+			gridTable = (GridTable) dse.getSource();
+			GridField firstField = gridTable.getField(0);
+			if (firstField != null && firstField.getGridTab() != null)
+				tabName = firstField.getGridTab().getName();
 		}
+
+		int Record_ID = -1;
+		if (dse.Record_ID instanceof Integer)
+			Record_ID = ((Integer)dse.Record_ID).intValue();
+		else
+			log.info("dynInit - Invalid Record_ID=" + dse.Record_ID);
+
+		MTable dbtable = null;
+		if (dse.AD_Table_ID != 0)
+			dbtable = MTable.get(Env.getCtx(), dse.AD_Table_ID);
+
 		if (gridTable != null && dse.getCurrentRow() >= 0 && dse.getCurrentRow() < gridTable.getRowCount())
 		{
 			PO po = gridTable.getPO(dse.getCurrentRow());
 			if (po != null) {
 				String uuidcol = po.getUUIDColumnName();
-				String uuid = po.get_ValueAsString(uuidcol);
+				String uuid = null;
+				if (po.is_new()) {
+					if (Record_ID == 0 && MTable.isZeroIDTable(dbtable.getTableName())) {
+						StringBuilder sql = new StringBuilder("SELECT ")
+								.append(uuidcol)
+								.append(" FROM ")
+								.append(dbtable.getTableName())
+								.append(" WHERE ")
+								.append(dbtable.getTableName())
+								.append("_ID=0");
+						uuid = DB.getSQLValueString(null, sql.toString());
+					}
+				} else {
+					uuid = po.get_ValueAsString(uuidcol);
+				}
 				if (!Util.isEmpty(uuid))
 					m_info.append("\n ").append(uuidcol).append("=").append(uuid);
+				m_permalink.setHref(AEnv.getZoomUrlTableID(po));
+				m_permalink.setVisible(po.get_KeyColumns().length == 1);
 			}
 		}
 		
 		//	Title
-		if (dse.AD_Table_ID != 0)
+		if (tabName == null && dse.AD_Table_ID != 0)
 		{
-			MTable table1 = MTable.get (Env.getCtx(), dse.AD_Table_ID);
-			setTitle(title + " - " + table1.getName());
+			tabName = dbtable.getName();
 		}
+		setTitle(title + " - " + tabName);
 
 		//	Only Client Preference can view Change Log
 		if (!MRole.PREFERENCETYPE_Client.equals(MRole.getDefault().getPreferenceType()))
 			return false;
 		
-		int Record_ID = 0;
-		if (dse.Record_ID instanceof Integer)
-			Record_ID = ((Integer)dse.Record_ID).intValue();
-		else
-			log.info("dynInit - Invalid Record_ID=" + dse.Record_ID);
-		if (Record_ID == 0)
+		if (Record_ID <= 0)
 			return false;
 		
 		//	Data
@@ -369,9 +426,9 @@ public class WRecordInfo extends Window implements EventListener<Event>
 			else if (column.getAD_Reference_ID() == DisplayType.Integer)
 			{
 				if (OldValue != null)
-					showOldValue = m_intFormat.format (new Integer (OldValue));
+					showOldValue = m_intFormat.format (Integer.valueOf(OldValue));
 				if (NewValue != null)
-					showNewValue = m_intFormat.format (new Integer (NewValue));
+					showNewValue = m_intFormat.format (Integer.valueOf(NewValue));
 			}
 			else if (DisplayType.isNumeric (column.getAD_Reference_ID ()))
 			{
@@ -439,7 +496,59 @@ public class WRecordInfo extends Window implements EventListener<Event>
 	
 	
 	public void onEvent(Event event) throws Exception {
-		this.detach();
+		
+		if(event.getTarget() == m_shareLink)
+		{
+			int port = Executions.getCurrent().getServerPort();
+			String sch = Executions.getCurrent().getScheme();
+			String sport = null;
+			if ( (sch.equals("http") && port == 80) || (sch.equals("https") && port == 443) )
+				sport = "";
+			else
+				sport = ":" + port;
+			String baseUrl = sch + "://" + Executions.getCurrent().getServerName() + sport + Executions.getCurrent().getContextPath();
+			String imgUrl = baseUrl + ThemeManager.getThemeResource("images/Zoom24.png");
+			
+			// 
+			
+			MessageFormat fmt = new MessageFormat("<a href=\"{0}\" target=\"_blank\"><img src=\"{1}\" ></a>");
+
+			String fmtJavascript = "{"+
+				  // Create a hidden input
+"				  function listener(e) { " +
+"			    	e.clipboardData.setData(\"text/html\", '{0}'); " +
+"			    	e.clipboardData.setData(\"text/plain\", '{0}'); " +
+"			    	e.preventDefault(); " +
+"			  	  } " +
+"			  	  document.addEventListener(\"copy\", listener); " +
+			  					
+"				  let _aux = document.createElement(\"input\"); " +
+
+				  // Assign it the value of the specified element
+"				  _aux.setAttribute(\"value\", '{0}'); " +
+
+				  // Append it to the body
+"				  document.body.appendChild(_aux); " +
+
+				   // Highlight its content
+"				  _aux.select(); " +
+
+				  // Copy the highlighted text
+"				  document.execCommand('copy'); " +
+"				  document.removeEventListener(\"copy\", listener);" +
+
+				  // Remove it from the body
+"				  document.body.removeChild(_aux); } ";
+			
+			String params[] = {m_permalink.getHref(), imgUrl};			
+			String htmlToCopy = fmt.format(params);
+			
+			String javaScript = fmtJavascript.replaceAll(Pattern.quote("{0}"), htmlToCopy);
+			
+			Clients.evalJavaScript(javaScript);
+		}
+		else
+			this.detach();
 	}
 
 }	// WRecordInfo
