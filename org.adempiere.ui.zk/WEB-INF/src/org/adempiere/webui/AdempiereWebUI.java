@@ -153,7 +153,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
         langSession = Env.getContext(ctx, Env.LANGUAGE);
         if (session.getAttribute(SessionContextListener.SESSION_CTX) == null || !SessionManager.isUserLoggedIn(ctx))
         {
-            loginDesktop = new WLogin(this);
+        	loginDesktop = new WLogin(this, false);  // FIN: (st) 20/09/2017 need to know if its a role change
             loginDesktop.createPart(this.getPage());
         }
         else
@@ -555,7 +555,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 		Properties properties = (Properties) map.get("context");
         
 		SessionManager.setSessionApplication(this);
-		loginDesktop = new WLogin(this);
+		loginDesktop = new WLogin(this, true);  // FIN: (st) 20/09/2017 need to know if its a role change
         loginDesktop.createPart(this.getPage());
         loginDesktop.changeRole(locale, properties);
 		
