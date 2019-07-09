@@ -260,6 +260,16 @@ public class GridFieldVO implements Serializable
 			CLogger.get().log(Level.SEVERE, "ColumnName=" + columnName, e);
 			return null;
 		}
+		
+		//LS: custom isDisplayed
+		MUserDefField userDef = null;
+		userDef = MUserDefField.get(vo.ctx,AD_Field_ID, AD_Tab_ID, AD_Window_ID);
+		if (userDef != null)
+		{
+			if (userDef.getIsDisplayed()!= null)
+				vo.IsDisplayed = "Y".equals(userDef.getIsDisplayed());
+		}
+		
 		// ASP
 		if (vo.IsDisplayed) {
 			MClient client = MClient.get(ctx);
@@ -271,110 +281,105 @@ public class GridFieldVO implements Serializable
 		}
 		// FR IDEMPIERE-177
 		// Field Customization
-		if (vo.IsDisplayed) {
-			MUserDefField userDef = null;
-			userDef = MUserDefField.get(vo.ctx,AD_Field_ID, AD_Tab_ID, AD_Window_ID);
-			if (userDef != null)
+		if (vo.IsDisplayed && userDef != null) 
+		{
+
+			if (userDef.getName() != null)
+				vo.Header = userDef.getName();
+			if (userDef.getDescription() != null)
+				vo.Description = userDef.getDescription();
+			if (userDef.getHelp() != null)
+				vo.Help = userDef.getHelp();
+			if (userDef.getDisplayLength() > 0)
+				vo.DisplayLength = userDef.getDisplayLength();
+			if (userDef.getDisplayLogic() != null)
+				vo.DisplayLogic = userDef.getDisplayLogic();
+			if (userDef.getDefaultValue() != null)
+				vo.DefaultValue = userDef.getDefaultValue();
+			if (userDef.getSortNo() > 0)
+				vo.SortNo = userDef.getSortNo();
+			//IDEMPIERE-163
+			if (userDef.getIsReadOnly()!= null)
+				vo.IsReadOnly = "Y".equals(userDef.getIsReadOnly());
+			if (userDef.getIsSameLine()!= null)
+				vo.IsSameLine = "Y".equals(userDef.getIsSameLine());
+			if (userDef.getIsUpdateable()!= null)
+				vo.IsUpdateable = "Y".equals(userDef.getIsUpdateable());
+			if (userDef.getIsAlwaysUpdateable()!= null)	
+				vo.IsAlwaysUpdateable = "Y".equals(userDef.getIsAlwaysUpdateable());
+			if (userDef.getReadOnlyLogic()!= null)
+				vo.ReadOnlyLogic = userDef.getReadOnlyLogic();
+			if (userDef.getMandatoryLogic()!= null )
+				vo.MandatoryLogic = userDef.getMandatoryLogic();	
+			if (userDef.getAD_Reference_ID()>0)
+				vo.displayType = userDef.getAD_Reference_ID();
+			if (userDef.getAD_Reference_Value_ID()>0)
+				vo.AD_Reference_Value_ID = userDef.getAD_Reference_Value_ID();
+			if (userDef.getIsMandatory()!= null)
+				vo.IsMandatory = "Y".equals(userDef.getIsMandatory());
+			if (userDef.getXPosition() > 0)
+				vo.XPosition = userDef.getXPosition();
+			if (userDef.getColumnSpan() > 0)
+				vo.ColumnSpan=userDef.getColumnSpan();
+			if (userDef.getNumLines() > 0)
+				vo.NumLines=userDef.getNumLines();
+			if (userDef.getIsToolbarButton() != null)
+				vo.IsToolbarButton  = userDef.getIsToolbarButton();
+			if (userDef.getVFormat() != null)
+				vo.VFormat = userDef.getVFormat();
+			//IDEMPIERE-1120 Implement Field SeqNo customization
+			if (userDef.getSeqNo() > 0)
+				vo.SeqNo = userDef.getSeqNo();
+			if (userDef.getAD_Val_Rule_ID() > 0)
+				vo.ValidationCode  = MValRule.get(ctx, userDef.getAD_Val_Rule_ID()).getCode();
+
+			if (userDef.getAD_LabelStyle_ID() > 0)
+				vo.AD_LabelStyle_ID = userDef.getAD_LabelStyle_ID();
+
+			if (userDef.getAD_FieldStyle_ID() > 0)
+				vo.AD_FieldStyle_ID = userDef.getAD_FieldStyle_ID();
+
+			if (userDef.getPA_DashboardContent_ID() > 0)
+				vo.PA_DashboardContent_ID = userDef.getPA_DashboardContent_ID();
+			// F3P: new fields
+
+			if(userDef.getAD_FieldGroup_ID() > 0)
 			{
-				if (userDef.getName() != null)
-					vo.Header = userDef.getName();
-				if (userDef.getDescription() != null)
-					vo.Description = userDef.getDescription();
-				if (userDef.getHelp() != null)
-					vo.Help = userDef.getHelp();
-				if (userDef.getDisplayLength() > 0)
-					vo.DisplayLength = userDef.getDisplayLength();
-				if (userDef.getDisplayLogic() != null)
-					vo.DisplayLogic = userDef.getDisplayLogic();
-				if (userDef.getDefaultValue() != null)
-					vo.DefaultValue = userDef.getDefaultValue();
-				if (userDef.getSortNo() > 0)
-					vo.SortNo = userDef.getSortNo();
-				//IDEMPIERE-163
-				if (userDef.getIsDisplayed()!= null)
-				    vo.IsDisplayed = "Y".equals(userDef.getIsDisplayed());
-				if (userDef.getIsReadOnly()!= null)
-				    vo.IsReadOnly = "Y".equals(userDef.getIsReadOnly());
-				if (userDef.getIsSameLine()!= null)
-				    vo.IsSameLine = "Y".equals(userDef.getIsSameLine());
-				if (userDef.getIsUpdateable()!= null)
-				    vo.IsUpdateable = "Y".equals(userDef.getIsUpdateable());
-				if (userDef.getIsAlwaysUpdateable()!= null)	
-				   vo.IsAlwaysUpdateable = "Y".equals(userDef.getIsAlwaysUpdateable());
-				if (userDef.getReadOnlyLogic()!= null)
-					vo.ReadOnlyLogic = userDef.getReadOnlyLogic();
-				if (userDef.getMandatoryLogic()!= null )
-					vo.MandatoryLogic = userDef.getMandatoryLogic();	
-				if (userDef.getAD_Reference_ID()>0)
-					vo.displayType = userDef.getAD_Reference_ID();
-				if (userDef.getAD_Reference_Value_ID()>0)
-					vo.AD_Reference_Value_ID = userDef.getAD_Reference_Value_ID();
-				if (userDef.getIsMandatory()!= null)
-					vo.IsMandatory = "Y".equals(userDef.getIsMandatory());
-				if (userDef.getXPosition() > 0)
-					vo.XPosition = userDef.getXPosition();
-				if (userDef.getColumnSpan() > 0)
-					vo.ColumnSpan=userDef.getColumnSpan();
-				if (userDef.getNumLines() > 0)
-					vo.NumLines=userDef.getNumLines();
-				if (userDef.getIsToolbarButton() != null)
-					vo.IsToolbarButton  = userDef.getIsToolbarButton();
-				if (userDef.getVFormat() != null)
-					vo.VFormat = userDef.getVFormat();
-				//IDEMPIERE-1120 Implement Field SeqNo customization
-				if (userDef.getSeqNo() > 0)
-				    vo.SeqNo = userDef.getSeqNo();
-				if (userDef.getAD_Val_Rule_ID() > 0)
-					vo.ValidationCode  = MValRule.get(ctx, userDef.getAD_Val_Rule_ID()).getCode();
-				
-				if (userDef.getAD_LabelStyle_ID() > 0)
-					vo.AD_LabelStyle_ID = userDef.getAD_LabelStyle_ID();
-				
-				if (userDef.getAD_FieldStyle_ID() > 0)
-					vo.AD_FieldStyle_ID = userDef.getAD_FieldStyle_ID();
-				
-				if (userDef.getPA_DashboardContent_ID() > 0)
-					vo.PA_DashboardContent_ID = userDef.getPA_DashboardContent_ID();
-				// F3P: new fields
-				
-				if(userDef.getAD_FieldGroup_ID() > 0)
-				{
-					I_AD_FieldGroup fieldGroup = userDef.getAD_FieldGroup();
-					String name = null;
-					
-					if(Env.isBaseLanguage(ctx, MTab.Table_Name))
-						name = fieldGroup.getName();
-					else
-						name = ((PO)fieldGroup).get_Translation(X_AD_FieldGroup.COLUMNNAME_Name, Env.getAD_Language(ctx)); 
-					
-					vo.FieldGroup = name;
-					vo.FieldGroupType = fieldGroup.getFieldGroupType();
-				}
-				
-				if(userDef.getSeqNoGrid() > 0)
-					vo.SeqNoGrid = userDef.getSeqNoGrid();
-				
-				if(userDef.getSeqNoSelection() > 0)
-					vo.SeqNoSelection = userDef.getSeqNoSelection();
-					
-				if(userDef.getIsDisplayedGrid() != null)
-					vo.IsDisplayedGrid = Util.asBoolean(userDef.getIsDisplayedGrid());
-				
-				if(userDef.getIsDefaultFocus() != null)
-					vo.IsDefaultFocus = Util.asBoolean(userDef.getIsDefaultFocus());
-				
-				if(userDef.getIsAllowCopy() != null)
-					vo.IsAllowCopy = Util.asBoolean(userDef.getIsAllowCopy());
-				
-				if(userDef.getIsAutocomplete() != null)
-					vo.IsAutocomplete = Util.asBoolean(userDef.getIsAutocomplete());
-				
-				if(userDef.getIsSelectionColumn() != null)
-					vo.IsSelectionColumn = Util.asBoolean(userDef.getIsSelectionColumn());
-				
-				if(userDef.getCallout() != null)
-					vo.Callout = userDef.getCallout();
+				I_AD_FieldGroup fieldGroup = userDef.getAD_FieldGroup();
+				String name = null;
+
+				if(Env.isBaseLanguage(ctx, MTab.Table_Name))
+					name = fieldGroup.getName();
+				else
+					name = ((PO)fieldGroup).get_Translation(X_AD_FieldGroup.COLUMNNAME_Name, Env.getAD_Language(ctx)); 
+
+				vo.FieldGroup = name;
+				vo.FieldGroupType = fieldGroup.getFieldGroupType();
 			}
+
+			if(userDef.getSeqNoGrid() > 0)
+				vo.SeqNoGrid = userDef.getSeqNoGrid();
+
+			if(userDef.getSeqNoSelection() > 0)
+				vo.SeqNoSelection = userDef.getSeqNoSelection();
+
+			if(userDef.getIsDisplayedGrid() != null)
+				vo.IsDisplayedGrid = Util.asBoolean(userDef.getIsDisplayedGrid());
+
+			if(userDef.getIsDefaultFocus() != null)
+				vo.IsDefaultFocus = Util.asBoolean(userDef.getIsDefaultFocus());
+
+			if(userDef.getIsAllowCopy() != null)
+				vo.IsAllowCopy = Util.asBoolean(userDef.getIsAllowCopy());
+
+			if(userDef.getIsAutocomplete() != null)
+				vo.IsAutocomplete = Util.asBoolean(userDef.getIsAutocomplete());
+
+			if(userDef.getIsSelectionColumn() != null)
+				vo.IsSelectionColumn = Util.asBoolean(userDef.getIsSelectionColumn());
+
+			if(userDef.getCallout() != null)
+				vo.Callout = userDef.getCallout();
 		}
 		//
 		vo.initFinish();
