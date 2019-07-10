@@ -4927,4 +4927,61 @@ public abstract class PO
 		return trxData;
 	}
 	
+	public static void overWriteDataOnImport(PO from,PO to,boolean includeNull,ArrayList<String> columnnameToExclude )
+	{
+		if (s_log.isLoggable(Level.FINE)) s_log.fine("From ID=" + from.get_ID() + " - To ID=" + to.get_ID());
+		//	Different Classes
+		if (from.get_TableName().equals(to.get_TableName())==false)
+		{
+			for (int i1 = 0; i1 < from.m_oldValues.length; i1++)
+			{
+				String colName = from.p_info.getColumnName(i1);
+				
+				if(columnnameToExclude.contains(colName))
+					continue;
+				
+				MColumn column = MColumn.get(from.getCtx(), from.p_info.getAD_Column_ID(colName));
+				if (   column.isVirtualColumn()
+					|| column.isKey()		//	KeyColumn
+					|| column.isUUIDColumn() // IDEMPIERE-67
+					|| column.isStandardColumn()
+					|| ! column.isAllowCopy())
+					continue;
+				for (int i2 = 0; i2 < to.m_oldValues.length; i2++)
+				{
+					if (to.p_info.getColumnName(i2).equals(colName))
+					{
+						if(includeNull || from.m_oldValues[i1] != null)
+						{
+							to.m_newValues[i2] = from.m_oldValues[i1];
+							break;
+						}
+					}
+				}
+			}	//	from loop
+		}
+		else	//	same class
+		{
+			for (int i = 0; i < from.m_oldValues.length; i++)
+			{
+				String colName = from.p_info.getColumnName(i);
+				
+				if(columnnameToExclude.contains(colName))
+					continue;
+				
+				MColumn column = MColumn.get(from.getCtx(), from.p_info.getAD_Column_ID(colName));
+				if (   column.isVirtualColumn()
+					|| column.isKey()		//	KeyColumn
+					|| column.isUUIDColumn()
+					|| column.isStandardColumn()
+					|| ! column.isAllowCopy())
+					continue;
+				
+				if(includeNull || from.m_oldValues[i] != null)
+				{
+					to.m_newValues[i] = from.m_oldValues[i];
+				}
+			}
+		}	//	same class
+	}
 }   //  PO
