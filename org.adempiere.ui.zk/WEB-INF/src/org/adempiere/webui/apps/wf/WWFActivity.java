@@ -268,6 +268,7 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 		listbox.addEventListener(Events.ON_SELECT, this);
 
 		Center center = new Center();
+		center.setAutoscroll(true);
 		center.appendChild(grid);
 		layout.appendChild(center);
 		center.setStyle("background-color: transparent");
