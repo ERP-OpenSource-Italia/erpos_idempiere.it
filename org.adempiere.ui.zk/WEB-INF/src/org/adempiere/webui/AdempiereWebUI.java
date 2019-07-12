@@ -44,6 +44,7 @@ import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.BrowserToken;
 import org.adempiere.webui.util.UserPreference;
+import org.apache.ecs.xhtml.q;
 import org.compiere.model.MColumn;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
@@ -54,6 +55,7 @@ import org.compiere.model.MTable;
 import org.compiere.model.MUser;
 import org.compiere.model.MUserPreference;
 import org.compiere.util.CLogger;
+import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Language;
@@ -311,7 +313,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     				AEnv.zoom(tableID, recordID);
     			else // F3P: if record id is missing, try to build a query
     			{    				
-    				MTable mTable = MTable.get(Env.getCtx(), tableID);
+    				MTable mTable = MTable.get(Env.getCtx(), tableID);    				
     				MQuery query = null;
     				
     				for(Entry<String,String[]> entry:m_URLParameters.entrySet())
@@ -374,12 +376,60 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     				
     				if(query != null)
     				{
+    					String keyColumn = getPrmString("resolveKey");
+    					
+        				// For a detail record, we must resolve to the primary key
+        				
+        				if(keyColumn != null)
+        				{
+        					String	keyColumns[] = mTable.getKeyColumns();
+        					
+        					if(keyColumn.equals("Y")) // auto-resolve to key
+        					{
+        						
+        						if(keyColumns.length == 0)
+        							keyColumn = null;
+        						else
+        							keyColumn = keyColumns[0];
+        					}
+        					else
+        					{
+        						String keyCand = keyColumn;
+        						keyColumn = null;
+        						
+        						for(String candidate:keyColumns)
+        						{
+        							if(candidate.equalsIgnoreCase(keyCand)) // Check if its a real key to avoid assembling a query with non-filtered input values
+        							{
+        								keyColumn = candidate;
+        								break;
+        							}
+        						}        						
+        					}
+        					
+        					if(keyColumn != null)
+        					{
+        						String sql = "SELECT " + keyColumn + " FROM " + mTable.getTableName() + " WHERE " + query.toString();
+        						
+        						int keyValue = DB.getSQLValue(null, sql);
+        						
+        						// Reset query
+        						        						
+	    						query = new MQuery(tableID);
+	    						query.addRestriction(keyColumn, MQuery.EQUAL, keyValue);
+	    						query.setRecordCount(1);
+	    						query.setZoomColumnName(keyColumn);
+	    						query.setZoomTableName(mTable.getTableName());
+	    						query.setZoomValue(keyValue);
+        					}
+        					else
+        						logger.warning("resolveKey param found with invalid value, ignoed: " + getPrmString("resolveKey"));
+        				}
+
     					int windowID = getPrmInt("AD_Window_ID"); // using a query we can support a known window
     					
     					if(windowID < 1)
-    					{
     						windowID = Env.getZoomWindowID(query);
-    					}
     					
     					if(windowID > 0)
     					{
