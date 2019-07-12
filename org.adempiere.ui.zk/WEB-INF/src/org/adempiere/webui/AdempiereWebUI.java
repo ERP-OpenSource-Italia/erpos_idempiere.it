@@ -44,7 +44,6 @@ import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.BrowserToken;
 import org.adempiere.webui.util.UserPreference;
-import org.apache.ecs.xhtml.q;
 import org.compiere.model.MColumn;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
