@@ -38,6 +38,7 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+import org.compiere.util.WhereClauseAndParams;
 import org.zkoss.zk.ui.HtmlBasedComponent;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.Events;
@@ -56,13 +57,13 @@ public class WGridTabMultiSelectionEditor extends WEditor implements ContextMenu
 	
 	//LS query
 	
-	private static final String SQL_COLUMN_NAME = "SELECT tab.AD_Tab_ID, tab.ad_window_id "
+	private static final String SQL_COLUMN_NAME = "SELECT tab.AD_Tab_ID, tab.ad_window_id, null as WhereClause, null as OrderByClause "
 			+ "FROM AD_Column c "
 			+ " INNER JOIN AD_Table t ON (c.AD_Table_ID=t.AD_Table_ID) "
 			+ " INNER JOIN AD_Tab tab ON (t.AD_Window_ID=tab.AD_Window_ID AND tab.AD_Table_ID=t.AD_Table_ID) "
 			+ "WHERE c.columnname = ? AND c.IsKey='Y' "
 			+ "ORDER BY tab.tablevel ";
-	private static final String SQL_REFERENCE_VALUE = "SELECT tab.AD_Tab_ID, tab.ad_window_id "
+	private static final String SQL_REFERENCE_VALUE = "SELECT tab.AD_Tab_ID, tab.ad_window_id, rt.WhereClause, rt.OrderByClause "
 			+ "FROM AD_Column c "
 			+ " INNER JOIN AD_Table t ON (c.AD_Table_ID=t.AD_Table_ID) "
 			+ " INNER JOIN AD_Ref_Table rt ON (rt.AD_Table_ID=t.AD_Table_ID AND c.AD_Column_ID = rt.AD_Key) "
@@ -122,6 +123,9 @@ public class WGridTabMultiSelectionEditor extends WEditor implements ContextMenu
 		{
 			int AD_Tab_ID = 0, AD_Window_ID = 0;
 			GridWindow gridWindow;
+			//LS 
+			String wClause = null, oClause = null;
+			//LS end
 			
 			if (gridField.getGridTab() != null)
 			{
@@ -152,6 +156,8 @@ public class WGridTabMultiSelectionEditor extends WEditor implements ContextMenu
 					{
 						AD_Tab_ID = rs.getInt(1);
 						AD_Window_ID = rs.getInt(2);
+						wClause = rs.getString(3);
+						oClause = rs.getString(4);
 					}
 					
 				}
@@ -183,6 +189,14 @@ public class WGridTabMultiSelectionEditor extends WEditor implements ContextMenu
 				if (t.getAD_Tab_ID() == AD_Tab_ID)
 				{
 					GridTabVO vo = t.getVO();
+					//LS manage custom where/orderby from AD_Reference_Value, overriding tab ones
+					if (Util.isEmpty(wClause) == false){
+						vo.WhereClause = wClause;
+					}
+					if (Util.isEmpty(oClause) == false){
+						vo.OrderByClause = oClause;
+					}
+					//LS end
 					listViewGridTab = new GridTab(vo, gridWindow);
 					String lcn = t.getLinkColumnName();
 					if (Util.isEmpty(lcn)) {
