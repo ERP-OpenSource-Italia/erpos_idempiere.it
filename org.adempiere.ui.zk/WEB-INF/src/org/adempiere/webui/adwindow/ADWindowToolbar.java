@@ -615,10 +615,15 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 			keyEvent.stopPropagation();
 			if (!btn.isDisabled() && btn.isVisible()) {
 				Events.sendEvent(btn, new Event(Events.ON_CLICK, btn));
-				//client side script to close combobox popup
-				String script = "var w=zk.Widget.$('#" + btn.getUuid()+"'); " +
+				//LS these 2 shortcuts do not work due to this piece of code, I do not know what is its meaning, added a 'if' to keep compatibility for other shortcuts
+				if (keyEvent.getKeyCode() != VK_R && keyEvent.getKeyCode() != VK_O)
+				{
+					//client side script to close combobox popup
+					String script = "var w=zk.Widget.$('#" + btn.getUuid()+"'); " +
 						"zWatch.fire('onFloatUp', w);";
-				Clients.response(new AuScript(script));
+					Clients.response(new AuScript(script));
+				}
+				//LS end
 			}
 		}
 	}
