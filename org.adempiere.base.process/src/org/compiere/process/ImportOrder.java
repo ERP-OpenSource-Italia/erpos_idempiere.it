@@ -1171,7 +1171,7 @@ public class ImportOrder extends SvrProcess implements ImportProcess
 		if(bHasError)
 		{
 			Object params[] = {processMsg, order.getC_Order_ID()};
-			String sSQLError = "UPDATE I_Order set I_IsImported='E', I_ErrorMsg = I_ErrorMsg||' ERR='||? WHERE C_Order_ID = ?";						
+			String sSQLError = "UPDATE I_Order set I_ErrorMsg = I_ErrorMsg||' ERR='||? WHERE C_Order_ID = ?";						
 			DB.executeUpdateEx(sSQLError, params, get_TrxName());
 		}
 		
