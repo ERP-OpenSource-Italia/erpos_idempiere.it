@@ -348,19 +348,19 @@ public interface I_I_Asset
     public static final String COLUMNNAME_A_QTY_Current = "A_QTY_Current";
 
 	/** Set Current Qty	  */
-	public void setA_QTY_Current (int A_QTY_Current);
+	public void setA_QTY_Current (BigDecimal A_QTY_Current);
 
 	/** Get Current Qty	  */
-	public int getA_QTY_Current();
+	public BigDecimal getA_QTY_Current();
 
     /** Column name A_QTY_Original */
     public static final String COLUMNNAME_A_QTY_Original = "A_QTY_Original";
 
 	/** Set A_QTY_Original	  */
-	public void setA_QTY_Original (int A_QTY_Original);
+	public void setA_QTY_Original (BigDecimal A_QTY_Original);
 
 	/** Get A_QTY_Original	  */
-	public int getA_QTY_Original();
+	public BigDecimal getA_QTY_Original();
 
     /** Column name A_Reval_Accumdep_Offset_Cur */
     public static final String COLUMNNAME_A_Reval_Accumdep_Offset_Cur = "A_Reval_Accumdep_Offset_Cur";

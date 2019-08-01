@@ -624,36 +624,36 @@ public class X_I_Asset extends PO implements I_I_Asset, I_Persistent
 
 	/** Set Current Qty.
 		@param A_QTY_Current Current Qty	  */
-	public void setA_QTY_Current (int A_QTY_Current)
+	public void setA_QTY_Current (BigDecimal A_QTY_Current)
 	{
-		set_Value (COLUMNNAME_A_QTY_Current, Integer.valueOf(A_QTY_Current));
+		set_Value (COLUMNNAME_A_QTY_Current, A_QTY_Current);
 	}
 
 	/** Get Current Qty.
 		@return Current Qty	  */
-	public int getA_QTY_Current () 
+	public BigDecimal getA_QTY_Current () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_A_QTY_Current);
+		BigDecimal ii = (BigDecimal)get_Value(COLUMNNAME_A_QTY_Current);
 		if (ii == null)
-			 return 0;
-		return ii.intValue();
+			 return Env.ZERO;
+		return ii;
 	}
 
 	/** Set A_QTY_Original.
 		@param A_QTY_Original A_QTY_Original	  */
-	public void setA_QTY_Original (int A_QTY_Original)
+	public void setA_QTY_Original (BigDecimal A_QTY_Original)
 	{
-		set_Value (COLUMNNAME_A_QTY_Original, Integer.valueOf(A_QTY_Original));
+		set_Value (COLUMNNAME_A_QTY_Original, A_QTY_Original);
 	}
 
 	/** Get A_QTY_Original.
 		@return A_QTY_Original	  */
-	public int getA_QTY_Original () 
+	public BigDecimal getA_QTY_Original () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_A_QTY_Original);
+		BigDecimal ii = (BigDecimal)get_Value(COLUMNNAME_A_QTY_Original);
 		if (ii == null)
-			 return 0;
-		return ii.intValue();
+			 return Env.ZERO;
+		return ii;
 	}
 
 	public I_C_ValidCombination getA_Reval_Accumdep_Offset_() throws RuntimeException
