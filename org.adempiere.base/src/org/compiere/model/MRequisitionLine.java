@@ -17,6 +17,7 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.List;
@@ -249,6 +250,14 @@ public class MRequisitionLine extends X_M_RequisitionLine
 	public void setLineNetAmt ()
 	{
 		BigDecimal lineNetAmt = getQty().multiply(getPriceActual());
+	
+		MRequisition requisition = getParent();
+		MPriceList priceList = MPriceList.get(getCtx(), requisition.getM_PriceList_ID(), get_TrxName());
+		int precision = priceList.getStandardPrecision();
+		
+		if(lineNetAmt.scale() > precision)
+			lineNetAmt = lineNetAmt.setScale(precision,  RoundingMode.HALF_UP);
+
 		super.setLineNetAmt (lineNetAmt);
 	}	//	setLineNetAmt
 	
