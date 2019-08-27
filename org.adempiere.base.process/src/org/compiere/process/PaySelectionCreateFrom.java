@@ -141,8 +141,21 @@ public class PaySelectionCreateFrom extends SvrProcess
 			.append(" AND NOT EXISTS (SELECT * FROM C_PaySelectionLine psl")
 						.append(" INNER JOIN C_PaySelectionCheck psc ON (psl.C_PaySelectionCheck_ID=psc.C_PaySelectionCheck_ID)")
 						.append(" LEFT OUTER JOIN C_Payment pmt ON (pmt.C_Payment_ID=psc.C_Payment_ID)")
+/**LS 
+ * 
+ * ATTENZIONE:
+ * Utilizza PNG_Journal e PNG_JournalLine per tenere conto dei pagamanti in più rate
+ * 
+ * Non utilizzare in installazioni in cui non è presente erpos
+ * 
+ * Modifica presente anche in PaySelect.java
+ */
+						.append(" LEFT OUTER JOIN PNG_JournalLine jl ON (jl.PNG_JournalLine_ID=psc.PNG_JournalLine_ID)")
+						.append(" LEFT OUTER JOIN PNG_Journal j ON (j.PNG_Journal_ID=jl.PNG_Journal_ID)")
 						.append(" WHERE i.C_Invoice_ID=psl.C_Invoice_ID AND psl.IsActive='Y'")
-						.append(" AND (pmt.DocStatus IS NULL OR pmt.DocStatus NOT IN ('VO','RE')) )")
+						.append(" AND (psc.PNG_JournalLine_ID is null and (pmt.DocStatus IS NULL OR pmt.DocStatus NOT IN ('VO','RE')))")
+						.append(" AND (psc.C_Payment_ID is null and (j.DocStatus IS NULL OR j.DocStatus NOT IN ('VO','RE'))) )")
+						.append(" AND invoiceOpenNetAmt(i.C_Invoice_ID,i.C_InvoicePaySchedule_ID) <> 0") 
 			//	Don't generate again invoices already on this payment selection 
 			.append(" AND i.C_Invoice_ID NOT IN (SELECT i.C_Invoice_ID FROM C_PaySelectionLine psl WHERE psl.C_PaySelection_ID=?)"); //	##p9
 		//	Disputed

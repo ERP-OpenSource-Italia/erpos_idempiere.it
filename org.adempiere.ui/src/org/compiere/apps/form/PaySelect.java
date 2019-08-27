@@ -254,8 +254,21 @@ public class PaySelect
 			+ " AND NOT EXISTS (SELECT * FROM C_PaySelectionLine psl"
 			+                 " INNER JOIN C_PaySelectionCheck psc ON (psl.C_PaySelectionCheck_ID=psc.C_PaySelectionCheck_ID)"
 			+                 " LEFT OUTER JOIN C_Payment pmt ON (pmt.C_Payment_ID=psc.C_Payment_ID)"
+/**LS
+ * 
+ * ATTENZIONE:
+ * Utilizza PNG_Journal e PNG_JournalLine per tenere conto dei pagamanti in più rate
+ * 
+ * Non utilizzare in installazioni in cui non è presente erpos
+ * 
+ * Modifica presente anche in PaySelectionCreateFrom.java
+ */
+			+                 " LEFT OUTER JOIN PNG_JournalLine jl ON (jl.PNG_JournalLine_ID=psc.PNG_JournalLine_ID)"
+			+                 " LEFT OUTER JOIN PNG_Journal j ON (j.PNG_Journal_ID=jl.PNG_Journal_ID)"
 			+                 " WHERE i.C_Invoice_ID=psl.C_Invoice_ID AND psl.IsActive='Y'"
-			+				  " AND (pmt.DocStatus IS NULL OR pmt.DocStatus NOT IN ('VO','RE')) )"
+			+				  " AND (psc.PNG_JournalLine_ID is null and (pmt.DocStatus IS NULL OR pmt.DocStatus NOT IN ('VO','RE')) )"
+			+				  " AND (psc.C_Payment_ID is null and (j.DocStatus IS NULL OR j.DocStatus NOT IN ('VO','RE')))"
+			+ 				  ")"
 			+ " AND i.DocStatus IN ('CO','CL')"
 			+ " AND i.AD_Client_ID=?"	//	additional where & order in loadTableInfo()
 			+ " AND invoiceOpenNetAmt(i.C_Invoice_ID,i.C_InvoicePaySchedule_ID) <> 0", //F3P: gestione pagamento in piu tranches
