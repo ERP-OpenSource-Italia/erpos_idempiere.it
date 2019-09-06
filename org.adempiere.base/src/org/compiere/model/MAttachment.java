@@ -32,6 +32,8 @@ import org.compiere.util.Env;
 import org.compiere.util.MimeType;
 import org.compiere.util.Util;
 
+import it.idempiere.base.util.STDUtils;
+
 
 /**
  *	Attachment Model.
@@ -295,6 +297,12 @@ public class MAttachment extends X_AD_Attachment
 		boolean retValue = false;
 		if (item == null)
 			return false;
+		
+		// F3P: since attachment is logically a file, make sure its a valid name
+		
+		String safeName = STDUtils.convertToSafeFilename(item.getName(), '_');
+		item.setName(safeName);
+		
 		if (m_items == null)
 			loadLOBData();
 		for (int i = 0; i < m_items.size(); i++) {
