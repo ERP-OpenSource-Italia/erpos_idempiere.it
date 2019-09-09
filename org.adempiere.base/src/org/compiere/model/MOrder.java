@@ -1496,11 +1496,11 @@ public class MOrder extends X_C_Order implements DocAction
 		
 		if (isSOTrx() && getDeliveryViaRule().equals(DELIVERYVIARULE_Shipper))
 		{
-			if (getM_Shipper_ID() == 0)
-			{
-				m_processMsg = "@FillMandatory@" + Msg.getElement(getCtx(), COLUMNNAME_M_Shipper_ID);
-				return DocAction.STATUS_Invalid;
-			}
+//			if (getM_Shipper_ID() == 0)
+//			{
+//				m_processMsg = "@FillMandatory@" + Msg.getElement(getCtx(), COLUMNNAME_M_Shipper_ID);
+//				return DocAction.STATUS_Invalid;
+//			}
 			
 			if (!calculateFreightCharge())
 				return DocAction.STATUS_Invalid;
