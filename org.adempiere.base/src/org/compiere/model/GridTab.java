@@ -1186,11 +1186,11 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		if (!retValue)
 			return retValue;
 		setCurrentRow(m_currentRow + 1, true);
-
+		m_mTable.setChanged(false);	
 		//  process all Callouts (no dependency check - assumed that settings are valid)
 		for (int i = 0; i < getFieldCount(); i++)
 			processCallout(getField(i));
-		m_mTable.setChanged(false);		
+		//m_mTable.setChanged(false);		
 
 		fireStateChangeEvent(new StateChangeEvent(this, StateChangeEvent.DATA_NEW));
 		return retValue;
