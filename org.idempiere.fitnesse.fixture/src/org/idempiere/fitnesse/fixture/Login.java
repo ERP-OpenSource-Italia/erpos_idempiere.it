@@ -57,12 +57,14 @@ public class Login extends TableFixture {
 			adempiereInstance = Static_iDempiereInstance.getInstance();
 		}
 		Properties ctx = adempiereInstance.getAdempiereService().getCtx();
+		String trxName = adempiereInstance.getAdempiereService().get_TrxName();
+		
 		boolean isErrorExpected = "*Login*Error*".equalsIgnoreCase(getText(rows-1, 0));
 		String msgerror = getText(rows-1, 1);
 		for (int i = 0; i < rows; i++) {
 			String cell_title = getText(i, 0);
 			String cell_value = getText(i, 1);
-			String value_evaluated = Util.evaluate(null, 0, cell_value, getCell(i, 1));
+			String value_evaluated = Util.evaluate(null, 0, cell_value, getCell(i, 1),trxName);
 			if (cell_title.equalsIgnoreCase("User")) {
 				m_user = value_evaluated;
 			} else if (cell_title.equalsIgnoreCase("Password")) {
@@ -167,12 +169,16 @@ public class Login extends TableFixture {
 		KeyNamePair[] clients = login.getClients(m_user, m_password);
 		boolean okclient = false;
 		KeyNamePair selectedClient = null;
-		for (KeyNamePair client : clients) {
-			if (client.getKey() == m_client_id) {
-				okclient = true;
-				selectedClient = client;
-				break;
+		if (clients != null) {
+			for (KeyNamePair client : clients) {
+				if (client.getKey() == m_client_id) {
+					okclient = true;
+					selectedClient = client;
+					break;
+				}
 			}
+		} else {
+			return "Error logging in - user/password combination not valid";
 		}
 		if (!okclient)
 			return "Error logging in - client not allowed for this user";

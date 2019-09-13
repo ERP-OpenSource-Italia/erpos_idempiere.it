@@ -77,6 +77,7 @@ public class RunProcess extends TableFixture {
 		}
 		Properties ctx = adempiereInstance.getAdempiereService().getCtx();
 		int windowNo = adempiereInstance.getAdempiereService().getWindowNo();
+		String trxName = adempiereInstance.getAdempiereService().get_TrxName();
 
 		MProcess process = null;
 		@SuppressWarnings("unused")
@@ -156,7 +157,7 @@ public class RunProcess extends TableFixture {
 						    	// get the PO for the tablename and record ID
 						    	MTable table = MTable.get(ctx, wf.getAD_Table_ID());
 						    	if (table != null) {
-							    	PO po = table.getPO(recordID, null);
+							    	PO po = table.getPO(recordID, trxName);
 							    	if (po != null) {
 							    		po.set_ValueOfColumn("DocAction", docAction);
 										po.saveEx();
@@ -168,6 +169,7 @@ public class RunProcess extends TableFixture {
 					}
 				}
 				ProcessInfo pi = new ProcessInfo (process.getName(), process.getAD_Process_ID());
+				pi.setTransactionName(trxName);
 				pi.setAD_User_ID(Env.getAD_User_ID(ctx));
 				pi.setAD_Client_ID(Env.getAD_Client_ID(ctx));
 				pi.setAD_PInstance_ID(pInstance.getAD_PInstance_ID());
@@ -198,7 +200,7 @@ public class RunProcess extends TableFixture {
 							if (wf.getWorkflowType().equals(MWorkflow.WORKFLOWTYPE_DocumentProcess)) {
 								MTable table = MTable.get(ctx, wf.getAD_Table_ID());
 						    	if (table != null) {
-							    	PO po = table.getPO(recordID, null);
+							    	PO po = table.getPO(recordID, trxName);
 							    	if (!docAction.equals(po.get_Value("DocStatus"))) {
 										getCell(i, 1).addToBody("<br>Expected " + docAction + "<br>Received " + po.get_Value("DocStatus"));
 										boolean ok = Util.evaluateError(Msg.parseTranslation(ctx, pi.getSummary()), msgerror1, isErrorExpected); 	
@@ -238,13 +240,14 @@ public class RunProcess extends TableFixture {
 			
 				if (process.isJavaProcess() && !jasperreport)
 				{
-					Trx trx = Trx.get(Trx.createTrxName("FixturePrc"), true);
+					//Trx trx = Trx.get(Trx.createTrxName("FixturePrc"), true);
+					Trx trx = Trx.get(trxName, false);
 					trx.setDisplayName(getClass().getName()+"_doStaticTable");
 					try
 					{
-						processOK = process.processIt(pi, trx);
-						trx.commit();
-						trx.close();
+						processOK = process.processIt(pi, trx,false);
+						//trx.commit();
+						//trx.close();
 					}
 					catch (Throwable t)
 					{
@@ -287,7 +290,7 @@ public class RunProcess extends TableFixture {
 				}
 				// Parameter
 				String parameterName = cell_title;
-				String value_evaluated = Util.evaluate(ctx, windowNo, cell_value, getCell(i, 1));
+				String value_evaluated = Util.evaluate(ctx, windowNo, cell_value, getCell(i, 1),trxName);
 				if (parameterName.equalsIgnoreCase("*RecordID*")) {
 					try {
 						recordID = Integer.parseInt(value_evaluated);
