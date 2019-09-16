@@ -91,7 +91,7 @@ public class CreateRecord extends TableFixture {
 					if (ok)
 						right(i,1);
 					else
-						wrong(i,1);
+						wrong(i,1); 
 					tableOK = false;
 				} else {
 					tableOK = true;
@@ -136,11 +136,25 @@ public class CreateRecord extends TableFixture {
 								right(i, 1);
 							}
 							getCell(i, 1).addToBody(gpo.toString());
+							
+							String keyColumn = null;
+							if(gpo.get_KeyColumns().length == 1)
+							{
+								keyColumn = gpo.get_KeyColumns()[0];
+							}
+							
 							for (int idx = 0; idx < poinfo.getColumnCount(); idx++) {
 								String colname = poinfo.getColumnName(idx);
 								Object result = gpo.get_Value(colname);
 								if (result != null)
+								{
 									Env.setContext(ctx, windowNo, poinfo.getTableName().toLowerCase() + "." + colname.toLowerCase(), result.toString());
+								}
+								
+								if(keyColumn != null && keyColumn.equalsIgnoreCase(colname))
+								{
+									Env.setContext(ctx, windowNo,"lastRecord_ID",gpo.get_ValueAsInt(keyColumn));
+								}
 							}
 						}
 					}

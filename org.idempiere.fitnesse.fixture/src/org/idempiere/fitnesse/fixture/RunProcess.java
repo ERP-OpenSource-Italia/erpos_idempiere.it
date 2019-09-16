@@ -143,6 +143,21 @@ public class RunProcess extends TableFixture {
 				}	
 				if (recordID > 0)
 					pInstance.setRecord_ID( recordID);
+				else
+				{
+					String lastRecordIDString = Env.getContext(ctx, windowNo,"lastRecord_ID");
+									
+					if(lastRecordIDString != null)
+					{
+						recordID = Integer.parseInt(lastRecordIDString);
+						
+						if(recordID > 0)
+						{
+							pInstance.setRecord_ID( recordID);
+						}
+					}
+				}
+					
 				pInstance.saveEx();
 				if (docAction != null) {
 					if (docAction != null && docAction.length() > 0) {
