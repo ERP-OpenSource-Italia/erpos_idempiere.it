@@ -50,27 +50,47 @@ public class AssertVariable extends TableFixture {
 		}
 		Properties ctx = adempiereInstance.getAdempiereService().getCtx();
 		int windowNo = adempiereInstance.getAdempiereService().getWindowNo();
+		
+		String trxName = adempiereInstance.getAdempiereService().get_TrxName();
 
 		for (int i = 0; i < rows; i++) {
 			String cell_title = getText(i, 0);
 			String title_evaluated = cell_title;
 			if (cell_title.startsWith("@")) {
-				title_evaluated = Util.evaluate(ctx, windowNo, cell_title, getCell(i, 0));
+				title_evaluated = Util.evaluate(ctx, windowNo, cell_title, getCell(i, 0),trxName);
 			}
 			
 			String cell_value = getText(i, 1);
 			String value_evaluated = cell_value;
 			if (cell_value.startsWith("@")) {
-				value_evaluated = Util.evaluate(ctx, windowNo, cell_value, getCell(i, 1));
+				value_evaluated = Util.evaluate(ctx, windowNo, cell_value, getCell(i, 1),trxName);
 			}
 			
 			if (title_evaluated.equals(value_evaluated)) {
 				right(i, 1);
-			} else {
-				wrong(i, 1);
+			} else {//red1 check if numerical
+				if (numbers(title_evaluated,value_evaluated))
+					right(i, 1);
+				else
+					wrong(i, 1); 
 			}
 			
 		}
 	} // doStaticTable
+	
+	private boolean numbers(String title_evaluated, String value_evaluated) { 
+		Double num1 = 0.0d;
+		try
+		{
+		  num1 = Double.parseDouble(title_evaluated);
+		}
+		catch(NumberFormatException e)
+		{
+		  return false;
+		}
+		if (num1==(Double.parseDouble(value_evaluated)))
+			return true;
+		else return false;
+	}
 
 } // AdempiereSetVariable

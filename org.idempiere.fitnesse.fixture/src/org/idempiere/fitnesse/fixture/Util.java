@@ -97,14 +97,14 @@ public class Util {
 		return s_initOK;
 	} // initWeb
 	
-	public static String evaluate(Properties ctx, int windowNo, String cell_value, Parse parse) {
+	public static String evaluate(Properties ctx, int windowNo, String cell_value, Parse parse, String trxName) {
 
 		if (cell_value == null || cell_value.length() == 0)
 			return cell_value;
 		
 		if (cell_value.toLowerCase().startsWith("@sql=")) {
 			String sqlcmd = Env.parseContext(ctx, windowNo, lowerContextTableColumn(cell_value.substring(5)), false, false);
-			String newval = DB.getSQLValueStringEx(null, sqlcmd);
+			String newval = DB.getSQLValueStringEx(trxName, sqlcmd);
 			if (parse != null)
 				parse.addToBody("<hr/>" + newval);
 			if (log.isLoggable(Level.CONFIG)) log.config("Cell value " + cell_value + " evaluated to " + newval);
@@ -122,7 +122,7 @@ public class Util {
 			if (ctx != null)
 				whereParsed = "(" + whereParsed + ") AND AD_Client_ID IN (0,"+Env.getAD_Client_ID(ctx)+")";
 			String columnname = cell_value.substring(pos_clsqb+2);
-			String newval = DB.getSQLValueStringEx(null, "SELECT " + columnname + " FROM " + tablename + " WHERE " + whereParsed);
+			String newval = DB.getSQLValueStringEx(trxName, "SELECT " + columnname + " FROM " + tablename + " WHERE " + whereParsed);
 			if (parse != null)
 				parse.addToBody("<hr/>" + newval);
 			if (log.isLoggable(Level.CONFIG)) log.config("Cell value " + cell_value + " evaluated to " + newval);
@@ -258,7 +258,8 @@ public class Util {
 		Properties ctx = adempiereInstance.getAdempiereService().getCtx();
 		int windowNo = adempiereInstance.getAdempiereService().getWindowNo();
 		
-		return evaluate(ctx, windowNo, expr, null);
+		String trxName = adempiereInstance.getAdempiereService().get_TrxName();
+		return evaluate(ctx, windowNo, expr, null, trxName);
 	}
 
 	public static boolean evaluateError(String error, String cell, boolean isExpectedError) {

@@ -69,6 +69,7 @@ public class UpdateRecord extends TableFixture {
 		}
 		Properties ctx = adempiereInstance.getAdempiereService().getCtx();
 		int windowNo = adempiereInstance.getAdempiereService().getWindowNo();
+		String trxName = adempiereInstance.getAdempiereService().get_TrxName();//red1
 
 		PO gpo = null;
 		String tableName = new String("");
@@ -123,10 +124,10 @@ public class UpdateRecord extends TableFixture {
 				PreparedStatement pstmt = null;
 				ResultSet rs = null;
 				try {
-					pstmt = DB.prepareStatement(sql, null);
+					pstmt = DB.prepareStatement(sql, trxName);
 					rs = pstmt.executeQuery();
 					if (rs.next()) {
-						gpo = table.getPO(rs, null);
+						gpo = table.getPO(rs, trxName);
 					} else {
 						getCell(i, 1).addToBody("No record found: " + sql);
 						boolean ok = Util.evaluateError("No record found: ",cell_value, isErrorExpected);
@@ -168,7 +169,7 @@ public class UpdateRecord extends TableFixture {
 			} else {
 				// columns
 				if (tableOK) {
-					String value_evaluated = Util.evaluate(ctx, windowNo,cell_value, getCell(i, 1));
+					String value_evaluated = Util.evaluate(ctx, windowNo,cell_value, getCell(i, 1),trxName);
 					if (!alreadyread) {
 						// not read yet - add value to where clause						
 						if (whereclause.length() > 0) {
@@ -200,9 +201,9 @@ public class UpdateRecord extends TableFixture {
 									continue;
 								} else if (columnClass == Boolean.class) {
 									if ("Y".equalsIgnoreCase(value_evaluated) || "true".equalsIgnoreCase(value_evaluated))
-										value = new Boolean(true);
+										value = Boolean.TRUE;
 									else if ("N".equalsIgnoreCase(value_evaluated) || "false".equalsIgnoreCase(value_evaluated))
-										value = new Boolean(false);
+										value = Boolean.FALSE;
 									else {
 										exception(getCell(i, 1), new Exception("Wrong value for boolean, allowed Y/N/true/false"));
 										continue;
@@ -279,7 +280,7 @@ public class UpdateRecord extends TableFixture {
 		} //end for
 		if (tableOK && columnsOK && gpo != null) {
 			int i = rows-1;
-			if (!gpo.save()) {
+			if (!gpo.save(trxName)) {
 				StringBuilder msg = new StringBuilder();
 				Exception e = (Exception) ctx.get("org.compiere.util.CLogger.lastException");
 				if (e != null)
