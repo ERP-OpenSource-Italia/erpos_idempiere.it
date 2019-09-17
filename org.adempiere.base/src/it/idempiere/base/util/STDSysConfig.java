@@ -640,5 +640,12 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LIT_ALLOCATION_CHECTRXDATES, true, AD_Client_ID, AD_Org_ID);
 	}
+	
+	private static final String LIT__BLOCK_CONCURRENT_UPDATE_SAME_USER = "LIT_BLOCK_CONCURRENT_UPDATE_SAME_USER";
+
+	public static boolean isBlockConcurrentUpdateSameUser(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT__BLOCK_CONCURRENT_UPDATE_SAME_USER, false, AD_Client_ID);
+	}
 
 }

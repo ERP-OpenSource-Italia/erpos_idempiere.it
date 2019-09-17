@@ -64,6 +64,7 @@ import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 
+import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.SavedFromUI;
 
 /**
@@ -3953,7 +3954,15 @@ public class GridTable extends AbstractTableModel
 	    	{
 	    		int currentUser = Env.getAD_User_ID(m_ctx);
 	    		
-	    		if(updatedBy == currentUser && needSave() == false) // Implcit change
+	    		
+	    		// F3P: introdotta variabile per bloccare update da stesso utente	    		
+	    		// if(updatedBy == currentUser && needSave() == false) // Implcit change	    		
+	    		boolean bSameUser = (updatedBy == currentUser);	    		
+	    		
+	    		if(STDSysConfig.isBlockConcurrentUpdateSameUser(getAD_Client_ID())) // Se dobbiamo bloccare le modifiche anche se fatte dallo stesso utente, allora siamo nella condizione 'utente diverso' 
+	    			bSameUser = false;
+	    		
+	    		if(bSameUser && needSave() == false) // Implcit change
 	    		{
 	    			dataRefresh(row);
 	    			isChanged = false;
