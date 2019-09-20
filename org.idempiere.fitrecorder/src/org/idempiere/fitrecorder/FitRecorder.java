@@ -80,6 +80,7 @@ public class FitRecorder implements ModelValidator {
 			"AD_SCHEDULERLOG",
 			"AD_SESSION",
 			"AD_WINDOW_ACCESS",
+			"AD_PREFERENCE",
 			"AD_WORKFLOW_ACCESS",
 			"AD_WORKFLOWPROCESSORLOG",
 			"CM_WEBACCESSLOG",
