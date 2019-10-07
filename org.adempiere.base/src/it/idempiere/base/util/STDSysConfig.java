@@ -4,7 +4,9 @@ import java.io.File;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.compiere.model.MOrder;
@@ -646,6 +648,35 @@ public class STDSysConfig
 	public static boolean isBlockConcurrentUpdateSameUser(int AD_Client_ID)
 	{
 		return MSysConfig.getBooleanValue(LIT__BLOCK_CONCURRENT_UPDATE_SAME_USER, false, AD_Client_ID);
+	}
+	
+	/*private static final String LIT_IS_SHOW_ORDER_WITH_QTY_OVER_ZERO = "LIT_IS_SHOW_ORDER_WITH_QTY_OVER_ZERO";
+
+	public static boolean isShowOrderWithQtyOverZero(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_IS_SHOW_ORDER_WITH_QTY_OVER_ZERO, false, AD_Client_ID,AD_Org_ID);
+	}*/
+
+	
+	private static final String LIST_DOC_TYPE_ID_SHOW_NEGATIVE_QTY_ORDERED = "LIST_DOC_TYPE_ID_SHOW_NEGATIVE_QTY_ORDERED";
+	
+	public static List<Integer> getListDocTypeIDShowNegativeQtyOrdered(int AD_Client_ID, int AD_Org_ID)
+	{
+		String sListValue =  MSysConfig.getValue(LIST_DOC_TYPE_ID_SHOW_NEGATIVE_QTY_ORDERED, null, AD_Client_ID, AD_Org_ID);
+		ArrayList<Integer> listDocTypes = null;
+		
+		if(sListValue != null)
+		{
+		
+			listDocTypes = new ArrayList<Integer>();
+			
+			for(String value:sListValue.split(";"))
+			{
+				listDocTypes.add(Integer.parseInt(value));
+			}
+		}
+		
+		return listDocTypes;
 	}
 
 }
