@@ -18,6 +18,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 import java.util.logging.Level;
 
@@ -118,7 +119,28 @@ public abstract class CreateFrom implements ICreateFrom
 			+ " AND o.C_Order_ID IN "
 				  + "(SELECT ol.C_Order_ID FROM C_OrderLine ol"
 				  + " LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID" //F3P: added product link
-				  + " WHERE ol.QtyOrdered - ").append(column).append(" != 0 ");
+				  + " WHERE ((ol.QtyOrdered - ").append(column).append(" ) > 0 ) ");
+			
+		List<Integer> docTypeIDs = STDSysConfig.getListDocTypeIDShowNegativeQtyOrdered(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx()));
+		
+		if(docTypeIDs != null)
+		{ 
+			sql.append("OR (((ol.QtyOrdered - ").append(column).append(" ) != 0 ) AND o.C_DocType_ID in (");
+			boolean isFirst = true;
+			
+			for(Integer docType_ID : docTypeIDs)
+			{
+				if(isFirst)
+				{
+					sql.append(docType_ID);
+					isFirst = false;
+				}
+				else
+					sql.append(",").append(docType_ID);
+			}
+					
+			sql.append(" )) ");
+		}
 		
 		//F3P: show only service order
 		if(isShowOnlyServiceOrder() && forInvoice)
