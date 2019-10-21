@@ -156,7 +156,8 @@ public class FitRecorder implements ModelValidator {
 	}
 
 	public int getAD_Client_ID() {
-		return 0;
+		
+		return MSysConfig.getIntValue("FitRecorder_AD_Client_ID", 0);
 	}
 
 	@Override
@@ -206,7 +207,8 @@ public class FitRecorder implements ModelValidator {
 						|| colName.equals("AD_Client_ID")
 						|| colName.equals(table.getTableName() + "_ID")
 						|| colName.equals(PO.getUUIDColumnName(table.getTableName()))
-						|| column.getAD_Reference_ID() == DisplayType.Button)
+						|| column.getAD_Reference_ID() == DisplayType.Button
+						|| column.isVirtualColumn())
 						continue;
 					if (po.isActive() && colName.equals("IsActive"))
 						continue;
@@ -446,6 +448,7 @@ public class FitRecorder implements ModelValidator {
 
 		} catch (Exception e) {
 			if (log.isLoggable(Level.INFO)) log.info(e.getLocalizedMessage());
+			log.log(Level.SEVERE, "Error recording", e);
 			return e.getLocalizedMessage();
 		}
 		return null;
@@ -458,6 +461,14 @@ public class FitRecorder implements ModelValidator {
 		String foreignColName = null;
 		if ( ! ("AD_Language".equals(foreignTable) || "AD_EntityType".equals(foreignTable))) {
 			MTable fTable = MTable.get(Env.getCtx(), foreignTable);
+			
+			// F3P: null table ?
+			if(fTable == null)
+			{
+				log.log(Level.SEVERE, "No table" + foreignTable);
+				return null;
+			}
+			
 			// Hardcoded / do not check for Value on AD_Org, AD_User and AD_Ref_List, must use name for these two tables
 			if (! ("AD_Org".equals(foreignTable) || "AD_User".equals(foreignTable) || "AD_Ref_List".equals(foreignTable))
 					&& fTable.getColumn("Value") != null) {
@@ -492,6 +503,14 @@ public class FitRecorder implements ModelValidator {
 		String foreignColName = null;
 		if ( ! ("AD_Language".equals(foreignTable) || "AD_EntityType".equals(foreignTable))) {
 			MTable fTable = MTable.get(Env.getCtx(), foreignTable);
+			
+			// F3P: null table ?
+			if(fTable == null)
+			{
+				log.log(Level.SEVERE, "No table" + foreignTable);
+				return null;
+			}			
+			
 			// Hardcoded / do not check for Value on AD_Org, AD_User and AD_Ref_List, must use name for these two tables
 			if (! ("AD_Org".equals(foreignTable) || "AD_User".equals(foreignTable) || "AD_Ref_List".equals(foreignTable))
 					&& fTable.getColumn("Value") != null) {
@@ -590,6 +609,14 @@ public class FitRecorder implements ModelValidator {
 		String foreignColName = null;
 		if ( ! ("AD_Language".equals(foreignTable) || "AD_EntityType".equals(foreignTable))) {
 			MTable fTable = MTable.get(Env.getCtx(), foreignTable);
+			
+			// F3P: null table ?
+			if(fTable == null)
+			{
+				log.log(Level.SEVERE, "No table" + foreignTable);
+				return null;
+			}			
+			
 			// Hardcoded / do not check for Value on AD_Org, AD_User and AD_Ref_List, must use name for these two tables
 			if (! ("AD_Org".equals(foreignTable) || "AD_User".equals(foreignTable) || "AD_Ref_List".equals(foreignTable))
 					&& fTable.getColumn("Value") != null) {

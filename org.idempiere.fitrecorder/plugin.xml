@@ -18,5 +18,14 @@
             class="org.idempiere.fitrecorder.FitFileExporter"
             priority="0">
       </exporter>
+   </extension>
+      <extension
+         id="org.idempiere.fitrecorder.FitFileExporter"
+         name="FitFileExporter"
+         point="org.adempiere.base.IGridTabExporter">
+      <exporter
+            class="org.idempiere.fitrecorder.FitFileExporter"
+            priority="0">
+      </exporter>
       </extension>
 </plugin>
