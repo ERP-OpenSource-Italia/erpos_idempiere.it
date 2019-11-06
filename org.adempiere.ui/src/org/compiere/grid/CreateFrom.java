@@ -18,6 +18,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 import java.util.logging.Level;
 
@@ -113,18 +114,54 @@ public abstract class CreateFrom implements ICreateFrom
 		// F3P: integrated display based on selection columns		
 		String display = MLookupFactory.getDisplayBaseQuery(Env.getLanguage(Env.getCtx()), "C_Order_ID", "C_Order","o","o.C_Order_ID", null);
 		
-		StringBuilder sql = new StringBuilder(display)
-			.append("WHERE o.C_BPartner_ID=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO')"
+		
+		StringBuilder sql = new StringBuilder(display);
+				
+		List<Integer> docTypeIDs = STDSysConfig.getListDocTypeIDShowNegativeQtyOrdered(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx()));
+		
+		if(docTypeIDs == null)
+		{ 
+			sql.append("WHERE o.C_BPartner_ID=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO')"
 			+ " AND o.C_Order_ID IN "
 				  + "(SELECT ol.C_Order_ID FROM C_OrderLine ol"
 				  + " LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID" //F3P: added product link
-				  + " WHERE ol.QtyOrdered - ").append(column).append(" != 0 ");
+				  + " WHERE ((ol.QtyOrdered - ").append(column).append(" ) > 0 ) ");
+		}
+		else
+		{
+			boolean isFirst=true;
+			StringBuilder sqlDocType = new StringBuilder();
+			for(Integer docType_ID : docTypeIDs)
+			{
+				if(isFirst)
+				{
+					sqlDocType.append(docType_ID);
+					isFirst = false;
+				}
+				else
+					sqlDocType.append(",").append(docType_ID);
+			}
+			
+			sql.append("WHERE o.C_BPartner_ID=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO')"
+					+ "AND (o.C_DocType_ID in (").append(sqlDocType.toString()).append(")").append(
+					" OR o.C_Order_ID IN "
+						  + "(SELECT ol.C_Order_ID FROM C_OrderLine ol"
+						  + " LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID" //F3P: added product link
+						  + " WHERE ((ol.QtyOrdered - ").append(column).append(" ) > 0 ) ");
+		}	
+		
+		
 		
 		//F3P: show only service order
 		if(isShowOnlyServiceOrder() && forInvoice)
 			sql.append(" AND (ol.c_charge_id IS NOT NULL OR p.producttype <> 'I' )");
-		sql.append(") ");
-				
+		
+		
+		if(docTypeIDs == null)
+			sql.append(") ");
+		else
+			sql.append(")) ");	
+			
 		if(sameWarehouseOnly)
 		{
 			sql = sql.append(" AND o.M_Warehouse_ID=? ");

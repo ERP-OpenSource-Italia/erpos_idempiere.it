@@ -59,6 +59,8 @@ public class DeleteRecord extends TableFixture {
 		}
 		Properties ctx = adempiereInstance.getAdempiereService().getCtx();
 		int windowNo = adempiereInstance.getAdempiereService().getWindowNo();
+		
+		String trxName = adempiereInstance.getAdempiereService().get_TrxName();//red1
 
 		PO gpo = null;
 		String tableName = new String("");
@@ -112,10 +114,10 @@ public class DeleteRecord extends TableFixture {
 				PreparedStatement pstmt = null;
 				ResultSet rs = null;
 				try {
-					pstmt = DB.prepareStatement(sql, null);
+					pstmt = DB.prepareStatement(sql, trxName);
 					rs = pstmt.executeQuery();
 					if (rs.next()) {
-						gpo = table.getPO(rs, null);
+						gpo = table.getPO(rs, trxName);
 					} else {
 						getCell(i, 1).addToBody("No record found: " + sql);
 						boolean ok = Util.evaluateError("No record found: ",cell_value, isErrorExpected);
@@ -138,7 +140,7 @@ public class DeleteRecord extends TableFixture {
 					}
 					
 					if (gpo != null) {
-						gpo.deleteEx(true);
+						gpo.deleteEx(true,trxName);
 					}
 							
 				} catch (Exception e) {
@@ -159,7 +161,7 @@ public class DeleteRecord extends TableFixture {
 			} else {
 				// columns
 				if (tableOK) {
-					String value_evaluated = Util.evaluate(ctx, windowNo,cell_value, getCell(i, 1));
+					String value_evaluated = Util.evaluate(ctx, windowNo,cell_value, getCell(i, 1),trxName);
 					if (!alreadyread) {
 						// not read yet - add value to where clause						
 						if (whereclause.length() > 0) {

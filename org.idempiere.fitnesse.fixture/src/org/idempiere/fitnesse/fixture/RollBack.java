@@ -26,18 +26,16 @@
 
 package org.idempiere.fitnesse.fixture;
 
-import java.util.Properties;
-
-import org.compiere.util.Env;
+import org.compiere.util.Trx;
 
 import fitnesse.fixtures.TableFixture;
 
 /**
  *	iDempiere Set Variable fixture for use with fitnesse framework testing
  *
- *  @author Carlos Ruiz - globalqss
+ *  @author Redhuan D. Oon -- red1@red1.org (based on Carlos Ruiz GLobalQSS work)
  */
-public class SetVariable extends TableFixture {
+public class RollBack extends TableFixture {
 	private volatile static Instance adempiereInstance = null;
 	
 	@Override
@@ -49,21 +47,42 @@ public class SetVariable extends TableFixture {
 			wrong(rows-1, 1);
 			getCell(rows-1, 1).addToBody("not logged in");
 			return;
-		}
-		Properties ctx = adempiereInstance.getAdempiereService().getCtx();
-		int windowNo = adempiereInstance.getAdempiereService().getWindowNo();
-		
-		String trxName = adempiereInstance.getAdempiereService().get_TrxName();
-
+		} 
+		String trxName = adempiereInstance.getAdempiereService().get_TrxName(); //red1 
 		for (int i = 0; i < rows; i++) {
 			String cell_title = getText(i, 0);
 			String cell_value = getText(i, 1);
-			if (cell_title.startsWith("@") && cell_title.endsWith("@")) {
-				String value_evaluated = Util.evaluate(ctx, windowNo, cell_value, getCell(i, 1),trxName);
-				Env.setContext(ctx, windowNo, cell_title.substring(1, cell_title.length()-1), value_evaluated);
-			} else {
-				exception(getCell(i, 0), new Exception("Variable must start and end with @"));
-			}
+			if (cell_title.equalsIgnoreCase("*RollBack*") && cell_value.equalsIgnoreCase("TRUE")) {
+				Trx trx = Trx.get(trxName, false);
+				 if (trx==null) {
+					 exception(getCell(i, 1),new Exception("ERROR - TrxName not same or not found. Not Rolled Back"));
+					 return;
+				 }
+				 else {
+					 trx.rollback();
+					 trx.close();
+					 right(i,1);
+					 return;
+				 }
+				}
+			else if (cell_title.equalsIgnoreCase("*Commit*") && cell_value.equalsIgnoreCase("TRUE")) {
+				Trx trx = Trx.get(trxName, false);
+				 if (trx==null) {
+					 exception(getCell(i, 1),new Exception("ERROR - TrxName not same or not found. Not Rolled Back"));
+					 return;
+				 }
+				 else {
+					if (trx.commit())
+						right(i,1);
+					else 
+						wrong(i,1);		
+					if (!trx.close())//close the transaction whatever happens.
+						exception(getCell(i, 1),new Exception("WARNING - Transaction cannot close - memory leak!"));; 
+						//inform user that something bad happens
+					 return;
+				 }
+				}
+			exception(getCell(i, 1),new Exception("ERROR - *Incorrect Syntax*"));
 		}
 	} // doStaticTable
 

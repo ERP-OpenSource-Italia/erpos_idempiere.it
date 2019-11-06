@@ -59,6 +59,7 @@ public class ReadRecord extends TableFixture {
 		}
 		Properties ctx = adempiereInstance.getAdempiereService().getCtx();
 		int windowNo = adempiereInstance.getAdempiereService().getWindowNo();
+		String trxName = adempiereInstance.getAdempiereService().get_TrxName();
 
 		PO gpo = null;
 		String tableName  = new String("");
@@ -110,10 +111,10 @@ public class ReadRecord extends TableFixture {
 				ResultSet rs = null;
 				try
 				{
-					pstmt = DB.prepareStatement(sql, null);
+					pstmt = DB.prepareStatement(sql, trxName);
 					rs = pstmt.executeQuery();
 					if (rs.next()) {
-						gpo = table.getPO(rs, null);
+						gpo = table.getPO(rs, trxName);
 						if (isErrorExpected) {
 							wrong(i,1);							
 						}
@@ -171,7 +172,7 @@ public class ReadRecord extends TableFixture {
 				if (tableOK) {
 					if (! alreadyread) {
 						// not read yet - add value to where clause
-						String value_evaluated = Util.evaluate(ctx, windowNo, cell_value, getCell(i, 1));
+						String value_evaluated = Util.evaluate(ctx, windowNo, cell_value, getCell(i, 1),trxName);
 						if (whereclause.length() > 0) {
 							whereclause.insert(0, "(");
 							whereclause.append(") AND ");

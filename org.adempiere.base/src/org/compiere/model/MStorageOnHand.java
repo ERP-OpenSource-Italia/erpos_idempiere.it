@@ -33,6 +33,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Util;
 
+import it.idempiere.base.model.LITMReplenish;
+
 /**
  * 	Inventory Storage Model
  *
@@ -733,7 +735,7 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		load(get_TrxName());
 		if (getQtyOnHand().signum() == -1) {
 			MWarehouse wh = MWarehouse.get(Env.getCtx(), getM_Warehouse_ID());
-			if (wh.isDisallowNegativeInv()) {
+			if (wh.isDisallowNegativeInv() || LITMReplenish.isDisallowNegativeInv(getM_Product_ID(), getM_Warehouse_ID(), get_TrxName())) {
 				throw new NegativeInventoryDisallowedException(getCtx(), getM_Warehouse_ID(), getM_Product_ID(), getM_AttributeSetInstance_ID(), getM_Locator_ID(),
 						getQtyOnHand().subtract(addition), addition.negate());
 			}
@@ -880,7 +882,7 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		if (newRecord || is_ValueChanged("QtyOnHand"))
 		{
 			MWarehouse wh = new MWarehouse(getCtx(), getM_Warehouse_ID(), get_TrxName());
-			if (wh.isDisallowNegativeInv())
+			if (wh.isDisallowNegativeInv()|| LITMReplenish.isDisallowNegativeInv(getM_Product_ID(), getM_Warehouse_ID(), get_TrxName()))
 			{
 				String sql = "SELECT SUM(QtyOnHand) "
 					+ "FROM M_StorageOnHand s"

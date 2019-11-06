@@ -57,7 +57,7 @@ public class FitRecorder implements ModelValidator {
 	/** Logger */
 	private static CLogger log = CLogger.getCLogger(FitRecorder.class);
 
-	private static ArrayList<String> dontLogTables = new ArrayList<String>(Arrays.asList(
+	public static ArrayList<String> dontLogTables = new ArrayList<String>(Arrays.asList(
 			"AD_ACCESSLOG",
 			"AD_SESSION",
 			"AD_ALERTPROCESSORLOG",
@@ -80,6 +80,7 @@ public class FitRecorder implements ModelValidator {
 			"AD_SCHEDULERLOG",
 			"AD_SESSION",
 			"AD_WINDOW_ACCESS",
+			"AD_PREFERENCE",
 			"AD_WORKFLOW_ACCESS",
 			"AD_WORKFLOWPROCESSORLOG",
 			"CM_WEBACCESSLOG",
@@ -484,7 +485,7 @@ public class FitRecorder implements ModelValidator {
 		return value;
 	}
 
-	private String resolveValue(PO po, MTable table, MColumn column) {
+	public static String resolveValue(PO po, MTable table, MColumn column) {
 		String value = null;
 		// resolve to identifier - search for value first, if not search for name - if not use the ID
 		String foreignTable = column.getReferenceTableName();

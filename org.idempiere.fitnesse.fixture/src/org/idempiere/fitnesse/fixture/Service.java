@@ -43,6 +43,7 @@ import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Language;
 import org.compiere.util.Login;
+import org.compiere.util.Trx;
 
 /**
  *	iDempiere Service to control login for use with fitnesse framework testing
@@ -133,7 +134,7 @@ public class Service {
 	
 	public Service()
 	{
-		m_trx_name= null; //Trx.createTrxName(); 
+		m_trx_name= Trx.createTrxName(); 
 		LoggedIn = false;
 	}
 	

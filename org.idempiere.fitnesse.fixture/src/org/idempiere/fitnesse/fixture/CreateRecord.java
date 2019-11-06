@@ -62,6 +62,8 @@ public class CreateRecord extends TableFixture {
 		Properties ctx = adempiereInstance.getAdempiereService().getCtx();
 		int windowNo = adempiereInstance.getAdempiereService().getWindowNo();
 		
+		String trxName = adempiereInstance.getAdempiereService().get_TrxName(); //red1
+		
 		PO gpo = null;
 		String tableName  = new String("");
 		String columnName = null;
@@ -89,11 +91,11 @@ public class CreateRecord extends TableFixture {
 					if (ok)
 						right(i,1);
 					else
-						wrong(i,1);
+						wrong(i,1); 
 					tableOK = false;
 				} else {
 					tableOK = true;
-					gpo = table.getPO(0, null);
+					gpo = table.getPO(0, trxName);
 				}
 		    	poinfo = POInfo.getPOInfo(ctx, table!=null ? table.getAD_Table_ID() : 0);
 			} else if (cell_title.equalsIgnoreCase("*Save*") || cell_title.equalsIgnoreCase("*Save*Error*")) {
@@ -111,7 +113,7 @@ public class CreateRecord extends TableFixture {
 						wrong(i,1);
 				} else {
 					if (columnsOK) {
-						if (!gpo.save()) {
+						if (!gpo.save(trxName)) {
 							StringBuilder msg = new StringBuilder();
 							Exception e = (Exception) ctx.get("org.compiere.util.CLogger.lastException");
 							if (e != null)
@@ -134,11 +136,25 @@ public class CreateRecord extends TableFixture {
 								right(i, 1);
 							}
 							getCell(i, 1).addToBody(gpo.toString());
+							
+							String keyColumn = null;
+							if(gpo.get_KeyColumns().length == 1)
+							{
+								keyColumn = gpo.get_KeyColumns()[0];
+							}
+							
 							for (int idx = 0; idx < poinfo.getColumnCount(); idx++) {
 								String colname = poinfo.getColumnName(idx);
 								Object result = gpo.get_Value(colname);
 								if (result != null)
+								{
 									Env.setContext(ctx, windowNo, poinfo.getTableName().toLowerCase() + "." + colname.toLowerCase(), result.toString());
+								}
+								
+								if(keyColumn != null && keyColumn.equalsIgnoreCase(colname))
+								{
+									Env.setContext(ctx, windowNo,"lastRecord_ID",gpo.get_ValueAsInt(keyColumn));
+								}
 							}
 						}
 					}
@@ -154,7 +170,7 @@ public class CreateRecord extends TableFixture {
 						gpo.set_CustomColumnReturningBoolean(columnName, cell_value);
 					} else {
 						Class<?> columnClass = poinfo.getColumnClass(idxcol);
-						String value_evaluated = Util.evaluate(ctx, windowNo, cell_value, getCell(i, 1));
+						String value_evaluated = Util.evaluate(ctx, windowNo, cell_value, getCell(i, 1),trxName);
 						// set value according to class
 						Object value = null;
 						if (org.compiere.util.Util.isEmpty(cell_value)) {
@@ -169,9 +185,9 @@ public class CreateRecord extends TableFixture {
 							continue;
 						} else if (columnClass == Boolean.class) {
 							if ("Y".equalsIgnoreCase(value_evaluated) || "true".equalsIgnoreCase(value_evaluated))
-								value = new Boolean(true);
+								value = Boolean.TRUE;
 							else if ("N".equalsIgnoreCase(value_evaluated) || "false".equalsIgnoreCase(value_evaluated))
-								value = new Boolean(false);
+								value = Boolean.FALSE;
 							else {
 								exception(getCell(i, 1), new Exception("Wrong value for boolean, allowed Y/N/true/false"));
 								continue;
@@ -184,7 +200,7 @@ public class CreateRecord extends TableFixture {
 									// Evaluate the ID is from the actual client or system
 									String foreignTable = column.getReferenceTableName();
 									if (foreignTable != null) {
-										int foreignClient = DB.getSQLValueEx(null,
+										int foreignClient = DB.getSQLValueEx(trxName,
 												"SELECT AD_Client_ID FROM " + foreignTable + " WHERE " + foreignTable + "_ID=?",
 												intid);
 										if (foreignClient != 0 && foreignClient != Env.getAD_Client_ID(ctx)) {
