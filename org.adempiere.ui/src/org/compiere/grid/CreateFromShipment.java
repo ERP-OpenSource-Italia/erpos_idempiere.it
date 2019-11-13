@@ -236,6 +236,8 @@ public abstract class CreateFromShipment extends CreateFrom
 		else
 			sql.append(" LEFT OUTER JOIN C_UOM_Trl uom ON (l.C_UOM_ID=uom.C_UOM_ID AND uom.AD_Language='")
 			.append(Env.getAD_Language(Env.getCtx())).append("')");
+		
+		sql.append(" INNER JOIN C_Order o ON (o.C_Order_ID=l.C_Order_ID) ");
 		//
 		sql.append(" WHERE l.C_Order_ID=? "		);	//	#1
 		
