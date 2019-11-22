@@ -19,6 +19,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 import java.util.logging.Level;
 
@@ -42,6 +43,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *  Create Invoice Transactions from PO Orders or Receipt
@@ -233,9 +236,41 @@ public abstract class CreateFromShipment extends CreateFrom
 		else
 			sql.append(" LEFT OUTER JOIN C_UOM_Trl uom ON (l.C_UOM_ID=uom.C_UOM_ID AND uom.AD_Language='")
 			.append(Env.getAD_Language(Env.getCtx())).append("')");
+		
+		sql.append(" INNER JOIN C_Order o ON (o.C_Order_ID=l.C_Order_ID) ");
 		//
-		sql.append(" WHERE l.C_Order_ID=? "		)	//	#1
-		.append( "GROUP BY l.QtyOrdered,CASE WHEN l.QtyOrdered=0 THEN 0 ELSE l.QtyEntered/l.QtyOrdered END, ")
+		sql.append(" WHERE l.C_Order_ID=? "		);	//	#1
+		
+		String column = "l.QtyDelivered";
+		if (forInvoice)
+			column = "l.QtyInvoiced";
+		
+		sql.append(" AND ( l.QtyOrdered - ").append(column).append(" > 0  ");
+		
+		List<Integer> docTypeIDs = STDSysConfig.getListDocTypeIDShowNegativeQtyOrdered(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx()));
+		
+		if(docTypeIDs != null)
+		{ 
+			sql.append("OR ( o.C_DocType_ID in (");
+			boolean isFirst = true;
+			
+			for(Integer docType_ID : docTypeIDs)
+			{
+				if(isFirst)
+				{
+					sql.append(docType_ID);
+					isFirst = false;
+				}
+				else
+					sql.append(",").append(docType_ID);
+			}
+					
+			sql.append(" ))) ");
+		}
+		else
+			sql.append(" ) ");
+		
+		sql.append( "GROUP BY l.QtyOrdered,CASE WHEN l.QtyOrdered=0 THEN 0 ELSE l.QtyEntered/l.QtyOrdered END, ")
 		.append( "l.C_UOM_ID,COALESCE(uom.UOMSymbol,uom.Name), p.M_Locator_ID, loc.Value, po.VendorProductNo, ")
 		.append( "l.M_Product_ID,")
 		.append( "p.Value,l.Description," )//F3P: see above note 2
