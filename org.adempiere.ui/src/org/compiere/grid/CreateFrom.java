@@ -142,9 +142,20 @@ public abstract class CreateFrom implements ICreateFrom
 					sqlDocType.append(",").append(docType_ID);
 			}
 			
-			sql.append("WHERE o.C_BPartner_ID=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO')"
-					+ "AND (o.C_DocType_ID in (").append(sqlDocType.toString()).append(")").append(
-					" OR o.C_Order_ID IN "
+			sql.append("WHERE o.C_BPartner_ID=? AND o.IsSOTrx=? AND ");
+			
+			if(forInvoice)
+			{
+				sql.append(" o.DocStatus IN ('CL','CO') ");
+			}
+			else
+			{
+				sql.append(" o.DocStatus IN ('CO') ");
+			}
+			
+			
+			sql.append(" AND (o.C_DocType_ID in (").append(sqlDocType.toString()).append(")")
+				.append(" OR o.C_Order_ID IN "
 						  + "(SELECT ol.C_Order_ID FROM C_OrderLine ol"
 						  + " LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID" //F3P: added product link
 						  + " WHERE ((ol.QtyOrdered - ").append(column).append(" ) > 0 ) ");
