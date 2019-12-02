@@ -13,6 +13,7 @@
  *****************************************************************************/
 package org.adempiere.webui.adwindow;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -21,8 +22,10 @@ import java.util.Map;
 
 import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.LayoutUtils;
+import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.Menupopup;
+import org.adempiere.webui.component.Textbox;
 import org.adempiere.webui.component.ToolBar;
 import org.adempiere.webui.component.ToolBarButton;
 import org.adempiere.webui.component.ZkCssHelper;
@@ -48,6 +51,7 @@ import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Hlayout;
+import org.zkoss.zul.Html;
 import org.zkoss.zul.Menuitem;
 
 /**
@@ -87,7 +91,14 @@ public class BreadCrumb extends Div implements EventListener<Event> {
 	private Hlayout toolbarContainer;
 
 	protected Menupopup linkPopup;
+	//LS	
+	private ToolBarButton btnCopyHtml;
 
+	//private Div divCopyHtml;
+	private Textbox teCopyHtml;
+	private boolean connected = false;
+	//LS End	
+		
 	/**
 	 * 
 	 */
@@ -108,7 +119,21 @@ public class BreadCrumb extends Div implements EventListener<Event> {
 		this.appendChild(toolbarContainer);
 		
 		ToolBar toolbar = new ToolBar();
-		toolbarContainer.appendChild(toolbar);		
+		toolbarContainer.appendChild(toolbar);	
+		//LS
+//		divCopyHtml = new Div();
+//		divCopyHtml.appendChild(new Html("<b>test</b>"));
+//		divCopyHtml.setVisible(false); 
+//		toolbar.appendChild(divCopyHtml);
+		
+		teCopyHtml = new Textbox();
+		teCopyHtml.setVisible(false); 
+		teCopyHtml.setValue("<b>test</b>");
+		toolbar.appendChild(teCopyHtml);
+
+		btnCopyHtml = createButton("Copy", "Copy", "Copy link Html");
+		toolbar.appendChild(btnCopyHtml);
+		//LS End
 		btnFirst = createButton("First", "First", "First");
 		btnFirst.setTooltiptext(btnFirst.getTooltiptext()+"    Alt+Home");
 		toolbar.appendChild(btnFirst);
@@ -375,6 +400,15 @@ public class BreadCrumb extends Div implements EventListener<Event> {
         this.btnNext.setDisabled(!enabled);
     }
 
+    /**
+     * enable or disable the copy record html button
+     * @param enabled
+     */
+    public void enableButtonCopyHtml(boolean enabled)
+    {
+        this.btnCopyHtml.setDisabled(!enabled);
+    }
+    
 	private ToolBarButton createButton(String name, String image, String tooltip)
     {
     	ToolBarButton btn = new ToolBarButton("");
@@ -431,6 +465,17 @@ public class BreadCrumb extends Div implements EventListener<Event> {
         if (m_dse != null) {
         	enableFirstNavigation(m_dse.getCurrentRow() > 0);
         	enableLastNavigation(m_dse.getTotalRows() > m_dse.getCurrentRow()+1);
+        	
+        	//LS
+        	if(connected == false)
+        	{//Any better moment to do this?
+//        		connectButtonCopyHTML(btnCopyHtml.getUuid(),divCopyHtml.getUuid());
+        		connectButtonCopyHTML(btnCopyHtml.getUuid(),teCopyHtml.getUuid());
+        		connected= true;
+        	}
+        	setRecordLinkHTML(dse.AD_Table_ID, dse.Record_ID);
+        	enableButtonCopyHtml(m_dse.getTotalRows() > 0);
+        	//LS End
         }
     }
         
@@ -492,4 +537,103 @@ public class BreadCrumb extends Div implements EventListener<Event> {
 	public boolean isEmpty() {
 		return layout == null || layout.getChildren().isEmpty();
 	}
+	
+	//LS
+	/** Connect zk.Widget with uuid = @Identifier to listener that copy html from div with uuid = divIdentifier to clipboard
+	 * JS needed for client side copy to clipboard 
+	 */
+	private static void connectButtonCopyHTML(String btnIdentifier, String divIdentifier)
+	{
+		String js = "{"
+				+ "zk.Widget.$('"+btnIdentifier+"').listen("
+				+ "		{onClick: function copyToClpbrd(e) "
+				+ "			{ "
+				+ "				const container = document.createElement('div');"
+				+ "				const te = zk.Widget.$('"+divIdentifier+"');"
+				//Set div content (te.value need to be HTML)
+				+ "				container.innerHTML = te.getValue();"
+				//Invisible div
+				+ "				container.style.position = 'fixed';"
+				+ "  			container.style.pointerEvents = 'none';"
+				+ "  			container.style.opacity = 0;"
+				
+				+ "				var activeSheets = Array.prototype.slice.call(document.styleSheets)"
+				+ "				    .filter(function (sheet) {"
+				+ "				      return !sheet.disabled"
+				+ "				    });"
+				+ "				document.body.appendChild(container);"
+				+ "				window.getSelection().removeAllRanges();"
+				+ "				var range = document.createRange();"
+				+ "				range.selectNode(container);"
+				+ "				window.getSelection().addRange(range);"
+				//Copy
+				+ "				document.execCommand('copy');"
+				+ "				for (var i = 0; i < activeSheets.length; i++) activeSheets[i].disabled = true;"
+				+ "				document.execCommand('copy');"
+				+ "				for (var i = 0; i < activeSheets.length; i++) activeSheets[i].disabled = false;"
+				//Remove div
+				+ "				document.body.removeChild(container);"
+				+ "		}});"
+				+ "}";
+		/*String js = "{"
+				+ "zk.Widget.$('"+btnIdentifier+"').listen("
+				+ "		{onClick: function copyToClpbrd(e) "
+				+ "			{ "
+				//Get div
+				+ "				const container = zk.Widget.$('"+divIdentifier+"');"
+				//+ "				const container = jq('#' + '"+divIdentifier+"');"
+				+ "alert(container);"
+				+ "				var activeSheets = Array.prototype.slice.call(document.styleSheets)"
+				+ "				    .filter(function (sheet) {"
+				+ "				      return !sheet.disabled"
+				+ "				    });"
+				+ "				window.getSelection().removeAllRanges();"
+				+ "				var range = document.createRange();"
+				+ "				range.selectNode(container);"
+				+ "				window.getSelection().addRange(range);"
+				//Copy
+				+ "				document.execCommand('copy');"
+				+ "				for (var i = 0; i < activeSheets.length; i++) activeSheets[i].disabled = true;"
+				+ "				document.execCommand('copy');"
+				+ "				for (var i = 0; i < activeSheets.length; i++) activeSheets[i].disabled = false;"
+				+ "		}});"
+				+ "}";*/
+		
+		Clients.evalJavaScript(js);
+	}
+	
+	private void setRecordLinkHTML(int AD_Table_ID, Object Record_ID)
+	{
+		setRecordLinkHTML(AD_Table_ID, (int) Record_ID);
+	}
+
+	private void setRecordLinkHTML(int AD_Table_ID, int Record_ID)
+	{
+		String htmlText = "";
+		//divCopyHtml.removeChild(divCopyHtml.getFirstChild());//only one
+		
+		if(AD_Table_ID>0 && Record_ID>0)
+			htmlText = getRecordLink(AD_Table_ID, Record_ID);
+		teCopyHtml.setValue(htmlText);
+		//divCopyHtml.appendChild(new Html(htmlText));
+	}
+	
+	private static String getRecordLink(int AD_Table_ID, int Record_ID)
+	{
+		int port = Executions.getCurrent().getServerPort();
+		String sch = Executions.getCurrent().getScheme();
+		String sport = null;
+		if ( (sch.equals("http") && port == 80) || (sch.equals("https") && port == 443) )
+			sport = "";
+		else
+			sport = ":" + port;
+		String baseUrl = sch + "://" + Executions.getCurrent().getServerName() + sport + Executions.getCurrent().getContextPath();
+		String imgUrl = baseUrl + ThemeManager.getThemeResource("images/Zoom24.png");
+		
+		MessageFormat fmt = new MessageFormat("<a href=\"{0}\" target=\"_blank\"><img src=\"{1}\" ></a>");
+		String params[] = {AEnv.getZoomUrlTableID(AD_Table_ID, Record_ID), imgUrl};			
+		String htmlToCopy = fmt.format(params);
+		return htmlToCopy;
+	}
+	//LS End
 }
