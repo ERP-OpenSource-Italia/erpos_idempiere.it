@@ -21,12 +21,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
-import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Vector;
 import java.util.logging.Level;
-import java.util.regex.Pattern;
 
 import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.apps.AEnv;
@@ -34,8 +32,6 @@ import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Listbox;
 import org.adempiere.webui.component.SimpleListModel;
 import org.adempiere.webui.component.Window;
-import org.adempiere.webui.factory.ButtonFactory;
-import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.model.DataStatusEvent;
 import org.compiere.model.GridField;
@@ -58,14 +54,11 @@ import org.compiere.util.NamePair;
 import org.compiere.util.Util;
 import org.zkoss.zhtml.Pre;
 import org.zkoss.zhtml.Text;
-import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
-import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.A;
 import org.zkoss.zul.Borderlayout;
-import org.zkoss.zul.Button;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Hbox;
@@ -136,9 +129,6 @@ public class WRecordInfo extends Window implements EventListener<Event>
 	private StringBuffer	m_info = new StringBuffer();
 	/** Permalink			*/
 	private A				m_permalink = new A();
-	
-	private static final String SHARELINK_BUTTON_ID = "btnCopy";
-	private Button			m_shareLink = ButtonFactory.createNamedButton("Copy", false, true);
 
 	/** Date Time Format		*/
 	private SimpleDateFormat	m_dateTimeFormat = DisplayType.getDateFormat
@@ -209,13 +199,6 @@ public class WRecordInfo extends Window implements EventListener<Event>
 		south.appendChild(hbox);
 		ZKUpdateUtil.setHflex(m_permalink, "true");
 		hbox.appendChild(m_permalink);
-		
-		
-		ZKUpdateUtil.setHflex(m_shareLink, "true");
-		m_shareLink.setId(SHARELINK_BUTTON_ID);
-		hbox.appendChild(m_shareLink);
-		//m_shareLink.addEventListener(Events.ON_CLICK, this);
-		
 		
 		ZKUpdateUtil.setHflex(confirmPanel, "true");
 		hbox.appendChild(confirmPanel);
@@ -306,7 +289,6 @@ public class WRecordInfo extends Window implements EventListener<Event>
 					m_info.append("\n ").append(uuidcol).append("=").append(uuid);
 				m_permalink.setHref(AEnv.getZoomUrlTableID(po));
 				m_permalink.setVisible(po.get_KeyColumns().length == 1);
-				connectButtonToCopy(po,SHARELINK_BUTTON_ID);
 			}
 		}
 		
@@ -503,84 +485,5 @@ public class WRecordInfo extends Window implements EventListener<Event>
 	
 	public void onEvent(Event event) throws Exception {
 			this.detach();
-	}
-
-	
-	/** Connect zk.Widget with id = @Identifier to listener that copy html link to @po to clipboard
-	 */
-	private static void connectButtonToCopy(PO po, String btnIdentifier)
-	{
-		String js = "{"
-				+ "zk.Widget.$(\"$"+btnIdentifier+"\").listen("
-				+ "		{onClick: function copyToClpbrd(e) "
-				+ "			{ "
-				+ "				const el = document.createElement('textarea');"
-				+ "				el.value = '{0}';"
-				+ "				el.setAttribute('readonly', '');"
-				+ "				el.style.position = 'absolute';"
-				+ "				el.style.left = '-9999px';"
-				+ "				document.body.appendChild(el);"
-				+ "				el.select();"
-				+ "				document.execCommand('copy');"
-//				+"				alert(document.execCommand('copy'));" //true se ha copiato, altrimenti false
-				+"				document.body.removeChild(el);"
-				+ "		}});"
-				+ "}";
-		
-		int port = Executions.getCurrent().getServerPort();
-		String sch = Executions.getCurrent().getScheme();
-		String sport = null;
-		if ( (sch.equals("http") && port == 80) || (sch.equals("https") && port == 443) )
-			sport = "";
-		else
-			sport = ":" + port;
-		String baseUrl = sch + "://" + Executions.getCurrent().getServerName() + sport + Executions.getCurrent().getContextPath();
-		String imgUrl = baseUrl + ThemeManager.getThemeResource("images/Zoom24.png");
-		
-		MessageFormat fmt = new MessageFormat("<a href=\"{0}\" target=\"_blank\"><img src=\"{1}\" ></a>");
-		String params[] = {AEnv.getZoomUrlTableID(po), imgUrl};			
-		String htmlToCopy = fmt.format(params);
-		String javaScript = js.replaceAll(Pattern.quote("{0}"), htmlToCopy);
-		
-		Clients.evalJavaScript(javaScript);
-	}
-	
-	/** Connect zk.Widget with id = @Identifier to listener that copy html link to @po to clipboard
-	 */
-	private static void connectButtonToCopyHTML(String btnIdentifier, String teIdentifier)
-	{
-		String js = "{"
-				+ "zk.Widget.$(\"$"+btnIdentifier+"\").listen("
-				+ "		{onClick: function copyToClpbrd(e) "
-				+ "			{ "
-				+ "				const container = document.createElement('div');"
-				+ "				const te = zk.Widget.$(\"$"+teIdentifier+"\");"
-				//Set div content (textEdit.value need to be HTML)
-				+ "				container.innerHTML = te.value"
-				//Invisible div
-				+ "				container.style.position = 'fixed';"
-				+ "  			container.style.pointerEvents = 'none';"
-				+ "  			container.style.opacity = 0;"
-				
-				+ "				var activeSheets = Array.prototype.slice.call(document.styleSheets)"
-				+ "				    .filter(function (sheet) {"
-				+ "				      return !sheet.disabled"
-				+ "				    });"
-				+ "				document.body.appendChild(container);"
-				+ "				window.getSelection().removeAllRanges();"
-				+ "				var range = document.createRange();"
-				+ "				range.selectNode(container);"
-				+ "				window.getSelection().addRange(range);"
-				//Copy
-				+ "				document.execCommand('copy');"
-				+ "				for (var i = 0; i < activeSheets.length; i++) activeSheets[i].disabled = true;"
-				+ "				document.execCommand('copy');"
-				+ "				for (var i = 0; i < activeSheets.length; i++) activeSheets[i].disabled = false;"
-				//Remove div
-				+ "				document.body.removeChild(container);"
-				+ "		}});"
-				+ "}";
-		
-		Clients.evalJavaScript(js);
 	}
 }	// WRecordInfo
