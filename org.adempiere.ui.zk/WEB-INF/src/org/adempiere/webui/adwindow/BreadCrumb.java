@@ -36,6 +36,7 @@ import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.WRecordInfo;
 import org.compiere.model.DataStatusEvent;
 import org.compiere.model.MRole;
+import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
@@ -51,7 +52,6 @@ import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Hlayout;
-import org.zkoss.zul.Html;
 import org.zkoss.zul.Menuitem;
 
 /**
@@ -60,6 +60,34 @@ import org.zkoss.zul.Menuitem;
  */
 public class BreadCrumb extends Div implements EventListener<Event> {
 
+	//LS: Rule value 
+	private static final String RULE_IMG_VALUE = "system:imgB64";
+	//LS:image to be copied if there is not a rule
+	private static final String IMG_BASE64 ="data:image/png;base64,"
+			+ "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"
+			+ "TkSuQmCC";
+	
+	
 	private static final String ON_MOUSE_OVER_ECHO_EVENT = "onMouseOverEcho";
 	
 	private static final String ON_MOUSE_OUT_ECHO_EVENT = "onMouseOutEcho";
@@ -93,10 +121,9 @@ public class BreadCrumb extends Div implements EventListener<Event> {
 	protected Menupopup linkPopup;
 	//LS	
 	private ToolBarButton btnCopyHtml;
-
-	//private Div divCopyHtml;
 	private Textbox teCopyHtml;
 	private boolean connected = false;
+	private String imgBase64 = IMG_BASE64;
 	//LS End	
 		
 	/**
@@ -120,18 +147,13 @@ public class BreadCrumb extends Div implements EventListener<Event> {
 		
 		ToolBar toolbar = new ToolBar();
 		toolbarContainer.appendChild(toolbar);	
-		//LS
-//		divCopyHtml = new Div();
-//		divCopyHtml.appendChild(new Html("<b>test</b>"));
-//		divCopyHtml.setVisible(false); 
-//		toolbar.appendChild(divCopyHtml);
-		
+		//LS: Div seems not to work: fallback to TextEdit
 		teCopyHtml = new Textbox();
 		teCopyHtml.setVisible(false); 
-		teCopyHtml.setValue("<b>test</b>");
+		teCopyHtml.setValue("");
 		toolbar.appendChild(teCopyHtml);
 
-		btnCopyHtml = createButton("Copy", "Copy", "Copy link Html");
+		btnCopyHtml = createButton("Copy", "Setup", "Copy link Html");
 		toolbar.appendChild(btnCopyHtml);
 		//LS End
 		btnFirst = createButton("First", "First", "First");
@@ -158,6 +180,10 @@ public class BreadCrumb extends Div implements EventListener<Event> {
 		setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "breadcrumb");
 		
 		this.addEventListener(ON_MOUSE_OUT_ECHO_EVENT, this);
+		
+		String img = DB.getSQLValueString(null, "SELECT script FROM AD_Rule WHERE value = ?", RULE_IMG_VALUE);
+		if(Util.isEmpty(img,true) == false)
+			imgBase64 = img;
 	}
 
 	/**
@@ -469,7 +495,6 @@ public class BreadCrumb extends Div implements EventListener<Event> {
         	//LS
         	if(connected == false)
         	{//Any better moment to do this?
-//        		connectButtonCopyHTML(btnCopyHtml.getUuid(),divCopyHtml.getUuid());
         		connectButtonCopyHTML(btnCopyHtml.getUuid(),teCopyHtml.getUuid());
         		connected= true;
         	}
@@ -552,10 +577,10 @@ public class BreadCrumb extends Div implements EventListener<Event> {
 				+ "				const te = zk.Widget.$('"+divIdentifier+"');"
 				//Set div content (te.value need to be HTML)
 				+ "				container.innerHTML = te.getValue();"
-				//Invisible div
-				+ "				container.style.position = 'fixed';"
-				+ "  			container.style.pointerEvents = 'none';"
-				+ "  			container.style.opacity = 0;"
+				//LS: Invisible div is copied as it is: invisible, so is printed as it is: invisible
+//				+ "				container.style.position = 'fixed';"
+//				+ "  			container.style.pointerEvents = 'none';"
+//				+ "  			container.style.opacity = 0;"
 				
 				+ "				var activeSheets = Array.prototype.slice.call(document.styleSheets)"
 				+ "				    .filter(function (sheet) {"
@@ -574,64 +599,31 @@ public class BreadCrumb extends Div implements EventListener<Event> {
 				//Remove div
 				+ "				document.body.removeChild(container);"
 				+ "		}});"
-				+ "}";
-		/*String js = "{"
-				+ "zk.Widget.$('"+btnIdentifier+"').listen("
-				+ "		{onClick: function copyToClpbrd(e) "
-				+ "			{ "
-				//Get div
-				+ "				const container = zk.Widget.$('"+divIdentifier+"');"
-				//+ "				const container = jq('#' + '"+divIdentifier+"');"
-				+ "alert(container);"
-				+ "				var activeSheets = Array.prototype.slice.call(document.styleSheets)"
-				+ "				    .filter(function (sheet) {"
-				+ "				      return !sheet.disabled"
-				+ "				    });"
-				+ "				window.getSelection().removeAllRanges();"
-				+ "				var range = document.createRange();"
-				+ "				range.selectNode(container);"
-				+ "				window.getSelection().addRange(range);"
-				//Copy
-				+ "				document.execCommand('copy');"
-				+ "				for (var i = 0; i < activeSheets.length; i++) activeSheets[i].disabled = true;"
-				+ "				document.execCommand('copy');"
-				+ "				for (var i = 0; i < activeSheets.length; i++) activeSheets[i].disabled = false;"
-				+ "		}});"
-				+ "}";*/
-		
+				+ "}";		
 		Clients.evalJavaScript(js);
 	}
 	
 	private void setRecordLinkHTML(int AD_Table_ID, Object Record_ID)
 	{
-		setRecordLinkHTML(AD_Table_ID, (int) Record_ID);
+		int record_id = -1;
+		if(Record_ID!= null)
+			record_id = (int)Record_ID;
+		setRecordLinkHTML(AD_Table_ID, record_id);
 	}
 
 	private void setRecordLinkHTML(int AD_Table_ID, int Record_ID)
 	{
-		String htmlText = "";
-		//divCopyHtml.removeChild(divCopyHtml.getFirstChild());//only one
-		
+		String htmlText = "";	
 		if(AD_Table_ID>0 && Record_ID>0)
-			htmlText = getRecordLink(AD_Table_ID, Record_ID);
+			htmlText = getRecordLink(AD_Table_ID, imgBase64, Record_ID);
 		teCopyHtml.setValue(htmlText);
-		//divCopyHtml.appendChild(new Html(htmlText));
 	}
 	
-	private static String getRecordLink(int AD_Table_ID, int Record_ID)
+	private static String getRecordLink(int AD_Table_ID, String imgBase64,int Record_ID)
 	{
-		int port = Executions.getCurrent().getServerPort();
-		String sch = Executions.getCurrent().getScheme();
-		String sport = null;
-		if ( (sch.equals("http") && port == 80) || (sch.equals("https") && port == 443) )
-			sport = "";
-		else
-			sport = ":" + port;
-		String baseUrl = sch + "://" + Executions.getCurrent().getServerName() + sport + Executions.getCurrent().getContextPath();
-		String imgUrl = baseUrl + ThemeManager.getThemeResource("images/Zoom24.png");
-		
-		MessageFormat fmt = new MessageFormat("<a href=\"{0}\" target=\"_blank\"><img src=\"{1}\" ></a>");
-		String params[] = {AEnv.getZoomUrlTableID(AD_Table_ID, Record_ID), imgUrl};			
+
+		MessageFormat fmt = new MessageFormat("<a href=\"{0}\" target=\"_blank\"><img src=\"{1}\" alt=\"Link to Document\"></a>");
+		String params[] = {AEnv.getZoomUrlTableID(AD_Table_ID, Record_ID), imgBase64};			
 		String htmlToCopy = fmt.format(params);
 		return htmlToCopy;
 	}
