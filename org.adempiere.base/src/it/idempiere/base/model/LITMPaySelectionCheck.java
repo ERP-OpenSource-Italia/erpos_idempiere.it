@@ -28,4 +28,25 @@ public class LITMPaySelectionCheck
 			return 0;
 		return ii.intValue();
 	}
+	
+	/** Column name Description */
+	public static final String  COLUMNNAME_Description = "Description";
+	
+	/** Get Description
+	 * @param check
+	 * @return Description
+	 */
+	public static String getDescription(X_C_PaySelectionCheck check)
+	{
+		return check.get_ValueAsString(COLUMNNAME_Description);
+	}
+	
+	/** Set Description
+	 * @param check
+	 * @param Description
+	 */
+	public static void setDescription(X_C_PaySelectionCheck check, String Description)
+	{
+		check.set_ValueOfColumn(COLUMNNAME_Description, Description);
+	}
 }
