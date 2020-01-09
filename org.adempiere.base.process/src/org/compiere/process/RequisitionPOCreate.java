@@ -22,8 +22,10 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.NoVendorForProductException;
 import org.apache.commons.collections.keyvalue.MultiKey;
 import org.compiere.model.MBPartner;
@@ -39,7 +41,6 @@ import org.compiere.model.POResultSet;
 import org.compiere.model.Query;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
-import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
 /**
@@ -102,13 +103,16 @@ public class RequisitionPOCreate extends SvrProcess
 	private boolean		p_ConsolidateByDatePromised = true;
 	
 	/** Order				*/
-	private MOrder		m_order = null;
+	protected MOrder		m_order = null;
 	/** Order Line			*/
-	private MOrderLine	m_orderLine = null;
+	protected MOrderLine	m_orderLine = null;
 	/** Orders Cache : (C_BPartner_ID, DateRequired, M_PriceList_ID) -> MOrder */
 	private HashMap<MultiKey, MOrder> m_cacheOrders = new HashMap<MultiKey, MOrder>();
 	
 	private int m_M_Warehouse_ID = 0; //F3P: Gestione rottura per magazzino
+	
+	/** DR Aggiunto parametro per il completamento precedente **/
+	private boolean		p_CompleteBeforeGenerateOrder = false;
 	
 	/**	Manual Selection		*/
 	protected boolean 	 	p_Selection = false;
@@ -164,6 +168,8 @@ public class RequisitionPOCreate extends SvrProcess
 				p_C_BPartner_ID = para[i].getParameterAsInt();
 			else if (name.equals("Vendor_ID"))
 				p_Vendor_ID = para[i].getParameterAsInt();
+			else if (name.equals("CompleteBeforeGenerateOrder")) //DR vedo se completare prima gli ordini.
+				p_CompleteBeforeGenerateOrder = para[i].getParameterAsBoolean();			
 			//end
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
@@ -190,6 +196,9 @@ public class RequisitionPOCreate extends SvrProcess
 			PreparedStatement pstmt = null;
 			ResultSet rs = null;
 			boolean error= false;
+			
+			Map<Integer,MRequisition> knownRequisition = new HashMap<>();
+			
 			try
 			{
 				pstmt = DB.prepareStatement(sql, get_TrxName());
@@ -200,6 +209,22 @@ public class RequisitionPOCreate extends SvrProcess
 					int Record_ID = rs.getInt(1);
 					
 					MRequisitionLine mReqLine = PO.get(getCtx(), MRequisitionLine.Table_Name, Record_ID, get_TrxName());
+					
+					if(p_CompleteBeforeGenerateOrder)
+					{
+						int M_Requisition_ID = mReqLine.getM_Requisition_ID();
+						MRequisition mReq = knownRequisition.get(M_Requisition_ID);
+						
+						if(mReq == null)
+						{
+							mReq = PO.get(getCtx(), MRequisition.Table_Name, M_Requisition_ID, get_TrxName());
+							
+							if(!MRequisition.DOCSTATUS_Completed.equals(mReq))
+								completeRequisiton(mReq);
+							
+							knownRequisition.put(M_Requisition_ID, mReq);
+						}						
+					}
 					
 					process(mReqLine);
 					
@@ -220,6 +245,8 @@ public class RequisitionPOCreate extends SvrProcess
 				pstmt = null;
 			}
 			
+			/* F3P: log gia' generato durante la closeOrder			 
+			 
 			if(m_orders_generated != null && m_orders_generated.isEmpty()==false && error ==false)
 			{
 				for(MOrder order:m_orders_generated)
@@ -227,6 +254,7 @@ public class RequisitionPOCreate extends SvrProcess
 					addLog(order.get_ID(), order.getDateOrdered(),null, "", order.get_Table_ID(), order.get_ID());
 				}
 			}
+			*/
 		}
 		else 
 		{
@@ -234,6 +262,10 @@ public class RequisitionPOCreate extends SvrProcess
 			{
 				if (log.isLoggable(Level.INFO)) log.info("M_Requisition_ID=" + p_M_Requisition_ID);
 				MRequisition req = new MRequisition(getCtx(), p_M_Requisition_ID, get_TrxName());
+				
+				if(p_CompleteBeforeGenerateOrder && !MRequisition.DOCSTATUS_Completed.equals(req.getDocStatus()))
+					completeRequisiton(req);
+				
 				if (!MRequisition.DOCSTATUS_Completed.equals(req.getDocStatus()))
 				{
 					throw new AdempiereUserError("@DocStatus@ = " + req.getDocStatus());
@@ -369,12 +401,7 @@ public class RequisitionPOCreate extends SvrProcess
 		
 		return "";
 	}	//	doit
-	
-	protected void generatePOFromRequisition(POResultSet<MRequisitionLine> rs) throws Exception
-	{
-			
-	}
-	
+		
 	private int 		m_M_Requisition_ID = 0;
 	private int 		m_M_Product_ID = 0;
 	private int			m_M_AttributeSetInstance_ID = 0;
@@ -430,7 +457,7 @@ public class RequisitionPOCreate extends SvrProcess
 	 *	@param C_BPartner_ID b.partner
 	 * 	@throws Exception
 	 */
-	private void newOrder(MRequisitionLine rLine, int C_BPartner_ID) throws Exception
+	protected void newOrder(MRequisitionLine rLine, int C_BPartner_ID) throws Exception
 	{
 		if (m_order != null)
 		{
@@ -494,7 +521,7 @@ public class RequisitionPOCreate extends SvrProcess
 		if (m_order != null)
 		{
 			m_order.load(get_TrxName());
-			String message = Msg.parseTranslation(getCtx(), "@GeneratedPO@ " + m_order.getDocumentNo());
+			String message = Msg.parseTranslation(getCtx(), "@C_Order_ID@ " + m_order.getDocumentNo());
 			addBufferLog(0, null, m_order.getGrandTotal(), message, m_order.get_Table_ID(), m_order.getC_Order_ID());
 		}
 		m_order = null;
@@ -507,7 +534,7 @@ public class RequisitionPOCreate extends SvrProcess
 	 *	@param rLine request line
 	 * 	@throws Exception
 	 */
-	private void newLine(MRequisitionLine rLine) throws Exception
+	protected void newLine(MRequisitionLine rLine) throws Exception
 	{
 		if (m_orderLine != null)
 		{
@@ -619,6 +646,36 @@ public class RequisitionPOCreate extends SvrProcess
 		}
 		return match;
 	}
+	
+	protected boolean completeRequisiton(MRequisition req)
+	{		
+		String docStatus = req.getDocStatus();
+		boolean processed = false;
+		
+		if(MRequisition.DOCSTATUS_Drafted.equals(docStatus) || 
+			MRequisition.DOCSTATUS_InProgress.equals(docStatus))
+		{
+			req.setDocAction(MRequisition.DOCACTION_Complete);
+			
+			try
+			{
+				if(req.processIt(MRequisition.DOCACTION_Complete) == false)
+				{
+					String processMsg = req.getProcessMsg();
+					throw new AdempiereException(processMsg);
+				}
+			}
+			catch(Exception e)
+			{
+				throw new AdempiereException(e);
+			}
+
+			processed = true;
+		}
+		
+		return processed;
+	}
+	
 	private List<Integer> m_excludedVendors = new ArrayList<Integer>();
 	
 }	//	RequisitionPOCreate
