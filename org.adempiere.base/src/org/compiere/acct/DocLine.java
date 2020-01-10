@@ -17,7 +17,6 @@
 package org.compiere.acct;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.logging.Level;

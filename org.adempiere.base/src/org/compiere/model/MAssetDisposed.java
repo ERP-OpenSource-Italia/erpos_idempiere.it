@@ -236,12 +236,12 @@ implements DocAction
 			// F3P: added 'sale' as a disposal method
 			else if(A_DISPOSED_METHOD_Sale.equals(method))
 			{
-				if(getA_Disposal_Amt().equals(getA_Asset_Cost()))
+				if(getA_Disposal_Amt().compareTo(getA_Asset_Cost().subtract(getA_Accumulated_Depr()))==0)
 					asset.changeStatus(MAsset.A_ASSET_STATUS_Sold, null);
-				else
+				else//Not completely sold
 					asset.changeStatus(MAsset.A_ASSET_STATUS_Activated,null);
-				
-				createDisposal();
+
+				createSaleDisposal();
 			}
 			else
 			{
@@ -439,5 +439,29 @@ implements DocAction
 		{
 			ex.deleteEx(false);
 		}	
+	}
+	
+	private void createSaleDisposal()
+	{
+		MDepreciationWorkfile assetwk = MDepreciationWorkfile.get(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
+		assetwk.adjustCost(getA_Disposal_Amt().negate(), Env.ZERO, false);
+		if(getA_Accumulated_Depr_Delta().compareTo(getA_Disposal_Amt())>=0)//Sold
+			assetwk.adjustAccumulatedDepr(Env.ZERO, Env.ZERO, false);
+		else//Partialy Sold
+			assetwk.adjustAccumulatedDepr(getA_Accumulated_Depr_Delta().negate(), getA_Accumulated_Depr_Delta().negate(), false);
+
+		assetwk.saveEx();
+		assetwk.buildDepreciation();
+		
+		// Delete not processed expense entries if sold
+		if(getA_Accumulated_Depr_Delta().compareTo(getA_Disposal_Amt())>0)
+		{
+			List<MDepreciationExp> list = MDepreciationExp.getNotProcessedEntries(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
+
+			for (MDepreciationExp ex : list)
+			{
+				ex.deleteEx(false);
+			}
+		}
 	}
 }
