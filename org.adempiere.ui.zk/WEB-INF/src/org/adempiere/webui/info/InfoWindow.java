@@ -3018,15 +3018,13 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 
 	@Override
-	public boolean onRestoreSelectedItemIndexInPage(Integer keyViewValue, int rowIndex, Object oRow)
+	public boolean onRestoreSelectedItemIndexInPage(Integer keyViewValue, int rowIndex, List<Object> row)
 	{
 		if(hasEditable && temporarySelectedData != null)
 		{
 			
 			cacheOriginalValues(rowIndex);
-			
-			@SuppressWarnings("unchecked")
-			List<Object> row = (List<Object>)oRow;
+									
 			List<Object> originalSelectedRow = temporarySelectedData.get(keyViewValue);
 			ListModelTable model = contentPanel.getModel();
 			
@@ -3058,7 +3056,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			model.addTableModelListener(this);
 		}
 
-		return super.onRestoreSelectedItemIndexInPage(keyViewValue, rowIndex, oRow);
+		return super.onRestoreSelectedItemIndexInPage(keyViewValue, rowIndex, row);
 	}
 	
 	// F3P: Export function
