@@ -1424,16 +1424,29 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		if (!p_multipleSelection)
 			return;
 		
+		// Selected data must reflect effectively selected items, so we clean it up and update recordSelectedData with effectively selected rows
+		
+		Map<Integer, List<Object>> selectedDataToRestore = new HashMap<Integer, List<Object>>(recordSelectedData);
+		recordSelectedData.clear();
+		
 		Collection<Object> lsSelectionRecord = new ArrayList<Object>();
 		for (int rowIndex = 0; rowIndex < contentPanel.getModel().getRowCount(); rowIndex++){
 			Integer keyViewValue = getColumnValue(rowIndex);
-			if (recordSelectedData.containsKey(keyViewValue)){
+			if (selectedDataToRestore.containsKey(keyViewValue)){
 				// TODO: maybe add logic to check value of current record (focus only to viewKeys value) is same as value save in lsSelectedKeyValue
 				// because record can change by other user
-				Object row = contentPanel.getModel().get(rowIndex);
+				@SuppressWarnings("unchecked")
+				List<Object> row = (List<Object>)contentPanel.getModel().get(rowIndex);				
 								
 				if(onRestoreSelectedItemIndexInPage(keyViewValue, rowIndex, row)) // F3P: provide an hook for operations on restored index
+				{
+					// Update row
+					List<Object> cloneOfRow = new ArrayList<>();
+					cloneOfRow.addAll(row);
+					recordSelectedData.put(keyViewValue, cloneOfRow);
+					
 					lsSelectionRecord.add(row);
+				}
 			}
 		}
 		
@@ -1447,7 +1460,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 * @param row row
 	 * @return false to skip restore selection
 	 */
-	public boolean onRestoreSelectedItemIndexInPage(Integer keyViewValue, int rowIndex, Object row)
+	public boolean onRestoreSelectedItemIndexInPage(Integer keyViewValue, int rowIndex, List<Object> row)
 	{
 		return true;
 	}
