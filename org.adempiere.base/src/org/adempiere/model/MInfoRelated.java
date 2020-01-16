@@ -26,6 +26,8 @@ public class MInfoRelated extends X_AD_InfoRelated implements IInfoColumn {
 	 * 
 	 */
 	private static final long serialVersionUID = -6216174103510277333L;
+	
+	private MInfoColumn m_parentRelatedColumn = null;
 
 	public MInfoRelated(Properties ctx, int AD_InfoRelated_ID, String trxName) {
 		super(ctx, AD_InfoRelated_ID, trxName);
@@ -66,7 +68,21 @@ public class MInfoRelated extends X_AD_InfoRelated implements IInfoColumn {
 	 */
 	@Override
 	public MInfoColumn getAD_InfoColumn (){
-		return (MInfoColumn) getParentRelatedColumn();
+		
+		if(m_parentRelatedColumn == null)
+		{
+			m_parentRelatedColumn = (MInfoColumn) getParentRelatedColumn(); 
+		}		
+		
+		return m_parentRelatedColumn;
 	}
-	
+
+	@Override
+	public void setParentRelatedColumn_ID(int ParentRelatedColumn_ID) {
+		
+		if(m_parentRelatedColumn != null && getParentRelatedColumn_ID() != ParentRelatedColumn_ID)
+			m_parentRelatedColumn = null;
+		
+		super.setParentRelatedColumn_ID(ParentRelatedColumn_ID);
+	}	
 }

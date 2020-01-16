@@ -457,7 +457,7 @@ public class InfoProductWindow extends InfoWindow {
 							}										
 							
 							m_lastSelectedIndex = row;
-							lastClickedMainContentRow = row;
+							mainContentRowUsedInSubcontent = row;
 						}
 					}
 				}
