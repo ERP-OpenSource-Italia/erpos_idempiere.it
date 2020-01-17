@@ -111,7 +111,7 @@ public class RequisitionPOCreate extends SvrProcess
 	
 	private int m_M_Warehouse_ID = 0; //F3P: Gestione rottura per magazzino
 	
-	/** DR Aggiunto parametro per il completamento precedente **/
+	/** DR Aggiunto parametro per il completamento pre-generazione ordine **/
 	private boolean		p_CompleteBeforeGenerateOrder = false;
 	
 	/**	Manual Selection		*/
@@ -183,15 +183,13 @@ public class RequisitionPOCreate extends SvrProcess
 	 */
 	protected String doIt() throws Exception
 	{
-		if(p_Selection)
+		if(p_Selection) // F3P: add support for T_Selection
 		{
-			String sql = "SELECT req.M_RequisitionLine_ID "
-					+ " FROM M_RequisitionLine req "
-					+ " JOIN T_Selection s on (req.M_RequisitionLine_ID = s.t_selection_ID) "
-					+ " LEFT JOIN T_Selection_InfoWindow iwdp on (iwdp.T_Selection_ID = s.T_Selection_ID and iwdp.AD_PInstance_ID = s.AD_PInstance_ID and iwdp.COLUMNNAME = 'DateRequired') "
-					+ " LEFT JOIN T_Selection_InfoWindow iwqty on (iwqty.T_Selection_ID = s.T_Selection_ID and iwqty.AD_PInstance_ID = s.AD_PInstance_ID and iwqty.COLUMNNAME = 'Qty')"
-					+ " LEFT JOIN T_Selection_InfoWindow iwdsc on (iwdsc.T_Selection_ID = s.T_Selection_ID and iwdsc.AD_PInstance_ID = s.AD_PInstance_ID and iwdsc.COLUMNNAME = 'Description')"
-					+ " WHERE s.AD_PInstance_ID = ? ";
+			String sql = "SELECT M_RequisitionLine.M_RequisitionLine_ID "
+					+ " FROM M_RequisitionLine M_RequisitionLine "
+					+ " JOIN T_Selection s on (M_RequisitionLine.M_RequisitionLine_ID = s.t_selection_ID) "
+					+ " WHERE s.AD_PInstance_ID = ?"
+					+ " ORDER BY " + getOrderByClause();
 			
 			PreparedStatement pstmt = null;
 			ResultSet rs = null;
@@ -210,7 +208,7 @@ public class RequisitionPOCreate extends SvrProcess
 					
 					MRequisitionLine mReqLine = PO.get(getCtx(), MRequisitionLine.Table_Name, Record_ID, get_TrxName());
 					
-					if(p_CompleteBeforeGenerateOrder)
+					if(p_CompleteBeforeGenerateOrder) // Complete is only relevat for T_Selection processing
 					{
 						int M_Requisition_ID = mReqLine.getM_Requisition_ID();
 						MRequisition mReq = knownRequisition.get(M_Requisition_ID);
@@ -370,13 +368,7 @@ public class RequisitionPOCreate extends SvrProcess
 			whereClause.append(")"); // End Requisition Header
 			//
 			// ORDER BY clause
-			StringBuilder orderClause = new StringBuilder();
-			if (!p_ConsolidateDocument)
-			{
-				orderClause.append("M_Requisition_ID, ");
-			}
-			orderClause.append("(SELECT DateRequired FROM M_Requisition r WHERE M_RequisitionLine.M_Requisition_ID=r.M_Requisition_ID),");
-			orderClause.append("M_Product_ID, C_Charge_ID, M_AttributeSetInstance_ID");
+			String orderClause = getOrderByClause(); // F3P: externalized order by clause
 			
 			POResultSet<MRequisitionLine> rs = new Query(getCtx(), MRequisitionLine.Table_Name, whereClause.toString(), get_TrxName())
 					.setParameters(params)
@@ -678,4 +670,29 @@ public class RequisitionPOCreate extends SvrProcess
 	
 	private List<Integer> m_excludedVendors = new ArrayList<Integer>();
 	
+	// F3P: Common order by clause for standard and T_Selection processing
+	
+	protected String getOrderByClause()
+	{
+		StringBuilder orderClause = new StringBuilder();
+		
+		if (!p_ConsolidateDocument)
+		{
+			orderClause.append("M_RequisitionLine.M_Requisition_ID, ");
+		}
+		
+		// B.Partner
+		
+		if(p_C_BPartner_ID <= 0)
+		{
+			orderClause.append("COALESCE(M_RequisitionLine.C_BPartner_ID,");
+			orderClause.append("(SELECT C_BPartner_ID FROM C_Charge WHERE C_Charge.C_Charge_ID = M_RequisitionLine.C_Charge_ID),");
+			orderClause.append("(SELECT C_BPartner_ID FROM M_Product_PO WHERE M_Product_PO.M_Product_ID = M_RequisitionLine.M_Product_ID ORDER BY IsCurrentVendor DESC FETCH FIRST 1 ROWS ONLY)) NULLS FIRST,"); // Nulls firts -> fast fail if no BP
+		}
+		
+		orderClause.append("(SELECT DateRequired FROM M_Requisition r WHERE M_RequisitionLine.M_Requisition_ID=r.M_Requisition_ID),");
+		orderClause.append("M_RequisitionLine.M_Product_ID, M_RequisitionLine.C_Charge_ID, M_RequisitionLine.M_AttributeSetInstance_ID");
+		
+		return orderClause.toString();
+	}
 }	//	RequisitionPOCreate
