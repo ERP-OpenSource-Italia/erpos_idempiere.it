@@ -3515,7 +3515,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	}
 	
 	@Override
-	public void addDBSelectedKeys(Collection<KeyNamePair> selectedKeys)
+	public Collection<KeyNamePair> getAdditionalDBSelectedKeys(Collection<KeyNamePair> selectedKeys)
 	{
 		String dynWhere = getSQLWhere();
         StringBuilder sql = new StringBuilder (m_sqlMain);
@@ -3531,6 +3531,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			}
         }
         
+        List<KeyNamePair> additionalSelected = new ArrayList<>();
         Set<Integer> setKeys = new HashSet<Integer>();
         
         for(KeyNamePair knp:selectedKeys)
@@ -3565,7 +3566,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				{
 					KeyNamePair knp = new KeyNamePair(key, null);
 					setKeys.add(key);
-					selectedKeys.add(knp);
+					additionalSelected.add(knp);
 				}
 			}
 		}
@@ -3579,6 +3580,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			DB.close(rs, pstmt);
 			trx.close();
 		}
+        
+        return additionalSelected;
 	}
 	
 	public static class InfoColumnLayout

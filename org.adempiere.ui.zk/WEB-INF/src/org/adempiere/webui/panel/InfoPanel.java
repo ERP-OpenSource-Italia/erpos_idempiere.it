@@ -1349,12 +1349,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
                 }
                 
             }
-            
-            if(hasPreSelectionColumn) // Since the pre-selection works on db-persisted column, its possible we have not loaded them if we never loaded that page, but they are to be considered selected
-            {
-            	addDBSelectedKeys(m_viewIDMap);
-            }
-            
+                        
             return m_viewIDMap;
         }else{
         	// never has this case, because when have process, p_multipleSelection always is true
@@ -2139,6 +2134,17 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 						null);	
 					saveResultSelection(getInfoColumnIDFromProcess(processModalDialog.getAD_Process_ID()));
 					createT_Selection_InfoWindow(pInstanceID);
+					
+		            if(hasPreSelectionColumn) // Since the pre-selection works on db-persisted column, its possible we have not loaded them if we never loaded that page, but they are to be considered selected
+		            {
+		            	Collection<KeyNamePair> additionalKeys = getAdditionalDBSelectedKeys(m_viewIDMap);
+		            	if(additionalKeys != null && additionalKeys.size() > 0)
+		            	{
+		            		DB.createT_SelectionNew(pInstanceID, additionalKeys,
+								null);
+		            	}
+		            }
+
 				}else if (ProcessModalDialog.ON_WINDOW_CLOSE.equals(event.getName())){ 
 					if (processModalDialog.isCancel()){
 						//clear back 
@@ -2675,9 +2681,9 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		runViaProcessInfo = pi;
 	}
 	
-	public void addDBSelectedKeys(Collection<KeyNamePair> selectedKeys)
+	public Collection<KeyNamePair> getAdditionalDBSelectedKeys(Collection<KeyNamePair> selectedKeys)
 	{
-		// Void default impl
+		return null; // Void default impl		
 	}
 	
 }	//	Info
