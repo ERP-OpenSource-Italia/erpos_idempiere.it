@@ -837,15 +837,12 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 						break;
 					}
 				}
-				
-				if(hasEditable)
-				{
-					infoWindowListItemRenderer = new WInfoWindowListItemRenderer(this);
-					contentPanel.setItemRenderer(infoWindowListItemRenderer);
-					contentPanel.setAllowIDColumnForReadWrite(true);
-					infoWindowListItemRenderer.addTableValueChangeListener(contentPanel); // Replicated from WListbox constructor
-				}					
-			}			
+			}
+			
+			infoWindowListItemRenderer = new WInfoWindowListItemRenderer(this);
+			contentPanel.setItemRenderer(infoWindowListItemRenderer);
+			contentPanel.setAllowIDColumnForReadWrite(hasEditable);
+			infoWindowListItemRenderer.addTableValueChangeListener(contentPanel); // Replicated from WListbox constructor
 			
 			StringBuilder builder = new StringBuilder(p_whereClause != null ? p_whereClause.trim() : "");
 			String infoWhereClause = infoWindow.getWhereClause();
