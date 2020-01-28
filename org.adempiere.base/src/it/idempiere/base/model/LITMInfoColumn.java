@@ -7,6 +7,8 @@ public class LITMInfoColumn {
 	public static final String COLUMNNAME_ColumnWidth = "ColumnWidth";
 	public static final String COLUMNNAME_IsRunningValue = "IsRunningValue";
 	public static final String COLUMNNAME_RunningValueSQL = "RunningValueSQL";
+    public static final String COLUMNNAME_AD_FieldStyle_ID = "AD_FieldStyle_ID";
+
 
 	/** Set ColumnWidth.
 	@param ColumnWidth
@@ -68,4 +70,26 @@ public class LITMInfoColumn {
 	{
 		return (String)ic.get_Value(COLUMNNAME_RunningValueSQL);
 	}
+	
+	/** Set AD_FieldStyle_ID
+	@param AD_FieldStyle_ID 	
+	*/
+	public static void setAD_FieldStyle_ID (X_AD_InfoColumn ic,int AD_FieldStyle_ID)
+	{
+		if (AD_FieldStyle_ID < 1) 
+			ic.set_ValueOfColumn (COLUMNNAME_AD_FieldStyle_ID, null);
+		else 
+			ic.set_ValueOfColumn (COLUMNNAME_AD_FieldStyle_ID, Integer.valueOf(AD_FieldStyle_ID));
+	}
+
+	/** Get AD_FieldStyle_ID.
+	@return AD_FieldStyle_ID
+  */
+	public static int getAD_FieldStyle_ID (X_AD_InfoColumn ic) 
+	{
+		Integer ii = (Integer)ic.get_Value(COLUMNNAME_AD_FieldStyle_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}	
 }
