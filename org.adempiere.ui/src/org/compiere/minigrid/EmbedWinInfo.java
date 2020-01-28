@@ -24,6 +24,7 @@ public class EmbedWinInfo {
 	private MInfoColumn linkInfoColumn;
 	private String linkColumnName;
 	private int parentLinkColumnID;
+	private boolean dataNeedsUpdate = false;
 	
 	private int keyColumnIndex; // F3P: keep track of key column for zoom
 
@@ -77,5 +78,14 @@ public class EmbedWinInfo {
 	public int getKeyColumnIndex() {
 		return keyColumnIndex;
 	}
+	
+	public boolean isDataNeedsUpdate()
+	{
+		return dataNeedsUpdate;
+	}
 
+	public void setDataNeedsUpdate(boolean needsUpdate)
+	{
+		dataNeedsUpdate = needsUpdate;
+	}
 }

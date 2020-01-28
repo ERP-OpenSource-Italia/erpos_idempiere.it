@@ -106,6 +106,7 @@ import org.zkoss.zul.event.PagingEvent;
 import org.zkoss.zul.event.ZulEvents;
 import org.zkoss.zul.ext.Sortable;
 
+import it.idempiere.base.model.LITMInfoProcess;
 import it.idempiere.base.util.STDUtils;
 
 /**
@@ -177,6 +178,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 * {@link #syncSelectedAfterRequery()}
 	*/
 	protected boolean isRequeryByRunSuccessProcess = false;
+	
+	/**
+	 * Row on main panel currently used to update subpanels
+	 */
+	protected int mainContentRowUsedInSubcontent = -1;
 	
 	
     public static InfoPanel create (int WindowNo,
@@ -433,6 +439,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	* Info process have style is menu
 	*/
 	protected List<MInfoProcess> infoProcessMenuList;
+	
+	/**
+	*  Info process by process id  
+	*/	
+	protected Map<Integer,MInfoProcess> infoProcessByProcess  = new HashMap<>();
+	
 	/**
 	* save selected id and viewID
 	*/
@@ -678,6 +690,18 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 				
 				IDColumn idc = (IDColumn)potentialIDC;
 				idc.setSelected(selected);
+				
+				if(selected)
+				{				
+					// Update selected data
+					List<Object> cloneOfLine = new ArrayList<>();
+					cloneOfLine.addAll(data);				
+					
+					if(recordSelectedData.containsKey(idc.getRecord_ID()) == false)
+					{
+						recordSelectedData.put(idc.getRecord_ID(), data);
+					}
+				}
 			}
 		}
 	}
@@ -1311,13 +1335,21 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 					Object viewIDValue = selectedInfo.getValue().get(dataIndex);
                 	
                 	m_viewIDMap.add (new KeyNamePair(keyData, viewIDValue == null?null:viewIDValue.toString()));
+                	
+                	if(log.isLoggable(Level.INFO))
+                		log.info("Saving key: " + keyData);
+                	
                 }else{
+
+                	if(log.isLoggable(Level.INFO))
+                		log.info("Saving key: " + keyData);
+
                 	// hasn't viewID, set viewID value is null
                 	m_viewIDMap.add (new KeyNamePair(keyData, null));
                 }
                 
             }
-            
+                        
             return m_viewIDMap;
         }else{
         	// never has this case, because when have process, p_multipleSelection always is true
@@ -1424,29 +1456,20 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		if (!p_multipleSelection)
 			return;
 		
-		// Selected data must reflect effectively selected items, so we clean it up and update recordSelectedData with effectively selected rows
-		
-		Map<Integer, List<Object>> selectedDataToRestore = new HashMap<Integer, List<Object>>(recordSelectedData);
-		recordSelectedData.clear();
-		
+		if(recordSelectedData.size() == 0)
+			return;
+				
 		Collection<Object> lsSelectionRecord = new ArrayList<Object>();
 		for (int rowIndex = 0; rowIndex < contentPanel.getModel().getRowCount(); rowIndex++){
 			Integer keyViewValue = getColumnValue(rowIndex);
-			if (selectedDataToRestore.containsKey(keyViewValue)){
+			if (recordSelectedData.containsKey(keyViewValue)){
 				// TODO: maybe add logic to check value of current record (focus only to viewKeys value) is same as value save in lsSelectedKeyValue
 				// because record can change by other user
 				@SuppressWarnings("unchecked")
 				List<Object> row = (List<Object>)contentPanel.getModel().get(rowIndex);				
 								
 				if(onRestoreSelectedItemIndexInPage(keyViewValue, rowIndex, row)) // F3P: provide an hook for operations on restored index
-				{
-					// Update row
-					List<Object> cloneOfRow = new ArrayList<>();
-					cloneOfRow.addAll(row);
-					recordSelectedData.put(keyViewValue, cloneOfRow);
-					
 					lsSelectionRecord.add(row);
-				}
 			}
 		}
 		
@@ -1940,6 +1963,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 
             	if (pageNo != pgNo)
             	{
+            		mainContentRowUsedInSubcontent = -1;
 
             		contentPanel.clearSelection();
 
@@ -2012,7 +2036,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
      */
     public void onUserQuery (){   	
     	if (validateParameters()){
-            showBusyDialog();
+            showBusyDialog();            
             isQueryByUser = true;
             Clients.response(new AuEcho(this, "onQueryCallback", null));
         }
@@ -2086,6 +2110,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			instance.setRecord_ID(runViaProcessInfo.getRecord_ID());
 		}
 		
+		// F3P: refresh mode
+		
+		MInfoProcess infoProcess = infoProcessByProcess.get(processIdObj);
+		String refreshMode = LITMInfoProcess.getRefreshAfterProcess(infoProcess);
+		
 		instance.saveEx();
 		final int pInstanceID = instance.getAD_PInstance_ID();
 		// Execute Process
@@ -2105,6 +2134,17 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 						null);	
 					saveResultSelection(getInfoColumnIDFromProcess(processModalDialog.getAD_Process_ID()));
 					createT_Selection_InfoWindow(pInstanceID);
+					
+		            if(hasPreSelectionColumn) // Since the pre-selection works on db-persisted column, its possible we have not loaded them if we never loaded that page, but they are to be considered selected
+		            {
+		            	Collection<KeyNamePair> additionalKeys = getAdditionalDBSelectedKeys(m_viewIDMap);
+		            	if(additionalKeys != null && additionalKeys.size() > 0)
+		            	{
+		            		DB.createT_SelectionNew(pInstanceID, additionalKeys,
+								null);
+		            	}
+		            }
+
 				}else if (ProcessModalDialog.ON_WINDOW_CLOSE.equals(event.getName())){ 
 					if (processModalDialog.isCancel()){
 						//clear back 
@@ -2116,9 +2156,22 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 						// enable or disable control button rely selected record status 
 						enableButtons();
 					}else if (!m_pi.isError()){
-						ProcessInfoDialog.showProcessInfo(m_pi, p_WindowNo, InfoPanel.this, true);	
+						ProcessInfoDialog.showProcessInfo(m_pi, p_WindowNo, InfoPanel.this, true);
+						
+						boolean shouldExecuteQuery = !LITMInfoProcess.REFRESHAFTERPROCESS_DoNotRefresh.equals(refreshMode);
 						isRequeryByRunSuccessProcess = true;
-						Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", null));
+						
+						if(LITMInfoProcess.REFRESHAFTERPROCESS_FullRefresh.equals(refreshMode))
+						{
+							recordSelectedData.clear();
+							isRequeryByRunSuccessProcess = false;
+							mainContentRowUsedInSubcontent = -1;
+						}
+						
+						if(shouldExecuteQuery)
+							Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", null));
+						else
+							enableButtons();
 					}
 					
 				}
@@ -2318,6 +2371,10 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     				header.setSortDirection("natural");
     			}
     		}
+    		
+    		if(isQueryByUser && hasPreSelectionColumn)
+    			recordSelectedData.clear();
+    		
     		m_sqlUserOrder="";
     		// event == null mean direct call from reset button
     		if (event == null)
@@ -2331,7 +2388,9 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         	if (isQueryByUser){
         		bindInfoProcess();
         		// reset selected list
-                recordSelectedData.clear();
+        		if(hasPreSelectionColumn == false)
+                	recordSelectedData.clear();
+                	
                 isRequeryByRunSuccessProcess = false;
         	}
         	if (isRequeryByRunSuccessProcess){
@@ -2339,13 +2398,22 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         		restoreSelectedInPage();
         	}
         	// IDEMPIERE-1334 after refresh, restore prev selected item end
-        	updateSubcontent ();
+        	m_lastSelectedIndex = contentPanel.getSelectedIndex();
+        	
+        	if(mainContentRowUsedInSubcontent < 0)        	
+        		updateSubcontent (m_lastSelectedIndex);
         }
     	finally
     	{
     		isQueryByUser = false;
     		hideBusyDialog();
     	}
+    }
+    
+    protected void scrollToActedOnContentRow(Event event)
+    {
+    	Listitem item = contentPanel.getItemAtIndex(mainContentRowUsedInSubcontent);
+    	Clients.scrollIntoView(item);
     }
 
     /**
@@ -2518,8 +2586,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 
     public void scrollToSelectedRow()
     {
-    	if (contentPanel != null && contentPanel.getSelectedIndex() >= 0) {
-    		Listitem selected = contentPanel.getItemAtIndex(contentPanel.getSelectedIndex());
+    	int selectedIndex = mainContentRowUsedInSubcontent; // Last used (clicked on) row
+    	
+    	if(selectedIndex < 0 || selectedIndex >= contentPanel.getRowCount())
+    		selectedIndex = contentPanel.getSelectedIndex();
+    	
+    	if (contentPanel != null && selectedIndex >= 0) {
+    		Listitem selected = contentPanel.getItemAtIndex(selectedIndex);
     		if (selected != null) {
     			selected.focus();
     		}
@@ -2607,5 +2680,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	{
 		runViaProcessInfo = pi;
 	}
+	
+	public Collection<KeyNamePair> getAdditionalDBSelectedKeys(Collection<KeyNamePair> selectedKeys)
+	{
+		return null; // Void default impl		
+	}
+	
 }	//	Info
 

@@ -457,7 +457,7 @@ public class InfoProductWindow extends InfoWindow {
 							}										
 							
 							m_lastSelectedIndex = row;
-							lastClickedMainContentRow = row;
+							mainContentRowUsedInSubcontent = row;
 						}
 					}
 				}
@@ -469,11 +469,15 @@ public class InfoProductWindow extends InfoWindow {
 		
 		warehouseTbl.addActionListener(new EventListener<Event>() {
 			public void onEvent(Event event) throws Exception {
-				int row = warehouseTbl.getSelectedRow();
+				
+				int row = mainContentRowUsedInSubcontent; // F3P: Improved compatibility with click-on-select 				
+				if(row<0)
+					row = warehouseTbl.getSelectedRow();
+				
 				if (row >= 0) {
 					String value = (String)warehouseTbl.getValueAt(warehouseTbl.getSelectedRow(),0);
 					int M_Warehouse_ID = DB.getSQLValue(null, Q_WAREHOUSE, new Object[] { value ,Env.getAD_Client_ID(Env.getCtx())});
-					int m_M_Product_ID = getSelectedRowKey();
+					int m_M_Product_ID = getRowKey(row);
 					initLocatorTab(M_Warehouse_ID, m_M_Product_ID);
 				}
 			}
@@ -701,7 +705,7 @@ public class InfoProductWindow extends InfoWindow {
 		if(row < 0)
 			m_M_Product_ID = getSelectedRowKey();
 		else
-			m_M_Product_ID = contentPanel.getRowKeyAt (row);
+			m_M_Product_ID = getRowKey (row);
 		
 		String sql = m_sqlWarehouse;
 		if (log.isLoggable(Level.FINEST)) log.finest(sql);
@@ -1194,5 +1198,13 @@ public class InfoProductWindow extends InfoWindow {
 		}
 		
 		return bVisibile;
+	}
+	
+	// F3P: added to improve compatibility with click-on-row to select
+	
+	protected Integer getRowKey(int row)
+	{
+		Integer key = contentPanel.getRowKeyAt(row);	
+		return key;
 	}
 }
