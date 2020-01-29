@@ -52,13 +52,18 @@ public class MUserDefField extends X_AD_UserDef_Field
 		" from AD_UserDef_Win w inner join AD_UserDef_Tab tb on (w.AD_UserDef_Win_ID = tb.AD_UserDef_Win_ID)" +
 		"   inner join AD_UserDef_Field u on (u.AD_UserDef_Tab_ID = tb.AD_UserDef_Tab_ID) " +
 		"	left outer join AD_UserDef_Field_Trl t on (u.AD_UserDef_Field_ID = t.AD_UserDef_Field_ID)" +
-		" where u.AD_Field_ID = ? and u.isActive = 'Y' and tb.isActive = 'Y' and w.isActive = 'Y'" + // AD_Field_ID			
+		" where u.AD_Field_ID IN (SELECT AD_Field.AD_Field_ID FROM AD_Field " +
+								  " INNER JOIN AD_Tab on AD_Tab.AD_Tab_ID = AD_Field.AD_Tab_ID " +
+								  "  WHERE AD_Tab.AD_Window_ID = ? " +
+								  "  AND AD_Tab.IsActive='Y'" +
+								  "  AND AD_Field.IsActive='Y') " +
+	    "  and u.isActive = 'Y' and tb.isActive = 'Y' and w.isActive = 'Y'" + // AD_Field_ID			
 		"  and (t.AD_Language = ? or t.AD_Language IS NULL)" + // Language
 		"  and (w.ad_client_id = 0 or w.ad_client_id = ?) " + // AD_Client_ID
 		"  and (w.ad_org_id = 0 or w.ad_org_id = ?) " + // AD_Org_ID
 		"  and (w.ad_role_id is null or w.ad_role_id = ?) " + // AD_Role_ID
 		"  and (w.ad_user_id is null or w.ad_user_id = ?) " + // AD_User_ID
-		" order by w.ad_user_id nulls first, w.ad_role_id nulls first, w.ad_org_id, w.ad_client_id";
+		" order by u.AD_Field_ID, w.ad_user_id nulls first, w.ad_role_id nulls first, w.ad_org_id, w.ad_client_id";
 	
 	private static final String Q_COLUMNCALLOUT = "SELECT c.callout FROM AD_Column c inner join AD_Field f on (c.AD_Column_ID = f.AD_Column_ID) WHERE f.AD_Field_ID = ?";
 
@@ -101,7 +106,7 @@ public class MUserDefField extends X_AD_UserDef_Field
 	{
 		// F3P: managed aggregation
 		if(MUserDefWin.isAggregationEnabled())		
-			return getAggregatedMatch(ctx, AD_Field_ID);
+			return getAggregatedMatch(ctx, AD_Window_ID, AD_Field_ID);
 
 		MUserDefWin userdefWin = MUserDefWin.getBestMatch(ctx, AD_Window_ID);
 		if (userdefWin == null)
@@ -154,7 +159,7 @@ public class MUserDefField extends X_AD_UserDef_Field
 	 * @param window_ID
 	 * @return best matching MUserDefWin
 	 */
-	public static MUserDefField getAggregatedMatch(Properties ctx,int AD_Field_ID)
+	public static MUserDefField getAggregatedMatch(Properties ctx,int AD_Window_ID, int AD_Field_ID)
 	{
 		// parameters
 		final int AD_Client_ID = Env.getAD_Client_ID(ctx);
@@ -165,19 +170,21 @@ public class MUserDefField extends X_AD_UserDef_Field
 		final int AD_User_ID = Env.getAD_User_ID(ctx);
 		//final String anyUser = "NULL";
 		
-		//  Check Cache
-		String key = new StringBuilder()
-				.append(AD_Field_ID).append("_")
+		String keySuffix = new StringBuilder("_")
 				.append(Env.getAD_Client_ID(ctx)).append("_")
 				.append(Env.getAD_Language(ctx)).append("_")
 				.append(AD_Org_ID).append("_")
 				.append(AD_Role_ID).append("_")
 				.append(AD_User_ID)
 				.toString();
+				
+		//  Check Cache
+		String key = AD_Field_ID + keySuffix;
 		
 		if (s_cacheAggregated.containsKey(key))	{
 			return s_cacheAggregated.get(key);
 		}
+		
 		
 		PreparedStatement pstmt = DB.prepareStatement(Q_USERDEFFIELD, null);
 		ResultSet		  rs = null;
@@ -185,23 +192,40 @@ public class MUserDefField extends X_AD_UserDef_Field
 		
 		try
 		{
-			pstmt.setInt(1, AD_Field_ID);
+			pstmt.setInt(1, AD_Window_ID);
 			pstmt.setString(2, Env.getAD_Language(ctx));
 			pstmt.setInt(3, AD_Client_ID);
 			pstmt.setInt(4, AD_Org_ID);
 			pstmt.setInt(5, AD_Role_ID);
 			pstmt.setInt(6, AD_User_ID);
+
 			rs = pstmt.executeQuery();
-			
+    		
+    		int currentAD_Field_ID = -1;
+    		
 			while(rs.next())
 			{
+				int rsAD_Field_ID = rs.getInt("AD_Field_ID");
+				
+				if(fakeField != null && rsAD_Field_ID != currentAD_Field_ID)
+				{
+					fakeField = null;					
+				}
+					
 				if(fakeField == null)
 				{
+					currentAD_Field_ID = rsAD_Field_ID;
+					
+					String fieldKey = currentAD_Field_ID + keySuffix;							
+					
 					fakeField = new MUserDefField(ctx, -1, null);
+					fakeField.setAD_Field_ID(currentAD_Field_ID);
+					
+					s_cacheAggregated.put(fieldKey, fakeField);
 					
 					// Initialize callout from column callout, to properly manage #rep prefixed callouts
 					
-					String columnCallout = DB.getSQLValueString(null, Q_COLUMNCALLOUT, AD_Field_ID);
+					String columnCallout = DB.getSQLValueString(null, Q_COLUMNCALLOUT, currentAD_Field_ID);
 					fakeField.setCallout(columnCallout);
 				}
 				
@@ -407,11 +431,8 @@ public class MUserDefField extends X_AD_UserDef_Field
 							fakeField.setCallout(cbCallout.toString());
 						}						
 					}					
-				}
-				
-			}
-			
-			s_cacheAggregated.put(key, fakeField);
+				}			
+			}			
 		}
 		catch(Exception e)
 		{
@@ -420,6 +441,36 @@ public class MUserDefField extends X_AD_UserDef_Field
 		finally
 		{
 			DB.close(rs,pstmt);
+		}
+		
+		// Create null cache for non-customized fields
+		
+		String sqlFields = "SELECT AD_Field_ID FROM AD_Field WHERE AD_Tab_ID in (SELECT AD_Tab.AD_Tab_ID FROM AD_Tab WHERE AD_Tab.AD_Window_ID = ?)";
+		PreparedStatement pstmtF = null;
+		ResultSet rsF = null;
+		
+		try
+		{
+			pstmtF = DB.prepareStatement(sqlFields, null);
+			pstmtF.setInt(1, AD_Window_ID);
+			rsF = pstmtF.executeQuery();
+			
+			while(rsF.next())
+			{
+				int rsAD_Field_ID = rsF.getInt(1);
+				String keyField = rsAD_Field_ID + keySuffix;
+				
+				if (s_cacheAggregated.containsKey(keyField) == false)
+					s_cacheAggregated.put(keyField, null);
+			}
+		}
+		catch(Exception e)
+		{
+			throw new AdempiereException(e); // Should never happen
+		}
+		finally
+		{
+			DB.close(rsF,pstmtF);
 		}
 		
 		return fakeField;			
