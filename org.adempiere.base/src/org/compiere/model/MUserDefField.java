@@ -473,7 +473,7 @@ public class MUserDefField extends X_AD_UserDef_Field
 			DB.close(rsF,pstmtF);
 		}
 		
-		return fakeField;			
+		return s_cacheAggregated.get(key);
 	}
 		
 	/**	F3P: Cache of aggregated selected MUserDefField entries 					**/
