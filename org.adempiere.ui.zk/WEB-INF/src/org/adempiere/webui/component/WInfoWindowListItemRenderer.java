@@ -23,6 +23,7 @@ import org.compiere.util.Util;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.HtmlBasedComponent;
 import org.zkoss.zul.Listcell;
+import org.zkoss.zul.Listitem;
 
 import it.idempiere.base.model.LITMInfoColumn;
 
@@ -50,12 +51,18 @@ public class WInfoWindowListItemRenderer extends WListItemRenderer
 		this.infoWindow = infoWindow;
 	}
 	
-	public void setGridDisplaydInfoColumns(MInfoColumn[] infoColumns, ColumnInfo[] columnInfos)
+	public void setGridDisplayedInfoColumns(MInfoColumn[] infoColumns, ColumnInfo[] columnInfos)
 	{
 		this.gridDisplayedInfoColumns = infoColumns;
 		this.gridDisplayedColumnInfos = columnInfos;
 	}
 		
+	@Override
+	public void render(Listitem item, Object data, int index) throws Exception {
+		rowEvaluatee.resetRow();
+		super.render(item, data, index);
+	}
+
 	@Override
 	protected Listcell getCellComponent(WListbox table, Object field,
 			final int rowIndex, final int columnIndex)
@@ -107,14 +114,17 @@ public class WInfoWindowListItemRenderer extends WListItemRenderer
 				
 				editor.setValue(value);
 				
-				editor.addValueChangeListener(new ValueChangeListener()
-				{					
-					@Override
-					public void valueChange(ValueChangeEvent evt)
-					{
-						infoWindow.onCellEditCallback(evt, rowIndex, columnIndex, editor, gridField);
-					}
-				});
+				if(infoWindow != null)
+				{
+					editor.addValueChangeListener(new ValueChangeListener()
+					{					
+						@Override
+						public void valueChange(ValueChangeEvent evt)
+						{
+							infoWindow.onCellEditCallback(evt, rowIndex, columnIndex, editor, gridField);
+						}
+					});
+				}
 				
 				listCell.appendChild(editor.getComponent());
 				listcell = listCell;
@@ -187,6 +197,11 @@ public class WInfoWindowListItemRenderer extends WListItemRenderer
 		private int row = -1;
 		private Properties ctx = new Properties(Env.getCtx());
 		
+		public void resetRow()
+		{
+			row = -1;
+		}
+		
 		public void setRow(ListModelTable table, int newRow)
 		{
 			if(newRow != row)
@@ -195,6 +210,9 @@ public class WInfoWindowListItemRenderer extends WListItemRenderer
 				
 				for(int i=0; i<gridDisplayedInfoColumns.length; i++)
 				{
+					if(gridDisplayedInfoColumns[i] == null)
+						continue;
+					
 					Object value = table.getValueAt(row, i);
 					
 					if(value instanceof IDColumn)
@@ -211,7 +229,7 @@ public class WInfoWindowListItemRenderer extends WListItemRenderer
 					if(value == null)
 						value = "";
 					
-					Env.setContext(ctx, gridDisplayedColumnInfos[i].getColumnName(), value.toString());
+					Env.setContext(ctx, gridDisplayedInfoColumns[i].getColumnName(), value.toString());
 				}
 			}
 		}
