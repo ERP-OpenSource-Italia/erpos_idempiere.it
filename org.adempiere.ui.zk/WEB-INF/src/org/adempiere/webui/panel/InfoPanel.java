@@ -87,6 +87,7 @@ import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
 import org.compiere.util.NamePair;
 import org.compiere.util.Trx;
+import org.compiere.util.TrxRunnable;
 import org.compiere.util.ValueNamePair;
 import org.zkoss.zk.au.out.AuEcho;
 import org.zkoss.zk.ui.Page;
@@ -128,7 +129,10 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	private static final long serialVersionUID = 3761627143274259211L;
 	private final static int DEFAULT_PAGE_SIZE = 100;
-	private final static int DEFAULT_PAGE_PRELOAD = 4;
+	private final static int DEFAULT_PAGE_PRELOAD = 4;	
+	private final static String INSERT_TSELECTION_IW = "INSERT INTO T_Selection_InfoWindow (AD_PINSTANCE_ID, T_SELECTION_ID, COLUMNNAME , VALUE_STRING, VALUE_NUMBER , VALUE_DATE ) VALUES(?,?,?,?,?,?) ";
+	private final static String UPDATE_TSELECTION_IW = "UPDATE T_Selection_InfoWindow SET VALUE_STRING = ?, VALUE_NUMBER = ?, VALUE_DATE = ? WHERE AD_PINSTANCE_ID = ? AND T_SELECTION_ID = ? AND COLUMNNAME = ?";
+	
 	protected List<Button> btProcessList = new ArrayList<Button>();
 	protected Map<String, WEditor> editorMap = new HashMap<String, WEditor>();
 	protected final static String PROCESS_ID_KEY = "processId";
@@ -158,6 +162,10 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected boolean isIDColumnKeyOfView = false;
 	protected boolean hasRightQuickEntry = true;
 	protected boolean isHasNextPage = false;
+	
+	// F3P: persistent edit support
+	protected int	editAD_Pinstance_ID = -1;
+	
 	/**
 	 * store selected record info
 	 * key of map is value of column play as keyView
@@ -2167,9 +2175,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 							isRequeryByRunSuccessProcess = false;
 							mainContentRowUsedInSubcontent = -1;
 						}
-						
+																		
 						if(shouldExecuteQuery)
+						{
+							clearImmediateEditDB(-1);
 							Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", null));
+						}
 						else
 							enableButtons();
 					}
@@ -2232,8 +2243,6 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	public void createT_Selection_InfoWindow(int AD_PInstance_ID)
 	{
-		StringBuilder insert = new StringBuilder();
-		insert.append("INSERT INTO T_Selection_InfoWindow (AD_PINSTANCE_ID, T_SELECTION_ID, COLUMNNAME , VALUE_STRING, VALUE_NUMBER , VALUE_DATE ) VALUES(?,?,?,?,?,?) ");
 		for (Entry<KeyNamePair,LinkedHashMap<String, Object>> records : m_values.entrySet()) {
 			//set Record ID
 			
@@ -2258,77 +2267,84 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 					parameters.add(field.getKey());
 					
 					Object data = field.getValue();
-					// set Values					
-					if (data instanceof IDColumn)
-					{
-						IDColumn id = (IDColumn) data;
-						parameters.add(null);
-						parameters.add(id.getRecord_ID());
-						parameters.add(null);
-					}					
-					else if (data instanceof String)
-					{
-						parameters.add(data);
-						parameters.add(null);
-						parameters.add(null);
-					}
-					else if (data instanceof BigDecimal || data instanceof Integer || data instanceof Double)
-					{
-						parameters.add(null);
-						if(data instanceof Double)
-						{	
-							BigDecimal value = BigDecimal.valueOf((Double)data);
-							parameters.add(value);
-						}	
-						else	
-							parameters.add(data);
-						parameters.add(null);
-					}
-					else if (data instanceof Integer)
-					{
-						parameters.add(null);
-						parameters.add((Integer)data);
-						parameters.add(null);
-					}
-					else if (data instanceof Timestamp || data instanceof Date)
-					{
-						parameters.add(null);
-						parameters.add(null);
-						if(data instanceof Date)
-						{
-							Timestamp value = new Timestamp(((Date)data).getTime());
-							parameters.add(value);
-						}
-						else 
-						parameters.add(data);
-					}
-					else if(data instanceof KeyNamePair)
-					{
-						KeyNamePair knpData = (KeyNamePair)data;
-						
-						parameters.add(null);
-						parameters.add(knpData.getKey());
-						parameters.add(null);						
-					}
-					else if(data instanceof NamePair)
-					{
-						NamePair npData = (NamePair)data;
-						
-						parameters.add(npData.getID());
-						parameters.add(null);
-						parameters.add(null);						
-					}
-					else
-					{
-						parameters.add(data);
-						parameters.add(null);
-						parameters.add(null);
-					}
-					DB.executeUpdateEx(insert.toString(),parameters.toArray() , null);
-						
+					
+					// set Values
+					appendTSelectionInfoWindowValueParams(data, parameters);
+					DB.executeUpdateEx(INSERT_TSELECTION_IW,parameters.toArray() , null);
 				}
 		}
 	} // createT_Selection_InfoWindow
+	
+	protected List<Object> appendTSelectionInfoWindowValueParams(Object data, List<Object> parameters)
+	{
+		if (data instanceof IDColumn)
+		{
+			IDColumn id = (IDColumn) data;
+			parameters.add(null);
+			parameters.add(id.getRecord_ID());
+			parameters.add(null);
+		}					
+		else if (data instanceof String)
+		{
+			parameters.add(data);
+			parameters.add(null);
+			parameters.add(null);
+		}
+		else if (data instanceof BigDecimal || data instanceof Integer || data instanceof Double)
+		{
+			parameters.add(null);
+			if(data instanceof Double)
+			{	
+				BigDecimal value = BigDecimal.valueOf((Double)data);
+				parameters.add(value);
+			}	
+			else	
+				parameters.add(data);
+			parameters.add(null);
+		}
+		else if (data instanceof Integer)
+		{
+			parameters.add(null);
+			parameters.add((Integer)data);
+			parameters.add(null);
+		}
+		else if (data instanceof Timestamp || data instanceof Date)
+		{
+			parameters.add(null);
+			parameters.add(null);
+			if(data instanceof Date)
+			{
+				Timestamp value = new Timestamp(((Date)data).getTime());
+				parameters.add(value);
+			}
+			else 
+				parameters.add(data);
+		}
+		else if(data instanceof KeyNamePair)
+		{
+			KeyNamePair knpData = (KeyNamePair)data;
+			
+			parameters.add(null);
+			parameters.add(knpData.getKey());
+			parameters.add(null);						
+		}
+		else if(data instanceof NamePair)
+		{
+			NamePair npData = (NamePair)data;
+			
+			parameters.add(npData.getID());
+			parameters.add(null);
+			parameters.add(null);						
+		}
+		else
+		{
+			parameters.add(data);
+			parameters.add(null);
+			parameters.add(null);
+		}
+		
+		return parameters;
+	} // appendTSelectionInfoWindowValueParams
 	
     /**
      * Get InfoColumnID of infoProcess have processID is processId
@@ -2684,6 +2700,60 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	public Collection<KeyNamePair> getAdditionalDBSelectedKeys(Collection<KeyNamePair> selectedKeys)
 	{
 		return null; // Void default impl		
+	}
+	
+	/** Clears the db records used by immediate edit
+	 * 
+	 * @param recordID -1 to clear all rows
+	 */
+	protected void clearImmediateEditDB(int recordID)
+	{
+		if(editAD_Pinstance_ID > 0)
+		{
+			if(recordID >= 0)
+			{
+				Object params[] = {editAD_Pinstance_ID, recordID};
+				DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ? AND T_Selection_ID = ?", params, null);				
+			}
+			else
+			{
+				Object params[] = {editAD_Pinstance_ID};
+				DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ?", params, null);
+			}
+		}
+	}
+	
+	protected void createOrUpdateImmediateEditDB(final int recordID, final String columnName, final Object value)
+	{
+		if(editAD_Pinstance_ID < 0)
+			return;
+		
+		List<Object> valueParams = appendTSelectionInfoWindowValueParams(value, new ArrayList<>());		
+				
+		Trx.run(new TrxRunnable() {
+			
+			@Override
+			public void run(String trxName) 
+			{
+				List<Object> updateParams = new ArrayList<>(valueParams);
+				updateParams.add(editAD_Pinstance_ID);
+				updateParams.add(recordID);
+				updateParams.add(columnName);
+
+				int updatedNo = DB.executeUpdateEx(UPDATE_TSELECTION_IW, updateParams.toArray(), trxName);
+				
+				if(updatedNo == 0)
+				{
+					List<Object> insertParams = new ArrayList<>();
+					insertParams.add(editAD_Pinstance_ID);
+					insertParams.add(recordID);
+					insertParams.add(columnName);
+					insertParams.addAll(valueParams);
+					
+					DB.executeUpdateEx(INSERT_TSELECTION_IW, insertParams.toArray(), trxName);
+				}				
+			}
+		});
 	}
 	
 }	//	Info

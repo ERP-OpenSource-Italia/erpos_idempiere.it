@@ -80,6 +80,7 @@ import org.compiere.model.MInfoColumn;
 import org.compiere.model.MInfoWindow;
 import org.compiere.model.MLookupFactory;
 import org.compiere.model.MLookupInfo;
+import org.compiere.model.MPInstance;
 import org.compiere.model.MProcess;
 import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
@@ -169,9 +170,10 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	
 	// F3P: Keep original values: when a row is unselected, restore original values
 	
-	protected boolean hasEditable = false;
+	protected boolean hasEditable = false;	
 	private Map<Integer, List<Object>> cacheOriginalValues = new HashMap<>();
 	private Map<Integer, List<Object>> temporarySelectedData = new HashMap<>();
+	
 	
 	// F3P: additional data for editabillity end selection persist
 	
@@ -189,6 +191,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	// F3P: Zoom from detail tab
 	
 	private Button zoomDetailButton = null;
+	
+	// F3P: persistent edit
+	public static final String CTX_EDIT_AD_PINSTANCE_ID = "Edit_AD_Pinstance_ID";
+	protected boolean hasImmediatePersistEdit = false;
+	
 
 	/**
 	 * Menu contail process menu item
@@ -298,6 +305,10 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 						});
 					}   					
    				}
+   				
+   				// Selecion has changed, force refresh if the subcontent may depend on persisted selection
+   				if(tableSelectionColumnUpdate != null)
+   					mainContentRowUsedInSubcontent = -1;   				
    				   				   				
    				updateSubcontent(row);
    			}
@@ -393,7 +404,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		if(row < 0)
 			row = contentPanel.getSelectedRow();
 		
-		if(row != mainContentRowUsedInSubcontent)
+		if(row != mainContentRowUsedInSubcontent) // Persisting selection means the content panel may be dependant on it, force a refresh even if the row is the same
 		{
 			mainContentRowUsedInSubcontent = row; // F3P: Keep track of last row used for subcontent (row click on or initial after query)
 			
@@ -833,12 +844,20 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				{
 					if(infoColumn.isReadOnly() == false)
 					{
+						if(LITMInfoColumn.isSaveEditImmediate(infoColumn))
+							hasImmediatePersistEdit = true;
+							
 						hasEditable = true;
-						break;
 					}
 				}
 			}
 			
+			if(hasImmediatePersistEdit)
+			{
+				editAD_Pinstance_ID = DB.getNextID(Env.getCtx(), MPInstance.Table_Name, null);
+				Env.setContext(Env.getCtx(), p_WindowNo, CTX_EDIT_AD_PINSTANCE_ID, editAD_Pinstance_ID);
+			}
+						
 			infoWindowListItemRenderer = new WInfoWindowListItemRenderer(this);
 			contentPanel.setItemRenderer(infoWindowListItemRenderer);
 			contentPanel.setAllowIDColumnForReadWrite(hasEditable);
@@ -937,22 +956,66 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 
 			if (embedInfo != null) {
 				ArrayList<ColumnInfo> list = new ArrayList<ColumnInfo>();
-				list = getInfoColumnslayout(embedInfo).columnInfos;
+				InfoColumnLayout layout = getInfoColumnslayout(embedInfo);
+				list = layout.columnInfos;
 				//  Convert ArrayList to Array
 				ColumnInfo[] s_layoutEmbedded  = new ColumnInfo[list.size()];
 				list.toArray(s_layoutEmbedded);
 
 				/**	From Clause							*/
 				String s_sqlFrom = embedInfo.getFromClause();
+				
+				if(s_sqlFrom.indexOf('@') >= 0) // From clause may be using Edit_AD_Pinstance or other variant in join cluase
+				{
+					s_sqlFrom = Env.parseContext(Env.getCtx(), p_WindowNo, s_sqlFrom, false, true);
+					
+					if(s_sqlFrom.length() == 0)
+						log.severe("Failed to parse from: " + embedInfo.getFromClause());					
+				}
+				
 				/** Where Clause						*/
 				String s_sqlWhere = relatedInfo.getLinkColumnName() + "=?";
 				
-				// F3P: read where clause in addition to fixed filter
+				// LS: Grid renderer
 				
-				if(embedInfo.getWhereClause() != null)
-					s_sqlWhere += " AND " + embedInfo.getWhereClause();
+				WInfoWindowListItemRenderer embedItemRenderer = new WInfoWindowListItemRenderer(null);
+				embeddedTbl.setItemRenderer(embedItemRenderer);
+				embedItemRenderer.addTableValueChangeListener(embeddedTbl); // Replicated from WListbox constructor
+				
+				MInfoColumn[] embedInfoColumns  = new MInfoColumn[layout.displayedInfoColumns.size()];
+				embedInfoColumns = layout.displayedInfoColumns.toArray(embedInfoColumns);
+				embedItemRenderer.setGridDisplayedInfoColumns(embedInfoColumns,s_layoutEmbedded);
+							
+				// F3P: read where clause in addition to fixed filter
+				String whereClause = embedInfo.getWhereClause();
+				if(whereClause != null)
+				{
+					if(whereClause.indexOf('@') >= 0)
+					{
+						whereClause = Env.parseContext(Env.getCtx(), p_WindowNo, whereClause, false, true);
+						
+						if(s_sqlFrom.length() == 0)
+							log.severe("Failed to parse embed info where clause: " + embedInfo.getWhereClause());		
+					}
+					
+					s_sqlWhere += " AND " + whereClause;
+				}
 								
 				m_sqlEmbedded = embeddedTbl.prepareTable(s_layoutEmbedded, s_sqlFrom, s_sqlWhere, false, tableName);
+				
+				String otherClause = embedInfo.getOtherClause();
+				if(Util.isEmpty(otherClause) == false)
+				{
+					if(otherClause.indexOf('@') >= 0)
+					{
+						otherClause = Env.parseContext(Env.getCtx(), p_WindowNo, otherClause, false, true);
+						
+						if(s_sqlFrom.length() == 0)
+							log.severe("Failed to parse embed info other clause: " + embedInfo.getOtherClause());		
+					}
+					
+					m_sqlEmbedded += " " + otherClause;
+				}
 				
 				if(Util.isEmpty(embedInfo.getOrderByClause(), true) == false)
 					m_sqlEmbedded += " ORDER BY " + embedInfo.getOrderByClause();
@@ -1106,7 +1169,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		gridDisplayedInfoColumns = gridDisplayedIC.toArray(new MInfoColumn[gridDisplayedIC.size()]);
 		
 		if(infoWindowListItemRenderer != null)
-			infoWindowListItemRenderer.setGridDisplaydInfoColumns(gridDisplayedInfoColumns,columnInfos);
+			infoWindowListItemRenderer.setGridDisplayedInfoColumns(gridDisplayedInfoColumns,columnInfos);
 		
 		prepareTable(columnInfos, infoWindow.getFromClause(), p_whereClause, infoWindow.getOrderByClause());
 		
@@ -2924,6 +2987,15 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			model.addToSelection(row);
 			
 			Clients.resize(contentPanel);
+			
+			if(editAD_Pinstance_ID > 0 && LITMInfoColumn.isSaveEditImmediate(infoColumn))
+			{
+				int recordID = contentPanel.getRowKeyAt(rowIndex);
+				String columnName = infoColumn.getColumnName();
+				
+				createOrUpdateImmediateEditDB(recordID, columnName, val);
+				Clients.response(new AuEcho(this, "onRefreshSubcontentCallback", Integer.toString(rowIndex)));
+			}
 		}
 		else
 		{
@@ -2989,6 +3061,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					else
 					{
 						restoreOriginalValues(row);
+						clearImmediateEditDB(contentPanel.getRowKeyAt(row));
 					}
 				}
 			}
@@ -3002,6 +3075,9 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	@Override
 	public void onQueryCallback(Event event)
 	{
+		if(isQueryByUser)
+			clearImmediateEditDB(-1);
+		
 		super.onQueryCallback(event);
 		
 		enableExportButton();
@@ -3189,7 +3265,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				getTableRowAsCtx(listbox, embedSelectedRow, -1, null, p_WindowNo, Env.getCtx());
 			}
 		}
-	
+			
 		return ctx;
 	}
 	
@@ -3343,6 +3419,16 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				}
 			}
 		}
+	}
+	
+	public void onRefreshSubcontentCallback(Event event)
+	{
+		int row = mainContentRowUsedInSubcontent;
+		if(event.getData() != null)
+			row = Integer.parseInt((String)event.getData());
+		
+		mainContentRowUsedInSubcontent = -1;
+		updateSubcontent(row);
 	}
 	
 	private class XlsExportAction implements EventListener<Event>

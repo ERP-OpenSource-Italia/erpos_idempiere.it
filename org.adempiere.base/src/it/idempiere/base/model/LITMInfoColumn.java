@@ -6,6 +6,7 @@ public class LITMInfoColumn {
 	
 	public static final String COLUMNNAME_ColumnWidth = "ColumnWidth";
 	public static final String COLUMNNAME_IsRunningValue = "IsRunningValue";
+	public static final String COLUMNNAME_IsSaveEditImmediate = "IsSaveEditImmediate";
 	public static final String COLUMNNAME_RunningValueSQL = "RunningValueSQL";
     public static final String COLUMNNAME_AD_FieldStyle_ID = "AD_FieldStyle_ID";
 
@@ -91,5 +92,30 @@ public class LITMInfoColumn {
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
+	}	
+	
+	/** Set Is Save Edit Immediate
+	@param info column 
+	@param isSaveEditImmediate  */
+	public static void setIsSaveEditImmediate (X_AD_InfoColumn infoColumn,boolean isSaveImmediate)
+	{
+		infoColumn.set_ValueOfColumn(COLUMNNAME_IsSaveEditImmediate, Boolean.valueOf(isSaveImmediate));
+	}
+
+	/** IsSave Edit Immediate
+	@param info column
+	@return IsSaveEditImmediate
+	 */
+	public static boolean isSaveEditImmediate (X_AD_InfoColumn infoColumn) 
+	{
+		Object oo = infoColumn.get_Value(COLUMNNAME_IsSaveEditImmediate);
+
+		if (oo != null) 
+		{
+			if (oo instanceof Boolean) 
+				return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
 	}	
 }
