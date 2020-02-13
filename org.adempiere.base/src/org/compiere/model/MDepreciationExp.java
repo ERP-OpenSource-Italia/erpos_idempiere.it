@@ -80,7 +80,23 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 				, String description
 				, MDepreciationWorkfile assetwk)
 	{
-		MDepreciationExp depexp = new MDepreciationExp(ctx, 0, null);
+		return createEntry( ctx,  entryType,  A_Asset_ID
+				, A_Period, DateAcct, postingType
+				, drAcct, crAcct, expense
+				, description
+				, assetwk, null);
+	}
+	
+	/**	Create entry
+	 * LS: added trxName
+	 */
+	public static MDepreciationExp createEntry (Properties ctx, String entryType, int A_Asset_ID
+				, int A_Period, Timestamp DateAcct, String postingType
+				, int drAcct, int crAcct, BigDecimal expense
+				, String description
+				, MDepreciationWorkfile assetwk, String trxName)
+	{
+		MDepreciationExp depexp = new MDepreciationExp(ctx, 0, trxName);
 		depexp.setA_Entry_Type(entryType);
 		depexp.setA_Asset_ID(A_Asset_ID);
 		depexp.setDR_Account_ID(drAcct);
@@ -219,7 +235,8 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 				}
 			}
 			//
-			setDateAcct(assetwk.getDateAcct());
+			if(getA_Asset_Disposed_ID()<=0)
+				setDateAcct(assetwk.getDateAcct());
 			assetwk.adjustAccumulatedDepr(getExpense(), getExpense_F(), false);
 		}
 		else
