@@ -136,15 +136,10 @@ public final class Fact
 
 		//  Amounts - one needs to not zero
 		if (!line.setAmtSource(C_Currency_ID, debitAmt, creditAmt))
-		{
-			if (docLine == null || docLine.getQty() == null || docLine.getQty().signum() == 0)
-			{
-				if (log.isLoggable(Level.FINE)) log.fine("Both amounts & qty = 0/Null - " + docLine		
+		{//LS non contabilizziamo le righe a 0 anche se hanno una quantità
+			if (log.isLoggable(Level.FINE)) log.fine("Both amounts = 0/Null - " + docLine		
 					+ " - " + toString());			
 				return null;
-			}
-			if (log.isLoggable(Level.FINE)) log.fine("Both amounts = 0/Null, Qty=" + docLine.getQty() + " - " + docLine		
-				+ " - " + toString());			
 		}
 		//  Convert
 		line.convert();
