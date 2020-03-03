@@ -4,6 +4,7 @@
 package org.idempiere.fa.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.Properties;
 
@@ -13,6 +14,7 @@ import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.model.I_A_Asset_Disposed;
 import org.compiere.model.MAssetDisposed;
+import org.compiere.model.MDepreciationWorkfile;
 import org.compiere.util.Env;
 
 
@@ -27,8 +29,8 @@ public class CalloutA_Asset_Disposed extends CalloutEngine
 	{
 		I_A_Asset_Disposed bean = GridTabWrapper.create(mTab, I_A_Asset_Disposed.class);
 		MAssetDisposed.updateFromAsset(bean);
-		bean.setA_Disposal_Amt(bean.getA_Asset_Cost().subtract(bean.getA_Accumulated_Depr()));
-		//
+		//bean.setA_Disposal_Amt(bean.getA_Asset_Cost().subtract(bean.getA_Accumulated_Depr()));
+		bean.setA_Accumulated_Depr_Delta(bean.getA_Asset_Cost().subtract(bean.getA_Accumulated_Depr()));
 		return "";
 	}
 
@@ -53,6 +55,10 @@ public class CalloutA_Asset_Disposed extends CalloutEngine
 
 	public String amt(Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value)
 	{
+//		if(isCalloutActive()) // prevent recursive
+//			return "";
+		
+		
 		String columnName = mField.getColumnName();
 		
 		I_A_Asset_Disposed bean = GridTabWrapper.create(mTab, I_A_Asset_Disposed.class);
@@ -66,19 +72,71 @@ public class CalloutA_Asset_Disposed extends CalloutEngine
 		}
 		else if (MAssetDisposed.COLUMNNAME_A_Disposal_Amt.equals(columnName))
 		{
-			MAssetDisposed.setA_Disposal_Amt(bean);
+			if (value == null)
+				return "";
+			BigDecimal accumDepr = bean.getA_Accumulated_Depr(),
+					assetCost = bean.getA_Asset_Cost(),
+					disposalAmt = bean.getA_Disposal_Amt();
+			bean.setExpense((assetCost.subtract(accumDepr)).subtract(disposalAmt));
+			
 		}
 		else if (MAssetDisposed.COLUMNNAME_Expense.equals(columnName))
 		{
-			BigDecimal disposalAmt = bean.getA_Disposal_Amt();
+			if (value == null)
+				return "";
+			
+			BigDecimal assetCost = bean.getA_Asset_Cost();
+			BigDecimal accumDepr = bean.getA_Accumulated_Depr();
 			BigDecimal expenseAmt = bean.getExpense();
-			bean.setA_Accumulated_Depr_Delta(disposalAmt.subtract(expenseAmt));
+			
+			bean.setA_Disposal_Amt((assetCost.subtract(accumDepr)).subtract(expenseAmt));
+
 		}
-		else if (MAssetDisposed.COLUMNNAME_A_Accumulated_Depr.equals(columnName))
+		else if (MAssetDisposed.COLUMNNAME_A_Accumulated_Depr_Delta.equals(columnName))
 		{
+			MDepreciationWorkfile assetwk = MDepreciationWorkfile.get(ctx, bean.getA_Asset_ID(), bean.getPostingType(), null);
 			BigDecimal disposalAmt = bean.getA_Disposal_Amt();
-			BigDecimal accumDepr = bean.getA_Accumulated_Depr_Delta();
-			bean.setExpense(disposalAmt.subtract(accumDepr));
+			BigDecimal accumDeprDelta = bean.getA_Accumulated_Depr_Delta().setScale(15),
+					assetCostTot = assetwk.getA_Asset_Cost().setScale(15),
+					assetDeprTot = assetwk.getA_Accumulated_Depr().setScale(15),
+					accumDepr, assetCost;
+			
+			if(accumDeprDelta.compareTo(assetwk.getA_Asset_Remaining())>0)
+			{
+				accumDeprDelta = assetwk.getA_Asset_Remaining();
+				bean.setA_Accumulated_Depr_Delta(accumDeprDelta);
+				accumDepr=assetwk.getA_Accumulated_Depr();
+				assetCost=assetwk.getA_Asset_Cost();
+			}
+			else
+			{
+				accumDepr = (assetDeprTot.multiply(accumDeprDelta))
+						.divide((assetCostTot.subtract(assetDeprTot)), RoundingMode.UP)
+						.setScale(2,RoundingMode.UP);//ADT*ADD/(ACT-ADT)
+				assetCost = accumDeprDelta.add(accumDepr);
+			}
+			bean.setExpense((assetCost.subtract(accumDepr)).subtract(disposalAmt));
+			bean.setA_Asset_Cost(assetCost);
+			bean.setA_Accumulated_Depr(accumDepr);
+		}
+		else if (MAssetDisposed.COLUMNNAME_A_Asset_Cost.equals(columnName))
+		{
+			if (value == null)
+				return "";
+			
+			MDepreciationWorkfile assetwk = MDepreciationWorkfile.get(ctx, bean.getA_Asset_ID(), bean.getPostingType(), null);
+			BigDecimal disposalAmt = bean.getA_Disposal_Amt();
+			BigDecimal assetCost = bean.getA_Asset_Cost().setScale(15);
+			
+			BigDecimal accumDepr = assetCost.divide(assetwk.getA_Asset_Cost().setScale(15),RoundingMode.UP)
+					.multiply(assetwk.getA_Accumulated_Depr())
+					.setScale(2, RoundingMode.UP);
+			BigDecimal accumDeprDelta = bean.getA_Asset_Cost().subtract(accumDepr);
+			
+			
+			bean.setA_Accumulated_Depr(accumDepr);
+			bean.setExpense((assetCost.subtract(accumDepr)).subtract(disposalAmt));
+			bean.setA_Accumulated_Depr_Delta(accumDeprDelta);
 		}
 		return "";
 	}
