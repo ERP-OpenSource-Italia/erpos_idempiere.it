@@ -359,11 +359,11 @@ public class MenuSearchController implements EventListener<Event>{
 			boolean match = false;
 			if (compare.length() < 3)
 			{
-				match = label2.startsWith(compare);
+				match = label2.replaceAll("([^a-zA-Z0-9_])", "").startsWith(compare.replaceAll("([^a-zA-Z0-9_])", ""));
 			}
 			else
 			{
-				match = label2.contains(compare);
+				match = label2.replaceAll("([^a-zA-Z0-9_])", "").contains(compare.replaceAll("([^a-zA-Z0-9_])", ""));
 			} 
 			return match ? 0 : -1;
 		}
