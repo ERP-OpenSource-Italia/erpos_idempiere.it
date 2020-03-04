@@ -87,7 +87,7 @@ public class Doc_Invoice extends Doc
 	 *  Load Specific Document Details
 	 *  @return error message or null
 	 */
-	protected String loadDocumentDetails ()
+	public String loadDocumentDetails ()
 	{
 		MInvoice invoice = (MInvoice)getPO();
 		setDateDoc(invoice.getDateInvoiced());
