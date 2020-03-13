@@ -342,10 +342,6 @@ public class WDocActionPanel extends Window implements EventListener<Event>, Dia
 		{
 			if (confirmPanel.getButton("Ok").equals(event.getTarget()))
 			{		
-				//F3P UI action flag
-				StartedFromUI.add(Env.getCtx(),  gridTab.getAD_Table_ID(), gridTab.getRecord_ID(), null);
-				//F3P end
-				
 				MClientInfo clientInfo = MClientInfo.get(Env.getCtx());
 				if(clientInfo.isConfirmOnDocClose() || clientInfo.isConfirmOnDocVoid())
 				{

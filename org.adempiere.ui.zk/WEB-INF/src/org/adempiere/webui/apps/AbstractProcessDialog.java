@@ -104,6 +104,7 @@ import org.zkoss.zul.Space;
 import org.zkoss.zul.Vlayout;
 
 import it.idempiere.base.model.LITMProcess;
+import it.idempiere.base.util.StartedFromUI;
 
 public abstract class AbstractProcessDialog extends Window implements IProcessUI2, EventListener<Event>
 {
@@ -1106,6 +1107,13 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 		{
 			ProcessInfo m_pi = getProcessInfo();
 			try {
+				//F3P UI action flag
+				if(m_pi.getTable_ID() > 0 && m_pi.getRecord_ID() > 0)
+				{
+					String trxName = (m_trx != null)?m_trx.getTrxName():null;
+					StartedFromUI.add(Env.getCtx(),  m_pi.getTable_ID(), m_pi.getRecord_ID(), trxName);
+				}
+				
 				if (log.isLoggable(Level.INFO))
 					log.log(Level.INFO, "Process Info=" + m_pi + " AD_Client_ID="+ Env.getAD_Client_ID(Env.getCtx()));
 				FeedbackContainer.setCurrent(feedbackContainer); // F3P: set feedback container before invoking process (need for document events)
@@ -1117,6 +1125,13 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			} finally {
 				FeedbackContainer.setCurrent(null);
 				Executions.schedule(getDesktop(), AbstractProcessDialog.this, new Event(ON_COMPLETE, AbstractProcessDialog.this, null));
+				
+				// F3P: clear action flag
+				if(m_pi.getTable_ID() > 0 && m_pi.getRecord_ID() > 0)
+				{
+					String trxName = (m_trx != null)?m_trx.getTrxName():null;
+					StartedFromUI.remove(Env.getCtx(), m_pi.getTable_ID(), m_pi.getRecord_ID(), trxName);	
+				}
 			}		
 		}
 	}
