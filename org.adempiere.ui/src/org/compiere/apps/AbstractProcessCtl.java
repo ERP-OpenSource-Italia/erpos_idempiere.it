@@ -411,10 +411,6 @@ public abstract class AbstractProcessCtl implements Runnable
 			if (m_trx != null)
 				m_pi.setTransactionName(m_trx.getTrxName());
 			MWFProcess wfProcess = ProcessUtil.startWorkFlow(Env.getCtx(), m_pi, AD_Workflow_ID);
-			
-			// F3P: remove UI action flag
-			StartedFromUI.remove(Env.getCtx(), m_pi.getTable_ID(), m_pi.getRecord_ID(), m_pi.getTransactionName());
-			//F3P end
 			started = wfProcess != null;
 		}
 		return started;
