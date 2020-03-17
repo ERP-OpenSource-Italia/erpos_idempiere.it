@@ -477,11 +477,11 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 	    		
 	    		InfoPanel ip = appDesktop.openInfo(AD_InfoWindow_ID, WindowNo);
 	    		
-	    		if(runQuery)
-	    			ip.onUserQuery();
-	    		
 	    		if(ip != null)
 	    		{
+		    		if(runQuery)
+		    			ip.onUserQuery();
+		    		
 	    			ip.addEventListener(Events.ON_CLOSE, closeEvtListener);
 	    			ip.addEventListener(Events.ON_CANCEL, closeEvtListener);
 	    		}
