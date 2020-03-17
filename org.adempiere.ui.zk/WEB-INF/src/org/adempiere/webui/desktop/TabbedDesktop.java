@@ -110,8 +110,23 @@ public abstract class TabbedDesktop extends AbstractDesktop {
 	 */
 	@Override
 	public InfoPanel openInfo(int infoId) {
-		InfoPanel infoPanel = InfoManager.create(infoId);
+		return openInfo(infoId, -1);
+	}
+	
+	/**
+	 *
+	 * @param infoId
+	 */
+	@Override
+	public InfoPanel openInfo(int infoId, int WindowNo) {
 		
+		InfoPanel infoPanel = null;
+		
+		if(WindowNo > 0)
+			infoPanel = InfoManager.create(WindowNo, infoId);
+		else
+			infoPanel = InfoManager.create(infoId);
+			
 		if (infoPanel != null) {
 			DesktopTabpanel tabPanel = new DesktopTabpanel();
 			infoPanel.setParent(tabPanel);
@@ -125,7 +140,7 @@ public abstract class TabbedDesktop extends AbstractDesktop {
 		}
 		
 		return infoPanel;
-	}
+	}	
 	
 	/**
 	 *

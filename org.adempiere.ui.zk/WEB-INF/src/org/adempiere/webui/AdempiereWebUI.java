@@ -39,6 +39,7 @@ import org.adempiere.webui.component.TokenCommand;
 import org.adempiere.webui.component.ZoomCommand;
 import org.adempiere.webui.desktop.DefaultDesktop;
 import org.adempiere.webui.desktop.IDesktop;
+import org.adempiere.webui.panel.InfoPanel;
 import org.adempiere.webui.session.SessionContextListener;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
@@ -123,6 +124,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 	
 	// Query param prefix
 	private static String QUERYPARAM_PREFIX = "q_";
+	private static String RUNQUERY = "runquery";
 
 	private ConcurrentMap<String, String[]> m_URLParameters;
 
@@ -438,6 +440,54 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     			}
     		}
     	}
+    	else if ("Info".equalsIgnoreCase(action)) {
+    		int AD_InfoWindow_ID = getPrmInt("AD_InfoWindow_ID");
+    		
+    		if(AD_InfoWindow_ID > 0)
+    		{
+    			final IDesktop appDesktop = SessionManager.getAppDesktop(); 
+    			int WindowNo = appDesktop.registerWindow(AD_InfoWindow_ID);
+    			boolean runQuery = "Y".equalsIgnoreCase(getPrmString(RUNQUERY));
+    			Properties ctx = Env.getCtx();
+    			
+	    		for(Entry<String,String[]> entry:m_URLParameters.entrySet())
+	    		{
+	    			String paramName = entry.getKey();
+	    			
+	    			if(paramName.startsWith(QUERYPARAM_PREFIX))
+	    			{
+	    				String columnName = paramName.substring(QUERYPARAM_PREFIX.length()); // remove 'q_'
+	    				
+	    				String[] values = entry.getValue();
+    					String value = null;
+    					if(values != null && values.length > 0)
+    						value = values[0];
+    					
+    					if(value != null)
+    						Env.setContext(ctx, WindowNo, columnName, value);
+	    			}
+	    		}
+	    		
+	    		EventListener<Event> closeEvtListener = new EventListener<Event>() {
+	    			@Override
+					public void onEvent(Event evt) throws Exception {
+	    				appDesktop.unregisterWindow(WindowNo);						
+					}
+				};
+	    		
+	    		InfoPanel ip = appDesktop.openInfo(AD_InfoWindow_ID, WindowNo);
+	    		
+	    		if(runQuery)
+	    			ip.onUserQuery();
+	    		
+	    		if(ip != null)
+	    		{
+	    			ip.addEventListener(Events.ON_CLOSE, closeEvtListener);
+	    			ip.addEventListener(Events.ON_CANCEL, closeEvtListener);
+	    		}
+    		}
+    	}
+    	
     	m_URLParameters = null;
     }
 
