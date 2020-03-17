@@ -216,4 +216,12 @@ public interface IDesktop extends UIPart {
 	public void setTabTitle(String title, int windowNo);
 	
 	public void renderHomeTab();
+	
+	/**
+    *
+    * @param infoId
+    * @param WindowNo
+    * @return ADWindow
+    */
+	public InfoPanel openInfo(int infoId, int WindowNo);
 }
