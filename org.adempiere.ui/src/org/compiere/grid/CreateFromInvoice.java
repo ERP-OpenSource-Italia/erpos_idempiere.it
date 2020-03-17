@@ -103,6 +103,7 @@ public abstract class CreateFromInvoice extends CreateFrom
 			display = sbDisplay.toString(); 
 		}
 		
+		String movementType = isSOTrx ? "C-":"V+";
 		//
 		StringBuilder sql = new StringBuilder("SELECT s.M_InOut_ID,").append(display)
 			.append(" FROM M_InOut s "
@@ -110,23 +111,36 @@ public abstract class CreateFromInvoice extends CreateFrom
 			+ " AND s.M_InOut_ID IN "
 				+ "(SELECT sl.M_InOut_ID FROM M_InOutLine sl");
 			if(!isSOTrx) //F3P from adempiere modify query
+			{
 				sql.append(" LEFT OUTER JOIN M_MatchInv mi ON (sl.M_InOutLine_ID=mi.M_InOutLine_ID) ")
-					.append(" JOIN M_InOut s2 ON (sl.M_InOut_ID=s2.M_InOut_ID) ")
-					.append(" WHERE s2.C_BPartner_ID=? AND s2.IsSOTrx=? AND s2.DocStatus IN ('CL','CO') ")
-					.append(" AND (sl.m_product_id IS NOT NULL OR sl.c_charge_id IS NOT NULL) ")
-					.append(" GROUP BY sl.M_InOut_ID,sl.M_InOutLine_ID,sl.MovementQty ")
-					.append(" HAVING (sl.MovementQty<>COALESCE( SUM(CASE WHEN sl.M_Product_ID IS NOT NULL THEN COALESCE(mi.Qty,0) WHEN sl.C_Charge_ID IS NOT NULL THEN")
-					.append("(SELECT SUM(cil.QtyInvoiced) FROM C_InvoiceLine cil INNER JOIN C_Invoice ci ON (ci.C_Invoice_ID = cil.C_Invoice_ID)") 
-					.append(" WHERE cil.M_InOutLine_ID = sl.M_InOutLine_ID AND ci.DocStatus IN ('CO','CL')) ELSE 0 END),")
-					.append(" 0))");
-			//removed for visualize inoutline not description .append(" OR mi.M_InOutLine_ID IS NOT NULL ");
+				.append(" JOIN M_InOut s2 ON (sl.M_InOut_ID=s2.M_InOut_ID) ")
+				.append(" WHERE s2.C_BPartner_ID=? AND s2.IsSOTrx=? AND s2.DocStatus IN ('CL','CO') ")
+				.append(" AND (sl.m_product_id IS NOT NULL OR sl.c_charge_id IS NOT NULL) ");
+				if(STDSysConfig.isFilterCreateFromInvoiceMovementType(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())))
+				{
+					sql.append(" AND s2.MovementType IN ('"+movementType+"')  ");
+				}		
+				sql.append(" GROUP BY sl.M_InOut_ID,sl.M_InOutLine_ID,sl.MovementQty ")
+				.append(" HAVING (sl.MovementQty<>COALESCE( SUM(CASE WHEN sl.M_Product_ID IS NOT NULL THEN COALESCE(mi.Qty,0) WHEN sl.C_Charge_ID IS NOT NULL THEN")
+				.append("(SELECT SUM(cil.QtyInvoiced) FROM C_InvoiceLine cil INNER JOIN C_Invoice ci ON (ci.C_Invoice_ID = cil.C_Invoice_ID)") 
+				.append(" WHERE cil.M_InOutLine_ID = sl.M_InOutLine_ID AND ci.DocStatus IN ('CO','CL')) ELSE 0 END),")
+				.append(" 0))");
+				//removed for visualize inoutline not description .append(" OR mi.M_InOutLine_ID IS NOT NULL ");
+			}
 			else
+			{
 				sql.append(" INNER JOIN M_InOut s2 ON (sl.M_InOut_ID=s2.M_InOut_ID)")
-					.append(" LEFT JOIN C_InvoiceLine il ON sl.M_InOutLine_ID = il.M_InOutLine_ID")
-					.append(" WHERE s2.C_BPartner_ID=? AND s2.IsSOTrx=? AND s2.DocStatus IN ('CL','CO')")
-					.append(" AND (sl.m_product_id IS NOT NULL OR sl.c_charge_id IS NOT NULL) ")
-					.append(" GROUP BY sl.M_InOutLine_ID")
-					.append(" HAVING sl.MovementQty - sum(COALESCE(il.QtyInvoiced,0)) > 0");
+				.append(" LEFT JOIN C_InvoiceLine il ON sl.M_InOutLine_ID = il.M_InOutLine_ID")
+				.append(" WHERE s2.C_BPartner_ID=? AND s2.IsSOTrx=? AND s2.DocStatus IN ('CL','CO')");
+				if(STDSysConfig.isFilterCreateFromInvoiceMovementType(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())))
+
+				{
+					sql.append(" AND s2.MovementType IN ('"+movementType+"')  ");
+				}
+				sql.append(" AND (sl.m_product_id IS NOT NULL OR sl.c_charge_id IS NOT NULL) ")
+				.append(" GROUP BY sl.M_InOutLine_ID")
+				.append(" HAVING sl.MovementQty - sum(COALESCE(il.QtyInvoiced,0)) > 0");
+			}
 			sql.append(") ORDER BY s.MovementDate");
 			
 		// F3P: apply filter query

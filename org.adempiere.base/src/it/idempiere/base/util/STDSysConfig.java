@@ -679,4 +679,11 @@ public class STDSysConfig
 		return listDocTypes;
 	}
 
+	public static final String LIT_FILTER_CREATE_FROM_INVOICE_MOVEMENT_TYPE = "LIT_FILTER_CREATE_FROM_INVOICE_MOVEMENT_TYPE";
+
+	public static boolean isFilterCreateFromInvoiceMovementType(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getBooleanValue(LIT_FILTER_CREATE_FROM_INVOICE_MOVEMENT_TYPE, false, AD_Client_ID,AD_Org_ID); 
+	}
+
 }
