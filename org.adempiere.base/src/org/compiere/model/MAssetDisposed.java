@@ -127,7 +127,7 @@ implements DocAction
 		MPeriod.testPeriodOpen(getCtx(), getDateAcct(), MDocType.DOCBASETYPE_GLDocument, getAD_Org_ID());
 
 		//saveEx() //commented by @win
-		updateFromAsset(this);
+		//updateFromAsset(this);
 		saveEx(get_TrxName()); //added by @win
 		if (is_Changed())
 		{
@@ -224,9 +224,12 @@ implements DocAction
 				)
 			{
 				asset.changeStatus(MAsset.A_ASSET_STATUS_Disposed, null);
-				setA_Disposal_Amt(getA_Asset_Cost());
-				setA_Accumulated_Depr_Delta(getA_Accumulated_Depr());
-				setExpense(getA_Disposal_Amt().subtract(getA_Accumulated_Depr_Delta()));
+				MDepreciationWorkfile assetwk = MDepreciationWorkfile.get(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
+				setA_Asset_Cost(assetwk.getA_Asset_Cost());
+				setA_Accumulated_Depr(assetwk.getA_Accumulated_Depr());
+				setA_Disposal_Amt(BigDecimal.ZERO);
+				setExpense(getA_Asset_Cost().subtract(assetwk.getA_Accumulated_Depr()));
+				setA_Accumulated_Depr_Delta(getExpense());
 				createDisposal();
 			}
 			else if (A_DISPOSED_METHOD_PartialRetirement.equals(method))
@@ -236,12 +239,16 @@ implements DocAction
 			// F3P: added 'sale' as a disposal method
 			else if(A_DISPOSED_METHOD_Sale.equals(method))
 			{
-				if(getA_Disposal_Amt().equals(getA_Asset_Cost()))
-					asset.changeStatus(MAsset.A_ASSET_STATUS_Sold, null);
-				else
-					asset.changeStatus(MAsset.A_ASSET_STATUS_Activated,null);
-				
-				createDisposal();
+//				if(getA_Disposal_Amt().compareTo(getA_Asset_Cost().subtract(getA_Accumulated_Depr()))==0)
+//				{
+//					asset.changeStatus(MAsset.A_ASSET_STATUS_Sold, null);
+//					asset.setIsFullyDepreciated(true);
+//				}
+//				else//Not completely sold
+//					asset.changeStatus(MAsset.A_ASSET_STATUS_Activated,null);
+
+				createSaleDisposal(asset);
+
 			}
 			else
 			{
@@ -419,7 +426,7 @@ implements DocAction
 		//
 		BigDecimal A_Accumulated_Depr = bean.getA_Accumulated_Depr();
 		BigDecimal A_Accumulated_Depr_Delta = A_Accumulated_Depr.multiply(coef).setScale(precision, RoundingMode.HALF_UP);
-		BigDecimal Expense = A_Disposal_Amt.subtract(A_Accumulated_Depr_Delta);
+		BigDecimal Expense = A_Accumulated_Depr_Delta.subtract(A_Disposal_Amt);
 		//
 		bean.setA_Accumulated_Depr_Delta(A_Accumulated_Depr_Delta);
 		bean.setExpense(Expense);
@@ -428,8 +435,8 @@ implements DocAction
 	private void createDisposal()
 	{
 		MDepreciationWorkfile assetwk = MDepreciationWorkfile.get(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
-		assetwk.adjustCost(getA_Disposal_Amt().negate(), Env.ZERO, false);
-		assetwk.adjustAccumulatedDepr(getA_Accumulated_Depr_Delta().negate(), getA_Accumulated_Depr_Delta().negate(), false);
+		assetwk.adjustCost(getA_Asset_Cost().negate(), Env.ZERO, false);
+		assetwk.adjustAccumulatedDepr(getA_Accumulated_Depr().negate(), getA_Accumulated_Depr().negate(), false);
 		assetwk.saveEx();
 		assetwk.buildDepreciation();
 		//
@@ -439,5 +446,45 @@ implements DocAction
 		{
 			ex.deleteEx(false);
 		}	
+	}
+	
+	private void createSaleDisposal(MAsset asset)
+	{
+		MDepreciationWorkfile assetwk = MDepreciationWorkfile.get(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
+		assetwk.adjustCost(getA_Asset_Cost().negate(), Env.ZERO, false);
+		assetwk.adjustAccumulatedDepr(getA_Accumulated_Depr().negate(), getA_Accumulated_Depr().negate(), false);
+
+		assetwk.saveEx();
+		assetwk.buildDepreciation();
+		
+		List<MDepreciationExp> list = MDepreciationExp.getNotProcessedEntries(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
+
+		boolean wasAssetNull = false;
+		if(asset == null)
+		{
+			asset = assetwk.getAsset();
+			wasAssetNull=true;
+		}
+		
+		BigDecimal remaining = assetwk.getA_Asset_Cost().subtract(assetwk.getA_Accumulated_Depr());
+
+		if(remaining.compareTo(Env.ZERO)<= 0)
+		{
+			asset.setA_Asset_Status(A_ASSET_STATUS_Sold);
+			asset.setIsFullyDepreciated(true);
+			asset.saveEx();
+			
+			for (MDepreciationExp ex : list)
+			{
+				ex.deleteEx(false);
+			}
+		}
+		else
+		{
+			asset.setA_Asset_Status(A_ASSET_STATUS_Activated);
+		}
+		
+		if(wasAssetNull == true && asset != null)
+			asset.saveEx();
 	}
 }

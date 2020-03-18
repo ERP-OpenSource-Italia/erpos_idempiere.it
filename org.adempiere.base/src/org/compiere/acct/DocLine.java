@@ -17,6 +17,7 @@
 package org.compiere.acct;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.logging.Level;
 
@@ -24,6 +25,7 @@ import org.compiere.model.MAccount;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MCharge;
 import org.compiere.model.MCostDetail;
+import org.compiere.model.MCurrency;
 import org.compiere.model.MProduct;
 import org.compiere.model.PO;
 import org.compiere.model.ProductCost;
@@ -273,7 +275,18 @@ public class DocLine
 		m_LineNetAmt =  LineNetAmt == null ? Env.ZERO : LineNetAmt;
 
 		if (PriceList != null && Qty != null)
-			m_ListAmt = PriceList.multiply(Qty);
+		{			
+			BigDecimal listAmt = PriceList.multiply(Qty);
+			
+			int C_Currency_ID = getC_Currency_ID();
+			if(C_Currency_ID > 0)
+			{
+				int precision = MCurrency.getStdPrecision(p_po.getCtx(), C_Currency_ID);				
+				listAmt = listAmt.setScale(precision,  RoundingMode.HALF_UP);
+			}
+			
+			m_ListAmt = listAmt;
+		}
 		if (m_ListAmt.compareTo(Env.ZERO) == 0)
 			m_ListAmt = m_LineNetAmt;
 		m_DiscountAmt = m_ListAmt.subtract(m_LineNetAmt);

@@ -1498,11 +1498,11 @@ public class MOrder extends X_C_Order implements DocAction
 		
 		if (isSOTrx() && getDeliveryViaRule().equals(DELIVERYVIARULE_Shipper))
 		{
-			if (getM_Shipper_ID() == 0)
-			{
-				m_processMsg = "@FillMandatory@" + Msg.getElement(getCtx(), COLUMNNAME_M_Shipper_ID);
-				return DocAction.STATUS_Invalid;
-			}
+//			if (getM_Shipper_ID() == 0)
+//			{
+//				m_processMsg = "@FillMandatory@" + Msg.getElement(getCtx(), COLUMNNAME_M_Shipper_ID);
+//				return DocAction.STATUS_Invalid;
+//			}
 			
 			if (!calculateFreightCharge())
 				return DocAction.STATUS_Invalid;
@@ -1627,6 +1627,9 @@ public class MOrder extends X_C_Order implements DocAction
 				// ignore -- don't validate for Cash POS Orders depending on sysconfig parameter
 			} else if (MDocType.DOCSUBTYPESO_PrepayOrder.equals(dt.getDocSubTypeSO())
 					&& !MSysConfig.getBooleanValue(MSysConfig.CHECK_CREDIT_ON_PREPAY_ORDER, true, getAD_Client_ID(), getAD_Org_ID())) {
+				// ignore -- don't validate Prepay Orders depending on sysconfig parameter
+			} else if ((MDocType.DOCSUBTYPESO_Proposal.equals(dt.getDocSubTypeSO()) || MDocType.DOCSUBTYPESO_Quotation.equals(dt.getDocSubTypeSO()))
+					&& !MSysConfig.getBooleanValue(MSysConfig.CHECK_CREDIT_ON_PROPOSAL_ORDER, true, getAD_Client_ID(), getAD_Org_ID())) {
 				// ignore -- don't validate Prepay Orders depending on sysconfig parameter
 			} else {
 				MBPartner bp = new MBPartner (getCtx(), getBill_BPartner_ID(), get_TrxName()); // bill bp is guaranteed on beforeSave

@@ -237,6 +237,8 @@ public abstract class CreateFromShipment extends CreateFrom
 		else
 			sql.append(" LEFT OUTER JOIN C_UOM_Trl uom ON (l.C_UOM_ID=uom.C_UOM_ID AND uom.AD_Language='")
 			.append(Env.getAD_Language(Env.getCtx())).append("')");
+		
+		sql.append(" INNER JOIN C_Order o ON (o.C_Order_ID=l.C_Order_ID) ");
 		//
 		sql.append(" WHERE l.C_Order_ID=? "		);	//	#1
 		
@@ -244,13 +246,13 @@ public abstract class CreateFromShipment extends CreateFrom
 		if (forInvoice)
 			column = "l.QtyInvoiced";
 		
-		sql.append(" AND l.QtyOrdered - ").append(column).append(" > 0  ");
+		sql.append(" AND ( l.QtyOrdered - ").append(column).append(" > 0  ");
 		
 		List<Integer> docTypeIDs = STDSysConfig.getListDocTypeIDShowNegativeQtyOrdered(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx()));
 		
 		if(docTypeIDs != null)
 		{ 
-			sql.append("OR (((l.QtyOrdered - ").append(column).append(" ) != 0 ) AND o.C_DocType_ID in (");
+			sql.append("OR ( o.C_DocType_ID in (");
 			boolean isFirst = true;
 			
 			for(Integer docType_ID : docTypeIDs)
@@ -264,8 +266,10 @@ public abstract class CreateFromShipment extends CreateFrom
 					sql.append(",").append(docType_ID);
 			}
 					
-			sql.append(" )) ");
+			sql.append(" ))) ");
 		}
+		else
+			sql.append(" ) ");
 		
 		sql.append( "GROUP BY l.QtyOrdered,CASE WHEN l.QtyOrdered=0 THEN 0 ELSE l.QtyEntered/l.QtyOrdered END, ")
 		.append( "l.C_UOM_ID,COALESCE(uom.UOMSymbol,uom.Name), p.M_Locator_ID, loc.Value, po.VendorProductNo, ")

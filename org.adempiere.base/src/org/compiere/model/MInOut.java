@@ -1117,7 +1117,10 @@ public class MInOut extends X_M_InOut implements DocAction
             // Set Document and Movement type for this Receipt
             MRMA rma = new MRMA(getCtx(), getM_RMA_ID(), get_TrxName());
             MDocType docType = MDocType.get(getCtx(), rma.getC_DocType_ID());
-            setC_DocType_ID(docType.getC_DocTypeShipment_ID());
+            
+            //Aggiunta propagazione solo se il tipo documento spedizione e' valorizzato
+            if(docType.getC_DocTypeShipment_ID() > 0)
+            	setC_DocType_ID(docType.getC_DocTypeShipment_ID());
         }
 
 		return true;

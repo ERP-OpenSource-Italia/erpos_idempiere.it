@@ -156,7 +156,7 @@ public class MProductionLine extends X_M_ProductionLine {
 			for(MProductionLineMA lineMA:lineMAs)
 			{
 				BigDecimal lineQty = lineMA.getMovementQty();
-				Timestamp dateMaterialPolicy = lineMA.getDateMaterialPolicy();
+				Timestamp dateMaterialPolicy = lineMA.getDateMaterialPolicy();				
 				
 				MTransaction matTrx = new MTransaction (getCtx(), getAD_Org_ID(), 
 						"P-", 
@@ -172,7 +172,7 @@ public class MProductionLine extends X_M_ProductionLine {
 				}
 				
 				MStorageOnHand storage = MStorageOnHand.getCreate(getCtx(), getM_Locator_ID(),
-						getM_Product_ID(), asi.get_ID(), dateMaterialPolicy, get_TrxName());
+						getM_Product_ID(), lineMA.getM_AttributeSetInstance_ID(), dateMaterialPolicy, get_TrxName());
 				
 				DB.getDatabase().forUpdate(storage, 120);
 				storage.addQtyOnHand(lineQty);				

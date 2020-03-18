@@ -143,7 +143,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
 	// private static File REPORT_HOME = null; F3P: changed to string	
     public static final JasperReportsContext jasperReportStartContext;
 	// F3P: standard jr parameters
-	private static String JRSTDPARAM_IGNORE_PAGINATION = "IS_IGNORE_PAGINATION";
+	private static String IS_IGNORE_PAGINATION = "IS_IGNORE_PAGINATION";
 	
 	//F3P ext reporting
 	public static String ADD_FILE_TO_PROC_INFO = "F3P_AddFileToProcInfo";
@@ -1396,23 +1396,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
                 String pStr = rs.getString(2);
                 String pStrTo = rs.getString(3);
                 BigDecimal pNum = rs.getBigDecimal(4);
-                BigDecimal pNumTo = rs.getBigDecimal(5);
-
-                // F3P: convert standad jasper parameters
-                
-                if(name != null && name.equals(JRSTDPARAM_IGNORE_PAGINATION))
-                {
-                	boolean bIgnorePagination = false;
-                	
-                	if(pStr != null && pStr.equals("Y"))
-                	{
-                		bIgnorePagination = true;
-                	}
-                	
-                	params.put(name, Boolean.valueOf(bIgnorePagination));
-                	continue;
-                }
-                
+                BigDecimal pNumTo = rs.getBigDecimal(5);                
                 Timestamp pDate = rs.getTimestamp(6);
                 Timestamp pDateTo = rs.getTimestamp(7);
                 if (pStr != null) {

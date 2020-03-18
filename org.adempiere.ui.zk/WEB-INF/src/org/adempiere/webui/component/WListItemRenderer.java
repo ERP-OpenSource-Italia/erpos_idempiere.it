@@ -804,7 +804,7 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 		this.cellFactoryIdentifier = cellFactoryIdentifier;
 	}
 	
-	// F3P: Listners to be added to list items
+	// F3P: Listeners to be added to list items
 	
 	public void addListitemEventListener(String evtnm, EventListener<Event> listener)
 	{

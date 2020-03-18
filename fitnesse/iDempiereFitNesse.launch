@@ -11,6 +11,6 @@
 <mapEntry key="fitnesse_home" value="${workspace_loc}/fitnesse"/>
 </mapAttribute>
 <stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="fitnesseMain.FitNesseMain"/>
-<stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value="-p 8089 -l log"/>
+<stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value="-p 8089 -l log -d D:\dev\idempiere\fitnesse_idempiere_suites"/>
 <stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="fitnesse"/>
 </launchConfiguration>

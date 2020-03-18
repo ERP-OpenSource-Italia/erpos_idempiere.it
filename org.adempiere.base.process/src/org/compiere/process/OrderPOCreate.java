@@ -45,20 +45,20 @@ import it.idempiere.base.util.STDSysConfig;
 public class OrderPOCreate extends SvrProcess
 {
 	/**	Order Date From		*/
-	private Timestamp	p_DateOrdered_From;
+	protected Timestamp	p_DateOrdered_From;
 	/**	Order Date To		*/
-	private Timestamp	p_DateOrdered_To;
+	protected Timestamp	p_DateOrdered_To;
 	/**	Customer			*/
-	private int			p_C_BPartner_ID;
+	protected int			p_C_BPartner_ID;
 	/**	Vendor				*/
 	protected int			p_Vendor_ID;
 	/**	Sales Order			*/
-	private int			p_C_Order_ID;
+	protected int			p_C_Order_ID;
 	/** Drop Ship			*/
-	private boolean		p_IsDropShip = false;
+	protected boolean		p_IsDropShip = false;
 	
 	// F3P: purchaser to set
-	private int	p_SalesRep_ID = -1;
+	protected int	p_SalesRep_ID = -1;
 	
 	/**
 	 *  Prepare - e.g., get Parameters.

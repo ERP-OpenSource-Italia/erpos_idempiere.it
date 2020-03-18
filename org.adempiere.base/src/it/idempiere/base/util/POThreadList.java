@@ -35,7 +35,7 @@ public class POThreadList
 	{		
 		for(PO o :  poList.get())
 		{
-			if(o == po)
+			if(o.equals(po))
 				return true;
 		}
 		

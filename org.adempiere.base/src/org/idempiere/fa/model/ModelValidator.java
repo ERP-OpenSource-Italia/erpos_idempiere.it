@@ -135,7 +135,7 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 			
 			if(timing==TIMING_AFTER_COMPLETE){
 				MInvoice mi = (MInvoice)po;
-				if (mi.isSOTrx()) {
+				if (mi.isSOTrx() && mi.isReversal() == false) {
 					MInvoiceLine[] mils = mi.getLines();
 					for (MInvoiceLine mil: mils) {
 						if (mil.isA_CreateAsset() && !mil.isA_Processed()) {
@@ -201,7 +201,6 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 				
 			// end modification by @win
 				
-			m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_CreateAsset, isAsset);
 			if (isAsset) {
 				if(!isSOTrx)	// F3P: Not needed for SOTrx invoices
 				{
@@ -213,9 +212,13 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 				
 			}
 			else {
-				m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_Asset_Group_ID, null);
-				m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_Asset_ID, null);
-				m.set_AttrValue("IsFixedAssetInvoice", false);
+				if(!isSOTrx)
+				{
+					m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_CreateAsset, isAsset);
+					m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_Asset_Group_ID, null);
+					m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_Asset_ID, null);
+					m.set_AttrValue("IsFixedAssetInvoice", false);
+				}
 			}
 			//
 			// Validate persistent object: 

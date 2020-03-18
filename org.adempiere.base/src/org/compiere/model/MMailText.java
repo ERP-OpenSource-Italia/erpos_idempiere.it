@@ -49,7 +49,7 @@ public class MMailText extends X_R_MailText
 	private static final long serialVersionUID = -6458808409321394821L;
 
 	//F3P: used by at-sign escaping
-	private static final String ESCAPE_AT = "_!_!_",
+	public static final String ESCAPE_AT = "_!_!_",
 			ESCAPE_AT_REGEX = Pattern.quote(ESCAPE_AT); 
 	
 	/**

@@ -198,6 +198,8 @@ public class MSysConfig extends X_AD_SysConfig
     public static final String ZK_LOGO_SMALL_TESTINST = "ZK_LOGO_SMALL_TESTINST";    
     public static final String SEND_EMAIL_TIMEOUT_IN_MILLIS = "SEND_EMAIL_TIMEOUT_IN_MILLIS";
 
+	public static final String CHECK_CREDIT_ON_PROPOSAL_ORDER = "CHECK_CREDIT_ON_PROPOSAL_ORDER";
+
 
 	/**
 	 * 	Standard Constructor

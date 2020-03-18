@@ -216,7 +216,7 @@ public class UpdateRecord extends TableFixture {
 											// Evaluate the ID is from the actual client or system
 											String foreignTable = column.getReferenceTableName();
 											if (foreignTable != null) {
-												int foreignClient = DB.getSQLValueEx(null,
+												int foreignClient = DB.getSQLValueEx(trxName,
 														"SELECT AD_Client_ID FROM " + foreignTable + " WHERE " + foreignTable + "_ID=?",
 														intid);
 												if (foreignClient != 0 && foreignClient != Env.getAD_Client_ID(ctx)) {

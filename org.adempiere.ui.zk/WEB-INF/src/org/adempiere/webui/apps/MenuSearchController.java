@@ -70,6 +70,7 @@ public class MenuSearchController implements EventListener<Event>{
 	private static final String ON_LOAD_MORE = "onLoadMore";
 	private static final String ONSELECT_TIMESTAMP = "onselect.timestamp";
 	private static final String STAR_BUTTON_NAME = "Star";
+	private static final String REGEX_MENU_ITEM = "([^a-zA-Z0-9_])";
 	private static final String NEW_BUTTON_NAME = "New";
 	private Tree tree;
 	private Listbox listbox;
@@ -411,11 +412,11 @@ public class MenuSearchController implements EventListener<Event>{
 			boolean match = false;
 			if (compare.length() < 3)
 			{
-				match = label2.startsWith(compare);
+				match = label2.replaceAll(REGEX_MENU_ITEM, "").startsWith(compare.replaceAll(REGEX_MENU_ITEM, ""));
 			}
 			else
 			{
-				match = label2.contains(compare);
+				match = label2.replaceAll(REGEX_MENU_ITEM, "").contains(compare.replaceAll(REGEX_MENU_ITEM, ""));
 			} 
 			return match ? 0 : -1;
 		}

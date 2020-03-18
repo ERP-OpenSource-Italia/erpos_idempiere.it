@@ -90,6 +90,7 @@ import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
 import org.compiere.util.NamePair;
 import org.compiere.util.Trx;
+import org.compiere.util.TrxRunnable;
 import org.compiere.util.ValueNamePair;
 import org.zkoss.zk.au.out.AuEcho;
 import org.zkoss.zk.ui.Page;
@@ -109,6 +110,7 @@ import org.zkoss.zul.event.PagingEvent;
 import org.zkoss.zul.event.ZulEvents;
 import org.zkoss.zul.ext.Sortable;
 
+import it.idempiere.base.model.LITMInfoProcess;
 import it.idempiere.base.util.STDUtils;
 
 /**
@@ -130,7 +132,10 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	private static final long serialVersionUID = 3761627143274259211L;
 	private final static int DEFAULT_PAGE_SIZE = 100;
-	private final static int DEFAULT_PAGE_PRELOAD = 4;
+	private final static int DEFAULT_PAGE_PRELOAD = 4;	
+	private final static String INSERT_TSELECTION_IW = "INSERT INTO T_Selection_InfoWindow (AD_PINSTANCE_ID, T_SELECTION_ID, COLUMNNAME , VALUE_STRING, VALUE_NUMBER , VALUE_DATE ) VALUES(?,?,?,?,?,?) ";
+	private final static String UPDATE_TSELECTION_IW = "UPDATE T_Selection_InfoWindow SET VALUE_STRING = ?, VALUE_NUMBER = ?, VALUE_DATE = ? WHERE AD_PINSTANCE_ID = ? AND T_SELECTION_ID = ? AND COLUMNNAME = ?";
+	
 	protected List<Button> btProcessList = new ArrayList<Button>();
 	protected Map<String, WEditor> editorMap = new HashMap<String, WEditor>();
 	protected final static String PROCESS_ID_KEY = "processId";
@@ -160,6 +165,10 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected boolean isIDColumnKeyOfView = false;
 	protected boolean hasRightQuickEntry = true;
 	protected boolean isHasNextPage = false;
+	
+	// F3P: persistent edit support
+	protected int	editAD_Pinstance_ID = -1;
+	
 	/**
 	 * store selected record info
 	 * key of map is value of column play as keyView
@@ -180,6 +189,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 * {@link #syncSelectedAfterRequery()}
 	*/
 	protected boolean isRequeryByRunSuccessProcess = false;
+	
+	/**
+	 * Row on main panel currently used to update subpanels
+	 */
+	protected int mainContentRowUsedInSubcontent = -1;
 	
 	
     public static InfoPanel create (int WindowNo,
@@ -457,6 +471,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	* Info process have style is menu
 	*/
 	protected List<MInfoProcess> infoProcessMenuList;
+	
+	/**
+	*  Info process by process id  
+	*/	
+	protected Map<Integer,MInfoProcess> infoProcessByProcess  = new HashMap<>();
+	
 	/**
 	* save selected id and viewID
 	*/
@@ -702,6 +722,18 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 				
 				IDColumn idc = (IDColumn)potentialIDC;
 				idc.setSelected(selected);
+				
+				if(selected)
+				{				
+					// Update selected data
+					List<Object> cloneOfLine = new ArrayList<>();
+					cloneOfLine.addAll(data);				
+					
+					if(recordSelectedData.containsKey(idc.getRecord_ID()) == false)
+					{
+						recordSelectedData.put(idc.getRecord_ID(), data);
+					}
+				}
 			}
 		}
 	}
@@ -1421,13 +1453,21 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 					Object viewIDValue = selectedInfo.getValue().get(dataIndex);
                 	
                 	m_viewIDMap.add (new KeyNamePair(keyData, viewIDValue == null?null:viewIDValue.toString()));
+                	
+                	if(log.isLoggable(Level.INFO))
+                		log.info("Saving key: " + keyData);
+                	
                 }else{
+
+                	if(log.isLoggable(Level.INFO))
+                		log.info("Saving key: " + keyData);
+
                 	// hasn't viewID, set viewID value is null
                 	m_viewIDMap.add (new KeyNamePair(keyData, null));
                 }
                 
             }
-            
+                        
             return m_viewIDMap;
         }else{
         	// never has this case, because when have process, p_multipleSelection always is true
@@ -1534,13 +1574,17 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		if (!p_multipleSelection)
 			return;
 		
+		if(recordSelectedData.size() == 0)
+			return;
+				
 		Collection<Object> lsSelectionRecord = new ArrayList<Object>();
 		for (int rowIndex = 0; rowIndex < contentPanel.getModel().getRowCount(); rowIndex++){
 			Integer keyViewValue = getColumnValue(rowIndex);
 			if (recordSelectedData.containsKey(keyViewValue)){
 				// TODO: maybe add logic to check value of current record (focus only to viewKeys value) is same as value save in lsSelectedKeyValue
 				// because record can change by other user
-				Object row = contentPanel.getModel().get(rowIndex);
+				@SuppressWarnings("unchecked")
+				List<Object> row = (List<Object>)contentPanel.getModel().get(rowIndex);				
 								
 				if(onRestoreSelectedItemIndexInPage(keyViewValue, rowIndex, row)) // F3P: provide an hook for operations on restored index
 					lsSelectionRecord.add(row);
@@ -1557,7 +1601,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 * @param row row
 	 * @return false to skip restore selection
 	 */
-	public boolean onRestoreSelectedItemIndexInPage(Integer keyViewValue, int rowIndex, Object row)
+	public boolean onRestoreSelectedItemIndexInPage(Integer keyViewValue, int rowIndex, List<Object> row)
 	{
 		return true;
 	}
@@ -2037,6 +2081,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 
             	if (pageNo != pgNo)
             	{
+            		mainContentRowUsedInSubcontent = -1;
 
             		contentPanel.clearSelection();
 
@@ -2112,7 +2157,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
      */
     public void onUserQuery (){   	
     	if (validateParameters()){
-            showBusyDialog();
+            showBusyDialog();            
             isQueryByUser = true;
             Clients.response(new AuEcho(this, "onQueryCallback", null));
         }
@@ -2186,6 +2231,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			instance.setRecord_ID(runViaProcessInfo.getRecord_ID());
 		}
 		
+		// F3P: refresh mode
+		
+		MInfoProcess infoProcess = infoProcessByProcess.get(processIdObj);
+		String refreshMode = LITMInfoProcess.getRefreshAfterProcess(infoProcess);
+		
 		instance.saveEx();
 		final int pInstanceID = instance.getAD_PInstance_ID();
 		// devCoffee - enable use of special forms from process related with info windows
@@ -2248,6 +2298,17 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 						null);	
 					saveResultSelection(getInfoColumnIDFromProcess(processModalDialog.getAD_Process_ID()));
 					createT_Selection_InfoWindow(pInstanceID);
+					
+		            if(hasPreSelectionColumn) // Since the pre-selection works on db-persisted column, its possible we have not loaded them if we never loaded that page, but they are to be considered selected
+		            {
+		            	Collection<KeyNamePair> additionalKeys = getAdditionalDBSelectedKeys(m_viewIDMap);
+		            	if(additionalKeys != null && additionalKeys.size() > 0)
+		            	{
+		            		DB.createT_SelectionNew(pInstanceID, additionalKeys,
+								null);
+		            	}
+		            }
+
 				}else if (ProcessModalDialog.ON_WINDOW_CLOSE.equals(event.getName())){ 
 					if (processModalDialog.isCancel()){
 						//clear back 
@@ -2259,11 +2320,26 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 						// enable or disable control button rely selected record status 
 						enableButtons();
 					}else if (!m_pi.isError()){
-						ProcessInfoDialog.showProcessInfo(m_pi, p_WindowNo, InfoPanel.this, true);	
+						ProcessInfoDialog.showProcessInfo(m_pi, p_WindowNo, InfoPanel.this, true);
+						
+						boolean shouldExecuteQuery = !LITMInfoProcess.REFRESHAFTERPROCESS_DoNotRefresh.equals(refreshMode);
 						isRequeryByRunSuccessProcess = true;
-						Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", null));
+						
+						if(LITMInfoProcess.REFRESHAFTERPROCESS_FullRefresh.equals(refreshMode))
+						{
+							recordSelectedData.clear();
+							isRequeryByRunSuccessProcess = false;
+							mainContentRowUsedInSubcontent = -1;
+						}
+																		
+						if(shouldExecuteQuery)
+						{
+							clearImmediateEditDB(-1);
+							Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", null));
+						}
+						else
+							enableButtons();
 					}
-					recordSelectedData.clear();
 				}
 				
 		//HengSin -- end --
@@ -2322,8 +2398,6 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	public void createT_Selection_InfoWindow(int AD_PInstance_ID)
 	{
-		StringBuilder insert = new StringBuilder();
-		insert.append("INSERT INTO T_Selection_InfoWindow (AD_PINSTANCE_ID, T_SELECTION_ID, COLUMNNAME , VALUE_STRING, VALUE_NUMBER , VALUE_DATE ) VALUES(?,?,?,?,?,?) ");
 		for (Entry<KeyNamePair,LinkedHashMap<String, Object>> records : m_values.entrySet()) {
 			//set Record ID
 			
@@ -2348,77 +2422,84 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 					parameters.add(field.getKey());
 					
 					Object data = field.getValue();
-					// set Values					
-					if (data instanceof IDColumn)
-					{
-						IDColumn id = (IDColumn) data;
-						parameters.add(null);
-						parameters.add(id.getRecord_ID());
-						parameters.add(null);
-					}					
-					else if (data instanceof String)
-					{
-						parameters.add(data);
-						parameters.add(null);
-						parameters.add(null);
-					}
-					else if (data instanceof BigDecimal || data instanceof Integer || data instanceof Double)
-					{
-						parameters.add(null);
-						if(data instanceof Double)
-						{	
-							BigDecimal value = BigDecimal.valueOf((Double)data);
-							parameters.add(value);
-						}	
-						else	
-							parameters.add(data);
-						parameters.add(null);
-					}
-					else if (data instanceof Integer)
-					{
-						parameters.add(null);
-						parameters.add((Integer)data);
-						parameters.add(null);
-					}
-					else if (data instanceof Timestamp || data instanceof Date)
-					{
-						parameters.add(null);
-						parameters.add(null);
-						if(data instanceof Date)
-						{
-							Timestamp value = new Timestamp(((Date)data).getTime());
-							parameters.add(value);
-						}
-						else 
-						parameters.add(data);
-					}
-					else if(data instanceof KeyNamePair)
-					{
-						KeyNamePair knpData = (KeyNamePair)data;
-						
-						parameters.add(null);
-						parameters.add(knpData.getKey());
-						parameters.add(null);						
-					}
-					else if(data instanceof NamePair)
-					{
-						NamePair npData = (NamePair)data;
-						
-						parameters.add(npData.getID());
-						parameters.add(null);
-						parameters.add(null);						
-					}
-					else
-					{
-						parameters.add(data);
-						parameters.add(null);
-						parameters.add(null);
-					}
-					DB.executeUpdateEx(insert.toString(),parameters.toArray() , null);
-						
+					
+					// set Values
+					appendTSelectionInfoWindowValueParams(data, parameters);
+					DB.executeUpdateEx(INSERT_TSELECTION_IW,parameters.toArray() , null);
 				}
 		}
 	} // createT_Selection_InfoWindow
+	
+	protected List<Object> appendTSelectionInfoWindowValueParams(Object data, List<Object> parameters)
+	{
+		if (data instanceof IDColumn)
+		{
+			IDColumn id = (IDColumn) data;
+			parameters.add(null);
+			parameters.add(id.getRecord_ID());
+			parameters.add(null);
+		}					
+		else if (data instanceof String)
+		{
+			parameters.add(data);
+			parameters.add(null);
+			parameters.add(null);
+		}
+		else if (data instanceof BigDecimal || data instanceof Integer || data instanceof Double)
+		{
+			parameters.add(null);
+			if(data instanceof Double)
+			{	
+				BigDecimal value = BigDecimal.valueOf((Double)data);
+				parameters.add(value);
+			}	
+			else	
+				parameters.add(data);
+			parameters.add(null);
+		}
+		else if (data instanceof Integer)
+		{
+			parameters.add(null);
+			parameters.add((Integer)data);
+			parameters.add(null);
+		}
+		else if (data instanceof Timestamp || data instanceof Date)
+		{
+			parameters.add(null);
+			parameters.add(null);
+			if(data instanceof Date)
+			{
+				Timestamp value = new Timestamp(((Date)data).getTime());
+				parameters.add(value);
+			}
+			else 
+				parameters.add(data);
+		}
+		else if(data instanceof KeyNamePair)
+		{
+			KeyNamePair knpData = (KeyNamePair)data;
+			
+			parameters.add(null);
+			parameters.add(knpData.getKey());
+			parameters.add(null);						
+		}
+		else if(data instanceof NamePair)
+		{
+			NamePair npData = (NamePair)data;
+			
+			parameters.add(npData.getID());
+			parameters.add(null);
+			parameters.add(null);						
+		}
+		else
+		{
+			parameters.add(data);
+			parameters.add(null);
+			parameters.add(null);
+		}
+		
+		return parameters;
+	} // appendTSelectionInfoWindowValueParams
 	
     /**
      * Get InfoColumnID of infoProcess have processID is processId
@@ -2484,7 +2565,9 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         	if (isQueryByUser){
         		bindInfoProcess();
         		// reset selected list
-                recordSelectedData.clear();
+        		if(hasPreSelectionColumn == false)
+                	recordSelectedData.clear();
+                	
                 isRequeryByRunSuccessProcess = false;
         	}
         	if (isRequeryByRunSuccessProcess){
@@ -2492,13 +2575,22 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         		restoreSelectedInPage();
         	}
         	// IDEMPIERE-1334 after refresh, restore prev selected item end
-        	updateSubcontent ();
+        	m_lastSelectedIndex = contentPanel.getSelectedIndex();
+        	
+        	if(mainContentRowUsedInSubcontent < 0)        	
+        		updateSubcontent (m_lastSelectedIndex);
         }
     	finally
     	{
     		isQueryByUser = false;
     		hideBusyDialog();
     	}
+    }
+    
+    protected void scrollToActedOnContentRow(Event event)
+    {
+    	Listitem item = contentPanel.getItemAtIndex(mainContentRowUsedInSubcontent);
+    	Clients.scrollIntoView(item);
     }
 
     /**
@@ -2645,8 +2737,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 
     public void scrollToSelectedRow()
     {
-    	if (contentPanel != null && contentPanel.getSelectedIndex() >= 0) {
-    		Listitem selected = contentPanel.getItemAtIndex(contentPanel.getSelectedIndex());
+    	int selectedIndex = mainContentRowUsedInSubcontent; // Last used (clicked on) row
+    	
+    	if(selectedIndex < 0 || selectedIndex >= contentPanel.getRowCount())
+    		selectedIndex = contentPanel.getSelectedIndex();
+    	
+    	if (contentPanel != null && selectedIndex >= 0) {
+    		Listitem selected = contentPanel.getItemAtIndex(selectedIndex);
     		if (selected != null) {
     			selected.focus();
     		}
@@ -2737,5 +2834,65 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	{
 		runViaProcessInfo = pi;
 	}
+	
+	public Collection<KeyNamePair> getAdditionalDBSelectedKeys(Collection<KeyNamePair> selectedKeys)
+	{
+		return null; // Void default impl		
+	}
+	
+	/** Clears the db records used by immediate edit
+	 * 
+	 * @param recordID -1 to clear all rows
+	 */
+	protected void clearImmediateEditDB(int recordID)
+	{
+		if(editAD_Pinstance_ID > 0)
+		{
+			if(recordID >= 0)
+			{
+				Object params[] = {editAD_Pinstance_ID, recordID};
+				DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ? AND T_Selection_ID = ?", params, null);				
+			}
+			else
+			{
+				Object params[] = {editAD_Pinstance_ID};
+				DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ?", params, null);
+			}
+		}
+	}
+	
+	protected void createOrUpdateImmediateEditDB(final int recordID, final String columnName, final Object value)
+	{
+		if(editAD_Pinstance_ID < 0)
+			return;
+		
+		List<Object> valueParams = appendTSelectionInfoWindowValueParams(value, new ArrayList<>());		
+				
+		Trx.run(new TrxRunnable() {
+			
+			@Override
+			public void run(String trxName) 
+			{
+				List<Object> updateParams = new ArrayList<>(valueParams);
+				updateParams.add(editAD_Pinstance_ID);
+				updateParams.add(recordID);
+				updateParams.add(columnName);
+
+				int updatedNo = DB.executeUpdateEx(UPDATE_TSELECTION_IW, updateParams.toArray(), trxName);
+				
+				if(updatedNo == 0)
+				{
+					List<Object> insertParams = new ArrayList<>();
+					insertParams.add(editAD_Pinstance_ID);
+					insertParams.add(recordID);
+					insertParams.add(columnName);
+					insertParams.addAll(valueParams);
+					
+					DB.executeUpdateEx(INSERT_TSELECTION_IW, insertParams.toArray(), trxName);
+				}				
+			}
+		});
+	}
+	
 }	//	Info
 

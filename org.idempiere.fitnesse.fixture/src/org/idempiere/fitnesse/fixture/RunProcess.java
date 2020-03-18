@@ -147,7 +147,7 @@ public class RunProcess extends TableFixture {
 				{
 					String lastRecordIDString = Env.getContext(ctx, windowNo,"lastRecord_ID");
 									
-					if(lastRecordIDString != null)
+					if(lastRecordIDString != null && lastRecordIDString.length() > 0)
 					{
 						recordID = Integer.parseInt(lastRecordIDString);
 						
@@ -256,7 +256,8 @@ public class RunProcess extends TableFixture {
 				if (process.isJavaProcess() && !jasperreport)
 				{
 					//Trx trx = Trx.get(Trx.createTrxName("FixturePrc"), true);
-					Trx trx = Trx.get(trxName, false);
+					Trx trx = Trx.get(trxName, true);					
+					
 					trx.setDisplayName(getClass().getName()+"_doStaticTable");
 					try
 					{
