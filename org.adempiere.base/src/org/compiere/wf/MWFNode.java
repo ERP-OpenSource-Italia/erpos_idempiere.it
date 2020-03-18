@@ -18,6 +18,7 @@ package org.compiere.wf;
 
 import java.awt.Point;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -142,7 +143,7 @@ public class MWFNode extends X_AD_WF_Node
 		//	Save to Cache
 		String key = null;
 		try {
-			Integer wfnodeid = new Integer (rs.getInt("AD_WF_Node_ID"));
+			Integer wfnodeid = Integer.valueOf(rs.getInt("AD_WF_Node_ID"));
 			if (wfnodeid != null && wfnodeid.intValue() > 0)
 				key = Env.getAD_Language(ctx) + "_" + wfnodeid;
 		} catch (SQLException e) {
@@ -186,7 +187,8 @@ public class MWFNode extends X_AD_WF_Node
 	 */
 	private void loadNext()
 	{
-		m_next = new Query(getCtx(), MWFNodeNext.Table_Name, "AD_WF_Node_ID=?", get_TrxName())
+		m_next = new Query(getCtx(), MWFNodeNext.Table_Name, "AD_WF_NodeNext.AD_WF_Node_ID=?", get_TrxName())
+								.addJoinClause(" JOIN AD_WF_Node ON (AD_WF_Node.AD_WF_Node_ID=AD_WF_NodeNext.AD_WF_Next_ID AND AD_WF_Node.IsActive='Y')")
 								.setParameters(new Object[]{get_ID()})
 								.setOnlyActiveRecords(true)
 								.setOrderBy(MWFNodeNext.COLUMNNAME_SeqNo)
@@ -360,6 +362,8 @@ public class MWFNode extends X_AD_WF_Node
 			return "Form:AD_Form_ID=" + getAD_Form_ID();
 		else if (ACTION_UserWindow.equals(action))
 			return "Window:AD_Window_ID=" + getAD_Window_ID();
+		else if (ACTION_UserInfo.equals(action))
+			return "Window:AD_InfoWindow_ID=" + getAD_InfoWindow_ID();
 		else if (ACTION_WaitSleep.equals(action))
 			return "Sleep:WaitTime=" + getWaitTime();
 		return "??";
@@ -426,6 +430,7 @@ public class MWFNode extends X_AD_WF_Node
 	{
 		if (ACTION_UserForm.equals(getAction())
 			|| ACTION_UserWindow.equals(getAction())
+			|| ACTION_UserInfo.equals(getAction())
 			/*|| ACTION_UserWorkbench.equals(getAction())*/)
 			return true;
 		return false;
@@ -492,7 +497,7 @@ public class MWFNode extends X_AD_WF_Node
 			return 0;
 		//
 		BigDecimal change = new BigDecimal (seconds)
-			.divide(divide, BigDecimal.ROUND_DOWN)
+			.divide(divide, RoundingMode.DOWN)
 			.multiply(getDynPriorityChange());
 		return change.intValue();
 	}	//	calculateDynamicPriority
@@ -606,7 +611,7 @@ public class MWFNode extends X_AD_WF_Node
 			}
 			if (getAD_Column_ID() > 0) {
 				// validate that just advanced roles can manipulate secure content via workflows
-				MColumn column = MColumn.get(getCtx(), getAD_Column_ID());
+				MColumn column = MColumn.get(getCtx(), getAD_Column_ID(), get_TrxName ());
 				if (column.isSecure() || column.isAdvanced()) {
 					if (! MRole.getDefault().isAccessAdvanced()) {
 						log.saveError("AccessTableNoUpdate", Msg.getElement(getCtx(), column.getColumnName()));
@@ -644,6 +649,14 @@ public class MWFNode extends X_AD_WF_Node
 			if (getAD_Window_ID() == 0)
 			{
 				log.saveError("FillMandatory", Msg.getElement(getCtx(), "AD_Window_ID"));
+				return false;
+			}
+		}
+		else if (action.equals(ACTION_UserInfo)) 
+		{
+			if (getAD_InfoWindow_ID() == 0)
+			{
+				log.saveError("FillMandatory", Msg.getElement(getCtx(), "AD_InfoWindow_ID"));
 				return false;
 			}
 		}

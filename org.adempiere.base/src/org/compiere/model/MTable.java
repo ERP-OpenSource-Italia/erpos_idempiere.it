@@ -20,6 +20,8 @@ package org.compiere.model;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -30,9 +32,13 @@ import java.util.logging.Level;
 import org.adempiere.base.IModelFactory;
 import org.adempiere.base.Service;
 import org.adempiere.model.GenericPO;
+import org.compiere.db.Database;
 import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.KeyNamePair;
+import org.compiere.util.Msg;
+import org.compiere.util.Util;
 
 /**
  *	Persistent Table Model
@@ -55,7 +61,7 @@ public class MTable extends X_AD_Table
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -8757836873040013402L;
+	private static final long serialVersionUID = 4974471096496488963L;
 
 	public final static int MAX_OFFICIAL_ID = 999999;
 
@@ -99,7 +105,7 @@ public class MTable extends X_AD_Table
 	 *	@param tableName case insensitive table name
 	 *	@return Table
 	 */
-	public static MTable get (Properties ctx, String tableName)
+	public static synchronized MTable get (Properties ctx, String tableName)
 	{
 		if (tableName == null)
 			return null;
@@ -356,19 +362,26 @@ public class MTable extends X_AD_Table
 	 * 	Get Identifier Columns of Table
 	 *	@return Identifier columns
 	 */
-	public String[] getIdentifierColumns()
-	{
-		getColumns(false);
-		ArrayList<String> list = new ArrayList<String>();
-		//
-		for (int i = 0; i < m_columns.length; i++)
-		{
-			MColumn column = m_columns[i];
+	public String[] getIdentifierColumns() {
+		ArrayList<KeyNamePair> listkn = new ArrayList<KeyNamePair>();
+		for (MColumn column : getColumns(false)) {
 			if (column.isIdentifier())
-				list.add(column.getColumnName());
+				listkn.add(new KeyNamePair(column.getSeqNo(), column.getColumnName()));
 		}
-		String[] retValue = new String[list.size()];
-		retValue = list.toArray(retValue);
+		// Order by SeqNo
+		Collections.sort(listkn, new Comparator<KeyNamePair>(){
+			public int compare(KeyNamePair s1,KeyNamePair s2){
+				if (s1.getKey() < s2.getKey())
+					return -1;
+				else if (s1.getKey() > s2.getKey())
+					return 1;
+				else
+					return 0;
+			}});
+		String[] retValue = new String[listkn.size()];
+		for (int i = 0; i < listkn.size(); i++) {
+			retValue[i] = listkn.get(i).getName();
+		}
 		return retValue;
 	}	//	getIdentifierColumns
 
@@ -515,6 +528,11 @@ public class MTable extends X_AD_Table
 		if (isView() && isDeleteable())
 			setIsDeleteable(false);
 		//
+		String error = Database.isValidIdentifier(getTableName());
+		if (!Util.isEmpty(error)) {
+			log.saveError("Error", Msg.getMsg(getCtx(), error) + " [TableName]");
+			return false;
+		}
 		return true;
 	}	//	beforeSave
 
@@ -604,20 +622,23 @@ public class MTable extends X_AD_Table
 	}	//	getSQLCreate
 
 	// globalqss
+	public static int getTable_ID(String tableName) {
+		return getTable_ID(tableName, null);
+	}
 	/**
 	 * 	Grant independence to GenerateModel from AD_Table_ID
 	 *	@param String tableName
 	 *	@return int retValue
 	 */
-	public static int getTable_ID(String tableName) {
+	public static int getTable_ID(String tableName, String trxName) {
 		int retValue = 0;
-		String SQL = "SELECT AD_Table_ID FROM AD_Table WHERE tablename = ?";
+		String SQL = "SELECT AD_Table_ID FROM AD_Table WHERE UPPER(tablename) = ?";
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
 		{
-			pstmt = DB.prepareStatement(SQL, null);
-			pstmt.setString(1, tableName);
+			pstmt = DB.prepareStatement(SQL, trxName);
+			pstmt.setString(1, tableName.toUpperCase());
 			rs = pstmt.executeQuery();
 			if (rs.next())
 				retValue = rs.getInt(1);
@@ -689,10 +710,13 @@ public class MTable extends X_AD_Table
 		return (tablename.equals("AD_Org") ||
 				tablename.equals("AD_OrgInfo") ||
 				tablename.equals("AD_Client") || // IDEMPIERE-668
+				tablename.equals("AD_AllClients_V") ||
 				tablename.equals("AD_ReportView") ||
 				tablename.equals("AD_Role") ||
+				tablename.equals("AD_AllRoles_V") ||
 				tablename.equals("AD_System") ||
 				tablename.equals("AD_User") ||
+				tablename.equals("AD_AllUsers_V") ||
 				tablename.equals("C_DocType") ||
 				tablename.equals("GL_Category") ||
 				tablename.equals("M_AttributeSet") ||

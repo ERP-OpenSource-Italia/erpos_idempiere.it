@@ -19,20 +19,21 @@ package org.compiere.model;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
 import java.util.Properties;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 
 /** Generated Model for M_AttributeInstance
  *  @author iDempiere (generated) 
- *  @version Release 4.1 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_M_AttributeInstance extends PO implements I_M_AttributeInstance, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20190106L;
 
     /** Standard Constructor */
     public X_M_AttributeInstance (Properties ctx, int M_AttributeInstance_ID, String trxName)
@@ -194,6 +195,20 @@ public class X_M_AttributeInstance extends PO implements I_M_AttributeInstance, 
 	public String getValue () 
 	{
 		return (String)get_Value(COLUMNNAME_Value);
+	}
+
+	/** Set Value Date.
+		@param ValueDate Value Date	  */
+	public void setValueDate (Timestamp ValueDate)
+	{
+		set_Value (COLUMNNAME_ValueDate, ValueDate);
+	}
+
+	/** Get Value Date.
+		@return Value Date	  */
+	public Timestamp getValueDate () 
+	{
+		return (Timestamp)get_Value(COLUMNNAME_ValueDate);
 	}
 
 	/** Set Value.

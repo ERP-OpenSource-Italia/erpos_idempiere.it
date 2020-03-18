@@ -30,14 +30,19 @@ echo -------------------------------------
 echo Re-Create DataPump directory
 echo -------------------------------------
 sqlplus $1@$ADEMPIERE_DB_SERVER:$ADEMPIERE_DB_PORT/$ADEMPIERE_DB_NAME @$IDEMPIERE_HOME/utils/$ADEMPIERE_DB_PATH/CreateDataPumpDir.sql $IDEMPIERE_HOME/data/seed
+# Note the user running this script must be member of dba group:  usermod -G dba idempiere
+chgrp dba $IDEMPIERE_HOME/data
+chmod 770 $IDEMPIERE_HOME/data
 chgrp dba $IDEMPIERE_HOME/data/seed
 chmod 770 $IDEMPIERE_HOME/data/seed
+chgrp dba $IDEMPIERE_HOME/data/seed/Adempiere.dmp
+chmod 640 $IDEMPIERE_HOME/data/seed/Adempiere.dmp
 
 echo -------------------------------------
 echo Import Adempiere.dmp
 echo -------------------------------------
 echo "impdp $1@$ADEMPIERE_DB_SERVER:$ADEMPIERE_DB_PORT/$ADEMPIERE_DB_NAME DIRECTORY=ADEMPIERE_DATA_PUMP_DIR DUMPFILE=Adempiere.dmp REMAP_SCHEMA=reference:$2"
-impdp $1@$ADEMPIERE_DB_SERVER:$ADEMPIERE_DB_PORT/$ADEMPIERE_DB_NAME DIRECTORY=ADEMPIERE_DATA_PUMP_DIR DUMPFILE=Adempiere.dmp REMAP_SCHEMA=reference:$2
+impdp $2/$3@$ADEMPIERE_DB_SERVER:$ADEMPIERE_DB_PORT/$ADEMPIERE_DB_NAME DIRECTORY=ADEMPIERE_DATA_PUMP_DIR DUMPFILE=Adempiere.dmp REMAP_SCHEMA=reference:$2
 
 echo -------------------------------------
 echo Check System

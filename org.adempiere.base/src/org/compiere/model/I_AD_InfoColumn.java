@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_InfoColumn
  *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @version Release 6.2
  */
 public interface I_AD_InfoColumn 
 {
@@ -395,6 +395,15 @@ public interface I_AD_InfoColumn
 	  * Alphanumeric identifier of the entity
 	  */
 	public String getName();
+
+    /** Column name Placeholder */
+    public static final String COLUMNNAME_Placeholder = "Placeholder";
+
+	/** Set Placeholder	  */
+	public void setPlaceholder (String Placeholder);
+
+	/** Get Placeholder	  */
+	public String getPlaceholder();
 
     /** Column name QueryFunction */
     public static final String COLUMNNAME_QueryFunction = "QueryFunction";

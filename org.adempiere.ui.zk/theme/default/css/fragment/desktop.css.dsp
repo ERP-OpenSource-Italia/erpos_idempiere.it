@@ -20,6 +20,11 @@
 	width: 100%;
 	height: 46px;
 	border-bottom: 1px solid #C5C5C5 !important;
+	padding-left: 4px;
+}
+.desktop-header.mobile {
+	height: 36px;
+	padding: 4px 4px;
 }
 
 .desktop-header-font {
@@ -38,6 +43,7 @@
 
 .desktop-header-popup .desktop-header {
 	border: none;
+	height: 100% !important;
 }
 
 .desktop-header-username {
@@ -52,6 +58,9 @@
 .desktop-user-panel {
 	float: right;
 }
+.desktop-user-panel.mobile .desktop-header-font.desktop-header-username {
+	font-weight: 600;
+}
 
 .desktop-layout {
 	position: absolute; 
@@ -64,12 +73,17 @@
 	background-color: #E4E4E4;
 }
 
-.desktop-tabbox .z-tab {
-	margin-right: 2px;
+.desktop-tabbox .z-tabs-content {
+    width: 5555px !important;
 }
 
 .desktop-tabbox .z-tab {
 	height: 24px;
+}
+@media screen and (max-width: 360px) {
+	.desktop-tabbox .z-tab {
+		max-width: 190px;
+	}
 }
 
 .desktop-tabbox .z-tab-selected {
@@ -221,35 +235,30 @@
 }
 
 <%-- window container --%>
-.window-container-toolbar-btn .z-toolbarbutton-content img {
-	width: 22px;
-	height: 22px;
-}
-
-.window-container-toolbar-btn.context-help-btn .z-toolbarbutton-content img {
+.window-container-toolbar-btn.z-toolbarbutton .z-toolbarbutton-content img {
 	width: 16px;
 	height: 16px;
 	padding: 3px 3px;
 }
-@media screen and (min-width: 720px) {
-	.desktop-header  > .z-hlayout-inner  {
-	    width: 50%;
-	    height: 100%;
-	}
+.window-container-toolbar-btn.z-toolbarbutton .z-toolbarbutton-content [class^="z-icon"] {
+	width: 22px;
+	height: 22px;
+	padding: 3px 3px;
 }
-@media screen and (max-width: 720px) {
-	.desktop-header {	
-		width: 100%;
-		height: 100%;
-		
-	}
-	.desktop-user-panel {
-		float: none;
-	}
-	.desktop-header  > .z-hlayout-inner {
-        width: 100%;
-        height: 40%;
-        display: block;
-    }
-    
+.window-container-toolbar > .z-toolbar-content,
+.window-container-toolbar-btn.z-toolbarbutton, 
+.window-container-toolbar-btn.z-toolbarbutton .z-toolbarbutton-content,
+.window-container-toolbar-btn.z-toolbarbutton .z-toolbarbutton-content [class^="z-icon"] {
+	display:inline-flex;
+	align-items: center;
+	justify-content: center; 
+}
+
+.user-panel-popup .z-popup-content {
+	padding-left: 0px;
+	padding-right: 0px;
+}
+.user-panel-popup .z-popup-content > .z-vlayout {
+	overflow-x: auto;
+	padding: 8px;
 }

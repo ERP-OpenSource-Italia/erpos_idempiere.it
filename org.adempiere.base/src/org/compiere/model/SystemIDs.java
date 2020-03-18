@@ -34,7 +34,7 @@ public class SystemIDs
 	public final static int COLUMN_C_PAYSELECTIONCHECK_C_PAYSELECTION_ID = 7670;
 	public final static int COLUMN_FACT_ACCT_C_ACCTSCHEMA_ID = 2513;	
 	public final static int COLUMN_FACT_ACCT_M_PRODUCT_ID = 2527;	
-	public final static int COLUMN_M_MOVEMENTLINE_M_ATTRIBUTESETINSTANCE_ID = 8851;
+	public final static int COLUMN_M_MOVEMENTLINE_M_ATTRIBUTESETINSTANCE_ID = 8551;
 	public final static int COLUMN_M_PRODUCT_M_ATTRIBUTESETINSTANCE_ID = 8418;
 	public final static int COLUMN_S_RESOURCE_S_RESOURCETYPE_ID = 6851;
 	public final static int COLUMN_S_RESOURCEASSIGNMENT_S_RESOURCE_ID = 6826;
@@ -58,6 +58,15 @@ public class SystemIDs
 	public final static int MESSAGE_WORKFLOWRESULT = 753;
 
 	public final static int PRINTFORMAT_STATEMENTOFACCOUNT = 134;
+	public final static int PRINTFORMAT_ORDER_HEADER_TEMPLATE = 100;
+	public final static int PRINTFORMAT_ORDER_LINETAX_TEMPLATE = 101;
+	public final static int PRINTFORMAT_INVOICE_HEADER_TEMPLATE = 102;
+	public final static int PRINTFORMAT_INVOICE_LINETAX_TEMPLATE = 103;
+	public final static int PRINTFORMAT_INOUT_HEADER_TEMPLATE = 104;
+	public final static int PRINTFORMAT_INOUT_LINE_TEMPLATE = 105;
+	public final static int PRINTFORMAT_PAYSELECTION_CHECK_TEMPLATE = 106;
+	public final static int PRINTFORMAT_PAYSELECTION_REMITTANCE_LINES_TEMPLATE = 107;
+	public final static int PRINTFORMAT_PAYSELECTION_REMITTANCE__TEMPLATE = 108;
 
 	public final static int PROCESS_AD_WORKFLOW_DOCVALUE = 305;
 	public final static int PROCESS_AD_CHANGELOG_UNDO = 306;
@@ -125,6 +134,7 @@ public class SystemIDs
 	public final static int REFERENCE_PAYMENTRULE = 195;
 	public final static int REFERENCE_POSTING_TYPE = 125;
 	public final static int REFERENCE_POSTED = 234;
+	public final static int REFERENCE_SQLORDERBY = 53296;
 	public final static int REFERENCE_YESNO = 319;
 	public final static int REFERENCE_WIZARDSTATUS = 200003;
 	public final static int REFERENCE_WFINSTANCE_STATE = 305;

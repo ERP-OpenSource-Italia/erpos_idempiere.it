@@ -23,14 +23,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for AD_Process_Para
  *  @author iDempiere (generated) 
- *  @version Release 4.1 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_AD_Process_Para extends PO implements I_AD_Process_Para, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20170408L;
+	private static final long serialVersionUID = 20190106L;
 
     /** Standard Constructor */
     public X_AD_Process_Para (Properties ctx, int AD_Process_Para_ID, String trxName)
@@ -43,7 +43,7 @@ public class X_AD_Process_Para extends PO implements I_AD_Process_Para, I_Persis
 			setAD_Reference_ID (0);
 			setColumnName (null);
 			setEntityType (null);
-// U
+// @SQL=select get_sysconfig('DEFAULT_ENTITYTYPE','U',0,0) from dual
 			setFieldLength (0);
 			setIsCentrallyMaintained (true);
 // Y
@@ -535,6 +535,34 @@ public class X_AD_Process_Para extends PO implements I_AD_Process_Para, I_Persis
     {
         return new KeyNamePair(get_ID(), getName());
     }
+
+	/** Set Placeholder.
+		@param Placeholder Placeholder	  */
+	public void setPlaceholder (String Placeholder)
+	{
+		set_Value (COLUMNNAME_Placeholder, Placeholder);
+	}
+
+	/** Get Placeholder.
+		@return Placeholder	  */
+	public String getPlaceholder () 
+	{
+		return (String)get_Value(COLUMNNAME_Placeholder);
+	}
+
+	/** Set Placeholder2.
+		@param Placeholder2 Placeholder2	  */
+	public void setPlaceholder2 (String Placeholder2)
+	{
+		set_Value (COLUMNNAME_Placeholder2, Placeholder2);
+	}
+
+	/** Get Placeholder2.
+		@return Placeholder2	  */
+	public String getPlaceholder2 () 
+	{
+		return (String)get_Value(COLUMNNAME_Placeholder2);
+	}
 
 	/** Set Read Only Logic.
 		@param ReadOnlyLogic 

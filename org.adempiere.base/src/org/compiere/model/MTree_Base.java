@@ -204,7 +204,7 @@ public class MTree_Base extends X_AD_Tree
 	 */
 	public static MTree_Base get (Properties ctx, int AD_Tree_ID, String trxName)
 	{
-		Integer key = new Integer (AD_Tree_ID);
+		Integer key = Integer.valueOf(AD_Tree_ID);
 		MTree_Base retValue = (MTree_Base) s_cache.get (key);
 		if (retValue != null)
 			return retValue;
@@ -345,6 +345,11 @@ public class MTree_Base extends X_AD_Tree
 		if (!isActive() || !isAllNodes())
 			setIsDefault(false);
 
+		if (! TREETYPE_CustomTable.equals(getTreeType())) {
+			setAD_Table_ID(-1);
+			setParent_Column_ID(-1);
+		}
+		
 		String tableName = getSourceTableName(true);
 		MTable table = MTable.get(getCtx(), tableName);
 		if (table.getColumnIndex("IsSummary") < 0) {
@@ -352,10 +357,14 @@ public class MTree_Base extends X_AD_Tree
 			log.saveError("Error", "IsSummary column required for tree tables"); 
 			return false;
 		}
-		if (isTreeDrivenByValue()) {
-			if (table.getColumnIndex("Value") < 0) {
+		if (table.getColumnIndex("Value") < 0) {
+			if (isTreeDrivenByValue()) {
 				// Value is mandatory column to have a tree driven by Value
 				setIsTreeDrivenByValue(false);
+			}
+			if (isValueDisplayed()) {
+				// Value is mandatory column to be displayed
+				setIsValueDisplayed(false);
 			}
 		}
 

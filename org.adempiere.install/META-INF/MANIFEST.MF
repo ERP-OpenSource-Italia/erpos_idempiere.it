@@ -2,13 +2,12 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: iDempiere Setup
 Bundle-SymbolicName: org.adempiere.install;singleton:=true
-Bundle-Version: 4.1.0.qualifier
-Bundle-ClassPath: install.jar,
- ant-contrib-1.0b3.jar
+Bundle-Version: 6.2.0.qualifier
 Export-Package: org.adempiere.install,
  org.compiere.install
 Require-Bundle: org.adempiere.base;bundle-version="0.0.0"
-Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Comment: Bundle-RequiredExecutionEnvironment: JavaSE-11
+Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version>=1.11))"
 Import-Package: javax.mail;version="1.5",
  javax.mail.internet;version="1.5",
  org.apache.tools.ant,
@@ -18,3 +17,6 @@ Import-Package: javax.mail;version="1.5",
  org.osgi.framework
 Bundle-ActivationPolicy: lazy
 Bundle-Activator: org.adempiere.install.InstallBundleActivator
+Bundle-ClassPath: .
+Automatic-Module-Name: org.adempiere.install
+Bundle-Vendor: iDempiere Community

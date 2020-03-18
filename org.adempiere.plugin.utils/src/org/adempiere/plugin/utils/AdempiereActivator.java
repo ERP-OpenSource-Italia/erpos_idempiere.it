@@ -10,6 +10,7 @@ import java.util.logging.Level;
 import org.adempiere.base.IDictionaryService;
 import org.adempiere.util.ServerContext;
 import org.compiere.Adempiere;
+import org.compiere.model.MSession;
 import org.compiere.model.Query;
 import org.compiere.model.ServerStateChangeEvent;
 import org.compiere.model.ServerStateChangeListener;
@@ -59,16 +60,17 @@ public class AdempiereActivator extends AbstractActivator {
 			if (pkg == null) {
 				try {
 					if (getDBLock()) {
-						System.out.println("Installing " + getName() + " " + version + " ...");
+						logger.log(Level.WARNING, "Installing " + getName() + " " + version + " ...");
 						packIn();
 						install();
-						releaseLock();
-						System.out.println(getName() + " " + version + " installed.");
+						logger.log(Level.WARNING, getName() + " " + version + " installed.");
 					} else {
-						logger.log(Level.SEVERE, "Could not acquire the DB lock to install:" + getName());
+						logger.log(Level.WARNING, "Could not acquire the DB lock to install:" + getName());
 					}
 				} catch (AdempiereSystemError e) {
 					e.printStackTrace();
+				} finally {
+					releaseLock();
 				}
 			} else {
 				if (logger.isLoggable(Level.INFO)) logger.info(getName() + " " + version + " was installed: "
@@ -104,6 +106,8 @@ public class AdempiereActivator extends AbstractActivator {
 	protected void packIn() {
 		URL packout = context.getBundle().getEntry("/META-INF/2Pack.zip");
 		if (packout != null && service != null) {
+			//Create Session to be able to create records in AD_ChangeLog
+			MSession.get(Env.getCtx(), true);
 			FileOutputStream zipstream = null;
 			try {
 				// copy the resource to a temporary file to process it with 2pack
@@ -118,7 +122,7 @@ public class AdempiereActivator extends AbstractActivator {
 			    // call 2pack
 				merge(zipfile, getPKVersion());
 			} catch (Throwable e) {
-				logger.log(Level.SEVERE, "Pack in failed.", e);
+				logger.log(Level.WARNING, "Pack in failed.", e);
 			}
 			finally{
 				if (zipstream != null) {
@@ -211,6 +215,7 @@ public class AdempiereActivator extends AbstractActivator {
 
 	protected void setupPackInContext() {
 		Properties serverContext = new Properties();
+		serverContext.setProperty("#AD_Client_ID", "0");
 		ServerContext.setCurrentInstance(serverContext);
 	};
 }

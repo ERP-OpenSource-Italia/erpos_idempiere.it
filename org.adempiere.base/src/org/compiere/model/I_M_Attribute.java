@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for M_Attribute
  *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @version Release 6.2
  */
 public interface I_M_Attribute 
 {
@@ -90,6 +90,19 @@ public interface I_M_Attribute
 	  * User who created this records
 	  */
 	public int getCreatedBy();
+
+    /** Column name DateFormat */
+    public static final String COLUMNNAME_DateFormat = "DateFormat";
+
+	/** Set Date Format.
+	  * Date format used in the input format
+	  */
+	public void setDateFormat (String DateFormat);
+
+	/** Get Date Format.
+	  * Date format used in the input format
+	  */
+	public String getDateFormat();
 
     /** Column name Description */
     public static final String COLUMNNAME_Description = "Description";

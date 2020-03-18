@@ -26,14 +26,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for C_Invoice
  *  @author iDempiere (generated) 
- *  @version Release 4.1 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20170109L;
+	private static final long serialVersionUID = 20190725L;
 
     /** Standard Constructor */
     public X_C_Invoice (Properties ctx, int C_Invoice_ID, String trxName)
@@ -51,7 +51,7 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 			setC_Invoice_ID (0);
 			setC_PaymentTerm_ID (0);
 			setDateAcct (new Timestamp( System.currentTimeMillis() ));
-// @SQL=select max(c_invoice.dateacct) as DefaultValue from c_invoice where c_invoice.ad_org_id = @#AD_Org_ID@ and c_invoice.issotrx = 'N' and '@IsSOTrx@' = 'N'
+// @#Date@
 			setDateInvoiced (new Timestamp( System.currentTimeMillis() ));
 // @#Date@
 			setDocAction (null);
@@ -59,13 +59,10 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 			setDocStatus (null);
 // DR
 			setDocumentNo (null);
-			setF3P_IsEmailed (false);
 			setGrandTotal (Env.ZERO);
 			setIsApproved (false);
 // @IsApproved@
 			setIsDiscountPrinted (false);
-			setIsFixedAssetInvoice (false);
-// N
 			setIsInDispute (false);
 // N
 			setIsPaid (false);
@@ -76,18 +73,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 // @IsSOTrx@
 			setIsTaxIncluded (false);
 			setIsTransferred (false);
-			setLIT_AdvPerc (Env.ZERO);
-			setLIT_AdvValue (Env.ZERO);
-			setLIT_AmtBeforeDisc (Env.ZERO);
-// 0
-			setLIT_ControlAmt (Env.ZERO);
-			setLIT_DocDiscPerc (Env.ZERO);
-// 0
-			setLIT_DocDiscVal (Env.ZERO);
-			setLIT_IsCashOrdAdv (false);
-			setLIT_IsDiscOnlyProd (false);
-// N
-			setLS_IsCompetenza (false);
 			setM_PriceList_ID (0);
 			setPaymentRule (null);
 // P
@@ -206,34 +191,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 		return ii.intValue();
 	}
 
-	public org.compiere.model.I_C_BankAccount getC_BankAccount() throws RuntimeException
-    {
-		return (org.compiere.model.I_C_BankAccount)MTable.get(getCtx(), org.compiere.model.I_C_BankAccount.Table_Name)
-			.getPO(getC_BankAccount_ID(), get_TrxName());	}
-
-	/** Set Bank Account.
-		@param C_BankAccount_ID 
-		Account at the Bank
-	  */
-	public void setC_BankAccount_ID (int C_BankAccount_ID)
-	{
-		if (C_BankAccount_ID < 1) 
-			set_Value (COLUMNNAME_C_BankAccount_ID, null);
-		else 
-			set_Value (COLUMNNAME_C_BankAccount_ID, Integer.valueOf(C_BankAccount_ID));
-	}
-
-	/** Get Bank Account.
-		@return Account at the Bank
-	  */
-	public int getC_BankAccount_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_C_BankAccount_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
 	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException
     {
 		return (org.compiere.model.I_C_BPartner)MTable.get(getCtx(), org.compiere.model.I_C_BPartner.Table_Name)
@@ -285,34 +242,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 	public int getC_BPartner_Location_ID () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_C_BPartner_Location_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
-	public org.compiere.model.I_C_BP_BankAccount getC_BP_BankAccount() throws RuntimeException
-    {
-		return (org.compiere.model.I_C_BP_BankAccount)MTable.get(getCtx(), org.compiere.model.I_C_BP_BankAccount.Table_Name)
-			.getPO(getC_BP_BankAccount_ID(), get_TrxName());	}
-
-	/** Set Partner Bank Account.
-		@param C_BP_BankAccount_ID 
-		Bank Account of the Business Partner
-	  */
-	public void setC_BP_BankAccount_ID (int C_BP_BankAccount_ID)
-	{
-		if (C_BP_BankAccount_ID < 1) 
-			set_Value (COLUMNNAME_C_BP_BankAccount_ID, null);
-		else 
-			set_Value (COLUMNNAME_C_BP_BankAccount_ID, Integer.valueOf(C_BP_BankAccount_ID));
-	}
-
-	/** Get Partner Bank Account.
-		@return Bank Account of the Business Partner
-	  */
-	public int getC_BP_BankAccount_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_C_BP_BankAccount_ID);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
@@ -584,23 +513,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 		return bd;
 	}
 
-	/** Set Codice Identificativo di Gara.
-		@param CIG 
-		CIG from public aministration office
-	  */
-	public void setCIG (String CIG)
-	{
-		set_Value (COLUMNNAME_CIG, CIG);
-	}
-
-	/** Get Codice Identificativo di Gara.
-		@return CIG from public aministration office
-	  */
-	public String getCIG () 
-	{
-		return (String)get_Value(COLUMNNAME_CIG);
-	}
-
 	/** Set Invoice.
 		@param C_Invoice_ID 
 		Invoice Identifier
@@ -636,27 +548,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 	public String getC_Invoice_UU () 
 	{
 		return (String)get_Value(COLUMNNAME_C_Invoice_UU);
-	}
-
-	/** Direct Credit = A */
-	public static final String COLLECTIONTYPE_DirectCredit = "A";
-	/** Direct Deposit = B */
-	public static final String COLLECTIONTYPE_DirectDeposit = "B";
-	/** Other = X */
-	public static final String COLLECTIONTYPE_Other = "X";
-	/** Set Collection Type.
-		@param CollectionType Collection Type	  */
-	public void setCollectionType (String CollectionType)
-	{
-
-		set_Value (COLUMNNAME_CollectionType, CollectionType);
-	}
-
-	/** Get Collection Type.
-		@return Collection Type	  */
-	public String getCollectionType () 
-	{
-		return (String)get_Value(COLUMNNAME_CollectionType);
 	}
 
 	/** Set Copy From.
@@ -938,22 +829,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 		return (String)get_Value(COLUMNNAME_DocAction);
 	}
 
-	/** Set Document BaseType.
-		@param DocBaseType 
-		Logical type of document
-	  */
-	public void setDocBaseType (String DocBaseType)
-	{
-		throw new IllegalArgumentException ("DocBaseType is virtual column");	}
-
-	/** Get Document BaseType.
-		@return Logical type of document
-	  */
-	public String getDocBaseType () 
-	{
-		return (String)get_Value(COLUMNNAME_DocBaseType);
-	}
-
 	/** DocStatus AD_Reference_ID=131 */
 	public static final int DOCSTATUS_AD_Reference_ID=131;
 	/** Drafted = DR */
@@ -1004,7 +879,7 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 	  */
 	public void setDocumentNo (String DocumentNo)
 	{
-		set_Value (COLUMNNAME_DocumentNo, DocumentNo);
+		set_ValueNoCheck (COLUMNNAME_DocumentNo, DocumentNo);
 	}
 
 	/** Get Document No.
@@ -1037,41 +912,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 		return (Timestamp)get_Value(COLUMNNAME_DunningGrace);
 	}
 
-	/** Set Date Emailed.
-		@param F3P_DateEmailed Date Emailed	  */
-	public void setF3P_DateEmailed (Timestamp F3P_DateEmailed)
-	{
-		set_Value (COLUMNNAME_F3P_DateEmailed, F3P_DateEmailed);
-	}
-
-	/** Get Date Emailed.
-		@return Date Emailed	  */
-	public Timestamp getF3P_DateEmailed () 
-	{
-		return (Timestamp)get_Value(COLUMNNAME_F3P_DateEmailed);
-	}
-
-	/** Set Is Emailed.
-		@param F3P_IsEmailed Is Emailed	  */
-	public void setF3P_IsEmailed (boolean F3P_IsEmailed)
-	{
-		set_Value (COLUMNNAME_F3P_IsEmailed, Boolean.valueOf(F3P_IsEmailed));
-	}
-
-	/** Get Is Emailed.
-		@return Is Emailed	  */
-	public boolean isF3P_IsEmailed () 
-	{
-		Object oo = get_Value(COLUMNNAME_F3P_IsEmailed);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
 	/** Set Generate To.
 		@param GenerateTo 
 		Generate To
@@ -1087,20 +927,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 	public String getGenerateTo () 
 	{
 		return (String)get_Value(COLUMNNAME_GenerateTo);
-	}
-
-	/** Set Generate Withholding.
-		@param GenerateWithholding Generate Withholding	  */
-	public void setGenerateWithholding (String GenerateWithholding)
-	{
-		set_Value (COLUMNNAME_GenerateWithholding, GenerateWithholding);
-	}
-
-	/** Get Generate Withholding.
-		@return Generate Withholding	  */
-	public String getGenerateWithholding () 
-	{
-		return (String)get_Value(COLUMNNAME_GenerateWithholding);
 	}
 
 	/** Set Grand Total.
@@ -1199,15 +1025,15 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 		return false;
 	}
 
-	/** Set Fixed Assets Invoice.
-		@param IsFixedAssetInvoice Fixed Assets Invoice	  */
+	/** Set IsFixedAssetInvoice.
+		@param IsFixedAssetInvoice IsFixedAssetInvoice	  */
 	public void setIsFixedAssetInvoice (boolean IsFixedAssetInvoice)
 	{
-		set_ValueNoCheck (COLUMNNAME_IsFixedAssetInvoice, Boolean.valueOf(IsFixedAssetInvoice));
+		set_Value (COLUMNNAME_IsFixedAssetInvoice, Boolean.valueOf(IsFixedAssetInvoice));
 	}
 
-	/** Get Fixed Assets Invoice.
-		@return Fixed Assets Invoice	  */
+	/** Get IsFixedAssetInvoice.
+		@return IsFixedAssetInvoice	  */
 	public boolean isFixedAssetInvoice () 
 	{
 		Object oo = get_Value(COLUMNNAME_IsFixedAssetInvoice);
@@ -1235,27 +1061,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 	public boolean isInDispute () 
 	{
 		Object oo = get_Value(COLUMNNAME_IsInDispute);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
-	/** Set Is Intra VAT.
-		@param IsIntraVAT Is Intra VAT	  */
-	public void setIsIntraVAT (boolean IsIntraVAT)
-	{
-		set_Value (COLUMNNAME_IsIntraVAT, Boolean.valueOf(IsIntraVAT));
-	}
-
-	/** Get Is Intra VAT.
-		@return Is Intra VAT	  */
-	public boolean isIntraVAT () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsIntraVAT);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 
@@ -1337,27 +1142,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 		return false;
 	}
 
-	/** Set Is Reverse Charge.
-		@param IsReverseCharge Is Reverse Charge	  */
-	public void setIsReverseCharge (boolean IsReverseCharge)
-	{
-		set_Value (COLUMNNAME_IsReverseCharge, Boolean.valueOf(IsReverseCharge));
-	}
-
-	/** Get Is Reverse Charge.
-		@return Is Reverse Charge	  */
-	public boolean isReverseCharge () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsReverseCharge);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
 	/** Set Self-Service.
 		@param IsSelfService 
 		This is a Self-Service entry or this entry can be changed via Self-Service
@@ -1406,48 +1190,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 		return false;
 	}
 
-	/** Set Split Payment.
-		@param IsSplitPayment Split Payment	  */
-	public void setIsSplitPayment (boolean IsSplitPayment)
-	{
-		set_Value (COLUMNNAME_IsSplitPayment, Boolean.valueOf(IsSplitPayment));
-	}
-
-	/** Get Split Payment.
-		@return Split Payment	  */
-	public boolean isSplitPayment () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsSplitPayment);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
-	/** Set Is Suspended VAT.
-		@param IsSuspendedVAT Is Suspended VAT	  */
-	public void setIsSuspendedVAT (boolean IsSuspendedVAT)
-	{
-		set_Value (COLUMNNAME_IsSuspendedVAT, Boolean.valueOf(IsSuspendedVAT));
-	}
-
-	/** Get Is Suspended VAT.
-		@return Is Suspended VAT	  */
-	public boolean isSuspendedVAT () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsSuspendedVAT);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
 	/** Set Price includes Tax.
 		@param IsTaxIncluded 
 		Tax is included in the price 
@@ -1487,301 +1229,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 	public boolean isTransferred () 
 	{
 		Object oo = get_Value(COLUMNNAME_IsTransferred);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
-	/** Set IsUpdateDocNo.
-		@param IsUpdateDocNo IsUpdateDocNo	  */
-	public void setIsUpdateDocNo (boolean IsUpdateDocNo)
-	{
-		set_Value (COLUMNNAME_IsUpdateDocNo, Boolean.valueOf(IsUpdateDocNo));
-	}
-
-	/** Get IsUpdateDocNo.
-		@return IsUpdateDocNo	  */
-	public boolean isUpdateDocNo () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsUpdateDocNo);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
-	public org.compiere.model.I_C_Invoice getLIT_AdvDoc() throws RuntimeException
-    {
-		return (org.compiere.model.I_C_Invoice)MTable.get(getCtx(), org.compiere.model.I_C_Invoice.Table_Name)
-			.getPO(getLIT_AdvDoc_ID(), get_TrxName());	}
-
-	/** Set Advance Inv. Document.
-		@param LIT_AdvDoc_ID 
-		Advance Invoice Document
-	  */
-	public void setLIT_AdvDoc_ID (int LIT_AdvDoc_ID)
-	{
-		throw new IllegalArgumentException ("LIT_AdvDoc_ID is virtual column");	}
-
-	/** Get Advance Inv. Document.
-		@return Advance Invoice Document
-	  */
-	public int getLIT_AdvDoc_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_LIT_AdvDoc_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
-	/** Set Advance Value.
-		@param LIT_AdvDocVal 
-		Advance Valule reported in Advance Document
-	  */
-	public void setLIT_AdvDocVal (BigDecimal LIT_AdvDocVal)
-	{
-		throw new IllegalArgumentException ("LIT_AdvDocVal is virtual column");	}
-
-	/** Get Advance Value.
-		@return Advance Valule reported in Advance Document
-	  */
-	public BigDecimal getLIT_AdvDocVal () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_LIT_AdvDocVal);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set Adv. Percentage.
-		@param LIT_AdvPerc Adv. Percentage	  */
-	public void setLIT_AdvPerc (BigDecimal LIT_AdvPerc)
-	{
-		set_Value (COLUMNNAME_LIT_AdvPerc, LIT_AdvPerc);
-	}
-
-	/** Get Adv. Percentage.
-		@return Adv. Percentage	  */
-	public BigDecimal getLIT_AdvPerc () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_LIT_AdvPerc);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set Adv. Value.
-		@param LIT_AdvValue Adv. Value	  */
-	public void setLIT_AdvValue (BigDecimal LIT_AdvValue)
-	{
-		set_Value (COLUMNNAME_LIT_AdvValue, LIT_AdvValue);
-	}
-
-	/** Get Adv. Value.
-		@return Adv. Value	  */
-	public BigDecimal getLIT_AdvValue () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_LIT_AdvValue);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set Total Lines Before Doc. Disc..
-		@param LIT_AmtBeforeDisc 
-		Total Lines value Before Document Discount
-	  */
-	public void setLIT_AmtBeforeDisc (BigDecimal LIT_AmtBeforeDisc)
-	{
-		set_Value (COLUMNNAME_LIT_AmtBeforeDisc, LIT_AmtBeforeDisc);
-	}
-
-	/** Get Total Lines Before Doc. Disc..
-		@return Total Lines value Before Document Discount
-	  */
-	public BigDecimal getLIT_AmtBeforeDisc () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_LIT_AmtBeforeDisc);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set Control Amount.
-		@param LIT_ControlAmt 
-		If not zero, the Grand Total amount of the document must be equal this amount
-	  */
-	public void setLIT_ControlAmt (BigDecimal LIT_ControlAmt)
-	{
-		set_Value (COLUMNNAME_LIT_ControlAmt, LIT_ControlAmt);
-	}
-
-	/** Get Control Amount.
-		@return If not zero, the Grand Total amount of the document must be equal this amount
-	  */
-	public BigDecimal getLIT_ControlAmt () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_LIT_ControlAmt);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set Document Discount Perc..
-		@param LIT_DocDiscPerc 
-		Discount appllied for all Document
-	  */
-	public void setLIT_DocDiscPerc (BigDecimal LIT_DocDiscPerc)
-	{
-		set_Value (COLUMNNAME_LIT_DocDiscPerc, LIT_DocDiscPerc);
-	}
-
-	/** Get Document Discount Perc..
-		@return Discount appllied for all Document
-	  */
-	public BigDecimal getLIT_DocDiscPerc () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_LIT_DocDiscPerc);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set Document Discount Amt.
-		@param LIT_DocDiscVal 
-		Document Dicount Amount
-	  */
-	public void setLIT_DocDiscVal (BigDecimal LIT_DocDiscVal)
-	{
-		set_Value (COLUMNNAME_LIT_DocDiscVal, LIT_DocDiscVal);
-	}
-
-	/** Get Document Discount Amt.
-		@return Document Dicount Amount
-	  */
-	public BigDecimal getLIT_DocDiscVal () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_LIT_DocDiscVal);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set Invoice Template.
-		@param LIT_InvTemplate_ID Invoice Template	  */
-	public void setLIT_InvTemplate_ID (int LIT_InvTemplate_ID)
-	{
-		if (LIT_InvTemplate_ID < 1) 
-			set_Value (COLUMNNAME_LIT_InvTemplate_ID, null);
-		else 
-			set_Value (COLUMNNAME_LIT_InvTemplate_ID, Integer.valueOf(LIT_InvTemplate_ID));
-	}
-
-	/** Get Invoice Template.
-		@return Invoice Template	  */
-	public int getLIT_InvTemplate_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_LIT_InvTemplate_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
-	/** Set Advance on exposure.
-		@param LIT_IsCashOrdAdv 
-		Advance on maximum exposure
-	  */
-	public void setLIT_IsCashOrdAdv (boolean LIT_IsCashOrdAdv)
-	{
-		set_Value (COLUMNNAME_LIT_IsCashOrdAdv, Boolean.valueOf(LIT_IsCashOrdAdv));
-	}
-
-	/** Get Advance on exposure.
-		@return Advance on maximum exposure
-	  */
-	public boolean isLIT_IsCashOrdAdv () 
-	{
-		Object oo = get_Value(COLUMNNAME_LIT_IsCashOrdAdv);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
-	/** Set Disc. only on products.
-		@param LIT_IsDiscOnlyProd 
-		Document discount will be applied only on product lines
-	  */
-	public void setLIT_IsDiscOnlyProd (boolean LIT_IsDiscOnlyProd)
-	{
-		set_Value (COLUMNNAME_LIT_IsDiscOnlyProd, Boolean.valueOf(LIT_IsDiscOnlyProd));
-	}
-
-	/** Get Disc. only on products.
-		@return Document discount will be applied only on product lines
-	  */
-	public boolean isLIT_IsDiscOnlyProd () 
-	{
-		Object oo = get_Value(COLUMNNAME_LIT_IsDiscOnlyProd);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
-	/** Set Accrual Date From.
-		@param LS_DateComp_From Accrual Date From	  */
-	public void setLS_DateComp_From (Timestamp LS_DateComp_From)
-	{
-		set_Value (COLUMNNAME_LS_DateComp_From, LS_DateComp_From);
-	}
-
-	/** Get Accrual Date From.
-		@return Accrual Date From	  */
-	public Timestamp getLS_DateComp_From () 
-	{
-		return (Timestamp)get_Value(COLUMNNAME_LS_DateComp_From);
-	}
-
-	/** Set Accrual Date To.
-		@param LS_DateComp_To Accrual Date To	  */
-	public void setLS_DateComp_To (Timestamp LS_DateComp_To)
-	{
-		set_Value (COLUMNNAME_LS_DateComp_To, LS_DateComp_To);
-	}
-
-	/** Get Accrual Date To.
-		@return Accrual Date To	  */
-	public Timestamp getLS_DateComp_To () 
-	{
-		return (Timestamp)get_Value(COLUMNNAME_LS_DateComp_To);
-	}
-
-	/** Set Accrual Period Management.
-		@param LS_IsCompetenza Accrual Period Management	  */
-	public void setLS_IsCompetenza (boolean LS_IsCompetenza)
-	{
-		set_Value (COLUMNNAME_LS_IsCompetenza, Boolean.valueOf(LS_IsCompetenza));
-	}
-
-	/** Get Accrual Period Management.
-		@return Accrual Period Management	  */
-	public boolean isLS_IsCompetenza () 
-	{
-		Object oo = get_Value(COLUMNNAME_LS_IsCompetenza);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 
@@ -1847,57 +1294,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 		return ii.intValue();
 	}
 
-	/** 1 Sales or Purchase = 1 */
-	public static final String NATUREOFTRANSACTION_1SalesOrPurchase = "1";
-	/** 2 Returned goods and replacement goods = 2 */
-	public static final String NATUREOFTRANSACTION_2ReturnedGoodsAndReplacementGoods = "2";
-	/** 3 Aid shipments = 3 */
-	public static final String NATUREOFTRANSACTION_3AidShipments = "3";
-	/** 4 Operations with a view to processing  under contract  = 4 */
-	public static final String NATUREOFTRANSACTION_4OperationsWithAViewToProcessingUnderContract = "4";
-	/** 5 Operations following processing under contract  = 5 */
-	public static final String NATUREOFTRANSACTION_5OperationsFollowingProcessingUnderContract = "5";
-	/** 6 Particular transactions recorded for national purposes  = 6 */
-	public static final String NATUREOFTRANSACTION_6ParticularTransactionsRecordedForNationalPurposes = "6";
-	/** 7 Operations under joint defence projects = 7 */
-	public static final String NATUREOFTRANSACTION_7OperationsUnderJointDefenceProjects = "7";
-	/** 8 General construction or civil engineering contract = 8 */
-	public static final String NATUREOFTRANSACTION_8GeneralConstructionOrCivilEngineeringContract = "8";
-	/** 9 Other transactions = 9 */
-	public static final String NATUREOFTRANSACTION_9OtherTransactions = "9";
-	/** A Sales or Purchase Triangular Operations = A */
-	public static final String NATUREOFTRANSACTION_ASalesOrPurchaseTriangularOperations = "A";
-	/** B Returned goods and replacement goods Triangular operations = B */
-	public static final String NATUREOFTRANSACTION_BReturnedGoodsAndReplacementGoodsTriangularOperations = "B";
-	/** C Aid shipments Triangular Operations = C */
-	public static final String NATUREOFTRANSACTION_CAidShipmentsTriangularOperations = "C";
-	/** D Operations with a view to processing  under contract T.O. = D */
-	public static final String NATUREOFTRANSACTION_DOperationsWithAViewToProcessingUnderContractTO = "D";
-	/** E Operations following processing under contract T.O. = E */
-	public static final String NATUREOFTRANSACTION_EOperationsFollowingProcessingUnderContractTO = "E";
-	/** F Particular transactions recorded for national purposes T.O = F */
-	public static final String NATUREOFTRANSACTION_FParticularTransactionsRecordedForNationalPurposesTO = "F";
-	/** G Operations under joint defence projects T.O. = G */
-	public static final String NATUREOFTRANSACTION_GOperationsUnderJointDefenceProjectsTO = "G";
-	/** H General construction or civil engineering contract T.O. = H */
-	public static final String NATUREOFTRANSACTION_HGeneralConstructionOrCivilEngineeringContractTO = "H";
-	/** I Other transactions T.O. = I */
-	public static final String NATUREOFTRANSACTION_IOtherTransactionsTO = "I";
-	/** Set Nature Of Transaction.
-		@param NatureOfTransaction Nature Of Transaction	  */
-	public void setNatureOfTransaction (String NatureOfTransaction)
-	{
-
-		set_Value (COLUMNNAME_NatureOfTransaction, NatureOfTransaction);
-	}
-
-	/** Get Nature Of Transaction.
-		@return Nature Of Transaction	  */
-	public String getNatureOfTransaction () 
-	{
-		return (String)get_Value(COLUMNNAME_NatureOfTransaction);
-	}
-
 	/** PaymentRule AD_Reference_ID=195 */
 	public static final int PAYMENTRULE_AD_Reference_ID=195;
 	/** Cash = B */
@@ -1914,8 +1310,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 	public static final String PAYMENTRULE_DirectDebit = "D";
 	/** Mixed POS Payment = M */
 	public static final String PAYMENTRULE_MixedPOSPayment = "M";
-	/** Ricevuta Bancaria = R */
-	public static final String PAYMENTRULE_RicevutaBancaria = "R";
 	/** Set Payment Rule.
 		@param PaymentRule 
 		How you pay the invoice
@@ -2040,45 +1434,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 		return false;
 	}
 
-	/** Immediate = I */
-	public static final String PROVISIONTYPE_Immediate = "I";
-	/** Repeated = R */
-	public static final String PROVISIONTYPE_Repeated = "R";
-	/** Set Provision Type.
-		@param ProvisionType Provision Type	  */
-	public void setProvisionType (String ProvisionType)
-	{
-
-		set_Value (COLUMNNAME_ProvisionType, ProvisionType);
-	}
-
-	/** Get Provision Type.
-		@return Provision Type	  */
-	public String getProvisionType () 
-	{
-		return (String)get_Value(COLUMNNAME_ProvisionType);
-	}
-
-	/** Set Effects.
-		@param RB_Effects_ID Effects	  */
-	public void setRB_Effects_ID (int RB_Effects_ID)
-	{
-		if (RB_Effects_ID < 1) 
-			set_Value (COLUMNNAME_RB_Effects_ID, null);
-		else 
-			set_Value (COLUMNNAME_RB_Effects_ID, Integer.valueOf(RB_Effects_ID));
-	}
-
-	/** Get Effects.
-		@return Effects	  */
-	public int getRB_Effects_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_RB_Effects_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
 	/** Set Referenced Invoice.
 		@param Ref_Invoice_ID Referenced Invoice	  */
 	public void setRef_Invoice_ID (int Ref_Invoice_ID)
@@ -2094,6 +1449,31 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 	public int getRef_Invoice_ID () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_Ref_Invoice_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_C_Invoice getRelatedInvoice() throws RuntimeException
+    {
+		return (org.compiere.model.I_C_Invoice)MTable.get(getCtx(), org.compiere.model.I_C_Invoice.Table_Name)
+			.getPO(getRelatedInvoice_ID(), get_TrxName());	}
+
+	/** Set Related Invoice.
+		@param RelatedInvoice_ID Related Invoice	  */
+	public void setRelatedInvoice_ID (int RelatedInvoice_ID)
+	{
+		if (RelatedInvoice_ID < 1) 
+			set_Value (COLUMNNAME_RelatedInvoice_ID, null);
+		else 
+			set_Value (COLUMNNAME_RelatedInvoice_ID, Integer.valueOf(RelatedInvoice_ID));
+	}
+
+	/** Get Related Invoice.
+		@return Related Invoice	  */
+	public int getRelatedInvoice_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_RelatedInvoice_ID);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
@@ -2179,34 +1559,6 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 		return false;
 	}
 
-	public org.compiere.model.I_S_TimeExpense getS_TimeExpense() throws RuntimeException
-    {
-		return (org.compiere.model.I_S_TimeExpense)MTable.get(getCtx(), org.compiere.model.I_S_TimeExpense.Table_Name)
-			.getPO(getS_TimeExpense_ID(), get_TrxName());	}
-
-	/** Set Expense Report.
-		@param S_TimeExpense_ID 
-		Time and Expense Report
-	  */
-	public void setS_TimeExpense_ID (int S_TimeExpense_ID)
-	{
-		if (S_TimeExpense_ID < 1) 
-			set_Value (COLUMNNAME_S_TimeExpense_ID, null);
-		else 
-			set_Value (COLUMNNAME_S_TimeExpense_ID, Integer.valueOf(S_TimeExpense_ID));
-	}
-
-	/** Get Expense Report.
-		@return Time and Expense Report
-	  */
-	public int getS_TimeExpense_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_S_TimeExpense_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
 	/** Set Total Lines.
 		@param TotalLines 
 		Total of all document lines
@@ -2281,50 +1633,5 @@ public class X_C_Invoice extends PO implements I_C_Invoice, I_Persistent
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
-	}
-
-	/** Set VAT Ledger Date.
-		@param VATLedgerDate VAT Ledger Date	  */
-	public void setVATLedgerDate (Timestamp VATLedgerDate)
-	{
-		set_Value (COLUMNNAME_VATLedgerDate, VATLedgerDate);
-	}
-
-	/** Get VAT Ledger Date.
-		@return VAT Ledger Date	  */
-	public Timestamp getVATLedgerDate () 
-	{
-		return (Timestamp)get_Value(COLUMNNAME_VATLedgerDate);
-	}
-
-	/** Set VAT Ledger No.
-		@param VATLedgerNo VAT Ledger No	  */
-	public void setVATLedgerNo (String VATLedgerNo)
-	{
-		set_Value (COLUMNNAME_VATLedgerNo, VATLedgerNo);
-	}
-
-	/** Get VAT Ledger No.
-		@return VAT Ledger No	  */
-	public String getVATLedgerNo () 
-	{
-		return (String)get_Value(COLUMNNAME_VATLedgerNo);
-	}
-
-	/** Set Withholding Amount.
-		@param WithholdingAmt Withholding Amount	  */
-	public void setWithholdingAmt (BigDecimal WithholdingAmt)
-	{
-		set_Value (COLUMNNAME_WithholdingAmt, WithholdingAmt);
-	}
-
-	/** Get Withholding Amount.
-		@return Withholding Amount	  */
-	public BigDecimal getWithholdingAmt () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_WithholdingAmt);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
 	}
 }

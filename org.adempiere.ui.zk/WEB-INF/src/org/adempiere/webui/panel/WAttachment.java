@@ -20,12 +20,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
 import org.adempiere.util.Callback;
 import org.adempiere.webui.AdempiereWebUI;
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.ConfirmPanel;
@@ -49,7 +51,6 @@ import org.compiere.util.Util;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.util.media.Media;
 import org.zkoss.zk.au.out.AuEcho;
-import org.zkoss.zk.au.out.AuScript;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
@@ -114,6 +115,8 @@ public class WAttachment extends Window implements EventListener<Event>
 
 	private int displayIndex;
 
+	private String orientation;
+
 	private static List<String> autoPreviewList;
 
 	static {
@@ -123,7 +126,7 @@ public class WAttachment extends Window implements EventListener<Event>
 		autoPreviewList.add("image/gif");
 		autoPreviewList.add("text/plain");
 		autoPreviewList.add("application/pdf");
-		autoPreviewList.add("text/html");
+		// autoPreviewList.add("text/html"); IDEMPIERE-3980
 	}
 
 	/**
@@ -190,9 +193,9 @@ public class WAttachment extends Window implements EventListener<Event>
 			AEnv.showWindow(this);
 			if (autoPreview(0, true))
 			{
-				String script = "setTimeout(\"zk.Widget.$('"+ preview.getUuid() + "').$n().src = zk.Widget.$('" +
-				preview.getUuid() + "').$n().src\", 1000)";
-				Clients.response(new AuScript(null, script));
+				//String script = "setTimeout(\"zk.Widget.$('"+ preview.getUuid() + "').$n().src = zk.Widget.$('" +
+				//preview.getUuid() + "').$n().src\", 1000)";
+				//Clients.response(new AuScript(null, script));
 			}
 
 		}
@@ -220,13 +223,23 @@ public class WAttachment extends Window implements EventListener<Event>
 	{
 		this.setAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "attachment");
 		this.setMaximizable(true);
-		ZKUpdateUtil.setWidth(this, "700px");
-		ZKUpdateUtil.setHeight(this, "85%");
+		if (!ThemeManager.isUseCSSForWindowSize())
+		{
+			ZKUpdateUtil.setWindowWidthX(this, 700);
+			ZKUpdateUtil.setHeight(this, "85%");
+		}
+		else
+		{
+			addCallback(AFTER_PAGE_ATTACHED, t -> {
+				ZKUpdateUtil.setCSSHeight(this);
+				ZKUpdateUtil.setCSSWidth(this);
+			});
+		}
 		this.setTitle(Msg.getMsg(Env.getCtx(), "Attachment"));
 		this.setClosable(true);
 		this.setSizable(true);
 		this.setBorder("normal");
-		this.setSclass("popup-dialog");
+		this.setSclass("popup-dialog attachment-dialog");
 		this.setShadow(true);
 		this.appendChild(mainPanel);
 		ZKUpdateUtil.setHeight(mainPanel, "100%");
@@ -261,11 +274,17 @@ public class WAttachment extends Window implements EventListener<Event>
 
 		bSave.setEnabled(false);
 		bSave.setSclass("img-btn");
-		bSave.setImage(ThemeManager.getThemeResource("images/Export24.png"));
+		if (ThemeManager.isUseFontIconForImage())
+			bSave.setIconSclass("z-icon-Export");
+		else
+			bSave.setImage(ThemeManager.getThemeResource("images/Export24.png"));
 		bSave.setTooltiptext(Msg.getMsg(Env.getCtx(), "AttachmentSave"));
 		bSave.addEventListener(Events.ON_CLICK, this);
 
-		bLoad.setImage(ThemeManager.getThemeResource("images/Import24.png"));
+		if (ThemeManager.isUseFontIconForImage())
+			bLoad.setIconSclass("z-icon-Import");
+		else
+			bLoad.setImage(ThemeManager.getThemeResource("images/Import24.png"));
 		bLoad.setSclass("img-btn");
 		bLoad.setId("bLoad");
 //		bLoad.setAttribute("org.zkoss.zul.image.preload", Boolean.TRUE);
@@ -276,12 +295,12 @@ public class WAttachment extends Window implements EventListener<Event>
 		bDelete.addEventListener(Events.ON_CLICK, this);
 
 		previewPanel.appendChild(preview);
-		ZKUpdateUtil.setHeight(preview, "100%");
-		ZKUpdateUtil.setWidth(preview, "100%");
-
+		ZKUpdateUtil.setVflex(preview, "1");
+		ZKUpdateUtil.setHflex(preview, "1");
+		
 		Center centerPane = new Center();
 		centerPane.setSclass("dialog-content");
-		centerPane.setAutoscroll(true);
+		//centerPane.setAutoscroll(true); // not required the preview has its own scroll bar
 		mainPanel.appendChild(centerPane);
 		centerPane.appendChild(previewPanel);
 		ZKUpdateUtil.setVflex(previewPanel, "1");
@@ -296,7 +315,10 @@ public class WAttachment extends Window implements EventListener<Event>
 		bCancel.addEventListener(Events.ON_CLICK, this);
 		bOk.addEventListener(Events.ON_CLICK, this);
 
-		bDeleteAll.setImage(ThemeManager.getThemeResource("images/Delete24.png"));
+		if (ThemeManager.isUseFontIconForImage())
+			bDeleteAll.setIconSclass("z-icon-Delete");
+		else
+			bDeleteAll.setImage(ThemeManager.getThemeResource("images/Delete24.png"));
 		bDeleteAll.setSclass("img-btn");
 		bDeleteAll.addEventListener(Events.ON_CLICK, this);
 		bDeleteAll.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "DeleteAll")));
@@ -314,7 +336,28 @@ public class WAttachment extends Window implements EventListener<Event>
 		hbox.appendChild(bCancel);
 		
 
-		text.setTooltiptext(Msg.getElement(Env.getCtx(), "TextMsg"));		
+		text.setTooltiptext(Msg.getElement(Env.getCtx(), "TextMsg"));
+		
+		if (ClientInfo.isMobile())
+		{
+			orientation = ClientInfo.get().orientation;
+			ClientInfo.onClientInfo(this, this::onClientInfo);
+		}
+	}
+	
+	protected void onClientInfo()
+	{		
+		if (getPage() != null)
+		{
+			String newOrienation = ClientInfo.get().orientation;
+			if (!newOrienation.equals(orientation))
+			{
+				orientation = newOrienation;
+				ZKUpdateUtil.setCSSHeight(this);
+				ZKUpdateUtil.setCSSWidth(this);
+				invalidate();
+			}
+		}
 	}
 
 	/**
@@ -373,7 +416,7 @@ public class WAttachment extends Window implements EventListener<Event>
 				size = size.divide(new BigDecimal("1024"));
 				unit = " MB";
 			}
-			size = size.setScale(2, BigDecimal.ROUND_HALF_EVEN);
+			size = size.setScale(2, RoundingMode.HALF_EVEN);
 			sizeLabel.setText(size.toPlainString() + unit);
 
 			bSave.setEnabled(true);
@@ -690,5 +733,5 @@ public class WAttachment extends Window implements EventListener<Event>
 			}
 		}
 		return "UTF-8";
-	}
+	}	
 }

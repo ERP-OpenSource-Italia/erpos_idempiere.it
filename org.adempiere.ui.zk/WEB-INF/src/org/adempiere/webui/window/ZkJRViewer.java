@@ -10,6 +10,7 @@ import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 
 import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.Listbox;
 import org.adempiere.webui.component.Tabpanel;
@@ -29,12 +30,14 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
 import org.zkoss.util.media.AMedia;
+import org.zkoss.util.media.Media;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Page;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.event.KeyEvent;
+import org.zkoss.zk.ui.ext.render.DynamicMedia;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.Iframe;
@@ -43,17 +46,20 @@ import org.zkoss.zul.North;
 import org.zkoss.zul.Separator;
 import org.zkoss.zul.Tab;
 import org.zkoss.zul.Toolbar;
+import org.zkoss.zul.impl.Utils;
+import org.zkoss.zul.impl.XulElement;
 
 import it.adempiere.webui.mail.MailExtension;
 import net.sf.jasperreports.engine.DefaultJasperReportsContext;
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperReport;
+import net.sf.jasperreports.engine.JasperReportsContext;
+import net.sf.jasperreports.engine.SimpleJasperReportsContext;
 import net.sf.jasperreports.engine.export.HtmlExporter;
 import net.sf.jasperreports.engine.export.JRCsvExporter;
 import net.sf.jasperreports.engine.export.JRPdfExporter;
 import net.sf.jasperreports.engine.export.JRXlsExporter;
-import net.sf.jasperreports.engine.util.LocalJasperReportsContext;
 import net.sf.jasperreports.export.SimpleCsvExporterConfiguration;
 import net.sf.jasperreports.export.SimpleExporterInput;
 import net.sf.jasperreports.export.SimpleHtmlExporterOutput;
@@ -86,7 +92,9 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 	private KeyEvent prevKeyEvent;
 
 	private String m_title; // local title - embedded windows clear the title
-
+	
+	private int mediaVersion = 0;
+	
 	public ZkJRViewer(JasperPrint jasperPrint, String title) {
 		super();
 		this.setTitle(title);
@@ -127,8 +135,11 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 
 	private void init() {
 		final boolean isCanExport=MRole.getDefault().isCanExport();
-		defaultType = MSysConfig.getValue(MSysConfig.ZK_REPORT_JASPER_OUTPUT_TYPE, "PDF",
-				Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx()));//It gets default Jasper output type
+		defaultType = jasperPrint == null ? null : jasperPrint.getProperty("IDEMPIERE_REPORT_TYPE");
+		if (Util.isEmpty(defaultType)) {
+			defaultType = MSysConfig.getValue(MSysConfig.ZK_REPORT_JASPER_OUTPUT_TYPE, "PDF",
+					Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx()));//It gets default Jasper output type
+		}
 
 		Borderlayout layout = new Borderlayout();
 		layout.setStyle("position: absolute; height: 99%; width: 99%");
@@ -185,7 +196,10 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 		// Added BY Martin - Ntier Software Services 09/10/2013
 		toolbar.appendChild(new Separator("vertical"));
 		bSendMail.setName("SendMail");  // ?? Msg
-		bSendMail.setImage(ThemeManager.getThemeResource("images/SendMail24.png"));
+		if (ThemeManager.isUseFontIconForImage())
+			bSendMail.setIconSclass("z-icon-SendMail");
+		else
+			bSendMail.setImage(ThemeManager.getThemeResource("images/SendMail24.png"));
 		bSendMail.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "SendMail")));
 		toolbar.appendChild(bSendMail);
 		bSendMail.addEventListener(Events.ON_CLICK, this);
@@ -333,10 +347,9 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 					prefix = makePrefix(jasperPrintList.get(0).getName())+"_List";
 				else
 					prefix = makePrefix(jasperPrint.getName());
-				if (log.isLoggable(Level.FINE))
-				{
-					log.log(Level.FINE, "Path="+path + " Prefix="+prefix);
-				}
+				if (prefix.length() < 3)
+					prefix += "_".repeat(3-prefix.length());
+				if (log.isLoggable(Level.FINE)) log.log(Level.FINE, "Path="+path + " Prefix="+prefix);
 				File file = File.createTempFile(prefix, ".html", new File(path));
 
 				HtmlExporter exporter = new HtmlExporter();
@@ -359,10 +372,9 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 					prefix = makePrefix(jasperPrintList.get(0).getName())+"_List";
 				else
 					prefix = makePrefix(jasperPrint.getName());
-				if (log.isLoggable(Level.FINE))
-				{
-					log.log(Level.FINE, "Path="+path + " Prefix="+prefix);
-				}
+				if (prefix.length() < 3)
+					prefix += "_".repeat(3-prefix.length());
+				if (log.isLoggable(Level.FINE)) log.log(Level.FINE, "Path="+path + " Prefix="+prefix);
 				File file = File.createTempFile(prefix, ".xls", new File(path));
 		        FileOutputStream fos = new FileOutputStream(file);
 
@@ -389,10 +401,9 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 					prefix = makePrefix(jasperPrintList.get(0).getName())+"_List";
 				else
 					prefix = makePrefix(jasperPrint.getName());
-				if (log.isLoggable(Level.FINE))
-				{
-					log.log(Level.FINE, "Path="+path + " Prefix="+prefix);
-				}
+				if (prefix.length() < 3)
+					prefix += "_".repeat(3-prefix.length());
+				if (log.isLoggable(Level.FINE)) log.log(Level.FINE, "Path="+path + " Prefix="+prefix);
 				File file = File.createTempFile(prefix, ".csv", new File(path));
 				FileOutputStream fos = new FileOutputStream(file);
 				JRCsvExporter exporter= new JRCsvExporter();
@@ -413,10 +424,9 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 					prefix = makePrefix(jasperPrintList.get(0).getName())+"_List";
 				else
 					prefix = makePrefix(jasperPrint.getName());
-				if (log.isLoggable(Level.FINE))
-				{
-					log.log(Level.FINE, "Path="+path + " Prefix="+prefix);
-				}
+				if (prefix.length() < 3)
+					prefix += "_".repeat(3-prefix.length());
+				if (log.isLoggable(Level.FINE)) log.log(Level.FINE, "Path="+path + " Prefix="+prefix);
 				File file = File.createTempFile(prefix, ".ssv", new File(path));
 				FileOutputStream fos = new FileOutputStream(file);
 				JRCsvExporter exporter= new JRCsvExporter();
@@ -455,8 +465,7 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 			log.log(Level.FINE, "Path="+path + " Prefix="+prefix);
 		}
 		File file = new File(FileUtil.getTempMailName(prefix, ".pdf"));
-		LocalJasperReportsContext context = new LocalJasperReportsContext(DefaultJasperReportsContext.getInstance());
-		context.setClassLoader(JRPdfExporter.class.getClassLoader());
+		JasperReportsContext context = new SimpleJasperReportsContext(DefaultJasperReportsContext.getInstance());
 		JRPdfExporter exporter = new JRPdfExporter(context);
 		if (!isList){
 			jasperPrintList = new ArrayList<>();
@@ -469,6 +478,19 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 	}
 
 	public void onRenderReport() {
+		if (ClientInfo.isMobile()) {
+			Listitem selected = previewType.getSelectedItem();
+			String reportType=selected.getValue();
+			if ( "PDF".equals( reportType ) ) {
+				mediaVersion++;
+				String url = Utils.getDynamicMediaURI(this, mediaVersion, media.getName(), media.getFormat());
+				String pdfJsUrl = "pdf.js/web/viewer.html?file="+url;
+				iframe.setContent(null);
+				iframe.setSrc(pdfJsUrl);				
+				return;
+			}
+		}
+		iframe.setSrc(null);
 		iframe.setContent(media);
 	}
 
@@ -496,6 +518,21 @@ public class ZkJRViewer extends Window implements EventListener<Event>, ITabOnCl
 			SessionManager.getAppDesktop().unregisterWindow(m_WindowNo);
 			jasperPrint = null;
 			m_WindowNo = -1;
+		}
+	}
+	
+	//-- ComponentCtrl --//
+	public Object getExtraCtrl() {
+		return new ExtraCtrl();
+	}
+	/** A utility class to implement {@link #getExtraCtrl}.
+	 * It is used only by component developers.
+	 */
+	protected class ExtraCtrl extends XulElement.ExtraCtrl
+	implements DynamicMedia {
+		//-- DynamicMedia --//
+		public Media getMedia(String pathInfo) {
+			return media;
 		}
 	}
 

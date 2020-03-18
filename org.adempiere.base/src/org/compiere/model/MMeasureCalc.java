@@ -48,7 +48,7 @@ public class MMeasureCalc extends X_PA_MeasureCalc
 	 */
 	public static MMeasureCalc get (Properties ctx, int PA_MeasureCalc_ID)
 	{
-		Integer key = new Integer (PA_MeasureCalc_ID);
+		Integer key = Integer.valueOf(PA_MeasureCalc_ID);
 		MMeasureCalc retValue = (MMeasureCalc)s_cache.get (key);
 		if (retValue != null)
 			return retValue;
@@ -126,6 +126,8 @@ public class MMeasureCalc extends X_PA_MeasureCalc
 				.append(DB.TO_DATE(reportDate)).append(",'").append(trunc).append("')");
 		}	//	date
 		String sql = addRestrictions(sb.toString(), restrictions, role);
+		if (sql.indexOf("@") >= 0)
+			sql = Env.parseContext(getCtx(), 0, sql.toString(), false, false);
 		
 		log.fine(sql);
 		return sql;
@@ -191,6 +193,8 @@ public class MMeasureCalc extends X_PA_MeasureCalc
 		if (groupBy != null)
 			sql += " GROUP BY " + groupBy
 					+ " ORDER BY " + groupBy; // teo_sarca, [ 1665129 ] Bar Graph is not ordered
+		if (sql.indexOf("@") >= 0)
+			sql = Env.parseContext(getCtx(), 0, sql, false, false);
 		//
 		log.fine(sql);
 		return sql;

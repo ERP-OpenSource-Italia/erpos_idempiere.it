@@ -49,10 +49,12 @@ import java.util.logging.Level;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.DBException;
 import org.adempiere.util.ServerContext;
 import org.compiere.Adempiere;
 import org.compiere.util.CLogger;
+import org.compiere.util.CacheMgt;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
@@ -102,15 +104,15 @@ import it.idempiere.base.util.SavedFromUI;
 public class GridTable extends AbstractTableModel
 	implements Serializable
 {
-
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -4982992333796276205L;
-	
+	private static final long serialVersionUID = -2741647620577906242L;
+
 	public static final String DATA_REFRESH_MESSAGE = "Refreshed";
 	public static final String DATA_UPDATE_COPIED_MESSAGE = "UpdateCopied";
 	public static final String DATA_INSERTED_MESSAGE = "Inserted";
+	public static final String DATA_IGNORED_MESSAGE = "Ignored";
 
 	/**
 	 *	JDBC Based Buffered Table
@@ -551,7 +553,7 @@ public class GridTable extends AbstractTableModel
 	 *  @param index index
 	 *  @return GridField
 	 */
-	protected GridField getField (int index)
+	public GridField getField (int index)
 	{
 		if (index < 0 || index >= m_fields.size())
 			return null;
@@ -1027,7 +1029,7 @@ public class GridTable extends AbstractTableModel
 			}
 		}
 		return null;
-	}	//	getKeyID
+	}	//	getUUID
 
 	/**
 	 *	Get Key ColumnName
@@ -1304,8 +1306,8 @@ public class GridTable extends AbstractTableModel
 
 		//  Save old value
 		m_oldValue = new Object[3];
-		m_oldValue[0] = new Integer(row);
-		m_oldValue[1] = new Integer(col);
+		m_oldValue[0] = Integer.valueOf(row);
+		m_oldValue[1] = Integer.valueOf(col);
 		m_oldValue[2] = oldValue;
 
 		//	Set Data item
@@ -1895,7 +1897,7 @@ public class GridTable extends AbstractTableModel
 								if (dd instanceof Integer)
 									iii = (Integer)dd;
 								else
-									iii = new Integer(dd.toString());
+									iii = Integer.valueOf(dd.toString());
 								if (encrypted)
 									iii = (Integer)encrypt(iii, getAD_Client_ID());
 								if (manualUpdate)
@@ -2121,6 +2123,9 @@ public class GridTable extends AbstractTableModel
 			rs = null; 
 			pstmt = null;
 		}
+		
+		CacheMgt.get().reset(m_tableName);
+		
 		//	everything ok
 		m_rowData = null;
 		m_changed = false;
@@ -2924,7 +2929,7 @@ public class GridTable extends AbstractTableModel
 		//	fireTableRowsUpdated(m_rowChanged, m_rowChanged); >> messes up display?? (clearSelection)
 		}
 		m_newRow = -1;
-		fireDataStatusIEvent("Ignored", "");
+		fireDataStatusIEvent(DATA_IGNORED_MESSAGE, "");
 	}	//	dataIgnore
 
 
@@ -3307,7 +3312,7 @@ public class GridTable extends AbstractTableModel
 				//	Integer, ID, Lookup
 				if (displayType == DisplayType.Integer || (DisplayType.isID(displayType) && !(columnName.equals("EntityType") || columnName.equals("AD_Language"))))
 				{
-					rowData[j] = new Integer(rs.getInt(j+1));	//	Integer
+					rowData[j] = Integer.valueOf(rs.getInt(j+1));	//	Integer
 					if (rs.wasNull())
 						rowData[j] = null;
 				}
@@ -3326,7 +3331,7 @@ public class GridTable extends AbstractTableModel
 					String str = rs.getString(j+1);
 					if (field.isEncryptedColumn())
 						str = (String)decrypt(str, getAD_Client_ID(rs));
-					rowData[j] = new Boolean ("Y".equals(str));	//	Boolean
+					rowData[j] = Boolean.valueOf("Y".equals(str));	//	Boolean
 				}
 				//	LOB
 				else if (DisplayType.isLOB(displayType))
@@ -3613,7 +3618,7 @@ public class GridTable extends AbstractTableModel
 				if (DBException.isInvalidIdentifierError(e0))
 					log.warning("Count - " + e0.getLocalizedMessage() + "\nSQL=" + m_SQL_Count);
 				else
-					log.log(Level.SEVERE, "Count SQL=" + m_SQL_Count, e0);
+					throw new AdempiereException(e0);
 				return 0;
 			}
 			finally
@@ -3693,12 +3698,12 @@ public class GridTable extends AbstractTableModel
 		}	//	run
 
 		private void doRun() {
-			openResultSet();
-			if (m_rs == null)
-				return;
-
 			try
 			{
+				openResultSet();
+				if (m_rs == null)
+					return;
+
 				while (m_rs.next())
 				{
 					if (Thread.interrupted())
@@ -3996,6 +4001,15 @@ public class GridTable extends AbstractTableModel
 					break;
 			}
 		return tabNo;
+	}
+
+	/**
+	 * get Tab No
+	 * @return Tab No
+	 */
+	public int getTabNo()
+	{
+		return m_TabNo;
 	}
 	
 	private boolean isNotNullAndIsEmpty (Object value) {

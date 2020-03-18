@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
-      id="org.adempiere.sdk"
+      id="org.adempiere.sdk.feature"
       label="Adempiere SDK"
-      version="4.1.0.qualifier"
+      version="6.2.0.qualifier"
       provider-name="Adempiere.org">
 
    <description url="http://www.example.com/description">
@@ -18,24 +18,28 @@
    </license>
 
    <includes
-         id="org.adempiere.target.platform"
+         id="org.adempiere.target.platform.feature"
          version="0.0.0"/>
 
    <includes
-         id="org.adempiere.server"
+         id="org.adempiere.server.feature"
          version="0.0.0"/>
 
    <includes
-         id="org.adempiere.ui.swing"
+         id="org.adempiere.ui.swing.feature"
          version="0.0.0"/>
 
    <includes
-         id="org.idempiere.hazelcast.service"
+         id="org.idempiere.hazelcast.service.feature"
          version="0.0.0"
          optional="true"/>
 
    <includes
-         id="org.idempiere.fitnesse"
+         id="org.idempiere.fitnesse.feature"
+         version="0.0.0"/>
+
+   <includes
+         id="org.idempiere.equinox.p2.director.feature"
          version="0.0.0"/>
 
    <plugin
@@ -90,32 +94,10 @@
          unpack="false"/>
 
    <plugin
-         id="org.eclipse.swt.cocoa.macosx"
-         os="macosx"
-         ws="cocoa"
-         arch="x86"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         fragment="true"
-         unpack="false"/>
-
-   <plugin
          id="org.eclipse.swt.cocoa.macosx.x86_64"
          os="macosx"
          ws="cocoa"
          arch="x86_64"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         fragment="true"
-         unpack="false"/>
-
-   <plugin
-         id="org.eclipse.swt.gtk.solaris.x86"
-         os="solaris"
-         ws="gtk"
-         arch="x86"
          download-size="0"
          install-size="0"
          version="0.0.0"

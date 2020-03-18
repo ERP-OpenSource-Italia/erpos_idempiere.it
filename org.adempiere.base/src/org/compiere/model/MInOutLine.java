@@ -17,6 +17,7 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.util.List;
 import java.util.Properties;
@@ -302,7 +303,7 @@ public class MInOutLine extends X_M_InOutLine
 		if (M_Locator_ID < 0)
 			throw new IllegalArgumentException ("M_Locator_ID is mandatory.");
 		//	set to 0 explicitly to reset
-		set_Value (COLUMNNAME_M_Locator_ID, new Integer(M_Locator_ID));
+		set_Value (COLUMNNAME_M_Locator_ID, Integer.valueOf(M_Locator_ID));
 	}	//	setM_Locator_ID
 
 	/**
@@ -354,7 +355,7 @@ public class MInOutLine extends X_M_InOutLine
 		if (QtyEntered != null && getC_UOM_ID() != 0)
 		{
 			int precision = MUOM.getPrecision(getCtx(), getC_UOM_ID());
-			QtyEntered = QtyEntered.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			QtyEntered = QtyEntered.setScale(precision, RoundingMode.HALF_UP);
 		}
 		super.setQtyEntered (QtyEntered);
 	}	//	setQtyEntered
@@ -369,7 +370,7 @@ public class MInOutLine extends X_M_InOutLine
 		if (MovementQty != null && product != null)
 		{
 			int precision = product.getUOMPrecision();
-			MovementQty = MovementQty.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			MovementQty = MovementQty.setScale(precision, RoundingMode.HALF_UP);
 		}
 		super.setMovementQty(MovementQty);
 	}	//	setMovementQty
@@ -606,7 +607,9 @@ public class MInOutLine extends X_M_InOutLine
 	        }
 	        
 		}
-		I_M_AttributeSet attributeset = getM_Product().getM_AttributeSet();
+		I_M_AttributeSet attributeset = null;
+		if (getM_Product_ID() > 0)
+			attributeset = MProduct.get(getCtx(), getM_Product_ID()).getM_AttributeSet();
 		boolean isAutoGenerateLot = false;
 		if (attributeset != null)
 			isAutoGenerateLot = attributeset.isAutoGenerateLot();
@@ -716,8 +719,7 @@ public class MInOutLine extends X_M_InOutLine
 	 */
 	protected boolean beforeDelete ()
 	{
-		if (getParent().getDocStatus().equals(MInOut.DOCSTATUS_Drafted))
-			return true;
+		if (! getParent().getDocStatus().equals(MInOut.DOCSTATUS_Drafted)) {
 		
 		//F3P
 		// Delete package lines
@@ -739,8 +741,19 @@ public class MInOutLine extends X_M_InOutLine
 		}
 		
 		//F3P:End
-		log.saveError("Error", Msg.getMsg(getCtx(), "CannotDelete"));
-		return false;
+			log.saveError("Error", Msg.getMsg(getCtx(), "CannotDelete"));
+			return false;
+		}
+		// IDEMPIERE-3391 Not possible to delete a line in the Material Receipt window
+		List<MInvoiceLine> ils = new Query(getCtx(), MInvoiceLine.Table_Name, "M_InOutLine_ID=?", get_TrxName())
+				.setParameters(getM_InOutLine_ID())
+				.list();
+		ils.forEach(il -> {
+			il.setM_InOutLine_ID(-1);
+			il.saveEx();
+		});
+		//
+		return true;
 	}	//	beforeDelete
 
 	/**

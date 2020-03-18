@@ -50,7 +50,7 @@ public class StandardTaxProvider implements ITaxProvider {
 				continue;
 			
 			totalLines = totalLines.add(line.getLineNetAmt());
-			Integer taxID = new Integer(line.getC_Tax_ID());
+			Integer taxID = Integer.valueOf(line.getC_Tax_ID());
 			if (!taxList.contains(taxID))
 			{
 				MTax tax = new MTax(order.getCtx(), taxID, order.get_TrxName());
@@ -327,7 +327,7 @@ public class StandardTaxProvider implements ITaxProvider {
 		{
 			MRMALine line = lines[i];
 			totalLines = totalLines.add(line.getLineNetAmt());
-			Integer taxID = new Integer(line.getC_Tax_ID());
+			Integer taxID = Integer.valueOf(line.getC_Tax_ID());
 			if (!taxList.contains(taxID))
 			{
 				MTax tax = new MTax(rma.getCtx(), taxID, rma.get_TrxName());

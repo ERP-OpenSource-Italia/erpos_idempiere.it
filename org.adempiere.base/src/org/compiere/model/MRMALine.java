@@ -17,9 +17,9 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.util.Properties;
-import java.util.logging.Level;
 
 import org.adempiere.base.Core;
 import org.adempiere.base.IProductPricing;
@@ -41,7 +41,7 @@ public class MRMALine extends X_M_RMALine
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -3459158383642518763L;
+	private static final long serialVersionUID = 3088864372141663734L;
 
 	/**
 	 * 	Standard Constructor
@@ -76,25 +76,25 @@ public class MRMALine extends X_M_RMALine
 	}	//	MRMALine
 	
 	/**	Shipment Line			*/
-	protected MInOutLine	m_ioLine = null; // F3P: changed to protected to allow using from overridden classes
+	protected MInOutLine	m_ioLine = null;
 	/**	Product					*/
-	protected MProduct	m_product = null; // F3P: changed to protected to allow using from overridden classes
+	protected MProduct	m_product = null;
 	/**	Charge					*/
-	protected MCharge		m_charge = null; // F3P: changed to protected to allow using from overridden classes
+	protected MCharge		m_charge = null;
 	/** Tax							*/
-	protected MTax 		m_tax = null; // F3P: changed to protected to allow using from overridden classes
+	protected MTax 		m_tax = null;
 	/** Parent                  */
-	private MRMA		m_parent = null;
+	protected MRMA		m_parent = null;
     
-    private int precision = 0;
-    private BigDecimal unitAmount = Env.ZERO;
-    protected BigDecimal originalQty = Env.ZERO;	// F3P: changed to protected to allow using from overridden classes
-    protected int taxId = 0;	// F3P: changed to protected to allow using from overridden classes
+    protected int precision = 0;
+    protected BigDecimal unitAmount = Env.ZERO;
+    protected BigDecimal originalQty = Env.ZERO;
+    protected int taxId = 0;
     
     /**
      * Initialise parameters that are required
      */
-    protected void init() // F3P: changed to protected to allow using from overridden classes
+    protected void init()
     {
         getShipLine();
         
@@ -102,7 +102,7 @@ public class MRMALine extends X_M_RMALine
         {        	
             // Get pricing details (Based on invoice if found, on order otherwise)
             //   --> m_ioLine.isInvoiced just work for sales orders - so it doesn't work for purchases
-            if (getInvoiceLineId() > 0)
+            if (getInvoiceLineId() != 0)
             {
                 MInvoiceLine invoiceLine = new MInvoiceLine(getCtx(), getInvoiceLineId(), get_TrxName());
                 precision = invoiceLine.getPrecision();
@@ -110,7 +110,7 @@ public class MRMALine extends X_M_RMALine
                 originalQty = invoiceLine.getQtyInvoiced();
                 taxId = invoiceLine.getC_Tax_ID();
             }
-            else if (m_ioLine.getC_OrderLine_ID() > 0)
+            else if (m_ioLine.getC_OrderLine_ID() != 0)
             {
                 MOrderLine orderLine = new MOrderLine (getCtx(), m_ioLine.getC_OrderLine_ID(), get_TrxName());
                 precision = orderLine.getPrecision();
@@ -152,8 +152,8 @@ public class MRMALine extends X_M_RMALine
 	        }
 	        else if (getM_Product_ID() > 0)
 	        {
-	        	IProductPricing pp = Core.getProductPricing();
-	    		pp.setRMALine(this, get_TrxName());
+        	IProductPricing pp = Core.getProductPricing();
+    		pp.setRMALine(this, get_TrxName());
 	        	
 	        	MInvoice invoice = getParent().getOriginalInvoice();
 	        	if (invoice != null)
@@ -242,7 +242,7 @@ public class MRMALine extends X_M_RMALine
      * Retrieves the invoiceLine Id associated with the Shipment/Receipt Line
      * @return Invoice Line ID
      */
-    private int getInvoiceLineId()
+    protected int getInvoiceLineId()
     {
     	int invoiceLine_ID = new Query(getCtx(), I_C_InvoiceLine.Table_Name, "M_InOutLine_ID=?", get_TrxName())
     	.setParameters(getM_InOutLine_ID())
@@ -266,54 +266,9 @@ public class MRMALine extends X_M_RMALine
     public BigDecimal getTotalAmt()
     {
         BigDecimal bd = getAmt().multiply(getQty()); 
-		
-		boolean documentLevel = getTax().isDocumentLevel();
-		
-		//	juddm: Tax Exempt & Tax Included in Price List & not Document Level - Adjust Line Amount
-		//  http://sourceforge.net/tracker/index.php?func=detail&aid=1733602&group_id=176962&atid=879332
-		if (getParent().isTaxIncluded() && !documentLevel)	
-		{
-			BigDecimal taxStdAmt = Env.ZERO, taxThisAmt = Env.ZERO;
-			
-			MTax orderTax = getTax();
-			MTax stdTax = null;
-			
-			//	get the standard tax
-			if (getProduct() == null)
-			{
-				if (getCharge() != null)	// Charge 
-				{
-					stdTax = new MTax (getCtx(), 
-							((MTaxCategory) getCharge().getC_TaxCategory()).getDefaultTax().getC_Tax_ID(),
-							get_TrxName());
-				}
-					
-			}
-			else	// Product
-				stdTax = new MTax (getCtx(), 
-							((MTaxCategory) getProduct().getC_TaxCategory()).getDefaultTax().getC_Tax_ID(), 
-							get_TrxName());
-
-			if (stdTax != null)
-			{
-				if (log.isLoggable(Level.FINE)){
-					log.fine("stdTax rate is " + stdTax.getRate());
-					log.fine("orderTax rate is " + orderTax.getRate());
-				}				
-				
-				taxThisAmt = taxThisAmt.add(orderTax.calculateTax(bd, getParent().isTaxIncluded(), getPrecision()));
-				taxStdAmt = taxStdAmt.add(stdTax.calculateTax(bd, getParent().isTaxIncluded(), getPrecision()));
-				
-				bd = bd.subtract(taxStdAmt).add(taxThisAmt);
-				
-				if (log.isLoggable(Level.FINE)) log.fine("Price List includes Tax and Tax Changed on Order Line: New Tax Amt: " 
-						+ taxThisAmt + " Standard Tax Amt: " + taxStdAmt + " Line Net Amt: " + bd);	
-			}
-			
-		}
 		int precision = getPrecision();
 		if (bd.scale() > precision)
-			bd = bd.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			bd = bd.setScale(precision, RoundingMode.HALF_UP);
 		
         return bd;
     }   //  getAmt
@@ -372,7 +327,7 @@ public class MRMALine extends X_M_RMALine
         }
         
         // Set default amount and qty for product
-        if (this.getM_Product_ID() != 0 && this.getQty().doubleValue() <= 0)
+        if (this.getM_Product_ID() != 0 && this.getQty().doubleValue() <= 0 && !MRMA.DOCACTION_Void.equals(getParent().getDocAction()))
         {
             if (getQty().signum() == 0)
                 this.setQty(Env.ONE);
@@ -381,7 +336,7 @@ public class MRMALine extends X_M_RMALine
         }
 
         // Set default amount and qty for charge
-        if (this.getC_Charge_ID() != 0 && this.getQty().doubleValue() <= 0)
+        if (this.getC_Charge_ID() != 0 && this.getQty().doubleValue() <= 0 && !MRMA.DOCACTION_Void.equals(getParent().getDocAction()))
         {
             if (getQty().signum() == 0)
                 this.setQty(Env.ONE);
@@ -390,7 +345,7 @@ public class MRMALine extends X_M_RMALine
         }
         
         // Set amount for products
-        if (this.getM_InOutLine_ID() != 0)
+        if (this.getM_InOutLine_ID() != 0 && !MRMA.DOCACTION_Void.equals(getParent().getDocAction()))
         {
         	this.setM_Product_ID(m_ioLine.getM_Product_ID());
         	this.setC_Charge_ID(m_ioLine.getC_Charge_ID());

@@ -21,6 +21,7 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.logging.Level;
 
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.ValuePreference;
 import org.adempiere.webui.component.Locationbox;
@@ -29,6 +30,7 @@ import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.WFieldRecordInfo;
 import org.adempiere.webui.window.WLocationDialog;
 import org.compiere.model.GridField;
@@ -86,11 +88,16 @@ public class WLocationEditor extends WEditor implements EventListener<Event>, Pr
 
     private void init()
     {
-    	getComponent().setButtonImage(ThemeManager.getThemeResource("images/Location16.png"));
+    	if (ThemeManager.isUseFontIconForImage())
+    		getComponent().getButton().setIconSclass("z-icon-Location");
+    	else
+    		getComponent().setButtonImage(ThemeManager.getThemeResource("images/Location16.png"));
     	
     	popupMenu = new WEditorPopupMenu(false, false, isShowPreference());
     	popupMenu.addMenuListener(this);
     	addChangeLogMenu(popupMenu);
+		if (gridField != null)
+    		getComponent().getTextbox().setPlaceholder(gridField.getPlaceholder());
     }
     
 	@Override
@@ -104,7 +111,7 @@ public class WLocationEditor extends WEditor implements EventListener<Event>, Pr
     {
         if (m_value == null)
             return null;
-        return new Integer(m_value.getC_Location_ID());
+        return Integer.valueOf(m_value.getC_Location_ID());
     }
 
     @Override
@@ -172,6 +179,7 @@ public class WLocationEditor extends WEditor implements EventListener<Event>, Pr
         {
             if (log.isLoggable(Level.CONFIG)) log.config( "actionPerformed - " + m_value);
             final WLocationDialog ld = new WLocationDialog(Msg.getMsg(Env.getCtx(), "Location"), m_value, gridField);
+            final int oldValue = m_value == null ? 0 : m_value.getC_Location_ID();
             ld.addEventListener(DialogEvents.ON_WINDOW_CLOSE, new EventListener<Event>() {
 
 				@Override
@@ -186,11 +194,9 @@ public class WLocationEditor extends WEditor implements EventListener<Event>, Pr
 		            int C_Location_ID = 0;
 		            if (m_value != null)
 		                C_Location_ID = m_value.getC_Location_ID();
-		            Integer ii = new Integer(C_Location_ID);
-		            //  force Change - user does not realize that embedded object is already saved.
-		            ValueChangeEvent valuechange = new ValueChangeEvent(WLocationEditor.this,getColumnName(),null,null);
-		            fireValueChange(valuechange);   //  resets m_mLocation
-		            if (C_Location_ID != 0)
+		            Integer ii = Integer.valueOf(C_Location_ID);
+
+		            if (C_Location_ID != 0 && oldValue == 0)
 		            {
 		                ValueChangeEvent vc = new ValueChangeEvent(WLocationEditor.this,getColumnName(),null,ii);
 		                fireValueChange(vc);
@@ -208,6 +214,25 @@ public class WLocationEditor extends WEditor implements EventListener<Event>, Pr
 			});
             ld.setTitle(null);
             LayoutUtils.openPopupWindow(getComponent(), ld);
+            if (ClientInfo.isMobile())
+    		{
+            	ld.setAttribute("mobile.orientation", ClientInfo.get().orientation);
+    			ClientInfo.onClientInfo(ld, () -> {
+    				if (ld.getPage() != null) {
+    					String orientation = (String) ld.getAttribute("mobile.orientation");
+    					String newOrientation = ClientInfo.get().orientation;
+    					if (!newOrientation.equals(orientation)) {
+    						ld.setAttribute("mobile.orientation", newOrientation);
+    						
+    						ZKUpdateUtil.setCSSHeight(ld);
+    						ZKUpdateUtil.setCSSWidth(ld);    						
+    						ld.invalidate();
+    						LayoutUtils.openPopupWindow(getComponent(), ld, 100);
+    						
+    					}	    				
+    				}
+    			});
+    		}
         }
     }
     

@@ -13,13 +13,13 @@
  *****************************************************************************/
 package org.adempiere.webui.dashboard;
 
-import static org.compiere.model.SystemIDs.TREE_MENUPRIMARY;
-
-import java.util.Enumeration;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.adempiere.util.Callback;
 import org.adempiere.webui.adwindow.ADTabpanel;
 import org.adempiere.webui.adwindow.ADWindow;
+import org.adempiere.webui.desktop.FavouriteController;
 import org.adempiere.webui.exception.ApplicationException;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ITheme;
@@ -27,29 +27,28 @@ import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.window.FDialog;
 import org.compiere.model.MMenu;
 import org.compiere.model.MQuery;
-import org.compiere.model.MTree;
 import org.compiere.model.MTreeNode;
-import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
 import org.zkoss.zk.ui.Component;
+import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.event.DropEvent;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.A;
-import org.zkoss.zul.Box;
-import org.zkoss.zul.Hbox;
+import org.zkoss.zul.Hlayout;
 import org.zkoss.zul.Image;
 import org.zkoss.zul.Label;
+import org.zkoss.zul.Layout;
 import org.zkoss.zul.Panel;
 import org.zkoss.zul.Panelchildren;
 import org.zkoss.zul.Toolbar;
 import org.zkoss.zul.Toolbarbutton;
 import org.zkoss.zul.Treeitem;
 import org.zkoss.zul.Treerow;
-import org.zkoss.zul.Vbox;
+import org.zkoss.zul.Vlayout;
 
 /**
  * Dashboard item: User favourites
@@ -70,12 +69,14 @@ public class DPFavourites extends DashboardPanel implements EventListener<Event>
 
 	public static final String DELETE_FAV_DROPPABLE = "deleteFav";
 
-	private Box bxFav;
+	private Layout bxFav;
 	
 	private Label lblMsg;
 	
-	private int m_AD_Tree_ID;
-		
+	private List<A> links = new ArrayList<>();
+
+	private boolean inCallingController;
+	
 	public DPFavourites()
 	{
 		super();
@@ -85,7 +86,7 @@ public class DPFavourites extends DashboardPanel implements EventListener<Event>
 		
 		Panelchildren favContent = new Panelchildren();
 		panel.appendChild(favContent);
-		bxFav = new Vbox();
+		bxFav = new Vlayout();
 		this.setSclass("favourites-box");
 		favContent.appendChild(bxFav);
 		createFavouritesPanel();
@@ -94,12 +95,24 @@ public class DPFavourites extends DashboardPanel implements EventListener<Event>
 		this.appendChild(favToolbar);
 		
 		// Elaine 2008/07/24
-		Image img = new Image(ThemeManager.getThemeResource("images/Delete24.png"));
-		favToolbar.appendChild(img);
-		img.setStyle("text-align: right; width:24px; height:24px;");
-		img.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Delete")));
-		img.setDroppable(DELETE_FAV_DROPPABLE);		
-		img.addEventListener(Events.ON_DROP, this);		
+		if (ThemeManager.isUseFontIconForImage())
+		{
+			Label deleteLabel = new Label();
+			favToolbar.appendChild(deleteLabel);
+			deleteLabel.setSclass("z-icon-Trash trash-font-icon");
+			deleteLabel.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Delete")));
+			deleteLabel.setDroppable(DELETE_FAV_DROPPABLE);		
+			deleteLabel.addEventListener(Events.ON_DROP, this);
+		}
+		else
+		{
+			Image img = new Image(ThemeManager.getThemeResource("images/Delete24.png"));
+			favToolbar.appendChild(img);
+			img.setStyle("text-align: right; width:24px; height:24px;");
+			img.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Delete")));
+			img.setDroppable(DELETE_FAV_DROPPABLE);		
+			img.addEventListener(Events.ON_DROP, this);		
+		}
 		//
         
         favContent.setDroppable(FAVOURITE_DROPPABLE); 
@@ -108,40 +121,51 @@ public class DPFavourites extends DashboardPanel implements EventListener<Event>
 	
 	private void createFavouritesPanel()
 	{
-		int AD_Role_ID = Env.getAD_Role_ID(Env.getCtx());
-		int AD_Tree_ID = DB.getSQLValue(null,
-			"SELECT COALESCE(r.AD_Tree_Menu_ID, ci.AD_Tree_Menu_ID)" 
-			+ "FROM AD_ClientInfo ci" 
-			+ " INNER JOIN AD_Role r ON (ci.AD_Client_ID=r.AD_Client_ID) "
-			+ "WHERE AD_Role_ID=?", AD_Role_ID);
-		if (AD_Tree_ID <= 0)
-			AD_Tree_ID = TREE_MENUPRIMARY;	//	Menu
-		
-		m_AD_Tree_ID = AD_Tree_ID;
-		
-		MTree vTree = new MTree(Env.getCtx(), AD_Tree_ID, false, true, null);
-		MTreeNode m_root = vTree.getRoot();
-		Enumeration<?> enTop = m_root.children();
-		while(enTop.hasMoreElements())
+		FavouriteController controller = FavouriteController.getInstance(Executions.getCurrent().getSession());
+		List<MTreeNode> favorites = controller.getFavourites();
+		for (MTreeNode nd : favorites)
 		{
-			MTreeNode ndTop = (MTreeNode)enTop.nextElement();
-			Enumeration<?> en = ndTop.preorderEnumeration();
-			while (en.hasMoreElements())
-			{
-				MTreeNode nd = (MTreeNode)en.nextElement();
-				if (nd.isOnBar()) {
-					addNode(nd.getNode_ID(), nd.toString().trim(), nd.getDescription(), getIconFile(nd), (nd.isWindow() && !nd.isForm()));
-				}
-			}
+			addNode(nd);
 		}
-		
+				
 		lblMsg = new Label(Msg.getMsg(Env.getCtx(), "DropMenuItemHere")); 
 		if(bxFav.getChildren().isEmpty()) bxFav.appendChild(lblMsg);
+		
+		controller.addInsertedCallback(t -> onInsertedCallback(t));
+		controller.addDeletedCallback(t -> onDeletedCallback(t));
+	}
+
+	private void addNode(MTreeNode nd) {
+		addNode(nd.getNode_ID(), nd.toString().trim(), nd.getDescription(), getIconFile(nd), (nd.isWindow() && !nd.isForm()));
+	}
+
+	private void onDeletedCallback(Integer nodeId) {
+		if (inCallingController) return;
+		for (A link : links) {
+			String id = (String) link.getAttribute(NODE_ID_ATTR);
+			if (id.equals(nodeId.toString())) {
+				removeLinkFromUI(link);
+				break;
+			}
+		}
+	}
+
+	private void onInsertedCallback(MTreeNode node) {
+		if (inCallingController) return;
+		for (A link : links) {
+			String id = (String) link.getAttribute(NODE_ID_ATTR);
+			if (id.equals(String.valueOf(node.getNode_ID()))) {
+				return;
+			}
+		}
+		addNode(node);
 	}
 
 	protected void addNode(int nodeId, String label, String description, String imageSrc, boolean addNewBtn) {
-		Hbox hbox = new Hbox();
+		Hlayout hbox = new Hlayout();
+		hbox.setSclass("favourites-item");
 		hbox.setSpacing("0px");
+		hbox.setValign("middle");
 		bxFav.appendChild(hbox);
 		
 		A btnFavItem = new A();
@@ -149,7 +173,9 @@ public class DPFavourites extends DashboardPanel implements EventListener<Event>
 		hbox.appendChild(btnFavItem);
 		btnFavItem.setLabel(label);
 		btnFavItem.setTooltiptext(description);
-		if (imageSrc.startsWith(ITheme.THEME_PATH_PREFIX))
+		if (ThemeManager.isUseFontIconForImage())
+			btnFavItem.setIconSclass(imageSrc);
+		else if (imageSrc.startsWith(ITheme.THEME_PATH_PREFIX))
 			btnFavItem.setImage(imageSrc);
 		else			
 			btnFavItem.setImage(ThemeManager.getThemeResource(imageSrc));
@@ -161,60 +187,20 @@ public class DPFavourites extends DashboardPanel implements EventListener<Event>
 		if (addNewBtn)
 		{
 			Toolbarbutton newBtn = new Toolbarbutton(null, ThemeManager.getThemeResource("images/New16.png"));
+			if (ThemeManager.isUseFontIconForImage())
+			{
+				newBtn.setImage(null);
+				newBtn.setIconSclass("z-icon-New");
+			}
 			newBtn.setAttribute(NODE_ID_ATTR, String.valueOf(nodeId));
 			hbox.appendChild(newBtn);
 			newBtn.addEventListener(Events.ON_CLICK, this);
 			newBtn.setSclass("fav-new-btn");
 			newBtn.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "New")));
 		}
+		links.add(btnFavItem);
 	}
 	
-    /**
-	 *	Make Bar add/remove persistent
-	 *  @param add true if add - otherwise remove
-	 *  @param Node_ID Node ID
-	 *  @return true if updated
-	 */
-    private boolean barDBupdate(boolean add, int Node_ID)
-	{
-		int AD_Client_ID = Env.getAD_Client_ID(Env.getCtx());
-		int AD_Org_ID = Env.getContextAsInt(Env.getCtx(), "#AD_Org_ID");
-		int AD_User_ID = Env.getContextAsInt(Env.getCtx(), "#AD_User_ID");
-		StringBuilder sql = new StringBuilder();
-		if (add) {
-			// If record already exist, we will only make an update
-			if (DB.getSQLValueEx(null, "SELECT 1 FROM AD_TreeBar WHERE AD_Tree_ID = ? AND AD_User_ID = ? AND Node_ID = ?", m_AD_Tree_ID, AD_User_ID, Node_ID) == 1) {
-				sql.append("UPDATE AD_TreeBar SET IsFavourite = 'Y', Updated = Sysdate, UpdatedBy = ").append(AD_User_ID).append(" WHERE AD_Tree_ID = ").append(m_AD_Tree_ID)
-				.append(" AND AD_User_ID=").append(AD_User_ID)
-				.append(" AND Node_ID=").append(Node_ID);
-			} 
-			else // we will create the record
-				sql.append("INSERT INTO AD_TreeBar "
-						+ "(AD_Tree_ID,AD_User_ID,Node_ID, "
-						+ "AD_Client_ID,AD_Org_ID, "
-						+ "IsActive,Created,CreatedBy,Updated,UpdatedBy)VALUES (")
-						.append(m_AD_Tree_ID).append(",").append(AD_User_ID).append(",").append(Node_ID).append(",")
-						.append(AD_Client_ID).append(",").append(AD_Org_ID).append(",")
-						.append("'Y',SysDate,").append(AD_User_ID).append(",SysDate,").append(AD_User_ID).append(")");
-			//	if already exist, will result in ORA-00001: unique constraint (ADEMPIERE.AD_TREEBAR_KEY)
-		}
-		else {
-			// if the menu entry is opened at login, we will only remove it from favourites
-			if (DB.getSQLValueEx(null, "SELECT LoginOpenSeqNo FROM AD_TreeBar WHERE AD_Tree_ID = ? AND AD_User_ID = ? AND Node_ID = ?", m_AD_Tree_ID, AD_User_ID, Node_ID) > 0) {
-
-				sql.append("UPDATE AD_TreeBar SET IsFavourite = 'N', Updated = Sysdate, UpdatedBy = ").append(AD_User_ID).append(" WHERE AD_Tree_ID = ").append(m_AD_Tree_ID)
-				.append(" AND AD_User_ID=").append(AD_User_ID)
-				.append(" AND Node_ID=").append(Node_ID);
-			}
-			else // otherwise, we remove the record
-				sql.append("DELETE AD_TreeBar WHERE AD_Tree_ID=").append(m_AD_Tree_ID)
-				.append(" AND AD_User_ID=").append(AD_User_ID)
-				.append(" AND Node_ID=").append(Node_ID);
-		}
-		int no = DB.executeUpdate(sql.toString(), false, null);
-		return no == 1;
-	}
-        
     public void onEvent(Event event)
     {
         Component comp = event.getTarget();
@@ -240,7 +226,7 @@ public class DPFavourites extends DashboardPanel implements EventListener<Event>
         			addItem(treeitem);
         		}
         	}
-        	else if(comp instanceof Image)
+        	else if(comp instanceof Image || comp instanceof Label)
         	{
         		if(dragged instanceof A)
         		{
@@ -317,18 +303,25 @@ public class DPFavourites extends DashboardPanel implements EventListener<Event>
 		if(value != null)
 		{
 			int Node_ID = Integer.valueOf(value.toString());
-			if(barDBupdate(false, Node_ID))
+			FavouriteController controller = FavouriteController.getInstance(Executions.getCurrent().getSession());
+			inCallingController = true;
+			if(controller.removeNode(Node_ID))
 			{
-				if (btn.getParent() instanceof Hbox)
-					bxFav.removeChild(btn.getParent());
-//				bxFav.removeChild(btn);
-				
-				if(bxFav.getChildren().isEmpty())
-					bxFav.appendChild(lblMsg);
-				
-				bxFav.invalidate();
+				removeLinkFromUI(btn);
 			}
+			inCallingController = false;
 		}
+	}
+
+	private void removeLinkFromUI(A btn) {
+		if (btn.getParent() instanceof Hlayout)
+			bxFav.removeChild(btn.getParent());
+		
+		if(bxFav.getChildren().isEmpty())
+			bxFav.appendChild(lblMsg);
+		
+		bxFav.invalidate();
+		links.remove(btn);
 	}
 
     /**
@@ -340,7 +333,9 @@ public class DPFavourites extends DashboardPanel implements EventListener<Event>
 		if(value != null)
 		{
 			int Node_ID = Integer.valueOf(value.toString());
-			if(barDBupdate(true, Node_ID))
+			FavouriteController controller = FavouriteController.getInstance(Executions.getCurrent().getSession());
+			inCallingController = true;
+			if(controller.addNode(Node_ID))
 			{				
 				String menuType = (String) treeitem.getAttribute("menu.type");
 				boolean isWindow = menuType != null && menuType.equals("window");
@@ -356,17 +351,24 @@ public class DPFavourites extends DashboardPanel implements EventListener<Event>
 				{
 					A link = (A) treeitem.getTreerow().getFirstChild().getFirstChild();
 					label = link.getLabel();
-					image = link.getImage();
+					if (ThemeManager.isUseFontIconForImage() && link.getIconSclass() != null)
+						image = link.getIconSclass();
+					else
+						image = link.getImage();
 				}
 				
 				addNode(Node_ID, label, treeitem.getTooltiptext(), image, isWindow);								
 			} else {
 				FDialog.error(0, this, "BookmarkExist", null);					
 			}
+			inCallingController = false;
 		}
 	}
 	
 	private String getIconFile(MTreeNode mt) {
+		if (ThemeManager.isUseFontIconForImage()) {
+			return getIconSclass(mt);
+		}
 		if (mt.isWindow())
 			return "images/mWindow.png";
 		if (mt.isReport())
@@ -375,6 +377,26 @@ public class DPFavourites extends DashboardPanel implements EventListener<Event>
 			return "images/mProcess.png";
 		if (mt.isWorkFlow())
 			return "images/mWorkFlow.png";
+		if (mt.isForm())
+			return "images/mForm.png";
+		if (mt.isInfo())
+			return "images/mInfo.png";
 		return "images/mWindow.png";
+	}
+
+	private String getIconSclass(MTreeNode mt) {
+		if (mt.isWindow())
+			return "z-icon-Window";
+		if (mt.isReport())
+			return "z-icon-Report";
+		if (mt.isProcess() || mt.isTask())
+			return "z-icon-Task";
+		if (mt.isWorkFlow())
+			return "z-icon-WorkFlow";
+		if (mt.isForm())
+			return "z-icon-Form";
+		if (mt.isInfo())
+			return "z-icon-Info";
+		return "z-icon-Window";
 	}
 }

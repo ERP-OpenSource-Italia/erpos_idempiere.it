@@ -27,8 +27,9 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import javax.script.ScriptEngine;
+import javax.script.ScriptEngineFactory;
+import javax.script.ScriptEngineManager;
 
-import org.adempiere.base.osgi.OSGiScriptEngineManager;
 import org.adempiere.model.IAddressValidation;
 import org.adempiere.model.IShipmentProcessor;
 import org.adempiere.model.ITaxProvider;
@@ -130,13 +131,13 @@ public class Core {
 		return null;
 	}
 
-		/**
+	/**
 	 *
 	 * @param processId Java class name or equinox extension id
 	 * @return ProcessCall instance or null if processId not found
 	 */
 	public static ProcessCall getProcess(String processId) {
-		List<IProcessFactory> factories = Service.locator().list(IProcessFactory.class).getServices();
+		List<IProcessFactory> factories = getProcessFactories();
 		if (factories != null && !factories.isEmpty()) {
 			for(IProcessFactory factory : factories) {
 				ProcessCall process = factory.newProcessInstance(processId);
@@ -145,6 +146,39 @@ public class Core {
 			}
 		}
 		return null; 		
+	}
+
+	/**
+	 * This method load the process factories waiting until the DefaultProcessFactory on base is loaded (IDEMPIERE-3829)
+	 * @return List of factories implementing IProcessFactory
+	 */
+	private static List<IProcessFactory> getProcessFactories() {
+		List<IProcessFactory> factories = null;
+		int maxIterations = 5;
+		int waitMillis = 1000;
+		int iterations = 0;
+		boolean foundDefault = false;
+		while (true) {
+			factories = Service.locator().list(IProcessFactory.class).getServices();
+			if (factories != null && !factories.isEmpty()) {
+				for(IProcessFactory factory : factories) {
+					// wait until DefaultProcessFactory is loaded
+					if (factory instanceof DefaultProcessFactory) {
+						foundDefault = true;
+						break;
+					}
+				}
+			}
+			iterations++;
+			if (foundDefault || iterations >= maxIterations) {
+				break;
+			}
+			try {
+				Thread.sleep(waitMillis);
+			} catch (InterruptedException e) {
+			}
+		}
+		return factories;
 	}
 
 	/**
@@ -412,18 +446,31 @@ public class Core {
 	}
 	
 
-	/** Get script engine, checking classpath first, and then osgi plugins 
+	/** Get script engine 
 	 * 
 	 * @param engineName
 	 * @return ScriptEngine found, or null
 	 */
 	public static ScriptEngine getScriptEngine(String engineName)
 	{
-		if(s_scriptEngineManager == null)
-			s_scriptEngineManager = new OSGiScriptEngineManager();
+		ScriptEngineManager manager = new ScriptEngineManager(Core.class.getClassLoader());
+		ScriptEngine engine = manager.getEngineByName(engineName);
+		if (engine != null)
+			return engine;
 		
-		ScriptEngine engine = s_scriptEngineManager.getEngineByName(engineName);
-		return engine;
+		List<ScriptEngineFactory> factoryList = 
+				Service.locator().list(ScriptEngineFactory.class).getServices();
+		if (factoryList != null) {
+			for(ScriptEngineFactory factory : factoryList) {
+				for (String name : factory.getNames()) {
+					if (engineName.equals(name)) {
+						return factory.getScriptEngine();
+					}
+				}
+			}
+		}
+		
+		return null;
 	}
 	
 	/**
@@ -459,6 +506,28 @@ public class Core {
 		
 		return myPaymentExporter;
 	}	
+
+	/**
+	 * get ProductPricing instance
+	 * 
+	 * @return instance of the IProductPricing or null
+	 */
+	public static IProductPricing getProductPricing() {
+
+		List<IProductPricingFactory> factoryList = 
+				Service.locator().list(IProductPricingFactory.class).getServices();
+		if (factoryList != null) {
+			for(IProductPricingFactory factory : factoryList) {
+				IProductPricing myProductPricing = factory.newProductPricingInstance();
+				if (myProductPricing != null) {
+					return myProductPricing;
+				}
+			}
+		}
+
+		return null;
+	}
+
 	/** Get the where clause for activities, and the set of parameters needed
 	 * 
 	 * @return where clause and list of params
@@ -513,26 +582,4 @@ public class Core {
 		
 		return cap;
 	}	
-
-	/**
-	 * get ProductPricing instance
-	 * 
-	 * @return instance of the IProductPricing or null
-	 */
-	public static IProductPricing getProductPricing() {
-
-		List<IProductPricingFactory> factoryList = 
-				Service.locator().list(IProductPricingFactory.class).getServices();
-		if (factoryList != null) {
-			for(IProductPricingFactory factory : factoryList) {
-				IProductPricing myProductPricing = factory.newProductPricingInstance();
-				if (myProductPricing != null) {
-					return myProductPricing;
-				}
-			}
-		}
-
-		return null;
-	}
-
 }

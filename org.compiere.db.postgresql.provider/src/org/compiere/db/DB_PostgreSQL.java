@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -117,7 +118,7 @@ public class DB_PostgreSQL implements AdempiereDatabase
 
     public static final String NATIVE_MARKER = "NATIVE_"+Database.DB_POSTGRESQL+"_KEYWORK";
 
-    private CCache<String, String> convertCache = new CCache<String, String>(null, "DB_PostgreSQL_Convert_Cache", 1000, 0, true);
+    private CCache<String, String> convertCache = new CCache<String, String>(null, "DB_PostgreSQL_Convert_Cache", 1000, 60, false);
 
     private Random rand = new Random();
 
@@ -382,7 +383,10 @@ public class DB_PostgreSQL implements AdempiereDatabase
 	 */
 	public String getSystemUser()
 	{
-		return "postgres";
+    	String systemUser = System.getProperty("ADEMPIERE_DB_SYSTEM_USER");
+    	if (systemUser == null)
+    		systemUser = "postgres";
+        return systemUser;
 	}	//	getSystemUser
 
 	/**
@@ -495,7 +499,7 @@ public class DB_PostgreSQL implements AdempiereDatabase
 		{
 			try
 			{
-				result = number.setScale(scale, BigDecimal.ROUND_HALF_UP);
+				result = number.setScale(scale, RoundingMode.HALF_UP);
 			}
 			catch (Exception e)
 			{
@@ -752,7 +756,7 @@ public class DB_PostgreSQL implements AdempiereDatabase
 		int maxIdleTime = getIntProperty(poolProperties, "MaxIdleTime", 1200);
 		int unreturnedConnectionTimeout = getIntProperty(poolProperties, "UnreturnedConnectionTimeout", 0);
 		boolean testConnectionOnCheckin = getBooleanProperty(poolProperties, "TestConnectionOnCheckin", false);
-		boolean testConnectionOnCheckout = getBooleanProperty(poolProperties, "TestConnectionOnCheckout", false);
+		boolean testConnectionOnCheckout = getBooleanProperty(poolProperties, "TestConnectionOnCheckout", true);
 		String mlogClass = getStringProperty(poolProperties, "com.mchange.v2.log.MLog", "com.mchange.v2.log.FallbackMLog");
 		
 		int checkoutTimeout = getIntProperty(poolProperties, "CheckoutTimeout", 0);
@@ -768,7 +772,7 @@ public class DB_PostgreSQL implements AdempiereDatabase
             cpds.setJdbcUrl(getConnectionURL(connection));
             cpds.setUser(connection.getDbUid());
             cpds.setPassword(connection.getDbPwd());
-            cpds.setPreferredTestQuery(DEFAULT_CONN_TEST_SQL);
+            //cpds.setPreferredTestQuery(DEFAULT_CONN_TEST_SQL);
             cpds.setIdleConnectionTestPeriod(idleConnectionTestPeriod);
             cpds.setMaxIdleTimeExcessConnections(maxIdleTimeExcessConnections);
             cpds.setMaxIdleTime(maxIdleTime);
@@ -962,8 +966,11 @@ public class DB_PostgreSQL implements AdempiereDatabase
 	}
 
 	public int getNextID(String name) {
+		return getNextID(name, null);
+	}
 
-		int m_sequence_id = DB.getSQLValueEx(null, "SELECT nextval('"+name.toLowerCase()+"')");
+	public int getNextID(String name, String trxName) {
+		int m_sequence_id = DB.getSQLValueEx(trxName, "SELECT nextval('"+name.toLowerCase()+"')");
 		return m_sequence_id;
 	}
 

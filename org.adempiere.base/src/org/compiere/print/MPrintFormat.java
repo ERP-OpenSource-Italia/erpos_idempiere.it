@@ -34,6 +34,7 @@ import org.adempiere.model.MTabCustomization;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.model.GridTable;
+import org.compiere.model.MColumn;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.model.Query;
@@ -59,7 +60,7 @@ public class MPrintFormat extends X_AD_PrintFormat
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 5563074831750686572L;
+	private static final long serialVersionUID = 2979978408305853342L;
 
 	/**
 	 *	Public Constructor.
@@ -146,7 +147,7 @@ public class MPrintFormat extends X_AD_PrintFormat
 		{
 			//	Sort Order and Column must be > 0
 			if (m_items[i].getSortNo() != 0 && m_items[i].getAD_Column_ID() != 0)
-				map.put(new Integer(m_items[i].getSortNo()), new Integer(m_items[i].getAD_Column_ID()));
+				map.put(Integer.valueOf(m_items[i].getSortNo()), Integer.valueOf(m_items[i].getAD_Column_ID()));
 		}
 		//	Get SortNo and Sort them
 		Integer[] keys = new Integer[map.keySet().size()];
@@ -173,7 +174,7 @@ public class MPrintFormat extends X_AD_PrintFormat
 		for (int i = 0; i < m_items.length; i++)
 		{
 			if (m_items[i].getAD_Column_ID() != 0 && m_items[i].isPrinted())
-				list.add(new Integer(m_items[i].getAD_Column_ID()));
+				list.add(Integer.valueOf(m_items[i].getAD_Column_ID()));
 		}
 		//	Convert
 		int[] retValue = new int[list.size()];
@@ -614,6 +615,8 @@ public class MPrintFormat extends X_AD_PrintFormat
 		int seqNo = 1;
 		for (GridField gridField : gridFields)
 		{
+			if (gridField.isVirtualUIColumn())
+				continue;
 			MPrintFormatItem pfi = MPrintFormatItem.createFromGridField(pf, gridField, seqNo++);
 			if (pfi != null)
 			{
@@ -647,6 +650,7 @@ public class MPrintFormat extends X_AD_PrintFormat
 	}	//	createFromTable
 
 	/**
+	 * 
 	 * 	Create MPrintFormat for Table
 	 *  @param ctx context
 	 * 	@param AD_Table_ID table
@@ -654,12 +658,25 @@ public class MPrintFormat extends X_AD_PrintFormat
 	 * 	@return print format
 	 */
 	static public MPrintFormat createFromTable (Properties ctx,
-		int AD_Table_ID, int AD_PrintFormat_ID)
+			int AD_Table_ID, int AD_PrintFormat_ID) {
+		return createFromTable(ctx, AD_Table_ID, AD_PrintFormat_ID, null);
+	}
+	
+	/**
+	 * 	Create MPrintFormat for Table
+	 *  @param ctx context
+	 * 	@param AD_Table_ID table
+	 *  @param AD_PrintFormat_ID 0 or existing PrintFormat
+	 *  @param trxName the transaction
+	 * 	@return print format
+	 */
+	static public MPrintFormat createFromTable (Properties ctx,
+		int AD_Table_ID, int AD_PrintFormat_ID, String trxName)
 	{
 		int AD_Client_ID = Env.getAD_Client_ID(ctx);
 		if (s_log.isLoggable(Level.INFO)) s_log.info ("AD_Table_ID=" + AD_Table_ID + " - AD_Client_ID=" + AD_Client_ID);
 
-		MPrintFormat pf = new MPrintFormat(ctx, AD_PrintFormat_ID, null);
+		MPrintFormat pf = new MPrintFormat(ctx, AD_PrintFormat_ID, trxName);
 		pf.setAD_Table_ID (AD_Table_ID);
 
 		//	Get Info
@@ -679,7 +696,7 @@ public class MPrintFormat extends X_AD_PrintFormat
 		ResultSet rs = null;
 		try
 		{
-			pstmt = DB.prepareStatement(sql, null);
+			pstmt = DB.prepareStatement(sql, trxName);
 			pstmt.setInt(1, AD_Table_ID);
 			pstmt.setInt(2, AD_Client_ID);
 			rs = pstmt.executeQuery();
@@ -859,7 +876,11 @@ public class MPrintFormat extends X_AD_PrintFormat
 			int seqNo = 1;
 			while (rs.next())
 			{
-				MPrintFormatItem pfi = MPrintFormatItem.createFromColumn (format, rs.getInt(1), seqNo++);
+				int columnID = rs.getInt(1);
+				MColumn column = MColumn.get(ctx, columnID);
+				if (column.isVirtualUIColumn())
+					continue;
+				MPrintFormatItem pfi = MPrintFormatItem.createFromColumn (format, columnID, seqNo++);
 				if (pfi != null)
 				{
 					list.add (pfi);
@@ -897,7 +918,11 @@ public class MPrintFormat extends X_AD_PrintFormat
 				int seqNo = 1;
 				while (rs.next())
 				{
-					MPrintFormatItem pfi = MPrintFormatItem.createFromColumn (format, rs.getInt(1), seqNo++);
+					int columnID = rs.getInt(1);
+					MColumn column = MColumn.get(ctx, columnID);
+					if (column.isVirtualUIColumn())
+						continue;
+					MPrintFormatItem pfi = MPrintFormatItem.createFromColumn (format, columnID, seqNo++);
 					if (pfi != null)
 					{
 						list.add (pfi);
@@ -1076,7 +1101,7 @@ public class MPrintFormat extends X_AD_PrintFormat
 	 */
 	static public MPrintFormat get (Properties ctx, int AD_PrintFormat_ID, boolean readFromDisk)
 	{
-		Integer key = new Integer(AD_PrintFormat_ID);
+		Integer key = Integer.valueOf(AD_PrintFormat_ID);
 		MPrintFormat pf = null;
 		if (!readFromDisk)
 			pf = (MPrintFormat)s_formats.get(key);
@@ -1143,7 +1168,7 @@ public class MPrintFormat extends X_AD_PrintFormat
 	 */
 	static public void deleteFromCache (int AD_PrintFormat_ID)
 	{
-		Integer key = new Integer(AD_PrintFormat_ID);
+		Integer key = Integer.valueOf(AD_PrintFormat_ID);
 		s_formats.put(key, null);
 	}	//	deleteFromCache
 
@@ -1186,9 +1211,9 @@ public class MPrintFormat extends X_AD_PrintFormat
 		// add sql parameter
 		List<Object> lsParameter = new ArrayList<Object>();
 
-		lsParameter.add(new Integer(AD_Table_ID));
+		lsParameter.add(Integer.valueOf(AD_Table_ID));
 		if (AD_Window_ID > 0)
-			lsParameter.add(new Integer(AD_Window_ID));		
+			lsParameter.add(Integer.valueOf(AD_Window_ID));		
 		
 		// init query
 		Query query = new Query(Env.getCtx(), MPrintFormat.Table_Name, sqlWhere, trxName);

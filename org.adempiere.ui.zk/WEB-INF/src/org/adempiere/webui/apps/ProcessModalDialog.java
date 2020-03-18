@@ -18,17 +18,21 @@ package org.adempiere.webui.apps;
 
 import java.util.logging.Level;
 
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.util.FeedbackContainer;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.Window;
 import org.adempiere.webui.event.DialogEvents;
-import org.adempiere.webui.session.SessionManager;
+import org.adempiere.webui.util.ZKUpdateUtil;
+import org.compiere.print.MPrintFormat;
 import org.compiere.process.ProcessInfo;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.zkoss.zk.ui.Component;
+import org.zkoss.zk.ui.HtmlBasedComponent;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
+import org.zkoss.zk.ui.event.Events;
 
 /**
  *
@@ -47,9 +51,13 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 	 * 
 	 */
 	private static final long serialVersionUID = -6227339628038418701L;
+	
+	private static final String ON_OK_ECHO = "onOkEcho";
+	
 	/**	Logger			*/
 	private static CLogger log = CLogger.getCLogger(ProcessModalDialog.class);
 	//
+	private String orientation;
 	
 	/**
 	 * @param aProcess
@@ -112,13 +120,34 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 		{
 			init(Env.getCtx(), WindowNo, pi.getAD_Process_ID(), pi, autoStart, true);
 			if (mainParameterLayout != null)// when auto start it's null
-				mainParameterLayout.setStyle("max-height:" + (SessionManager.getAppDesktop().getClientInfo().desktopHeight - 150) + "px");
-			this.setSclass("popup-dialog");
+			{
+				mainParameterLayout.setStyle("max-height:" + ClientInfo.get().desktopHeight + "px");
+				ZKUpdateUtil.setVflex(mainParameterLayout, "1");
+			}
+			if (topParameterLayout != null)
+			{
+				topParameterLayout.setStyle("max-height:" + (ClientInfo.get().desktopHeight-130) + "px");
+			}
+			if (bottomParameterLayout != null)
+			{
+				for(Component c : bottomParameterLayout.getChildren())
+				{
+					if (c instanceof HtmlBasedComponent)
+						ZKUpdateUtil.setVflex((HtmlBasedComponent) c, "min");
+				}
+			}			
+			this.setSclass("popup-dialog process-modal-dialog");
+			if (ClientInfo.isMobile())
+			{
+				orientation = ClientInfo.get().orientation;
+				ClientInfo.onClientInfo(this, this::onClientInfo);
+			}
 		}
 		catch(Exception ex)
 		{
 			log.log(Level.SEVERE, "", ex);
 		}
+		addEventListener(ON_OK_ECHO, this);
 	}
 	
 	/**
@@ -243,12 +272,50 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 		Component component = event.getTarget();
 		if (component.equals(bOK)) {
 			super.onEvent(event);
-			startProcess();
+			onOk();
+		} else if (event.getName().equals(ON_OK_ECHO)) {
+			onOk();
 		} else if (component.equals(bCancel)) {
 			super.onEvent(event);
 			cancelProcess();
 		}else {
 			super.onEvent(event);
 		}
-	}		
+	}
+
+	private void onOk() {
+		if (getParameterPanel().isWaitingForDialog())
+		{
+			Events.echoEvent(ON_OK_ECHO, this, null);
+			return;
+		}
+		if(fPrintFormat != null && fPrintFormat.getValue() != null) {
+			MPrintFormat format = new MPrintFormat(Env.getCtx(), (Integer) fPrintFormat.getValue(), null);
+			if (format != null) {
+				getProcessInfo().setSerializableObject(format);
+			}
+		}
+		if(freportType != null && freportType.getSelectedItem() != null) {
+			getProcessInfo().setReportType(freportType.getSelectedItem().getValue().toString());
+		}
+		startProcess();
+	}	
+	
+	protected void onClientInfo() {
+		if (getPage() != null) {
+			String newOrientation = ClientInfo.get().orientation;
+			if (!newOrientation.equals(orientation)) {
+				orientation = newOrientation;
+				if (mainParameterLayout != null)// when auto start it's null
+				{
+					mainParameterLayout.setStyle("max-height:" + ClientInfo.get().desktopHeight + "px");
+				}
+				if (topParameterLayout != null)
+				{
+					topParameterLayout.setStyle("max-height:" + (ClientInfo.get().desktopHeight-130) + "px");
+				}
+				this.invalidate();
+			}
+		}
+	}
 }	//	ProcessModalDialog

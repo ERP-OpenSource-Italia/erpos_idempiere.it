@@ -29,6 +29,7 @@ import javax.script.Bindings;
 import javax.script.ScriptEngine;
 
 import org.adempiere.apps.graph.GraphColumn;
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.util.MeasureInterface;
 import org.compiere.util.CCache;
 import org.compiere.util.DB;
@@ -65,7 +66,7 @@ public class MMeasure extends X_PA_Measure
 	 */
 	public static MMeasure get (Properties ctx, int PA_Measure_ID)
 	{
-		Integer key = new Integer (PA_Measure_ID);
+		Integer key = Integer.valueOf(PA_Measure_ID);
 		MMeasure retValue = (MMeasure)s_cache.get (key);
 		if (retValue != null)
 			return retValue;
@@ -614,6 +615,9 @@ public class MMeasure extends X_PA_Measure
 						break;
 					}
 					ScriptEngine engine = rule.getScriptEngine();
+					if (engine == null) {
+						throw new AdempiereException("Engine not found: " + rule.getEngineName());
+					}
 					Bindings bindings = engine.createBindings();
 					
 					MRule.setContext(bindings, po.getCtx(), 0);
@@ -637,7 +641,7 @@ public class MMeasure extends X_PA_Measure
 					try
 					{
 						Class<?> clazz = Class.forName(cmd);
-						custom = (MeasureInterface)clazz.newInstance();
+						custom = (MeasureInterface)clazz.getDeclaredConstructor().newInstance();
 					}
 					catch (Exception e)
 					{

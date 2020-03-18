@@ -20,6 +20,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.adempiere.base.IGridTabExporter;
 import org.adempiere.exceptions.AdempiereException;
@@ -72,7 +73,11 @@ public class GridTab2PackExporter implements IGridTabExporter {
 				if (child.getTableName().toLowerCase().endsWith("_trl")) // ignore trl tabs as they are exported as translation
 					continue;
 				if (child.getTabLevel() > gridTab.getTabLevel()+1) {
-					sql = sql.append(">").append(child.getTableName());
+					int level = child.getTabLevel() - gridTab.getTabLevel() - 1;
+					String sep = ">";
+					for (int i = 1; i < level; i++)
+						sep += "+";
+					sql = sql.append(sep).append(child.getTableName());
 				} else {
 					sql = sql.append(";").append(child.getTableName());
 				}
@@ -83,13 +88,27 @@ public class GridTab2PackExporter implements IGridTabExporter {
 			packoutItems.add(packoutItem);
 		} else {
 			if (currentRowOnly) {
-				PackoutItem packoutItem = new PackoutItem(tableName, gridTab.getRecord_ID(),
-						properties);
+				int recordID = gridTab.getRecord_ID();
+				String uuid = null;
+				if (recordID == -1) {
+					UUID uuidObj = gridTab.getTableModel().getUUID(gridTab.getCurrentRow());
+					if (uuidObj != null) {
+						uuid = uuidObj.toString();
+					}
+				}
+				PackoutItem packoutItem = new PackoutItem(tableName, recordID, uuid, properties);
 				packoutItems.add(packoutItem);
 			} else {
 				for(int i = 0; i < gridTab.getRowCount(); i++) {
-					PackoutItem packoutItem = new PackoutItem(tableName, gridTab.getKeyID(i),
-							properties);
+					int recordID = gridTab.getKeyID(i);
+					String uuid = null;
+					if (recordID == -1) {
+						UUID uuidObj = gridTab.getTableModel().getUUID(i);
+						if (uuidObj != null) {
+							uuid = uuidObj.toString();
+						}
+					}
+					PackoutItem packoutItem = new PackoutItem(tableName, recordID, uuid, properties);
 					packoutItems.add(packoutItem);
 				}
 			}

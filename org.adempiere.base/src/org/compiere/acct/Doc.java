@@ -202,6 +202,8 @@ public abstract class Doc
 	public static final String 	STATUS_Posted           = "Y";
 	/**	Document Status         */
 	public static final String 	STATUS_Error            = "E";
+	/** Document Status			*/
+	public static final String	STATUS_Deferred			= "d";
 
 
 	/**
@@ -543,7 +545,7 @@ public abstract class Doc
 		if (!force)
 			sql.append(" AND (Processing='N' OR Processing IS NULL)");
 		if (!repost)
-			sql.append(" AND Posted='N'");
+			sql.append(" AND Posted IN ('N','d')");
 		if (DB.executeUpdate(sql.toString(), trxName) == 1) {
 			if (log.isLoggable(Level.INFO)) log.info("Locked: " + get_TableName() + "_ID=" + get_ID());
 		} else {
@@ -562,7 +564,7 @@ public abstract class Doc
 		if (isDeferPosting())
 		{
 			unlock();
-			p_Status = STATUS_NotPosted;
+			p_Status = STATUS_Deferred;
 			return null;
 		}			
 
@@ -663,7 +665,7 @@ public abstract class Doc
 		}
 
 		//  Create Note
-		if (!p_Status.equals(STATUS_Posted))
+		if (!p_Status.equals(STATUS_Posted) && !p_Status.equals(STATUS_Deferred))
 		{
 			//  Insert Note
 			String AD_MessageValue = "PostingError-" + p_Status;
@@ -1122,12 +1124,12 @@ public abstract class Doc
 		}
 		//  Get All Currencies
 		HashSet<Integer> set = new HashSet<Integer>();
-		set.add(new Integer(getC_Currency_ID()));
+		set.add(Integer.valueOf(getC_Currency_ID()));
 		for (int i = 0; p_lines != null && i < p_lines.length; i++)
 		{
 			int C_Currency_ID = p_lines[i].getC_Currency_ID();
 			if (C_Currency_ID != NO_CURRENCY)
-				set.add(new Integer(C_Currency_ID));
+				set.add(Integer.valueOf(C_Currency_ID));
 		}
 
 		//  just one and the same

@@ -32,7 +32,7 @@ public class CLogger extends Logger implements Serializable
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 6492376264463028357L;
+	private static final long serialVersionUID = -4015949992093043663L;
 	private static final String LAST_INFO = "org.compiere.util.CLogger.lastInfo";
 	private static final String LAST_WARNING = "org.compiere.util.CLogger.lastWarning";
 	private static final String LAST_ERROR = "org.compiere.util.CLogger.lastError";
@@ -196,6 +196,16 @@ public class CLogger extends Logger implements Serializable
 		return vp;
 	}   //  retrieveError
 
+	/**
+	 *  Peek Error from Stack
+	 *  @return AD_Message as Value and Message as String
+	 */
+	public static ValueNamePair peekError()
+	{
+		ValueNamePair vp = (ValueNamePair) Env.getCtx().get(LAST_ERROR);
+		return vp;
+	}   //  retrieveError
+	
 	/**
 	 * Get Error message from stack
 	 * @param defaultMsg default message (used when there are no errors on stack)

@@ -45,6 +45,8 @@ public class WTableColumn
     
     protected String tooltipText;
     
+	private int AD_Reference_ID;
+
     //F3P
     protected String	cssClass = null;
     
@@ -295,6 +297,14 @@ public class WTableColumn
 	 */
 	public void setTooltipText(String tooltipText) {
 		this.tooltipText = tooltipText;
+	}
+	
+	public int getAD_Reference_ID() {
+		return AD_Reference_ID;
+	}
+	
+	public void setAD_Reference_ID(int AD_Reference_ID) {
+		this.AD_Reference_ID=AD_Reference_ID;
 	}
 	
 	//F3P: Css Class

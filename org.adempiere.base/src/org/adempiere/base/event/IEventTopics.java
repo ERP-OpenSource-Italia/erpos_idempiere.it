@@ -95,10 +95,20 @@ public interface IEventTopics {
 	
 	public static final String PREF_BEFORE_LOAD = "adempiere/pref/beforeLoad";
 	
+	/** Called after next document actions are set */
+	public static final String DOCACTION = "adempiere/docAction";
+
 	public static final String BROADCAST_MESSAGE = "idempiere/broadcastMsg";
 	
 	public static final String REQUEST_SEND_EMAIL = "idempiere/requestSendEMail";
 		
 	public static final String GATHER_FEEDBACK= "idempiere/gatherFeedback";
-}
 
+	/** Called before starting a process, after prepared */
+	public static final String BEFORE_PROCESS = "idempiere/beforeProcess";
+	/** Called after a process finishes, before commit */
+	public static final String AFTER_PROCESS = "idempiere/afterProcess";
+	/** Called after a process is committed */
+	public static final String POST_PROCESS = "idempiere/postProcess";
+
+}

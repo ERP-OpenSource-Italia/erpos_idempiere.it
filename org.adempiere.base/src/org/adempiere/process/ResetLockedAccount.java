@@ -50,7 +50,6 @@ public class ResetLockedAccount extends SvrProcess {
 
 			StringBuilder sql = new StringBuilder ("UPDATE AD_User SET IsLocked = 'N', DateAccountLocked=NULL, FailedLoginCount=0, DateLastLogin=NULL, Updated=SysDate ")
 					.append(" WHERE IsLocked='Y' AND AD_Client_ID = ? ")
-					.append(" AND DateAccountLocked IS NOT NULL ")
 					.append(" AND AD_User_ID = " + user.getAD_User_ID());
 			int no = DB.executeUpdate(sql.toString(), new Object[] { p_AD_Client_ID }, false, get_TrxName());
 			if (no <= 0)
@@ -65,22 +64,21 @@ public class ResetLockedAccount extends SvrProcess {
 			int MAX_INACTIVE_PERIOD = MSysConfig.getIntValue(MSysConfig.USER_LOCKING_MAX_INACTIVE_PERIOD_DAY, 0);
 			
 			StringBuilder sql = new StringBuilder("UPDATE AD_User SET IsLocked = 'N', DateAccountLocked=NULL, FailedLoginCount=0, DateLastLogin=NULL, Updated=SysDate ")
-					.append(" WHERE IsLocked='Y' AND AD_Client_ID = ? ")
-					.append(" AND DateAccountLocked IS NOT NULL");
+					.append(" WHERE IsLocked='Y' AND AD_Client_ID = ? ");
 			
 			if (DB.isPostgreSQL())
 			{
 				if (MAX_ACCOUNT_LOCK_MINUTES > 0)
-					sql.append( " AND EXTRACT(MINUTE FROM (now()-DateAccountLocked)) * 24 * 60 > ").append(MAX_ACCOUNT_LOCK_MINUTES);
+					sql.append(" AND EXTRACT(EPOCH FROM (now()-DateAccountLocked)) / 60 > ").append(MAX_ACCOUNT_LOCK_MINUTES);
 				if (MAX_INACTIVE_PERIOD > 0)
-					sql.append(" AND EXTRACT(DAY FROM (now()-DateLastLogin)) * 24 <= ").append(MAX_INACTIVE_PERIOD);
+					sql.append(" AND EXTRACT(EPOCH FROM (now()-DateLastLogin)) / 86400 <= ").append(MAX_INACTIVE_PERIOD);
 			}
 			else
 			{
 				if (MAX_ACCOUNT_LOCK_MINUTES > 0)
-					sql.append(" AND (SysDate-DateAccountLocked) * 24 * 60 > ").append(MAX_ACCOUNT_LOCK_MINUTES);
+					sql.append(" AND (SysDate-DateAccountLocked) * 1440 > ").append(MAX_ACCOUNT_LOCK_MINUTES);
 				if (MAX_INACTIVE_PERIOD > 0)
-					sql.append(" AND (SysDate-DateLastLogin) * 24 <= ").append(MAX_INACTIVE_PERIOD);
+					sql.append(" AND (SysDate-DateLastLogin) <= ").append(MAX_INACTIVE_PERIOD);
 			}
 			
 			int no = DB.executeUpdate(sql.toString(), p_AD_Client_ID, get_TrxName());

@@ -94,7 +94,7 @@ public class OnlineHelp extends JEditorPane implements HyperlinkListener
 	}   //  OnlineHelp
 
 	/** Base of Online Help System      */
-	protected static final String   BASE_URL = "http://www.adempiere.com/wiki/index.php/OnlineLoginHelp";
+	protected static final String   BASE_URL = "http://wiki.idempiere.org/en/Server_Setup_Help";
 
 	public static void openInDefaultBrowser()
 	{
@@ -266,7 +266,7 @@ class Worker extends Thread
 			InputStream is = conn.getInputStream();
 			HTMLEditorKit kit = new HTMLEditorKit();
 			HTMLDocument doc = (HTMLDocument)kit.createDefaultDocument();
-			doc.putProperty("IgnoreCharsetDirective", new Boolean(true));
+			doc.putProperty("IgnoreCharsetDirective", Boolean.TRUE);
 			kit.read (new InputStreamReader(is), doc, 0);
 
 			//  Get The Links to the Help Pages

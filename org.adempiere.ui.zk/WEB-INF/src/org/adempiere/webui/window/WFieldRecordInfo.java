@@ -79,8 +79,18 @@ public class WFieldRecordInfo extends Window implements EventListener<Event>
 		super ();
 		this.setTitle(title);
 		this.setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
-		ZKUpdateUtil.setWidth(this, "640px");
-		ZKUpdateUtil.setHeight(this, "480px");
+		if (!ThemeManager.isUseCSSForWindowSize())
+		{
+			ZKUpdateUtil.setWindowWidthX(this, 640);
+			ZKUpdateUtil.setWindowHeightX(this, 480);
+		}
+		else
+		{
+			addCallback(AFTER_PAGE_ATTACHED, t-> {
+				ZKUpdateUtil.setCSSHeight(this);
+				ZKUpdateUtil.setCSSWidth(this);
+			});
+		}
 		this.setBorder("normal");
 		this.setSizable(true);
 		this.setClosable(true);
@@ -153,6 +163,7 @@ public class WFieldRecordInfo extends Window implements EventListener<Event>
 		south.appendChild(confirmPanel);
 		
 		confirmPanel.addActionListener(Events.ON_CLICK, this);
+		setSclass("field-record-info-dialog");
 	}	//	init
 	
 	
@@ -281,9 +292,9 @@ public class WFieldRecordInfo extends Window implements EventListener<Event>
 			else if (column.getAD_Reference_ID() == DisplayType.Integer)
 			{
 				if (OldValue != null)
-					showOldValue = m_intFormat.format (new Integer (OldValue));
+					showOldValue = m_intFormat.format (Integer.valueOf(OldValue));
 				if (NewValue != null)
-					showNewValue = m_intFormat.format (new Integer (NewValue));
+					showNewValue = m_intFormat.format (Integer.valueOf(NewValue));
 			}
 			else if (DisplayType.isNumeric (column.getAD_Reference_ID ()))
 			{
@@ -372,11 +383,13 @@ public class WFieldRecordInfo extends Window implements EventListener<Event>
 	public static void addMenu(WEditorPopupMenu popupMenu) {
 		Menuitem changeLogItem = new Menuitem();
         changeLogItem.setLabel(Msg.getElement(Env.getCtx(), "AD_ChangeLog_ID"));
-        changeLogItem.setImage(ThemeManager.getThemeResource("images/ChangeLog16.png"));
+        if (ThemeManager.isUseFontIconForImage())
+        	changeLogItem.setIconSclass("z-icon-ChangeLog");
+        else
+        	changeLogItem.setImage(ThemeManager.getThemeResource("images/ChangeLog16.png"));
         changeLogItem.setAttribute(WEditorPopupMenu.EVENT_ATTRIBUTE, WEditorPopupMenu.CHANGE_LOG_EVENT);
         changeLogItem.addEventListener(Events.ON_CLICK, popupMenu);
         
         popupMenu.appendChild(changeLogItem);
 	}
-
 }	// WFieldRecordInfo

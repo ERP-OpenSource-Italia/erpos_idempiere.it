@@ -95,7 +95,9 @@ public class ProcessDialog extends AbstractProcessDialog implements EventListene
 	 */
 	private static final long serialVersionUID = -6728929130788829223L;
 
-	public static final String ON_INITIAL_FOCUS_EVENT = "onInitialFocus";	
+	public static final String ON_INITIAL_FOCUS_EVENT = "onInitialFocus";
+	
+	private static final String ON_OK_ECHO = "onOkEcho";
 	
 	/**	Logger			*/
 	private static CLogger log = CLogger.getCLogger(ProcessDialog.class);
@@ -139,6 +141,7 @@ public class ProcessDialog extends AbstractProcessDialog implements EventListene
 			querySaved();
 			addEventListener(WindowContainer.ON_WINDOW_CONTAINER_SELECTION_CHANGED_EVENT, this);
 			addEventListener(ON_INITIAL_FOCUS_EVENT, this);
+			addEventListener(ON_OK_ECHO, this);
 		}
 		catch(Exception ex)
 		{
@@ -189,10 +192,9 @@ public class ProcessDialog extends AbstractProcessDialog implements EventListene
 		} else if (bOK.equals(component)) {
 			super.onEvent(event);
 			
-			if (isParameterPage)
-				startProcess();
-			else
-				restart();
+			onOk();
+		} else if (event.getName().equals(ON_OK_ECHO)) {
+			onOk();
 		}else if (bCancel.equals(component)){
 			super.onEvent(event);
 			cancelProcess();
@@ -229,6 +231,20 @@ public class ProcessDialog extends AbstractProcessDialog implements EventListene
 		}
 	}
 
+	private void onOk() {
+		if (isParameterPage)
+		{
+			if (getParameterPanel().isWaitingForDialog())
+			{
+				Events.echoEvent(ON_OK_ECHO, this, null);
+				return;
+			}
+			startProcess();
+		}
+		else
+			restart();
+	}
+	
 	private void onCtrlKeyEvent(KeyEvent keyEvent) {
 		if (keyEvent.isAltKey() && keyEvent.getKeyCode() == 0x58) { // Alt-X
 			if (m_WindowNo > 0) {
@@ -315,7 +331,7 @@ public class ProcessDialog extends AbstractProcessDialog implements EventListene
 		layoutResultPanel (topParameterLayout);
 		
 		StringBuilder buildMsg = new StringBuilder(getInitialMessage());
-		buildMsg.append("<p><font color=\"").append(pi.isError() ? "#FF0000" : "#0000FF").append("\">** ")
+		buildMsg.append("<hr><p><font color=\"").append(pi.isError() ? "#FF0000" : "#0000FF").append("\">** ")
 		.append(pi.getSummary())
 		.append("</font></p>");
 	

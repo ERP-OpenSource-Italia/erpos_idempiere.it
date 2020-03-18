@@ -38,6 +38,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.logging.Level;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Transformer;
@@ -67,6 +68,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.SecureEngine;
 import org.compiere.util.Trace;
 import org.compiere.util.Trx;
+import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 import org.osgi.service.event.Event;
 import org.w3c.dom.Document;
@@ -110,7 +112,7 @@ public abstract class PO
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -2997116608353367498L;
+	private static final long serialVersionUID = -1743619574547406959L;
 
 	public static final String LOCAL_TRX_PREFIX = "POSave";
 
@@ -291,6 +293,7 @@ public abstract class PO
 		m_oldValues = new Object[size];
 		m_newValues = new Object[size];
 		m_setErrors = new ValueNamePair[size];
+		m_setErrorsFilled = false;
 
 		if (rs != null)
 			load(rs);		//	will not have virtual columns
@@ -335,6 +338,7 @@ public abstract class PO
 	private Object[]    		m_newValues = null;
 	/** Errors when setting     */
 	private ValueNamePair[]		m_setErrors = null;
+	private boolean				m_setErrorsFilled = false;  // to optimize not traveling the array if no errors
 
 	/** Record_IDs          		*/
 	private Object[]       		m_IDs = new Object[] {I_ZERO};
@@ -352,7 +356,7 @@ public abstract class PO
 	private HashMap<String,Object>	m_attributes = null;
 
 	/** Zero Integer				*/
-	protected static final Integer I_ZERO = new Integer(0);
+	protected static final Integer I_ZERO = Integer.valueOf(0);
 	/** Accounting Columns			*/
 	private ArrayList <String>	s_acctColumns = null;
 
@@ -767,7 +771,7 @@ public abstract class PO
 		{
 			int result = ((Integer)nValue).intValue();
 			result -= ((Integer)oValue).intValue();
-			return new Integer(result);
+			return Integer.valueOf(result);
 		}
 		//
 		log.warning("Invalid type - New=" + nValue);
@@ -888,6 +892,7 @@ public abstract class PO
 				log.log(Level.WARNING, "Virtual Column" + colInfo);
 				log.saveError("VirtualColumn", "Virtual Column" + colInfo);
 				m_setErrors[index] = new ValueNamePair("VirtualColumn", "Virtual Column" + colInfo);
+				m_setErrorsFilled = true;
 				return false;
 			}
 	
@@ -900,6 +905,7 @@ public abstract class PO
 				log.log(Level.WARNING, "Column not updateable" + colInfo);
 				log.saveError("ColumnReadonly", "Column not updateable" + colInfo);
 				m_setErrors[index] = new ValueNamePair("ColumnReadonly", "Column not updateable" + colInfo);
+				m_setErrorsFilled = true;
 				return false;
 			}
 		}
@@ -908,8 +914,9 @@ public abstract class PO
 		{
 			if (checkWritable && p_info.isColumnMandatory(index))
 			{
-				log.saveError("FillMandatory", ColumnName + " is mandatory.");
-				m_setErrors[index] = new ValueNamePair("FillMandatory", ColumnName + " is mandatory.");
+				log.saveError("FillMandatory", ColumnName);
+				m_setErrors[index] = new ValueNamePair("FillMandatory", ColumnName);
+				m_setErrorsFilled = true;
 				return false;
 			}
 			m_newValues[index] = Null.NULL;          //  correct
@@ -924,11 +931,11 @@ public abstract class PO
 			//  Integer can be set as BigDecimal
 			else if (value.getClass() == BigDecimal.class
 				&& p_info.getColumnClass(index) == Integer.class)
-				m_newValues[index] = new Integer (((BigDecimal)value).intValue());
+				m_newValues[index] = Integer.valueOf(((BigDecimal)value).intValue());
 			//	Set Boolean
 			else if (p_info.getColumnClass(index) == Boolean.class
 				&& ("Y".equals(value) || "N".equals(value)) )
-				m_newValues[index] = new Boolean("Y".equals(value));
+				m_newValues[index] = Boolean.valueOf("Y".equals(value));
 			// added by vpj-cd
 			// To solve BUG [ 1618423 ] Set Project Type button in Project window throws warning
 			// generated because C_Project.C_Project_Type_ID is defined as button in dictionary
@@ -940,7 +947,7 @@ public abstract class PO
 					&& p_info.getColumnClass(index) == Integer.class)
 				try
 				{
-					m_newValues[index] = new Integer((String)value);
+					m_newValues[index] = Integer.valueOf((String)value);
 				}
 				catch (NumberFormatException e)
 				{
@@ -950,6 +957,7 @@ public abstract class PO
 					log.log(Level.SEVERE, errmsg);
 					log.saveError("WrongDataType", errmsg);
 					m_setErrors[index] = new ValueNamePair("WrongDataType", errmsg);
+					m_setErrorsFilled = true;
 					return false;
 				}
 			else
@@ -960,6 +968,7 @@ public abstract class PO
 				log.log(Level.SEVERE, errmsg);
 				log.saveError("WrongDataType", errmsg);
 				m_setErrors[index] = new ValueNamePair("WrongDataType", errmsg);
+				m_setErrorsFilled = true;
 				return false;
 			}
 			//	Validate (Min/Max)
@@ -975,6 +984,7 @@ public abstract class PO
 					log.saveError(error, ColumnName);
 					m_setErrors[index] = new ValueNamePair(error, ColumnName);
 				}
+				m_setErrorsFilled = true;
 				return false;
 			}
 			//	Length for String
@@ -1003,6 +1013,7 @@ public abstract class PO
 							+ value + " - Reference_ID=" + p_info.getColumn(index).AD_Reference_Value_ID + validValues.toString();
 					log.saveError("Validate", errmsg);
 					m_setErrors[index] = new ValueNamePair("Validate", errmsg);
+					m_setErrorsFilled = true;
 					return false;
 				}
 			}
@@ -1393,7 +1404,7 @@ public abstract class PO
 		if (ID > 0)
 		{
 			setKeyInfo();
-			m_IDs = new Object[] {new Integer(ID)};
+			m_IDs = new Object[] {Integer.valueOf(ID)};
 			//m_KeyColumns = new String[] {p_info.getTableName() + "_ID"};
 			load(trxName);
 		}
@@ -1509,11 +1520,11 @@ public abstract class PO
 			try
 			{
 				if (clazz == Integer.class)
-					m_oldValues[index] = decrypt(index, new Integer(rs.getInt(columnName)));
+					m_oldValues[index] = decrypt(index, Integer.valueOf(rs.getInt(columnName)));
 				else if (clazz == BigDecimal.class)
 					m_oldValues[index] = decrypt(index, rs.getBigDecimal(columnName));
 				else if (clazz == Boolean.class)
-					m_oldValues[index] = new Boolean ("Y".equals(decrypt(index, rs.getString(columnName))));
+					m_oldValues[index] = Boolean.valueOf("Y".equals(decrypt(index, rs.getString(columnName))));
 				else if (clazz == Timestamp.class)
 					m_oldValues[index] = decrypt(index, rs.getTimestamp(columnName));
 				else if (DisplayType.isLOB(dt))
@@ -1585,11 +1596,11 @@ public abstract class PO
 			try
 			{
 				if (clazz == Integer.class)
-					m_oldValues[index] = new Integer(value);
+					m_oldValues[index] = Integer.valueOf(value);
 				else if (clazz == BigDecimal.class)
 					m_oldValues[index] = new BigDecimal(value);
 				else if (clazz == Boolean.class)
-					m_oldValues[index] = new Boolean ("Y".equals(value));
+					m_oldValues[index] = Boolean.valueOf("Y".equals(value));
 				else if (clazz == Timestamp.class)
 					m_oldValues[index] = Timestamp.valueOf(value);
 				else if (DisplayType.isLOB(dt))
@@ -1736,23 +1747,23 @@ public abstract class PO
 			String colName = p_info.getColumnName(i);
 			//  Set Standard Values
 			if (colName.endsWith("tedBy"))
-				m_newValues[i] = new Integer (Env.getContextAsInt(p_ctx, "#AD_User_ID"));
+				m_newValues[i] = Integer.valueOf(Env.getContextAsInt(p_ctx, "#AD_User_ID"));
 			else if (colName.equals("Created") || colName.equals("Updated"))
 				m_newValues[i] = new Timestamp (System.currentTimeMillis());
 			else if (colName.equals(p_info.getTableName() + "_ID"))    //  KeyColumn
 				m_newValues[i] = I_ZERO;
 			else if (colName.equals("IsActive"))
-				m_newValues[i] = new Boolean(true);
+				m_newValues[i] = Boolean.TRUE;
 			else if (colName.equals("AD_Client_ID"))
-				m_newValues[i] = new Integer(Env.getAD_Client_ID(p_ctx));
+				m_newValues[i] = Integer.valueOf(Env.getAD_Client_ID(p_ctx));
 			else if (colName.equals("AD_Org_ID"))
-				m_newValues[i] = new Integer(Env.getAD_Org_ID(p_ctx));
+				m_newValues[i] = Integer.valueOf(Env.getAD_Org_ID(p_ctx));
 			else if (colName.equals("Processed"))
-				m_newValues[i] = new Boolean(false);
+				m_newValues[i] = Boolean.FALSE;
 			else if (colName.equals("Processing"))
-				m_newValues[i] = new Boolean(false);
+				m_newValues[i] = Boolean.FALSE;
 			else if (colName.equals("Posted"))
-				m_newValues[i] = new Boolean(false);
+				m_newValues[i] = Boolean.FALSE;
 		}
 	}   //  setDefaults
 
@@ -1858,7 +1869,7 @@ public abstract class PO
 	 */
 	final protected void setAD_Client_ID (int AD_Client_ID)
 	{
-		set_ValueNoCheck ("AD_Client_ID", new Integer(AD_Client_ID));
+		set_ValueNoCheck ("AD_Client_ID", Integer.valueOf(AD_Client_ID));
 	}	//	setAD_Client_ID
 
 	/**
@@ -1879,7 +1890,7 @@ public abstract class PO
 	 */
 	final public void setAD_Org_ID (int AD_Org_ID)
 	{
-		set_ValueNoCheck ("AD_Org_ID", new Integer(AD_Org_ID));
+		set_ValueNoCheck ("AD_Org_ID", Integer.valueOf(AD_Org_ID));
 	}	//	setAD_Org_ID
 
 	/**
@@ -1922,7 +1933,7 @@ public abstract class PO
 	 */
 	public final void setIsActive (boolean active)
 	{
-		set_Value("IsActive", new Boolean(active));
+		set_Value("IsActive", Boolean.valueOf(active));
 	}	//	setActive
 
 	/**
@@ -1985,7 +1996,7 @@ public abstract class PO
 	 */
 	final protected void setUpdatedBy (int AD_User_ID)
 	{
-		set_ValueNoCheck ("UpdatedBy", new Integer(AD_User_ID));
+		set_ValueNoCheck ("UpdatedBy", Integer.valueOf(AD_User_ID));
 	}	//	setAD_User_ID
 
 	/**	Cache						*/
@@ -1993,7 +2004,7 @@ public abstract class PO
 
 	public String get_Translation (String columnName, String AD_Language)
 	{
-		return get_Translation(columnName, AD_Language, false);
+		return get_Translation(columnName, AD_Language, false, true);
 	}
 
 	/**
@@ -2002,11 +2013,12 @@ public abstract class PO
 	 * If there is no translation then it fallback to original value.
 	 * @param columnName
 	 * @param AD_Language
-	 * @boolean reload
+	 * @param reload don't use cache, reload from DB
+	 * @param fallback fallback to base if no translation found
 	 * @return translated string
 	 * @throws IllegalArgumentException if columnName or AD_Language is null or model has multiple PK
 	 */
-	public String get_Translation (String columnName, String AD_Language, boolean reload)
+	public String get_Translation (String columnName, String AD_Language, boolean reload, boolean fallback)
 	{
 		//
 		// Check if columnName, AD_Language is valid or table support translation (has 1 PK) => error
@@ -2044,7 +2056,7 @@ public abstract class PO
 		}
 		//
 		// If no translation found or not translated, fallback to original:
-		if (retValue == null) {
+		if (retValue == null && fallback) {
 			Object val = get_Value(columnName);
 			retValue = (val != null ? val.toString() : null);
 		}
@@ -2060,13 +2072,33 @@ public abstract class PO
 
 	/**
 	 * Get Translation of column
-	 * @param ctx context
 	 * @param columnName
-	 * @return translation
 	 */
 	public String get_Translation (String columnName)
 	{
-		return get_Translation(columnName, Env.getAD_Language(getCtx()));
+		return get_Translation(columnName, true);
+	}
+	
+	/**
+	 * Get Translation of column
+	 * @param columnName
+	 * @param AD_Language
+	 * @param reload don't use cache, reload from DB
+	 */
+	public String get_Translation (String columnName, String AD_Language, boolean reload)
+	{
+		return get_Translation(columnName, AD_Language, reload, true);
+	}
+	
+	/**
+	 * Get Translation of column
+	 * @param columnName
+	 * @param fallback fallback to base if no translation found
+	 * @return translation
+	 */
+	public String get_Translation (String columnName, boolean fallback)
+	{
+		return get_Translation(columnName, Env.getAD_Language(getCtx()), false, fallback);
 	}
 
 	/**
@@ -2111,12 +2143,14 @@ public abstract class PO
 			if (log.isLoggable(Level.FINE)) log.fine("Nothing changed - " + p_info.getTableName());
 			return true;
 		}
-		
-		for (int i = 0; i < m_setErrors.length; i++) {
-			ValueNamePair setError = m_setErrors[i];
-			if (setError != null) {
-				log.saveError(setError.getValue(), Msg.getElement(getCtx(), p_info.getColumnName(i)) + " - " + setError.getName());
-				return false;
+
+		if (m_setErrorsFilled) {
+			for (int i = 0; i < m_setErrors.length; i++) {
+				ValueNamePair setError = m_setErrors[i];
+				if (setError != null) {
+					log.saveError(setError.getValue(), Msg.getElement(getCtx(), p_info.getColumnName(i)) + " - " + setError.getName());
+					return false;
+				}
 			}
 		}
 
@@ -2158,7 +2192,10 @@ public abstract class PO
 				l_trxname.setLength(23);
 			m_trxName = Trx.createTrxName(l_trxname.toString());
 			localTrx = Trx.get(m_trxName, true);
-			localTrx.setDisplayName(getClass().getName()+"_save");
+			if (newRecord)
+				localTrx.setDisplayName(getClass().getName() + "_insert");
+			else
+				localTrx.setDisplayName(getClass().getName() + "_update_ID" + get_ID());
 			localTrx.getConnection();
 		}
 		else
@@ -2603,7 +2640,7 @@ public abstract class PO
 				if (!changes && !updatedBy)
 				{
 					int AD_User_ID = Env.getContextAsInt(p_ctx, "#AD_User_ID");
-					set_ValueNoCheck("UpdatedBy", new Integer(AD_User_ID));
+					set_ValueNoCheck("UpdatedBy", Integer.valueOf(AD_User_ID));
 					sql.append("UpdatedBy=").append(AD_User_ID);
 					changes = true;
 					updatedBy = true;
@@ -2782,7 +2819,7 @@ public abstract class PO
 			if (!updatedBy)	//	UpdatedBy not explicitly set
 			{
 				int AD_User_ID = Env.getContextAsInt(p_ctx, "#AD_User_ID");
-				set_ValueNoCheck("UpdatedBy", new Integer(AD_User_ID));
+				set_ValueNoCheck("UpdatedBy", Integer.valueOf(AD_User_ID));
 				if (withValues)
 				{
 					sql.append(",UpdatedBy=").append(AD_User_ID);
@@ -2809,12 +2846,24 @@ public abstract class PO
 				ok = lobSave();
 			else
 			{
-				if (m_trxName == null)
-					log.saveError("SaveError", "Update return " + no + " instead of 1"
-						+ " - " + p_info.getTableName() + "." + where);
-				else
-					log.saveError("SaveError", "Update return " + no + " instead of 1"
-						+ " - [" + m_trxName + "] - " + p_info.getTableName() + "." + where);
+				if (CLogger.peekError() == null) {
+					if (m_trxName == null)
+						log.saveError("SaveError", "Update return " + no + " instead of 1"
+							+ " - " + p_info.getTableName() + "." + where);
+					else
+						log.saveError("SaveError", "Update return " + no + " instead of 1"
+							+ " - [" + m_trxName + "] - " + p_info.getTableName() + "." + where);
+				} else {
+					String msg = "Not updated - ";
+					if (CLogMgt.isLevelFiner())
+						msg += sql.toString();
+					else
+						msg += get_TableName();
+					if (m_trxName == null)
+						log.log(Level.WARNING, msg);
+					else
+						log.log(Level.WARNING, "[" + m_trxName + "]" + msg);
+				}
 			}
 			return ok;
 		}
@@ -2856,7 +2905,7 @@ public abstract class PO
 				log.severe("No NextID (" + no + ")");
 				return saveFinish (true, false);
 			}
-			m_IDs[0] = new Integer(no);
+			m_IDs[0] = Integer.valueOf(no);
 			set_ValueNoCheck(m_KeyColumns[0], m_IDs[0]);
 		}
 		//uuid secondary key
@@ -2951,7 +3000,8 @@ public abstract class PO
 			if (DisplayType.isLOB(dt))
 			{
 				lobAdd (value, i, dt);
-				continue;
+				if (!p_info.isColumnMandatory(i))
+					continue;
 			}
 
 			//	** add column **
@@ -2990,7 +3040,16 @@ public abstract class PO
 					else if (c == String.class)
 						sqlValues.append (encrypt(i,DB.TO_STRING ((String)value)));
 					else if (DisplayType.isLOB(dt))
-						sqlValues.append("null");		//	no db dependent stuff here
+					{
+						if (p_info.isColumnMandatory(i))
+						{
+							sqlValues.append("''");		//	no db dependent stuff here -- at this point value is known to be not null
+						}
+						else
+						{
+							sqlValues.append("null");
+						}
+					}
 					else
 						sqlValues.append (saveNewSpecial (value, i));
 				}
@@ -3015,7 +3074,17 @@ public abstract class PO
 							
 				if (DisplayType.isLOB(dt))
 				{
-					params.add(null);
+					if (p_info.isColumnMandatory(i))
+					{
+						if (dt == DisplayType.Binary)
+							params.add(new byte[] {0}); // -- at this point value is known to be not null
+						else
+							params.add(""); // -- at this point value is known to be not null
+					}
+					else
+					{
+						params.add(null);
+					}
 				}
 				else if (value == null || value.equals (Null.NULL))
 				{
@@ -3300,7 +3369,7 @@ public abstract class PO
 			{
 				localTrxName = Trx.createTrxName("POdel");
 				localTrx = Trx.get(localTrxName, true);
-				localTrx.setDisplayName(getClass().getName()+"_delete");
+				localTrx.setDisplayName(getClass().getName()+ "_delete_ID" + get_ID());
 				localTrx.getConnection();
 				m_trxName = localTrxName;
 			}
@@ -4095,7 +4164,14 @@ public abstract class PO
 				if (I_C_ElementValue.Table_Name.equals(sourceTableName)) {
 					newParentID = retrieveIdOfElementValue(value, getAD_Client_ID(), ((I_C_ElementValue)this).getC_Element().getC_Element_ID(), get_TrxName());
 				} else {
-					newParentID = retrieveIdOfParentValue(value, sourceTableName, getAD_Client_ID(), get_TrxName());
+					int linkColId = tree.getParent_Column_ID();
+					String linkColName = null;
+					int linkID = 0;
+					if (linkColId > 0) {
+						linkColName = MColumn.getColumnName(Env.getCtx(), linkColId);
+						linkID = (Integer)this.get_Value(linkColName);
+					}
+					newParentID = retrieveIdOfParentValue(value, sourceTableName, linkColName, linkID, getAD_Client_ID(), get_TrxName());
 				}
 				int seqNo = DB.getSQLValueEx(get_TrxName(), selMinSeqNo, newParentID, tree.getAD_Tree_ID(), value);
 				if (seqNo == -1)
@@ -4122,9 +4198,17 @@ public abstract class PO
 	}
 
 	/** Returns the summary node with the corresponding value */
-	public static int retrieveIdOfParentValue(String value, String tableName, int clientID, String trxName)
+	public static int retrieveIdOfParentValue(String value, String tableName, int clientID, String trxName) {
+		return retrieveIdOfParentValue(value, tableName, null, 0, clientID, trxName);
+	}
+
+	public static int retrieveIdOfParentValue(String value, String tableName, String linkCol, int linkID, int clientID, String trxName)
 	{
-		String sql = "SELECT " + tableName + "_ID FROM " + tableName + " WHERE IsSummary='Y' AND AD_Client_ID=? AND Value=?";
+		String sql = "SELECT " + tableName + "_ID FROM " + tableName + " WHERE IsSummary='Y'";
+		if (!Util.isEmpty(linkCol)) {
+			sql = sql + " AND " + linkCol + "=" + linkID;
+		}
+		sql = sql + " AND AD_Client_ID=? AND Value=?";
 		int pos = value.length()-1;
 		while (pos > 0) {
 			String testParentValue = value.substring(0, pos);
@@ -4423,7 +4507,7 @@ public abstract class PO
 			pstmt = DB.prepareStatement(sql.toString(), trxName);
 			rs = pstmt.executeQuery();
 			while (rs.next())
-				list.add(new Integer(rs.getInt(1)));
+				list.add(Integer.valueOf(rs.getInt(1)));
 		}
 		catch (SQLException e)
 		{
@@ -4643,7 +4727,10 @@ public abstract class PO
 			if (value == null || value.equals (Null.NULL))
 				;
 			else if (c == Object.class)
+			{
+				col.setAttributeNS(XMLConstants.XML_NS_URI, "space", "preserve");
 				col.appendChild(document.createCDATASection(value.toString()));
+			}
 			else if (value instanceof Integer || value instanceof BigDecimal)
 				col.appendChild(document.createTextNode(value.toString()));
 			else if (c == Boolean.class)
@@ -4658,11 +4745,20 @@ public abstract class PO
 			else if (value instanceof Timestamp)
 				col.appendChild(document.createTextNode(value.toString()));
 			else if (c == String.class)
+			{
+				col.setAttributeNS(XMLConstants.XML_NS_URI, "space", "preserve");
 				col.appendChild(document.createCDATASection((String)value));
+			}
 			else if (DisplayType.isLOB(dt))
+			{
+				col.setAttributeNS(XMLConstants.XML_NS_URI, "space", "preserve");
 				col.appendChild(document.createCDATASection(value.toString()));
+			}
 			else
+			{
+				col.setAttributeNS(XMLConstants.XML_NS_URI, "space", "preserve");
 				col.appendChild(document.createCDATASection(value.toString()));
+			}
 			//
 			root.appendChild(col);
 		}

@@ -53,7 +53,7 @@ public class MBankStatement extends X_C_BankStatement implements DocAction,DocOp
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -859925588789443186L;
+	private static final long serialVersionUID = 4286511528899179483L;
 
 	/**
 	 * 	Standard Constructor
@@ -118,7 +118,7 @@ public class MBankStatement extends X_C_BankStatement implements DocAction,DocOp
 	}	//	MBankStatement
  
 	/**	Lines							*/
-	private MBankStatementLine[] 	m_lines = null;
+	protected MBankStatementLine[] m_lines = null;
 	
  	/**
  	 * 	Get Bank Statement Lines
@@ -266,9 +266,9 @@ public class MBankStatement extends X_C_BankStatement implements DocAction,DocOp
 	}	//	processIt
 	
 	/**	Process Message 			*/
-	private String		m_processMsg = null;
+	protected String m_processMsg = null;
 	/**	Just Prepared Flag			*/
-	private boolean		m_justPrepared = false;
+	protected boolean m_justPrepared = false;
 
 	/**
 	 * 	Unlock Document.
@@ -313,23 +313,25 @@ public class MBankStatement extends X_C_BankStatement implements DocAction,DocOp
 		}
 		//	Lines
 		BigDecimal total = Env.ZERO;
-		Timestamp minDate = getStatementDate();
-		Timestamp maxDate = minDate;
+		// IDEMPIERE-480 changed the way accounting is posted, now lines post just with the accounting date of the statement header
+		// so, it is unnecessary to validate the period of lines
+		// Timestamp minDate = getStatementDate();
+		// Timestamp maxDate = minDate;
 		for (int i = 0; i < lines.length; i++)
 		{
 			MBankStatementLine line = lines[i];
 			if (!line.isActive())
 				continue;
 			total = total.add(line.getStmtAmt());
-			if (line.getDateAcct().before(minDate))
-				minDate = line.getDateAcct(); 
-			if (line.getDateAcct().after(maxDate))
-				maxDate = line.getDateAcct(); 
+			// if (line.getDateAcct().before(minDate))
+				// minDate = line.getDateAcct(); 
+			// if (line.getDateAcct().after(maxDate))
+				// maxDate = line.getDateAcct(); 
 		}
 		setStatementDifference(total);
 		setEndingBalance(getBeginningBalance().add(total));
-		MPeriod.testPeriodOpen(getCtx(), minDate, MDocType.DOCBASETYPE_BankStatement, 0);
-		MPeriod.testPeriodOpen(getCtx(), maxDate, MDocType.DOCBASETYPE_BankStatement, 0);
+		// MPeriod.testPeriodOpen(getCtx(), minDate, MDocType.DOCBASETYPE_BankStatement, getAD_Org_ID());
+		// MPeriod.testPeriodOpen(getCtx(), maxDate, MDocType.DOCBASETYPE_BankStatement, getAD_Org_ID());
 
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_AFTER_PREPARE);
 		if (m_processMsg != null)

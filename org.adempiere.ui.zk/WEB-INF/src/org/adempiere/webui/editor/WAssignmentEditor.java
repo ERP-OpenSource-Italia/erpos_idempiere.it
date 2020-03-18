@@ -56,11 +56,16 @@ public class WAssignmentEditor extends WEditor implements ContextMenuListener {
 	
 	private void initComponents() {
 		getComponent().getTextbox().setReadonly(true);
-		getComponent().setButtonImage(ThemeManager.getThemeResource("images/Assignment16.png"));
+		if (ThemeManager.isUseFontIconForImage())
+			getComponent().getButton().setIconSclass("z-icon-Assignment");
+		else
+			getComponent().setButtonImage(ThemeManager.getThemeResource("images/Assignment16.png"));
 		
 		popupMenu = new WEditorPopupMenu(true, false, false);
 		popupMenu.addMenuListener(this);
 		addChangeLogMenu(popupMenu);
+		if (gridField != null)
+			getComponent().getTextbox().setPlaceholder(gridField.getPlaceholder());
 	}
 
 	
@@ -216,7 +221,7 @@ public class WAssignmentEditor extends WEditor implements ContextMenuListener {
 		// Set Value
 		if (ma != null && ma.getS_ResourceAssignment_ID() != 0)
 		{
-			setValue(new Integer(ma.getS_ResourceAssignment_ID()));
+			setValue(Integer.valueOf(ma.getS_ResourceAssignment_ID()));
 			ValueChangeEvent vce = new ValueChangeEvent(WAssignmentEditor.this, gridField.getColumnName(), oldValue, getValue());
 			fireValueChange(vce);
 		}

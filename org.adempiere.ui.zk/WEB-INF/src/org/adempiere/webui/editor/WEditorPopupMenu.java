@@ -26,8 +26,12 @@ import org.adempiere.webui.event.ContextMenuEvent;
 import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.WEditorPopupMenuItems;
+import org.adempiere.webui.window.WFieldSuggestion;
+import org.compiere.model.GridField;
 import org.compiere.model.Lookup;
 import org.compiere.model.MRole;
+import org.compiere.model.MTable;
+import org.compiere.model.MZoomCondition;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
@@ -53,7 +57,7 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 7826535512581441259L;
+	private static final long serialVersionUID = -1632375949585292635L;
 
 	public static final String EVENT_ATTRIBUTE = "EVENT";
     public static final String ZOOM_EVENT = "ZOOM";
@@ -154,16 +158,14 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
     	    	this.updateEnabled = false;
 
     			// check possible zoom conditions to enable back zoom
-    			for (int zoomCondWinID : 
-    				DB.getIDsEx(null, 
-    						"SELECT AD_Window_ID FROM AD_ZoomCondition WHERE IsActive='Y' AND AD_Table_ID IN (SELECT AD_Table_ID FROM AD_Table WHERE TableName=?)",
-    						tableName)) {
-    	    		Boolean canAccessZoom = MRole.getDefault().getWindowAccess(zoomCondWinID);
+    	    	MTable table = MTable.get(Env.getCtx(), tableName);
+    	    	for (MZoomCondition zoomCondition : MZoomCondition.getConditions(table.getAD_Table_ID())) {
+    	    		Boolean canAccessZoom = MRole.getDefault().getWindowAccess(zoomCondition.getAD_Window_ID());
     	    		if (canAccessZoom != null && canAccessZoom) {
     	    	    	this.zoomEnabled = true;
     	    			break;
     	    		}
-    			}
+    	    	}
     			
     			// F3P: check possible new condition to enable back new
     			
@@ -250,7 +252,10 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
             else
             {
 	            zoomItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Zoom")).intern());
-	            zoomItem.setImage(ThemeManager.getThemeResource("images/Zoom16.png"));	            
+            if (ThemeManager.isUseFontIconForImage())
+            	zoomItem.setIconSclass("z-icon-Zoom");
+            else
+            	zoomItem.setImage(ThemeManager.getThemeResource("images/Zoom16.png"));
             }
             
             
@@ -273,6 +278,9 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
             else
             {
             	requeryItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Refresh")).intern());
+            if (ThemeManager.isUseFontIconForImage())
+            	requeryItem.setIconSclass("z-icon-Refresh");
+            else
             	requeryItem.setImage(ThemeManager.getThemeResource("images/Refresh16.png"));
             }
                         
@@ -295,6 +303,9 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
             else
             {            
             	prefItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "ValuePreference")).intern());
+            if (ThemeManager.isUseFontIconForImage())
+            	prefItem.setIconSclass("z-icon-VPreference");
+            else
             	prefItem.setImage(ThemeManager.getThemeResource("images/VPreference16.png"));
             }
             
@@ -317,7 +328,10 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
             else
             {      
             	newItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "New")).intern());
-            	newItem.setImage(ThemeManager.getThemeResource("images/New16.png"));
+        	if (ThemeManager.isUseFontIconForImage())
+        		newItem.setIconSclass("z-icon-New");
+        	else
+        		newItem.setImage(ThemeManager.getThemeResource("images/New16.png"));
             }
         	
         	this.appendChild(newItem);
@@ -340,7 +354,10 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
             else
             {
             	updateItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Update")).intern());
-            	updateItem.setImage(ThemeManager.getThemeResource("images/InfoBPartner16.png"));
+        	if (ThemeManager.isUseFontIconForImage())
+        		updateItem.setIconSclass("z-icon-InfoBPartner");
+        	else
+        		updateItem.setImage(ThemeManager.getThemeResource("images/InfoBPartner16.png"));
             }
         	
         	this.appendChild(updateItem);
@@ -362,6 +379,9 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
             else
             {
             	showLocationItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "ShowLocation")).intern());
+        	if (ThemeManager.isUseFontIconForImage())
+        		showLocationItem.setIconSclass("z-icon-InfoBPartner");
+        	else
         		showLocationItem.setImage(ThemeManager.getThemeResource("images/InfoBPartner16.png"));
             }
         	
@@ -434,4 +454,19 @@ public class WEditorPopupMenu extends Menupopup implements EventListener<Event>
         	}
         }
     }
+
+	public void addSuggestion(final GridField field) {
+		Menuitem editor = new Menuitem(Msg.getElement(Env.getCtx(), "AD_FieldSuggestion_ID"));
+		if (ThemeManager.isUseFontIconForImage())
+			editor.setIconSclass("z-icon-FieldSuggestion");
+		editor.addEventListener(Events.ON_CLICK, new EventListener<Event>() {
+			@Override
+			public void onEvent(Event event) throws Exception {
+				WFieldSuggestion fieldSuggestion = new WFieldSuggestion(field.getAD_Field_ID());
+				fieldSuggestion.setPage(WEditorPopupMenu.this.getPage());
+				fieldSuggestion.doHighlighted();
+			}
+		});
+		appendChild(editor);		
+	}	
 }

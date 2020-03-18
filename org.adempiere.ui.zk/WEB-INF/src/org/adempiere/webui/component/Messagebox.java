@@ -21,6 +21,7 @@ import java.util.Properties;
 
 import org.adempiere.util.Callback;
 import org.adempiere.webui.AdempiereIdGenerator;
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.factory.ButtonFactory;
 import org.adempiere.webui.session.SessionManager;
@@ -54,6 +55,7 @@ public class Messagebox extends Window implements EventListener<Event>
 	private static final long serialVersionUID = 8928526331932742124L;
 
 	private static final String MESSAGE_PANEL_STYLE = "text-align:left; word-break: break-all; overflow: auto; max-height: 350pt; min-width: 230pt; max-width: 450pt;";	
+	private static final String SMALLER_MESSAGE_PANEL_STYLE = "text-align:left; word-break: break-all; overflow: auto; max-height: 350pt; min-width: 180pt; ";
 	private String msg = new String("");
 	private String imgSrc = new String("");
 
@@ -126,6 +128,7 @@ public class Messagebox extends Window implements EventListener<Event>
 		Properties ctx = Env.getCtx();
 		lblMsg.setEncode(false);
 		lblMsg.setValue(msg);
+		lblMsg.setClientAttribute("style", "word-break: normal;");
 		// Invert - Unify  OK/Cancel IDEMPIERE-77
 		btnOk = ButtonFactory.createNamedButton(ConfirmPanel.A_OK);
 		btnOk.setId("btnOk");
@@ -162,8 +165,15 @@ public class Messagebox extends Window implements EventListener<Event>
 		btnIgnore.setId("btnIgnore");
 
 		Panel pnlMessage = new Panel();
-		pnlMessage.setStyle(MESSAGE_PANEL_STYLE);
+		if (ClientInfo.maxWidth(399))
+		{
+			pnlMessage.setStyle(SMALLER_MESSAGE_PANEL_STYLE);
+			this.setWidth("100%");
+		}
+		else
+			pnlMessage.setStyle(MESSAGE_PANEL_STYLE);
 		pnlMessage.appendChild(lblMsg);
+		ZKUpdateUtil.setHflex(pnlMessage, "min");
 		
 		Panel pnlInput= new Panel();
 		pnlInput.setStyle(MESSAGE_PANEL_STYLE);
@@ -175,12 +185,35 @@ public class Messagebox extends Window implements EventListener<Event>
 
 		Hbox pnlImage = new Hbox();
 
-		img.setSrc(imgSrc);
+		String iconSclass = null;
+		Label label = null;
+		if (ThemeManager.isUseFontIconForImage()) 
+		{
+			if (imgSrc.equals(QUESTION))
+				iconSclass = "z-icon-QuestionMessageBox";
+			else if (imgSrc.equals(EXCLAMATION))
+				iconSclass = "z-icon-ExclamationMessageBox";
+			else if (imgSrc.equals(INFORMATION))
+				iconSclass = "z-icon-InformationMessageBox";
+			else if (imgSrc.equals(ERROR))
+				iconSclass = "z-icon-ErrorMessageBox";
+		}
+			
+		if (ThemeManager.isUseFontIconForImage() && iconSclass != null)
+		{
+			label = new Label();
+			label.setSclass(iconSclass);
+		}
+		else
+			img.setSrc(imgSrc);
 
 		ZKUpdateUtil.setWidth(pnlImage, "72px");
 		pnlImage.setAlign("center");
 		pnlImage.setPack("center");
-		pnlImage.appendChild(img);
+		if (ThemeManager.isUseFontIconForImage() && iconSclass != null)
+			pnlImage.appendChild(label);
+		else
+			pnlImage.appendChild(img);
 				
 		Hbox north = new Hbox();
 		north.setAlign("center");
@@ -188,6 +221,7 @@ public class Messagebox extends Window implements EventListener<Event>
 		north.appendChild(pnlImage);
 		north.appendChild(pnlText);
 		north.setSclass("dialog-content");
+		north.setWidth("100%");;
 
 		Hbox pnlButtons = new Hbox();
 		pnlButtons.setAlign("center");

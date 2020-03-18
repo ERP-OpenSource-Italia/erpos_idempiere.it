@@ -61,7 +61,7 @@ public class FinReportJasper extends FinReport
 		for (int i = 0; i < oldpara.length; i++)
 			list.add (oldpara[i]);
 		// and add the T_Report_AD_PInstance_ID parameter
-		list.add (new ProcessInfoParameter("T_Report_AD_PInstance_ID", new Integer(getAD_PInstance_ID()), null, null, null));
+		list.add (new ProcessInfoParameter("T_Report_AD_PInstance_ID", Integer.valueOf(getAD_PInstance_ID()), null, null, null));
 		ProcessInfoParameter[] pars = new ProcessInfoParameter[list.size()];
 		list.toArray(pars);
 
@@ -76,6 +76,7 @@ public class FinReportJasper extends FinReport
 	    poInfo.setRecord_ID(getRecord_ID());
 	    poInfo.setAD_Process_ID(proc.getAD_Process_ID());
 	    poInfo.setAD_PInstance_ID(instance.getAD_PInstance_ID());
+	    poInfo.setAD_Process_UU(proc.getAD_Process_UU());	
 
 	    // need to commit in order to allow jasper to view the data
 	    Trx trx = Trx.get(get_TrxName(), true);

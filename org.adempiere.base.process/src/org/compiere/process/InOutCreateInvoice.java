@@ -17,6 +17,7 @@
 package org.compiere.process;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.logging.Level;
 
 import org.compiere.model.I_C_Order;
@@ -157,7 +158,7 @@ public class InOutCreateInvoice extends SvrProcess
 				BigDecimal igt = invoice.getGrandTotal();
 				BigDecimal percent = Env.ONE;
 				if (ogt.compareTo(igt) != 0)
-					percent = igt.divide(ogt, 10, BigDecimal.ROUND_HALF_UP);
+					percent = igt.divide(ogt, 10, RoundingMode.HALF_UP);
 				MCurrency cur = MCurrency.get(order.getCtx(), order.getC_Currency_ID());
 				int scale = cur.getStdPrecision();
 			
@@ -167,7 +168,7 @@ public class InOutCreateInvoice extends SvrProcess
 					if (percent != Env.ONE) {
 						BigDecimal propDueAmt = ops.getDueAmt().multiply(percent);
 						if (propDueAmt.scale() > scale)
-							propDueAmt = propDueAmt.setScale(scale, BigDecimal.ROUND_HALF_UP);
+							propDueAmt = propDueAmt.setScale(scale, RoundingMode.HALF_UP);
 						ips.setDueAmt(propDueAmt);
 					}
 					ips.setC_Invoice_ID(invoice.getC_Invoice_ID());

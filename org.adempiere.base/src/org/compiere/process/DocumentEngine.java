@@ -22,9 +22,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
+import org.adempiere.base.event.EventManager;
+import org.adempiere.base.event.EventProperty;
+import org.adempiere.base.event.IEventTopics;
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.acct.Doc;
 import org.compiere.model.MAcctSchema;
@@ -55,6 +60,7 @@ import org.eevolution.model.I_DD_Order;
 import org.eevolution.model.I_HR_Process;
 import org.eevolution.model.I_PP_Cost_Collector;
 import org.eevolution.model.I_PP_Order;
+import org.osgi.service.event.Event;
 
 /**
  *	Document Action Engine
@@ -317,12 +323,13 @@ public class DocumentEngine implements DocAction
 			{
 				// PostProcess documents when invoice or inout (this is to postprocess the generated MatchPO and MatchInv if any)
 				ArrayList<PO> docsPostProcess = new ArrayList<PO>();
-				if (m_document instanceof MInvoice || m_document instanceof MInOut) {
+				if (m_document instanceof MInvoice || m_document instanceof MInOut || m_document instanceof MPayment) {
 					if (m_document instanceof MInvoice) {
 						docsPostProcess  = ((MInvoice) m_document).getDocsPostProcess();
-					}
-					if (m_document instanceof MInOut) {
+					} else if (m_document instanceof MInOut) {
 						docsPostProcess  = ((MInOut) m_document).getDocsPostProcess();
+					} else if (m_document instanceof MPayment) {
+						docsPostProcess  = ((MPayment) m_document).getDocsPostProcess();
 					}
 				}
 				if (m_document instanceof PO && docsPostProcess.size() > 0) {
@@ -686,7 +693,7 @@ public class DocumentEngine implements DocAction
 				ACTION_Post, ACTION_Void};
 
 		if (isClosed())
-			return new String[] {ACTION_Post, ACTION_ReOpen};
+			return new String[] {ACTION_Post, ACTION_ReActivate};
 
 		if (isReversed() || isVoided())
 			return new String[] {ACTION_Post};
@@ -907,7 +914,7 @@ public class DocumentEngine implements DocAction
 	 * @return Number of valid options
 	 */
 	public static int getValidActions(String docStatus, Object processing,
-			String orderType, String isSOTrx, int AD_Table_ID, String[] docAction, String[] options, boolean periodOpen)
+			String orderType, String isSOTrx, int AD_Table_ID, String[] docAction, String[] options, boolean periodOpen, PO po)
 	{
 		if (options == null)
 			throw new IllegalArgumentException("Option array parameter is null");
@@ -959,11 +966,13 @@ public class DocumentEngine implements DocAction
 			options[index++] = DocumentEngine.ACTION_Void;
 			options[index++] = DocumentEngine.ACTION_Prepare;
 		}
+		/*  IDEMPIERE-3599 - commented to allow adding options to these terminal status
 		//	Closed, Voided, REversed    ..  CL/VO/RE
 		else if (docStatus.equals(DocumentEngine.STATUS_Closed)
 			|| docStatus.equals(DocumentEngine.STATUS_Voided)
 			|| docStatus.equals(DocumentEngine.STATUS_Reversed))
 			return 0;
+		*/
 
 		/********************
 		 *  Order
@@ -1214,6 +1223,25 @@ public class DocumentEngine implements DocAction
 				options[index++] = DocumentEngine.ACTION_Void;
 			}
 		}
+
+		if (po instanceof DocOptions)
+			index = ((DocOptions) po).customizeValidActions(docStatus, processing, orderType, isSOTrx,
+					AD_Table_ID, docAction, options, index);
+
+		AtomicInteger indexObj = new AtomicInteger(index);
+		ArrayList<String> docActionsArray = new ArrayList<String>(Arrays.asList(docAction));
+		ArrayList<String> optionsArray = new ArrayList<String>(Arrays.asList(options));
+		DocActionEventData eventData = new DocActionEventData(docStatus, processing, orderType, isSOTrx, AD_Table_ID, docActionsArray, optionsArray, indexObj, po);
+		Event event = EventManager.newEvent(IEventTopics.DOCACTION,
+				new EventProperty(EventManager.EVENT_DATA, eventData),
+				new EventProperty("tableName", po.get_TableName()));
+		EventManager.getInstance().sendEvent(event);
+		index = indexObj.get();
+		for (int i = 0; i < optionsArray.size(); i++)
+			options[i] = optionsArray.get(i);
+		for (int i = 0; i < docActionsArray.size(); i++)
+			docAction[i] = docActionsArray.get(i);
+
 		return index;
 	}
 

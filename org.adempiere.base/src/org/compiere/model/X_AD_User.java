@@ -24,14 +24,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for AD_User
  *  @author iDempiere (generated) 
- *  @version Release 4.1 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_AD_User extends PO implements I_AD_User, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20190321L;
 
     /** Standard Constructor */
     public X_AD_User (Properties ctx, int AD_User_ID, String trxName)
@@ -52,13 +52,17 @@ public class X_AD_User extends PO implements I_AD_User, I_Persistent
 // N
 			setIsLocked (false);
 // 'N'
+			setIsNoExpire (false);
+// N
 			setIsNoPasswordReset (false);
 // 'N'
 			setIsSalesLead (false);
 // N
+			setIsSupportUser (false);
+// N
 			setName (null);
 			setNotificationType (null);
-// E
+// X
         } */
     }
 
@@ -747,6 +751,27 @@ public class X_AD_User extends PO implements I_AD_User, I_Persistent
 		return (String)get_Value(COLUMNNAME_IsMenuAutoExpand);
 	}
 
+	/** Set No Expire.
+		@param IsNoExpire No Expire	  */
+	public void setIsNoExpire (boolean IsNoExpire)
+	{
+		set_Value (COLUMNNAME_IsNoExpire, Boolean.valueOf(IsNoExpire));
+	}
+
+	/** Get No Expire.
+		@return No Expire	  */
+	public boolean isNoExpire () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsNoExpire);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
 	/** Set No Password Reset.
 		@param IsNoPasswordReset No Password Reset	  */
 	public void setIsNoPasswordReset (boolean IsNoPasswordReset)
@@ -783,6 +808,27 @@ public class X_AD_User extends PO implements I_AD_User, I_Persistent
 	public boolean isSalesLead () 
 	{
 		Object oo = get_Value(COLUMNNAME_IsSalesLead);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Support User.
+		@param IsSupportUser Support User	  */
+	public void setIsSupportUser (boolean IsSupportUser)
+	{
+		set_Value (COLUMNNAME_IsSupportUser, Boolean.valueOf(IsSupportUser));
+	}
+
+	/** Get Support User.
+		@return Support User	  */
+	public boolean isSupportUser () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsSupportUser);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 

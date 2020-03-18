@@ -22,6 +22,7 @@ import java.util.List;
 import org.adempiere.webui.AdempiereIdGenerator;
 import org.zkoss.zk.au.out.AuScript;
 import org.zkoss.zk.ui.IdSpace;
+import org.zkoss.zk.ui.WrongValueException;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Comboitem;
 
@@ -33,14 +34,31 @@ import org.zkoss.zul.Comboitem;
  */
 public class Combobox extends org.zkoss.zul.Combobox implements IdSpace
 {
-    /**
+    public Combobox() {
+		super();
+		override();
+	}
+
+	public Combobox(String value) throws WrongValueException {
+		super(value);
+		override();
+	}
+
+	private void override() {
+		// idempiere always want to show context ever on disable control
+		this.setWidgetOverride("shallIgnoreClick_", "function(evt) {"
+				+ " return false; "
+				+ "}");
+	}
+	
+	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -6278632602577424842L;
 
 	public void setEnabled(boolean enabled)
     {
-        this.setDisabled(!enabled);
+		this.setDisabled(!enabled);
         if (!enabled) {
         	//ensure list is close and not on focus
         	if (this.getPage() != null) 

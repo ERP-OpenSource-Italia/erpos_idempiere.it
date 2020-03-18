@@ -1351,6 +1351,12 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 			if (log.isLoggable(Level.FINE)) log.fine("Window:AD_Window_ID=" + m_node.getAD_Window_ID());
 			return false;
 		}
+		/******	User Info					******/
+		else if (MWFNode.ACTION_UserInfo.equals(action))
+		{
+			if (log.isLoggable(Level.FINE)) log.fine("InfoWindow:AD_InfoWindow_ID=" + m_node.getAD_InfoWindow_ID());
+			return false;
+		}
 		//
 		throw new IllegalArgumentException("Invalid Action (Not Implemented) =" + action);
 	}	//	performWork
@@ -1375,7 +1381,7 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		if (value == null)
 			;
 		else if (displayType == DisplayType.YesNo)
-			dbValue = new Boolean("Y".equals(value));
+			dbValue = Boolean.valueOf("Y".equals(value));
 		else if (DisplayType.isNumeric(displayType))
 			dbValue = new BigDecimal (value);
 		else if (DisplayType.isID(displayType)) {

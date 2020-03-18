@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 
 import org.adempiere.webui.AdempiereWebUI;
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.component.Grid;
 import org.adempiere.webui.component.GridFactory;
 import org.adempiere.webui.component.Label;
@@ -39,16 +40,20 @@ import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.model.GridField;
 import org.compiere.model.I_C_ElementValue;
+import org.compiere.model.MLookupFactory;
 import org.compiere.model.MTable;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
+import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Borderlayout;
+import org.zkoss.zul.Cell;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.North;
@@ -83,7 +88,7 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 
 	/** String Array of Column Info */
 	private ColumnInfo[] m_generalLayout;
-
+	
 	/** list of query columns */
 	private ArrayList<String> m_queryColumns = new ArrayList<String>();
 
@@ -92,6 +97,8 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 	private Borderlayout layout;
 	private Vbox southBody;
 	
+	private int noOfParameterColumn;
+
 	//F3P: support translation of values in data
 	private String	p_fromClause; // generalize from
 	private static final String TRANSLATED_COLUMN_PATTERN = "COALESCE(TRL.{0},{1}.{0})";
@@ -129,12 +136,28 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 			init();
 			initComponents();
 
-			if (queryValue != null && queryValue.length() > 0)
-			{
-				txt1.setValue(queryValue);
-			}
-
 			p_loadedOK = initInfo ();
+			
+			if (queryValue != null && queryValue.length() > 0)
+			{				
+				Textbox[] txts = new Textbox[] {txt1, txt2, txt3, txt4};
+				for(Textbox t : txts) 
+				{
+					if (t != null && t.isVisible())
+					{
+						t.setValue(queryValue);
+						testCount();
+						if (m_count <= 0)
+							t.setValue(null);
+						else
+							break;
+					}
+				}
+				if (m_count <= 0)
+				{
+					txt1.setValue(queryValue);
+				}
+			}
 		}
 		catch (Exception e)
 		{
@@ -169,58 +192,42 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
             executeQuery();
             renderItems();
         }
-
+		
+		if (ClientInfo.isMobile()) {
+			ClientInfo.onClientInfo(this, this::onClientInfo);
+		}
 	}
 
 	private void initComponents()
 	{
 		Grid grid = GridFactory.newGridLayout();
+		ZKUpdateUtil.setWidth(grid, "100%");
+		ZKUpdateUtil.setVflex(grid, "min");
 
-		Rows rows = new Rows();
-		grid.appendChild(rows);
-
-		Row row = new Row();
-		rows.appendChild(row);
-		row.appendChild(lbl1.rightAlign());
-		row.appendChild(txt1);
-		ZKUpdateUtil.setHflex(txt1, "1");
-		row.appendChild(lbl2.rightAlign());
-		row.appendChild(txt2);
-		ZKUpdateUtil.setHflex(txt2, "1");
-		row.appendChild(lbl3.rightAlign());
-		row.appendChild(txt3);
-		ZKUpdateUtil.setHflex(txt3, "1");
-		row.appendChild(lbl4.rightAlign());
-		row.appendChild(txt4);
-		ZKUpdateUtil.setHflex(txt4, "1");
+		layoutParameterGrid(grid);
 
 		layout = new Borderlayout();
 		ZKUpdateUtil.setWidth(layout, "100%");
 		ZKUpdateUtil.setHeight(layout, "100%");
-        if (!isLookup())
-        {
-        	layout.setStyle("position: absolute");
-        }
+        layout.setStyle("position: relative");
         this.appendChild(layout);
 
         North north = new North();
         layout.appendChild(north);
 		north.appendChild(grid);
+		ZKUpdateUtil.setVflex(north, "min");
 
         Center center = new Center();
 		layout.appendChild(center);
 		Div div = new Div();
 		div.appendChild(contentPanel);
-		if (isLookup())
-			ZKUpdateUtil.setWidth(contentPanel, "99%");
-        else
-        	contentPanel.setStyle("width: 99%; margin: 0px auto;");
+		ZKUpdateUtil.setWidth(contentPanel, "100%");
         ZKUpdateUtil.setVflex(contentPanel, true);
         contentPanel.setSizedByContent(true);
-		div.setStyle("width :100%; height: 100%");
 		center.appendChild(div);
 		ZKUpdateUtil.setVflex(div, "1");
 		ZKUpdateUtil.setHflex(div, "1");
+		ZKUpdateUtil.setVflex(center, "1");
 
 		South south = new South();
 		layout.appendChild(south);
@@ -230,6 +237,63 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 		southBody.appendChild(new Separator());
 		southBody.appendChild(confirmPanel);		
 		southBody.appendChild(statusBar);
+		ZKUpdateUtil.setVflex(south, "min");
+	}
+
+	protected void layoutParameterGrid(Grid grid) {
+		noOfParameterColumn = getNoOfParameterColumn();
+		Rows rows = new Rows();
+		grid.appendChild(rows);
+
+		Row row = new Row();
+		rows.appendChild(row);
+		row.appendChild(lbl1.rightAlign());
+		row.appendChild(txt1);
+		ZKUpdateUtil.setHflex(txt1, "1");
+		if (row.getChildren().size() % noOfParameterColumn == 0)
+			row = rows.newRow();
+		row.appendChild(lbl2.rightAlign());
+		row.appendChild(txt2);		
+		ZKUpdateUtil.setHflex(txt2, "1");
+		if (row.getChildren().size() % noOfParameterColumn == 0)
+			row = rows.newRow();
+		Cell cell = new Cell();
+		cell.setAlign("right");
+		cell.setValign("middle");
+		Div ldiv = new Div();
+		ldiv.appendChild(lbl3);
+		cell.appendChild(ldiv);
+		row.appendChild(cell);
+		cell = new Cell();
+		cell.setValign("middle");
+		cell.appendChild(txt3);
+		row.appendChild(cell);		
+		ZKUpdateUtil.setHflex(txt3, "1");
+		if (row.getChildren().size() % noOfParameterColumn == 0)
+			row = rows.newRow();
+		cell = new Cell();
+		cell.setAlign("right");
+		cell.setValign("middle");
+		ldiv = new Div();
+		ldiv.appendChild(lbl4);
+		cell.appendChild(ldiv);
+		row.appendChild(cell);
+		cell = new Cell();
+		cell.setValign("middle");
+		cell.appendChild(txt4);
+		row.appendChild(cell);
+		ZKUpdateUtil.setHflex(txt4, "1");
+	}
+
+	private int getNoOfParameterColumn() {
+		if (ClientInfo.maxWidth(ClientInfo.EXTRA_SMALL_WIDTH-1))
+			return 2;
+		else if (ClientInfo.maxWidth(ClientInfo.SMALL_WIDTH-1))
+			return 4;
+		else if (ClientInfo.maxWidth(ClientInfo.MEDIUM_WIDTH-1))
+			return 6;
+		else
+			return 8;
 	}
 
 	private void init()
@@ -264,11 +328,11 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 			return false;
 
 		//  Prepare table
-		StringBuffer where = new StringBuffer(p_tableName); // F3P: prepended isActive with tablename
-		where.append(".IsActive='Y'");
+
+		StringBuilder where = new StringBuilder(p_tableName).append(".").append("IsActive='Y'");
 
 		if (p_whereClause.length() > 0)
-			where.append(" AND ").append(p_whereClause);
+			where.append(" AND (").append(p_whereClause).append(")");
 		
 		prepareTable(m_generalLayout, 
 				p_fromClause, // F3P: generalize from clause 
@@ -296,6 +360,8 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 		{
 			lbl3.setVisible(false);
 			txt3.setVisible(false);
+			hideCell(lbl3);
+			hideCell(txt3);
 		}
 
 		if (m_queryColumns.size() > 3)
@@ -306,8 +372,23 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 		{
 			lbl4.setVisible(false);
 			txt4.setVisible(false);
+			hideCell(lbl4);
+			hideCell(txt4);
 		}
 		return true;
+	}
+
+	private void hideCell(Component comp) {
+		Component p = comp.getParent();
+		while (p != null)
+		{
+			if (p instanceof Cell)
+			{
+				p.setVisible(false);
+				break;
+			}
+			p = p.getParent();
+		}
 	}
 
 	private boolean initInfoTable ()
@@ -323,7 +404,7 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 			+ " AND EXISTS (SELECT * FROM AD_Field f "
 				+ "WHERE f.AD_Column_ID=c.AD_Column_ID"
 				+ " AND f.IsDisplayed='Y' AND f.IsEncrypted='N' AND f.ObscureType IS NULL) "
-			+ "ORDER BY c.IsIdentifier DESC, c.AD_Reference_ID, c.SeqNo";
+			+ "ORDER BY c.IsIdentifier DESC, c.IsSelectionColumn Desc, c.AD_Reference_ID, c.SeqNoSelection, c.SeqNo";
 
 		int AD_Table_ID = 0;
 		String tableName = null;
@@ -340,12 +421,15 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 			{
 				m_queryColumns.add(rs.getString(1));
 				String columnSql = rs.getString(4);
+				if (columnSql != null && columnSql.length() > 0 && columnSql.contains("@"))
+					columnSql = "NULL";
 				if (columnSql != null && columnSql.contains("@"))
 					columnSql = Env.parseContext(Env.getCtx(), -1, columnSql, false, true);
+				String qualified = p_tableName+"."+rs.getString(1);
 				if (columnSql != null && columnSql.length() > 0)
 					m_queryColumnsSql.add(columnSql);
 				else
-					m_queryColumnsSql.add(rs.getString(1));
+					m_queryColumnsSql.add(qualified);
 
 				if (AD_Table_ID == 0)
 				{
@@ -369,7 +453,7 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 		//	Miminum check
 		if (m_queryColumns.size() == 0)
 		{
-			FDialog.error(p_WindowNo, this, "Error", "No query columns found");
+			FDialog.error(p_WindowNo, this, "Error", Msg.getMsg(Env.getCtx(),"NoQueryColumnsFound"));
 			log.log(Level.SEVERE, "No query columns found");
 			return false;
 		}
@@ -395,7 +479,7 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 		//	Get Display Columns
 
 		ArrayList<ColumnInfo> list = new ArrayList<ColumnInfo>();
-		sql = "SELECT c.ColumnName, c.AD_Reference_ID, c.IsKey, f.IsDisplayed, c.AD_Reference_Value_ID, c.ColumnSql, c.IsTranslated " // F3P: added isItranslated
+		sql = "SELECT c.ColumnName, c.AD_Reference_ID, c.IsKey, f.IsDisplayed, c.AD_Reference_Value_ID, c.ColumnSql, c.AD_Column_ID, c.IsTranslated "
 			+ "FROM AD_Column c"
 			+ " INNER JOIN AD_Table t ON (c.AD_Table_ID=t.AD_Table_ID)"
 			+ " INNER JOIN AD_Tab tab ON (t.AD_Window_ID=tab.AD_Window_ID)"
@@ -424,11 +508,14 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 				boolean isDisplayed = rs.getString(4).equals("Y");
 				int AD_Reference_Value_ID = rs.getInt(5);
 				String columnSql = rs.getString(6);
-				boolean isTranslated = rs.getString(7).equals("Y"); // F3P: we need to know if the column is translated
+				if (columnSql != null && columnSql.length() > 0 && columnSql.contains("@"))
+					columnSql = "NULL";
 				if (columnSql != null && columnSql.contains("@"))
 					columnSql = Env.parseContext(Env.getCtx(), -1, columnSql, false, true);
 				if (columnSql == null || columnSql.length() == 0)
-					columnSql = columnName;
+					columnSql = tableName+"."+columnName;
+				int AD_Column_ID = rs.getInt(7);
+				boolean isTranslated = rs.getString(7).equals("Y"); // F3P: we need to know if the column is translated
 
 				//  Default
 				StringBuffer colSql = new StringBuffer(columnSql);
@@ -455,12 +542,12 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 				{
 					if (Env.isBaseLanguage(Env.getCtx(), "AD_Ref_List"))
 						colSql = new StringBuffer("(SELECT l.Name FROM AD_Ref_List l WHERE l.AD_Reference_ID=")
-							.append(AD_Reference_Value_ID).append(" AND l.Value=").append(tableName).append(".").append(columnSql)
+							.append(AD_Reference_Value_ID).append(" AND l.Value=").append(columnSql)
 							.append(") AS ").append(columnName);
 					else
 						colSql = new StringBuffer("(SELECT t.Name FROM AD_Ref_List l, AD_Ref_List_Trl t "
 							+ "WHERE l.AD_Ref_List_ID=t.AD_Ref_List_ID AND l.AD_Reference_ID=")
-							.append(AD_Reference_Value_ID).append(" AND l.Value=").append(tableName).append(".").append(columnSql)
+							.append(AD_Reference_Value_ID).append(" AND l.Value=").append(columnSql)
 							.append(" AND t.AD_Language='").append(Env.getAD_Language(Env.getCtx()))
 							.append("') AS ").append(columnName);
 					colClass = String.class;
@@ -504,6 +591,19 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 					
 					list.add(new ColumnInfo(Msg.translate(Env.getCtx(), columnName), colSql.toString(), colClass));
 					if (log.isLoggable(Level.FINEST)) log.finest("Added Column=" + columnName);
+				}
+				else if (DisplayType.isLookup(displayType))
+				{
+					ColumnInfo colInfo = createLookupColumnInfo(Msg.translate(Env.getCtx(), columnName), columnName, displayType, AD_Reference_Value_ID, AD_Column_ID);
+					if (colInfo != null)
+					{
+						list.add(colInfo);
+					}
+					else
+					{
+						if (log.isLoggable(Level.FINEST)) log.finest("Not Added Column=" + columnName);
+					}
+					
 				}
 				else
 					if (log.isLoggable(Level.FINEST)) log.finest("Not Added Column=" + columnName);
@@ -619,8 +719,38 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 		southBody.insertBefore(paging, southBody.getFirstChild());
 		layout.invalidate();
     }
+    
+	protected void onClientInfo() {
+		if (layout != null && layout.getNorth() != null && layout.getNorth().getFirstChild() instanceof Grid) {
+			int t = getNoOfParameterColumn();
+			if (t > 0 && noOfParameterColumn > 0 && t != noOfParameterColumn) {
+				Grid grid = (Grid) layout.getNorth().getFirstChild();
+				grid.getRows().detach();
+				layoutParameterGrid(grid);
+				this.invalidate();
+			}
+		}
+	}
+	
+	protected ColumnInfo createLookupColumnInfo(String name, String columnName, int AD_Reference_ID, int AD_Reference_Value_ID, int AD_Column_ID) {
+//		MLookupInfo lookupInfo = MLookupFactory.getLookupInfo(Env.getCtx(), p_WindowNo, AD_Column_ID, AD_Reference_ID, Env.getLanguage(Env.getCtx()), columnName, 
+//				AD_Reference_Value_ID, false, null);
+//		String displayColumn = lookupInfo.DisplayColumn;
+//		String keyColumn = lookupInfo.KeyColumn;
 
-    //F3P: filter event listener
+		String embedded = AD_Reference_Value_ID > 0 ? MLookupFactory.getLookup_TableEmbed(Env.getLanguage(Env.getCtx()), columnName, p_tableName, AD_Reference_Value_ID)
+				: MLookupFactory.getLookup_TableDirEmbed(Env.getLanguage(Env.getCtx()), columnName, p_tableName);
+		embedded = "(" + embedded + ")";
+	
+		ColumnInfo columnInfo = null;
+		if (columnName.endsWith("_ID"))
+			columnInfo = new ColumnInfo(name, embedded, KeyNamePair.class, p_tableName+"."+columnName);
+		else
+			columnInfo = new ColumnInfo(name, embedded, String.class, null);
+		return columnInfo;
+	}
+	
+	 //F3P: filter event listener
 	@Override
 	public void onEvent(Event event) {
 		
@@ -633,5 +763,5 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 		else
 			super.onEvent(event);
 	}
-	//F3P end
+	//F3P end	
 }

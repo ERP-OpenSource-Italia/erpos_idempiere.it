@@ -90,7 +90,8 @@ public class MSchedule extends X_AD_Schedule
 	public boolean isOKtoRunOnIP()
 	{
 		String ipOnly = getRunOnlyOnIP();
-		if ((ipOnly == null) || (ipOnly.length() == 0))
+		// 0.0.0.0 = all ip address
+		if ((ipOnly == null) || (ipOnly.length() == 0) || "0.0.0.0".equals(ipOnly))
 			return true;
 
 		StringTokenizer st = new StringTokenizer(ipOnly, ";");
@@ -145,7 +146,7 @@ public class MSchedule extends X_AD_Schedule
 
 	public static MSchedule get(Properties ctx, int AD_Schedule_ID) 
 	{
-		Integer key = new Integer (AD_Schedule_ID);
+		Integer key = Integer.valueOf(AD_Schedule_ID);
 		MSchedule retValue = (MSchedule)s_cache.get (key);
 		if (retValue != null)
 			return retValue;

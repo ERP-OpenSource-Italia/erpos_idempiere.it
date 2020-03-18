@@ -116,7 +116,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -2946624717834888117L;
+	private static final long serialVersionUID = -3115353522698098211L;
 
 	public static final String DEFAULT_STATUS_MESSAGE = "NavigateOrUpdate";
 	
@@ -233,6 +233,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	public static final String CTX_SQL = "_TabInfo_SQL";
 	public static final String CTX_IsSortTab = "_TabInfo_IsSortTab";
 
+	//private HashMap<Integer,Integer>	m_PostIts = null;
 
 	/**************************************************************************
 	 *  Tab loader for Tabs > 0
@@ -1319,9 +1320,8 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	public void setLinkColumnName (String linkColumnName)
 	{
 		// set parent column name
-		String sql = "SELECT ColumnName FROM AD_Column WHERE AD_Column_ID=?";
 		if (m_vo.Parent_Column_ID > 0)
-			m_parentColumnName = DB.getSQLValueString(null, sql, m_vo.Parent_Column_ID );
+			m_parentColumnName = MColumn.getColumnName(m_vo.ctx, m_vo.Parent_Column_ID);
 		if ( m_parentColumnName == null )
 			m_parentColumnName = "";
 
@@ -1336,27 +1336,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			//	we have a link column identified (primary parent column)
 			else
 			{
-				String SQL = "SELECT ColumnName FROM AD_Column WHERE AD_Column_ID=?";
-				PreparedStatement pstmt = null;
-				ResultSet rs = null;
-				try
-				{
-					pstmt = DB.prepareStatement(SQL, null);
-					pstmt.setInt(1, m_vo.AD_Column_ID);		//	Parent Link Column
-					rs = pstmt.executeQuery();
-					if (rs.next())
-						m_linkColumnName = rs.getString(1);
-				}
-				catch (SQLException e)
-				{
-					log.log(Level.SEVERE, "", e);
-				}
-				finally
-				{
-					DB.close(rs, pstmt);
-					rs = null;
-					pstmt = null;
-				}
+				m_linkColumnName = MColumn.getColumnName(m_vo.ctx, m_vo.AD_Column_ID);		//	Parent Link Column
 				if (log.isLoggable(Level.FINE)) log.fine("AD_Column_ID=" + m_vo.AD_Column_ID + " - " + m_linkColumnName);
 			}
 		}
@@ -1861,13 +1841,13 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				if (rs.next())
 				{
 					//	{0} - Number of lines
-					Integer lines = new Integer(rs.getInt(1));
+					Integer lines = Integer.valueOf(rs.getInt(1));
 					arguments[0] = lines;
 					//	{1} - Line net
-					Double net = new Double(rs.getDouble(2));
+					Double net = Double.valueOf(rs.getDouble(2));
 					arguments[1] = net;
 					//	{2} - Line net
-					Double total = new Double(rs.getDouble(3));
+					Double total = Double.valueOf(rs.getDouble(3));
 					arguments[2] = total;
 					filled = true;
 				}
@@ -2003,19 +1983,19 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				if (rs.next())
 				{
 					//	{0} - Number of lines
-					Integer lines = new Integer(rs.getInt(1));
+					Integer lines = Integer.valueOf(rs.getInt(1));
 					arguments[0] = lines;
 					//	{1} - Line toral
-					Double lineTotal = new Double(rs.getDouble(3));
+					Double lineTotal = Double.valueOf(rs.getDouble(3));
 					arguments[1] = lineTotal;
 					//	{2} - Grand total (including tax, etc.)
-					Double grandTotal = new Double(rs.getDouble(4));
+					Double grandTotal = Double.valueOf(rs.getDouble(4));
 					arguments[2] = grandTotal;
 					//	{3} - Currency
 					String currency = rs.getString(2);
 					arguments[3] = currency;
 					//	(4) - Grand total converted to Euro
-					Double grandEuro = new Double(rs.getDouble(5));
+					Double grandEuro = Double.valueOf(rs.getDouble(5));
 					arguments[4] = grandEuro;
 					filled = true;
 				}
@@ -2077,10 +2057,10 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				if (rs.next())
 				{
 					//	{0} - Number of lines
-					Integer lines = new Integer(rs.getInt(1));
+					Integer lines = Integer.valueOf(rs.getInt(1));
 					arguments[0] = lines;
 					//	{1} - Line total
-					Double total = new Double(rs.getDouble(2));
+					Double total = Double.valueOf(rs.getDouble(2));
 					arguments[1] = total;
 					//	{3} - Currency
 					arguments[2] = " ";
@@ -2214,6 +2194,11 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				fFax.setVFormat(phone_frm);
 		}
 
+		// Load virtual UI columns
+		for (GridField field : getFields()) {
+			if (field.isVirtualUIColumn())
+				field.processUIVirtualColumn();
+		}
 	}   //  loadDependentInfo
 
 	/**
@@ -2271,6 +2256,23 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		int recordID = m_mTable.getKeyID(m_currentRow);
 		return MChat.getID(m_vo.AD_Table_ID, recordID);
 	}	//	getCM_ChatID
+	
+	public boolean hasPostIt()
+	{
+		return getAD_PostIt_ID() > 0;
+	}	//	hasChat
+
+	/**
+	 *	Get PostItID for this record.
+	 *	@return ID or 0, if not found
+	 */
+	public int getAD_PostIt_ID()
+	{
+		if (!canHaveAttachment())
+			return 0;
+		int recordID = m_mTable.getKeyID(m_currentRow);
+		return MPostIt.getID(m_vo.AD_Table_ID, recordID);
+	}	//	getAD_PostIt_ID
 
 
 	/**
@@ -2310,7 +2312,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			rs = pstmt.executeQuery();
 			while (rs.next())
 			{
-				Integer key = new Integer(rs.getInt(1));
+				Integer key = Integer.valueOf(rs.getInt(1));
 				m_Lock.add(key);
 			}
 		}
@@ -2340,7 +2342,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		if (m_Lock == null || m_Lock.isEmpty())
 			return false;
 		//
-		Integer key = new Integer(m_mTable.getKeyID (m_currentRow));
+		Integer key = Integer.valueOf(m_mTable.getKeyID (m_currentRow));
 		return m_Lock.contains(key);
 	}	//	isLocked
 
@@ -2433,7 +2435,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			return;  // avoid NPE below
 		}
 		DataStatusListener[] listeners = m_listenerList.getListeners(DataStatusListener.class);
-		if (listeners.length == 0)
+		if (listeners.length == 0 || e == null)
 			return;
 		if (log.isLoggable(Level.FINE)) log.fine(e.toString());
 		//  WHO Info
@@ -2854,13 +2856,23 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			{
 				MLookup mLookup = (MLookup)dependentField.getLookup();
 				//  if the lookup is dynamic (i.e. contains this columnName as variable)
-				if (mLookup.getValidation().indexOf("@"+columnName+"@") != -1)
+				if (mLookup.getValidation().indexOf("@"+columnName+"@") != -1
+						|| mLookup.getValidation().matches(".*[@]"+columnName+"[:].+[@].*$"))
 				{
 					if (log.isLoggable(Level.FINE)) log.fine(columnName + " changed - "
 						+ dependentField.getColumnName() + " set to null");
+					Object currentValue = dependentField.getValue();
+					
 					//  invalidate current selection
 					setValue(dependentField, null);
+					
+					if (currentValue != null && mLookup.containsKey(currentValue))
+						setValue(dependentField, currentValue);
 				}
+			}
+			//  if the field is a Virtual UI Column
+			if (dependentField.isVirtualUIColumn()) {
+				dependentField.processUIVirtualColumn();
 			}
 		}   //  for all dependent fields
 	}   //  processDependencies
@@ -2951,6 +2963,11 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 					}
 	
 					ScriptEngine engine = rule.getScriptEngine();
+					if (engine == null) {
+						retValue = 	"Callout Invalid, engine not found: " + rule.getEngineName();
+						log.log(Level.SEVERE, retValue);
+						return retValue;
+					}
 					Bindings bindings = engine.createBindings();
 	
 					// Window context are    W_
@@ -3042,7 +3059,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 							if (call == null) {
 								//no match from factory, check java classpath
 								Class<?> cClass = Class.forName(className);
-								call = (Callout)cClass.newInstance();
+								call = (Callout)cClass.getDeclaredConstructor().newInstance();
 							}
 						}
 					}
@@ -3305,9 +3322,9 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			lineNoCurrentRow = (Integer) m_mTable.getValueAt(from, lineCol);
 			lineNoNextRow = (Integer) m_mTable.getValueAt(to, lineCol);
 		} else if (m_mTable.getValueAt(from, lineCol) instanceof BigDecimal) {
-			lineNoCurrentRow = new Integer(((BigDecimal) m_mTable.getValueAt(from, lineCol))
+			lineNoCurrentRow = Integer.valueOf(((BigDecimal) m_mTable.getValueAt(from, lineCol))
 					.intValue());
-			lineNoNextRow = new Integer(((BigDecimal) m_mTable.getValueAt(to, lineCol))
+			lineNoNextRow = Integer.valueOf(((BigDecimal) m_mTable.getValueAt(to, lineCol))
 					.intValue());
 		} else {
 			log.fine("unknown value format - return");
@@ -3424,7 +3441,16 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	public boolean isNew() {
 		return isOpen() && getCurrentRow() >= 0 && getCurrentRow() == m_mTable.getNewRow();
 	}
-	
+
+	public String getAD_Tab_UU() {
+		return m_vo.AD_Tab_UU;
+	}
+
+	public String getAD_Process_UU()
+	{
+		return m_vo.AD_Process_UU;
+	}
+
 	public boolean isUpdateWindowContext() 
 	{
 		return m_updateWindowContext ;

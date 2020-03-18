@@ -26,14 +26,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for C_Order
  *  @author iDempiere (generated) 
- *  @version Release 4.1 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_C_Order extends PO implements I_C_Order, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20170112L;
+	private static final long serialVersionUID = 20190106L;
 
     /** Standard Constructor */
     public X_C_Order (Properties ctx, int C_Order_ID, String trxName)
@@ -69,8 +69,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 			setFreightCostRule (null);
 // I
 			setGrandTotal (Env.ZERO);
-			setGuaranteeDaysOv (0);
-// 0
 			setInvoiceRule (null);
 // I
 			setIsApproved (false);
@@ -80,37 +78,20 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 			setIsDiscountPrinted (false);
 			setIsDropShip (false);
 // N
-			setIsIntraVAT (false);
-// N
 			setIsInvoiced (false);
-			setIsMntOrder (false);
 			setIsPayScheduleValid (false);
 // N
-			setIsPortalOrder (false);
 			setIsPrinted (false);
 			setIsPriviledgedRate (false);
-// N
-			setIsReverseCharge (false);
 // N
 			setIsSelected (false);
 			setIsSelfService (false);
 			setIsSOTrx (false);
 // @IsSOTrx@
-			setIsSuspendedVAT (false);
-// N
 			setIsTaxIncluded (false);
 			setIsTransferred (false);
-			setIsUpdateDocNo (false);
-			setLIT_AmtBeforeDisc (Env.ZERO);
-// 0
-			setLIT_DocDiscPerc (Env.ZERO);
-			setLIT_DocDiscVal (Env.ZERO);
-// 0
-			setLIT_IsDiscOnlyProd (false);
-// N
 			setM_PriceList_ID (0);
 			setM_Warehouse_ID (0);
-			setNoPackages (0);
 			setPaymentRule (null);
 // B
 			setPosted (false);
@@ -121,8 +102,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 			setSalesRep_ID (0);
 			setSendEMail (false);
 			setTotalLines (Env.ZERO);
-			setWSC_Peso_lordo (Env.ZERO);
-			setWSC_Peso_netto (Env.ZERO);
         } */
     }
 
@@ -323,49 +302,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		return ii.intValue();
 	}
 
-	/** Set Order  Notes.
-		@param BP_Order_notes 
-		Order Notes
-	  */
-	public void setBP_Order_notes (String BP_Order_notes)
-	{
-		set_Value (COLUMNNAME_BP_Order_notes, BP_Order_notes);
-	}
-
-	/** Get Order  Notes.
-		@return Order Notes
-	  */
-	public String getBP_Order_notes () 
-	{
-		return (String)get_Value(COLUMNNAME_BP_Order_notes);
-	}
-
-	/** Carriage Forward = A */
-	public static final String BP_PORTO_CarriageForward = "A";
-	/** Cash on Delivery = C */
-	public static final String BP_PORTO_CashOnDelivery = "C";
-	/** Free Port W/Charge = F */
-	public static final String BP_PORTO_FreePortWCharge = "F";
-	/** Free Port = G */
-	public static final String BP_PORTO_FreePort = "G";
-	/** Set Porto.
-		@param BP_porto 
-		Porto
-	  */
-	public void setBP_porto (String BP_porto)
-	{
-
-		set_Value (COLUMNNAME_BP_porto, BP_porto);
-	}
-
-	/** Get Porto.
-		@return Porto
-	  */
-	public String getBP_porto () 
-	{
-		return (String)get_Value(COLUMNNAME_BP_porto);
-	}
-
 	public org.compiere.model.I_C_Activity getC_Activity() throws RuntimeException
     {
 		return (org.compiere.model.I_C_Activity)MTable.get(getCtx(), org.compiere.model.I_C_Activity.Table_Name)
@@ -389,34 +325,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 	public int getC_Activity_ID () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_C_Activity_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
-	public org.compiere.model.I_C_BankAccount getC_BankAccount() throws RuntimeException
-    {
-		return (org.compiere.model.I_C_BankAccount)MTable.get(getCtx(), org.compiere.model.I_C_BankAccount.Table_Name)
-			.getPO(getC_BankAccount_ID(), get_TrxName());	}
-
-	/** Set Bank Account.
-		@param C_BankAccount_ID 
-		Account at the Bank
-	  */
-	public void setC_BankAccount_ID (int C_BankAccount_ID)
-	{
-		if (C_BankAccount_ID < 1) 
-			set_Value (COLUMNNAME_C_BankAccount_ID, null);
-		else 
-			set_Value (COLUMNNAME_C_BankAccount_ID, Integer.valueOf(C_BankAccount_ID));
-	}
-
-	/** Get Bank Account.
-		@return Account at the Bank
-	  */
-	public int getC_BankAccount_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_C_BankAccount_ID);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
@@ -473,34 +381,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 	public int getC_BPartner_Location_ID () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_C_BPartner_Location_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
-	public org.compiere.model.I_C_BP_BankAccount getC_BP_BankAccount() throws RuntimeException
-    {
-		return (org.compiere.model.I_C_BP_BankAccount)MTable.get(getCtx(), org.compiere.model.I_C_BP_BankAccount.Table_Name)
-			.getPO(getC_BP_BankAccount_ID(), get_TrxName());	}
-
-	/** Set Partner Bank Account.
-		@param C_BP_BankAccount_ID 
-		Bank Account of the Business Partner
-	  */
-	public void setC_BP_BankAccount_ID (int C_BP_BankAccount_ID)
-	{
-		if (C_BP_BankAccount_ID < 1) 
-			set_Value (COLUMNNAME_C_BP_BankAccount_ID, null);
-		else 
-			set_Value (COLUMNNAME_C_BP_BankAccount_ID, Integer.valueOf(C_BP_BankAccount_ID));
-	}
-
-	/** Get Partner Bank Account.
-		@return Bank Account of the Business Partner
-	  */
-	public int getC_BP_BankAccount_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_C_BP_BankAccount_ID);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
@@ -747,44 +627,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		return bd;
 	}
 
-	/** Set Codice Identificativo di Gara.
-		@param CIG 
-		CIG from public aministration office
-	  */
-	public void setCIG (String CIG)
-	{
-		set_Value (COLUMNNAME_CIG, CIG);
-	}
-
-	/** Get Codice Identificativo di Gara.
-		@return CIG from public aministration office
-	  */
-	public String getCIG () 
-	{
-		return (String)get_Value(COLUMNNAME_CIG);
-	}
-
-	/** Direct Credit = A */
-	public static final String COLLECTIONTYPE_DirectCredit = "A";
-	/** Direct Deposit = B */
-	public static final String COLLECTIONTYPE_DirectDeposit = "B";
-	/** Other = X */
-	public static final String COLLECTIONTYPE_Other = "X";
-	/** Set Collection Type.
-		@param CollectionType Collection Type	  */
-	public void setCollectionType (String CollectionType)
-	{
-
-		set_Value (COLUMNNAME_CollectionType, CollectionType);
-	}
-
-	/** Get Collection Type.
-		@return Collection Type	  */
-	public String getCollectionType () 
-	{
-		return (String)get_Value(COLUMNNAME_CollectionType);
-	}
-
 	public org.compiere.model.I_C_Opportunity getC_Opportunity() throws RuntimeException
     {
 		return (org.compiere.model.I_C_Opportunity)MTable.get(getCtx(), org.compiere.model.I_C_Opportunity.Table_Name)
@@ -999,20 +841,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
-	}
-
-	/** Set Create Delivery Package.
-		@param CreateDelPackage Create Delivery Package	  */
-	public void setCreateDelPackage (String CreateDelPackage)
-	{
-		set_Value (COLUMNNAME_CreateDelPackage, CreateDelPackage);
-	}
-
-	/** Get Create Delivery Package.
-		@return Create Delivery Package	  */
-	public String getCreateDelPackage () 
-	{
-		return (String)get_Value(COLUMNNAME_CreateDelPackage);
 	}
 
 	/** Set Account Date.
@@ -1427,63 +1255,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		return bd;
 	}
 
-	/** Set Order Guarantee Days.
-		@param GuaranteeDaysOv 
-		Guarantee Days for the order/quotation
-	  */
-	public void setGuaranteeDaysOv (int GuaranteeDaysOv)
-	{
-		set_Value (COLUMNNAME_GuaranteeDaysOv, Integer.valueOf(GuaranteeDaysOv));
-	}
-
-	/** Get Order Guarantee Days.
-		@return Guarantee Days for the order/quotation
-	  */
-	public int getGuaranteeDaysOv () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_GuaranteeDaysOv);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
-	/** CFR - Cost and Freight = CFR */
-	public static final String INCOTERMS_CFR_CostAndFreight = "CFR";
-	/** CIF - Cost, Insurance and Freight = CIF */
-	public static final String INCOTERMS_CIF_CostInsuranceAndFreight = "CIF";
-	/** CIP - Carriage and Insurance Paid to = CIP */
-	public static final String INCOTERMS_CIP_CarriageAndInsurancePaidTo = "CIP";
-	/** CPT - Carriage Paid to = CPT */
-	public static final String INCOTERMS_CPT_CarriagePaidTo = "CPT";
-	/** DAP - Delivered at Place = DAP */
-	public static final String INCOTERMS_DAP_DeliveredAtPlace = "DAP";
-	/** DAT - Delivered at Terminal = DAT */
-	public static final String INCOTERMS_DAT_DeliveredAtTerminal = "DAT";
-	/** DDP - Delivered Duty Paid = DDP */
-	public static final String INCOTERMS_DDP_DeliveredDutyPaid = "DDP";
-	/** EXW - Ex Works = EXW */
-	public static final String INCOTERMS_EXW_ExWorks = "EXW";
-	/** FAS - Free Alongside Ship = FAS */
-	public static final String INCOTERMS_FAS_FreeAlongsideShip = "FAS";
-	/** FCA - Free Carrier = FCA */
-	public static final String INCOTERMS_FCA_FreeCarrier = "FCA";
-	/** FOB - Free on Board = FOB */
-	public static final String INCOTERMS_FOB_FreeOnBoard = "FOB";
-	/** Set Terms of Delivery.
-		@param Incoterms Terms of Delivery	  */
-	public void setIncoterms (String Incoterms)
-	{
-
-		set_Value (COLUMNNAME_Incoterms, Incoterms);
-	}
-
-	/** Get Terms of Delivery.
-		@return Terms of Delivery	  */
-	public String getIncoterms () 
-	{
-		return (String)get_Value(COLUMNNAME_Incoterms);
-	}
-
 	/** InvoiceRule AD_Reference_ID=150 */
 	public static final int INVOICERULE_AD_Reference_ID=150;
 	/** After Order delivered = O */
@@ -1629,27 +1400,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		return false;
 	}
 
-	/** Set Is Intra VAT.
-		@param IsIntraVAT Is Intra VAT	  */
-	public void setIsIntraVAT (boolean IsIntraVAT)
-	{
-		set_Value (COLUMNNAME_IsIntraVAT, Boolean.valueOf(IsIntraVAT));
-	}
-
-	/** Get Is Intra VAT.
-		@return Is Intra VAT	  */
-	public boolean isIntraVAT () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsIntraVAT);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
 	/** Set Invoiced.
 		@param IsInvoiced 
 		Is this invoiced?
@@ -1674,51 +1424,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		return false;
 	}
 
-	/** Set Maintenance Order.
-		@param IsMntOrder 
-		If enabled, this is a sales order with maintenance lines
-	  */
-	public void setIsMntOrder (boolean IsMntOrder)
-	{
-		set_Value (COLUMNNAME_IsMntOrder, Boolean.valueOf(IsMntOrder));
-	}
-
-	/** Get Maintenance Order.
-		@return If enabled, this is a sales order with maintenance lines
-	  */
-	public boolean isMntOrder () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsMntOrder);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
-	/** Set IsOrderNotePrint.
-		@param IsOrderNotePrint IsOrderNotePrint	  */
-	public void setIsOrderNotePrint (boolean IsOrderNotePrint)
-	{
-		set_Value (COLUMNNAME_IsOrderNotePrint, Boolean.valueOf(IsOrderNotePrint));
-	}
-
-	/** Get IsOrderNotePrint.
-		@return IsOrderNotePrint	  */
-	public boolean isOrderNotePrint () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsOrderNotePrint);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
 	/** Set Pay Schedule valid.
 		@param IsPayScheduleValid 
 		Is the Payment Schedule is valid
@@ -1734,27 +1439,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 	public boolean isPayScheduleValid () 
 	{
 		Object oo = get_Value(COLUMNNAME_IsPayScheduleValid);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
-	/** Set Is Portal Order.
-		@param IsPortalOrder Is Portal Order	  */
-	public void setIsPortalOrder (boolean IsPortalOrder)
-	{
-		set_Value (COLUMNNAME_IsPortalOrder, Boolean.valueOf(IsPortalOrder));
-	}
-
-	/** Get Is Portal Order.
-		@return Is Portal Order	  */
-	public boolean isPortalOrder () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsPortalOrder);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 
@@ -1800,27 +1484,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 	public boolean isPriviledgedRate () 
 	{
 		Object oo = get_Value(COLUMNNAME_IsPriviledgedRate);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
-	/** Set Is Reverse Charge.
-		@param IsReverseCharge Is Reverse Charge	  */
-	public void setIsReverseCharge (boolean IsReverseCharge)
-	{
-		set_Value (COLUMNNAME_IsReverseCharge, Boolean.valueOf(IsReverseCharge));
-	}
-
-	/** Get Is Reverse Charge.
-		@return Is Reverse Charge	  */
-	public boolean isReverseCharge () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsReverseCharge);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 
@@ -1899,27 +1562,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		return false;
 	}
 
-	/** Set Is Suspended VAT.
-		@param IsSuspendedVAT Is Suspended VAT	  */
-	public void setIsSuspendedVAT (boolean IsSuspendedVAT)
-	{
-		set_Value (COLUMNNAME_IsSuspendedVAT, Boolean.valueOf(IsSuspendedVAT));
-	}
-
-	/** Get Is Suspended VAT.
-		@return Is Suspended VAT	  */
-	public boolean isSuspendedVAT () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsSuspendedVAT);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
 	/** Set Price includes Tax.
 		@param IsTaxIncluded 
 		Tax is included in the price 
@@ -1968,26 +1610,10 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		return false;
 	}
 
-	/** Set IsUpdateDocNo.
-		@param IsUpdateDocNo IsUpdateDocNo	  */
-	public void setIsUpdateDocNo (boolean IsUpdateDocNo)
-	{
-		set_Value (COLUMNNAME_IsUpdateDocNo, Boolean.valueOf(IsUpdateDocNo));
-	}
-
-	/** Get IsUpdateDocNo.
-		@return IsUpdateDocNo	  */
-	public boolean isUpdateDocNo () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsUpdateDocNo);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
+	public org.compiere.model.I_C_Order getLink_Order() throws RuntimeException
+    {
+		return (org.compiere.model.I_C_Order)MTable.get(getCtx(), org.compiere.model.I_C_Order.Table_Name)
+			.getPO(getLink_Order_ID(), get_TrxName());	}
 
 	/** Set Linked Order.
 		@param Link_Order_ID 
@@ -2010,131 +1636,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
-	}
-
-	/** Set Adv. Percentage.
-		@param LIT_AdvPerc Adv. Percentage	  */
-	public void setLIT_AdvPerc (BigDecimal LIT_AdvPerc)
-	{
-		set_Value (COLUMNNAME_LIT_AdvPerc, LIT_AdvPerc);
-	}
-
-	/** Get Adv. Percentage.
-		@return Adv. Percentage	  */
-	public BigDecimal getLIT_AdvPerc () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_LIT_AdvPerc);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set Total Lines Before Doc. Disc..
-		@param LIT_AmtBeforeDisc 
-		Total Lines value Before Document Discount
-	  */
-	public void setLIT_AmtBeforeDisc (BigDecimal LIT_AmtBeforeDisc)
-	{
-		set_Value (COLUMNNAME_LIT_AmtBeforeDisc, LIT_AmtBeforeDisc);
-	}
-
-	/** Get Total Lines Before Doc. Disc..
-		@return Total Lines value Before Document Discount
-	  */
-	public BigDecimal getLIT_AmtBeforeDisc () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_LIT_AmtBeforeDisc);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set Document Discount Perc..
-		@param LIT_DocDiscPerc 
-		Discount appllied for all Document
-	  */
-	public void setLIT_DocDiscPerc (BigDecimal LIT_DocDiscPerc)
-	{
-		set_Value (COLUMNNAME_LIT_DocDiscPerc, LIT_DocDiscPerc);
-	}
-
-	/** Get Document Discount Perc..
-		@return Discount appllied for all Document
-	  */
-	public BigDecimal getLIT_DocDiscPerc () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_LIT_DocDiscPerc);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set Document Discount Amt.
-		@param LIT_DocDiscVal 
-		Document Dicount Amount
-	  */
-	public void setLIT_DocDiscVal (BigDecimal LIT_DocDiscVal)
-	{
-		set_Value (COLUMNNAME_LIT_DocDiscVal, LIT_DocDiscVal);
-	}
-
-	/** Get Document Discount Amt.
-		@return Document Dicount Amount
-	  */
-	public BigDecimal getLIT_DocDiscVal () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_LIT_DocDiscVal);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** LIT_IsCashOrdAdv AD_Reference_ID=319 */
-	public static final int LIT_ISCASHORDADV_AD_Reference_ID=319;
-	/** Yes = Y */
-	public static final String LIT_ISCASHORDADV_Yes = "Y";
-	/** No = N */
-	public static final String LIT_ISCASHORDADV_No = "N";
-	/** Set Advance on exposure.
-		@param LIT_IsCashOrdAdv 
-		Advance on maximum exposure
-	  */
-	public void setLIT_IsCashOrdAdv (String LIT_IsCashOrdAdv)
-	{
-
-		set_Value (COLUMNNAME_LIT_IsCashOrdAdv, LIT_IsCashOrdAdv);
-	}
-
-	/** Get Advance on exposure.
-		@return Advance on maximum exposure
-	  */
-	public String getLIT_IsCashOrdAdv () 
-	{
-		return (String)get_Value(COLUMNNAME_LIT_IsCashOrdAdv);
-	}
-
-	/** Set Disc. only on products.
-		@param LIT_IsDiscOnlyProd 
-		Document discount will be applied only on product lines
-	  */
-	public void setLIT_IsDiscOnlyProd (boolean LIT_IsDiscOnlyProd)
-	{
-		set_Value (COLUMNNAME_LIT_IsDiscOnlyProd, Boolean.valueOf(LIT_IsDiscOnlyProd));
-	}
-
-	/** Get Disc. only on products.
-		@return Document discount will be applied only on product lines
-	  */
-	public boolean isLIT_IsDiscOnlyProd () 
-	{
-		Object oo = get_Value(COLUMNNAME_LIT_IsDiscOnlyProd);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
 	}
 
 	public org.compiere.model.I_M_FreightCategory getM_FreightCategory() throws RuntimeException
@@ -2165,37 +1666,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		return ii.intValue();
 	}
 
-	/** Transport by Sea = 1 */
-	public static final String MODEOFTRANSPORT_TransportBySea = "1";
-	/** Transport by Rail = 2 */
-	public static final String MODEOFTRANSPORT_TransportByRail = "2";
-	/** Transport by Road = 3 */
-	public static final String MODEOFTRANSPORT_TransportByRoad = "3";
-	/** Transport by Air = 4 */
-	public static final String MODEOFTRANSPORT_TransportByAir = "4";
-	/** Consignments by Post = 5 */
-	public static final String MODEOFTRANSPORT_ConsignmentsByPost = "5";
-	/** Fixed Transport Installations = 7 */
-	public static final String MODEOFTRANSPORT_FixedTransportInstallations = "7";
-	/** Transport by Inland Waterway = 8 */
-	public static final String MODEOFTRANSPORT_TransportByInlandWaterway = "8";
-	/** Own Propulsion = 9 */
-	public static final String MODEOFTRANSPORT_OwnPropulsion = "9";
-	/** Set Mode Of Transport.
-		@param ModeOfTransport Mode Of Transport	  */
-	public void setModeOfTransport (String ModeOfTransport)
-	{
-
-		set_Value (COLUMNNAME_ModeOfTransport, ModeOfTransport);
-	}
-
-	/** Get Mode Of Transport.
-		@return Mode Of Transport	  */
-	public String getModeOfTransport () 
-	{
-		return (String)get_Value(COLUMNNAME_ModeOfTransport);
-	}
-
 	public org.compiere.model.I_M_PriceList getM_PriceList() throws RuntimeException
     {
 		return (org.compiere.model.I_M_PriceList)MTable.get(getCtx(), org.compiere.model.I_M_PriceList.Table_Name)
@@ -2219,34 +1689,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 	public int getM_PriceList_ID () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_M_PriceList_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
-	public org.compiere.model.I_M_Shipper getM_Shipper2() throws RuntimeException
-    {
-		return (org.compiere.model.I_M_Shipper)MTable.get(getCtx(), org.compiere.model.I_M_Shipper.Table_Name)
-			.getPO(getM_Shipper2_ID(), get_TrxName());	}
-
-	/** Set Shipper 2.
-		@param M_Shipper2_ID 
-		Method or manner of product delivery
-	  */
-	public void setM_Shipper2_ID (int M_Shipper2_ID)
-	{
-		if (M_Shipper2_ID < 1) 
-			set_Value (COLUMNNAME_M_Shipper2_ID, null);
-		else 
-			set_Value (COLUMNNAME_M_Shipper2_ID, Integer.valueOf(M_Shipper2_ID));
-	}
-
-	/** Get Shipper 2.
-		@return Method or manner of product delivery
-	  */
-	public int getM_Shipper2_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_M_Shipper2_ID);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
@@ -2306,94 +1748,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
-	}
-
-	/** 1 Sales or Purchase = 1 */
-	public static final String NATUREOFTRANSACTION_1SalesOrPurchase = "1";
-	/** 2 Returned goods and replacement goods = 2 */
-	public static final String NATUREOFTRANSACTION_2ReturnedGoodsAndReplacementGoods = "2";
-	/** 3 Aid shipments = 3 */
-	public static final String NATUREOFTRANSACTION_3AidShipments = "3";
-	/** 4 Operations with a view to processing  under contract  = 4 */
-	public static final String NATUREOFTRANSACTION_4OperationsWithAViewToProcessingUnderContract = "4";
-	/** 5 Operations following processing under contract  = 5 */
-	public static final String NATUREOFTRANSACTION_5OperationsFollowingProcessingUnderContract = "5";
-	/** 6 Particular transactions recorded for national purposes  = 6 */
-	public static final String NATUREOFTRANSACTION_6ParticularTransactionsRecordedForNationalPurposes = "6";
-	/** 7 Operations under joint defence projects = 7 */
-	public static final String NATUREOFTRANSACTION_7OperationsUnderJointDefenceProjects = "7";
-	/** 8 General construction or civil engineering contract = 8 */
-	public static final String NATUREOFTRANSACTION_8GeneralConstructionOrCivilEngineeringContract = "8";
-	/** 9 Other transactions = 9 */
-	public static final String NATUREOFTRANSACTION_9OtherTransactions = "9";
-	/** A Sales or Purchase Triangular Operations = A */
-	public static final String NATUREOFTRANSACTION_ASalesOrPurchaseTriangularOperations = "A";
-	/** B Returned goods and replacement goods Triangular operations = B */
-	public static final String NATUREOFTRANSACTION_BReturnedGoodsAndReplacementGoodsTriangularOperations = "B";
-	/** C Aid shipments Triangular Operations = C */
-	public static final String NATUREOFTRANSACTION_CAidShipmentsTriangularOperations = "C";
-	/** D Operations with a view to processing  under contract T.O. = D */
-	public static final String NATUREOFTRANSACTION_DOperationsWithAViewToProcessingUnderContractTO = "D";
-	/** E Operations following processing under contract T.O. = E */
-	public static final String NATUREOFTRANSACTION_EOperationsFollowingProcessingUnderContractTO = "E";
-	/** F Particular transactions recorded for national purposes T.O = F */
-	public static final String NATUREOFTRANSACTION_FParticularTransactionsRecordedForNationalPurposesTO = "F";
-	/** G Operations under joint defence projects T.O. = G */
-	public static final String NATUREOFTRANSACTION_GOperationsUnderJointDefenceProjectsTO = "G";
-	/** H General construction or civil engineering contract T.O. = H */
-	public static final String NATUREOFTRANSACTION_HGeneralConstructionOrCivilEngineeringContractTO = "H";
-	/** I Other transactions T.O. = I */
-	public static final String NATUREOFTRANSACTION_IOtherTransactionsTO = "I";
-	/** Set Nature Of Transaction.
-		@param NatureOfTransaction Nature Of Transaction	  */
-	public void setNatureOfTransaction (String NatureOfTransaction)
-	{
-
-		set_Value (COLUMNNAME_NatureOfTransaction, NatureOfTransaction);
-	}
-
-	/** Get Nature Of Transaction.
-		@return Nature Of Transaction	  */
-	public String getNatureOfTransaction () 
-	{
-		return (String)get_Value(COLUMNNAME_NatureOfTransaction);
-	}
-
-	/** Set No Packages.
-		@param NoPackages 
-		Number of packages shipped
-	  */
-	public void setNoPackages (int NoPackages)
-	{
-		set_Value (COLUMNNAME_NoPackages, Integer.valueOf(NoPackages));
-	}
-
-	/** Get No Packages.
-		@return Number of packages shipped
-	  */
-	public int getNoPackages () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_NoPackages);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
-	/** Set Order Type.
-		@param OrderType 
-		Type of Order: MRP records grouped by source (Sales Order, Purchase Order, Distribution Order, Requisition)
-	  */
-	public void setOrderType (String OrderType)
-	{
-		set_Value (COLUMNNAME_OrderType, OrderType);
-	}
-
-	/** Get Order Type.
-		@return Type of Order: MRP records grouped by source (Sales Order, Purchase Order, Distribution Order, Requisition)
-	  */
-	public String getOrderType () 
-	{
-		return (String)get_Value(COLUMNNAME_OrderType);
 	}
 
 	/** Set Payment BPartner.
@@ -2458,8 +1812,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 	public static final String PAYMENTRULE_DirectDebit = "D";
 	/** Mixed POS Payment = M */
 	public static final String PAYMENTRULE_MixedPOSPayment = "M";
-	/** Ricevuta Bancaria = R */
-	public static final String PAYMENTRULE_RicevutaBancaria = "R";
 	/** Set Payment Rule.
 		@param PaymentRule 
 		How you pay the invoice
@@ -2493,20 +1845,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 	public String getPOReference () 
 	{
 		return (String)get_Value(COLUMNNAME_POReference);
-	}
-
-	/** Set Order Reference Date.
-		@param POReferenceDate Order Reference Date	  */
-	public void setPOReferenceDate (Timestamp POReferenceDate)
-	{
-		set_Value (COLUMNNAME_POReferenceDate, POReferenceDate);
-	}
-
-	/** Get Order Reference Date.
-		@return Order Reference Date	  */
-	public Timestamp getPOReferenceDate () 
-	{
-		return (Timestamp)get_Value(COLUMNNAME_POReferenceDate);
 	}
 
 	/** Set Posted.
@@ -2645,24 +1983,10 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		return (String)get_Value(COLUMNNAME_PromotionCode);
 	}
 
-	/** Immediate = I */
-	public static final String PROVISIONTYPE_Immediate = "I";
-	/** Repeated = R */
-	public static final String PROVISIONTYPE_Repeated = "R";
-	/** Set Provision Type.
-		@param ProvisionType Provision Type	  */
-	public void setProvisionType (String ProvisionType)
-	{
-
-		set_Value (COLUMNNAME_ProvisionType, ProvisionType);
-	}
-
-	/** Get Provision Type.
-		@return Provision Type	  */
-	public String getProvisionType () 
-	{
-		return (String)get_Value(COLUMNNAME_ProvisionType);
-	}
+	public org.compiere.model.I_C_Order getQuotationOrder() throws RuntimeException
+    {
+		return (org.compiere.model.I_C_Order)MTable.get(getCtx(), org.compiere.model.I_C_Order.Table_Name)
+			.getPO(getQuotationOrder_ID(), get_TrxName());	}
 
 	/** Set Quotation.
 		@param QuotationOrder_ID 
@@ -2686,6 +2010,11 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 			 return 0;
 		return ii.intValue();
 	}
+
+	public org.compiere.model.I_C_Order getRef_Order() throws RuntimeException
+    {
+		return (org.compiere.model.I_C_Order)MTable.get(getCtx(), org.compiere.model.I_C_Order.Table_Name)
+			.getPO(getRef_Order_ID(), get_TrxName());	}
 
 	/** Set Referenced Order.
 		@param Ref_Order_ID 
@@ -2776,26 +2105,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		return (String)get_Value(COLUMNNAME_ShippingRateInquiry);
 	}
 
-	/** Set Credit Used.
-		@param SO_CreditUsed 
-		Current open balance
-	  */
-	public void setSO_CreditUsed (BigDecimal SO_CreditUsed)
-	{
-		set_ValueNoCheck (COLUMNNAME_SO_CreditUsed, SO_CreditUsed);
-	}
-
-	/** Get Credit Used.
-		@return Current open balance
-	  */
-	public BigDecimal getSO_CreditUsed () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_SO_CreditUsed);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
 	/** Set Total Lines.
 		@param TotalLines 
 		Total of all document lines
@@ -2872,40 +2181,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 		return ii.intValue();
 	}
 
-	/** Set Valid from.
-		@param ValidFrom 
-		Valid from including this date (first day)
-	  */
-	public void setValidFrom (Timestamp ValidFrom)
-	{
-		set_Value (COLUMNNAME_ValidFrom, ValidFrom);
-	}
-
-	/** Get Valid from.
-		@return Valid from including this date (first day)
-	  */
-	public Timestamp getValidFrom () 
-	{
-		return (Timestamp)get_Value(COLUMNNAME_ValidFrom);
-	}
-
-	/** Set Valid to.
-		@param ValidTo 
-		Valid to including this date (last day)
-	  */
-	public void setValidTo (Timestamp ValidTo)
-	{
-		set_Value (COLUMNNAME_ValidTo, ValidTo);
-	}
-
-	/** Get Valid to.
-		@return Valid to including this date (last day)
-	  */
-	public Timestamp getValidTo () 
-	{
-		return (Timestamp)get_Value(COLUMNNAME_ValidTo);
-	}
-
 	/** Set Volume.
 		@param Volume 
 		Volume of a product
@@ -2941,68 +2216,6 @@ public class X_C_Order extends PO implements I_C_Order, I_Persistent
 	public BigDecimal getWeight () 
 	{
 		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_Weight);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set WSC_Aspetto_Beni.
-		@param WSC_Aspetto_Beni WSC_Aspetto_Beni	  */
-	public void setWSC_Aspetto_Beni (String WSC_Aspetto_Beni)
-	{
-		set_Value (COLUMNNAME_WSC_Aspetto_Beni, WSC_Aspetto_Beni);
-	}
-
-	/** Get WSC_Aspetto_Beni.
-		@return WSC_Aspetto_Beni	  */
-	public String getWSC_Aspetto_Beni () 
-	{
-		return (String)get_Value(COLUMNNAME_WSC_Aspetto_Beni);
-	}
-
-	/** Set WSC_causale_trasporto.
-		@param WSC_causale_trasporto WSC_causale_trasporto	  */
-	public void setWSC_causale_trasporto (String WSC_causale_trasporto)
-	{
-		set_Value (COLUMNNAME_WSC_causale_trasporto, WSC_causale_trasporto);
-	}
-
-	/** Get WSC_causale_trasporto.
-		@return WSC_causale_trasporto	  */
-	public String getWSC_causale_trasporto () 
-	{
-		return (String)get_Value(COLUMNNAME_WSC_causale_trasporto);
-	}
-
-	/** Set WSC_Peso_lordo.
-		@param WSC_Peso_lordo WSC_Peso_lordo	  */
-	public void setWSC_Peso_lordo (BigDecimal WSC_Peso_lordo)
-	{
-		set_Value (COLUMNNAME_WSC_Peso_lordo, WSC_Peso_lordo);
-	}
-
-	/** Get WSC_Peso_lordo.
-		@return WSC_Peso_lordo	  */
-	public BigDecimal getWSC_Peso_lordo () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_WSC_Peso_lordo);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set WSC_Peso_netto.
-		@param WSC_Peso_netto WSC_Peso_netto	  */
-	public void setWSC_Peso_netto (BigDecimal WSC_Peso_netto)
-	{
-		set_Value (COLUMNNAME_WSC_Peso_netto, WSC_Peso_netto);
-	}
-
-	/** Get WSC_Peso_netto.
-		@return WSC_Peso_netto	  */
-	public BigDecimal getWSC_Peso_netto () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_WSC_Peso_netto);
 		if (bd == null)
 			 return Env.ZERO;
 		return bd;

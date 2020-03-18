@@ -33,6 +33,7 @@ import org.adempiere.webui.component.Row;
 import org.adempiere.webui.component.Rows;
 import org.adempiere.webui.component.Window;
 import org.adempiere.webui.event.DialogEvents;
+import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
 import org.compiere.model.GridTab;
@@ -45,7 +46,6 @@ import org.compiere.model.MProduction;
 import org.compiere.model.MTable;
 import org.compiere.model.PO;
 import org.compiere.process.DocAction;
-import org.compiere.process.DocOptions;
 import org.compiere.process.DocumentEngine;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
@@ -173,15 +173,11 @@ public class WDocActionPanel extends Window implements EventListener<Event>, Dia
 
 		String[] docActionHolder = new String[]{DocAction};
 		index = DocumentEngine.getValidActions(DocStatus, Processing, OrderType, IsSOTrx,
-				m_AD_Table_ID, docActionHolder, options, periodOpen);
+				m_AD_Table_ID, docActionHolder, options, periodOpen, po);
 
-		if (po instanceof DocOptions)
-			index = ((DocOptions) po).customizeValidActions(DocStatus, Processing, OrderType, IsSOTrx,
-					m_AD_Table_ID, docActionHolder, options, index);
-
-		Integer doctypeId = (Integer)gridTab.getValue("C_DocType_ID");
+		Integer doctypeId = (Integer)gridTab.getValue("C_DocTypeTarget_ID");
 		if(doctypeId==null || doctypeId.intValue()==0){
-			doctypeId = (Integer)gridTab.getValue("C_DocTypeTarget_ID");
+			doctypeId = (Integer)gridTab.getValue("C_DocType_ID");
 		}
 		if (doctypeId == null && MAllocationHdr.Table_ID == m_AD_Table_ID) {
 			doctypeId = MDocType.getDocType(MDocType.DOCBASETYPE_PaymentAllocation);
@@ -253,6 +249,10 @@ public class WDocActionPanel extends Window implements EventListener<Event>, Dia
 			DocAction = DocumentEngine.ACTION_Close;
 	}
 
+	public List<Listitem> getDocActionItems() {
+		return (List<Listitem>)lstDocAction.getItems();
+	}
+	
 	private boolean checkStatus (String TableName, int Record_ID, String DocStatus)
 	{
 		String sql = "SELECT 2 FROM " + TableName
@@ -283,7 +283,7 @@ public class WDocActionPanel extends Window implements EventListener<Event>, Dia
 
 	private void init()
 	{
-		setSclass("popup-dialog");
+		setSclass("popup-dialog doc-action-dialog");
 		Vlayout vlayout = new Vlayout();
 		ZKUpdateUtil.setHflex(vlayout, "1");
 		this.appendChild(vlayout);
@@ -321,7 +321,8 @@ public class WDocActionPanel extends Window implements EventListener<Event>, Dia
 	    ZKUpdateUtil.setVflex(confirmPanel, "min");
 	    
 	    this.setTitle(Msg.translate(Env.getCtx(), "DocAction"));
-	    ZKUpdateUtil.setWidth(this, "410px");
+	    if (!ThemeManager.isUseCSSForWindowSize())
+	    	ZKUpdateUtil.setWindowWidthX(this, 410);
 	    this.setBorder("normal");
 	    this.setZindex(1000);
 	}
@@ -341,44 +342,12 @@ public class WDocActionPanel extends Window implements EventListener<Event>, Dia
 		if (Events.ON_CLICK.equals(event.getName()))
 		{
 			if (confirmPanel.getButton("Ok").equals(event.getTarget()))
-			{		
+			{
 				//F3P UI action flag
 				StartedFromUI.add(Env.getCtx(),  gridTab.getAD_Table_ID(), gridTab.getRecord_ID(), null);
-				//F3P end
-				
-				MClientInfo clientInfo = MClientInfo.get(Env.getCtx());
-				if(clientInfo.isConfirmOnDocClose() || clientInfo.isConfirmOnDocVoid())
-				{
-					String selected = lstDocAction.getSelectedItem().getValue().toString();
-					if((selected.equals(org.compiere.process.DocAction.ACTION_Close) && clientInfo.isConfirmOnDocClose())  
-						|| (selected.equals(org.compiere.process.DocAction.ACTION_Void) && clientInfo.isConfirmOnDocVoid())
-						|| (selected.equals(org.compiere.process.DocAction.ACTION_Reverse_Accrual) && clientInfo.isConfirmOnDocVoid())
-						|| (selected.equals(org.compiere.process.DocAction.ACTION_Reverse_Correct) && clientInfo.isConfirmOnDocVoid()))
-					{
-						String docAction = lstDocAction.getSelectedItem().getLabel();
-						MessageFormat mf = new MessageFormat(Msg.getMsg(Env.getAD_Language(Env.getCtx()), "ConfirmOnDocAction"));
-						Object[] arguments = new Object[]{docAction};
-						FDialog.ask(0, this, "", mf.format(arguments), new Callback<Boolean>() {
-							@Override
-							public void onCallback(Boolean result) {
-								if(result)
-								{
-									setValueAndClose();
-								}
-								else
-									return;
-							}
-						});
-					}
-					else
-					{
-						setValueAndClose();
-					}
-				}
-				else
-				{
-					setValueAndClose();
-				}
+				// F3P End
+						
+				onOk(null);
 			}
 			else if (confirmPanel.getButton("Cancel").equals(event.getTarget()))
 			{
@@ -394,6 +363,63 @@ public class WDocActionPanel extends Window implements EventListener<Event>, Dia
 				label.setValue(s_description[getSelectedIndex()]);
 			}
 		}
+	}
+
+	public void setSelectedItem(String value) {
+		lstDocAction.setSelectedIndex(-1);
+		List<Listitem> lst = (List<Listitem>)lstDocAction.getItems();
+		for(Listitem item: lst) {
+			if (value.equals(item.getValue())) {
+				item.setSelected(true);
+				break;
+			}
+		}
+	}
+	
+	public void onOk(final Callback<Boolean> callback) {
+		MClientInfo clientInfo = MClientInfo.get(Env.getCtx());
+		if(clientInfo.isConfirmOnDocClose() || clientInfo.isConfirmOnDocVoid())
+		{
+			String selected = lstDocAction.getSelectedItem().getValue().toString();
+			if((selected.equals(org.compiere.process.DocAction.ACTION_Close) && clientInfo.isConfirmOnDocClose())  
+				|| (selected.equals(org.compiere.process.DocAction.ACTION_Void) && clientInfo.isConfirmOnDocVoid())
+				|| (selected.equals(org.compiere.process.DocAction.ACTION_Reverse_Accrual) && clientInfo.isConfirmOnDocVoid())
+				|| (selected.equals(org.compiere.process.DocAction.ACTION_Reverse_Correct) && clientInfo.isConfirmOnDocVoid()))
+			{
+				String docAction = lstDocAction.getSelectedItem().getLabel();
+				MessageFormat mf = new MessageFormat(Msg.getMsg(Env.getAD_Language(Env.getCtx()), "ConfirmOnDocAction"));
+				Object[] arguments = new Object[]{docAction};
+				FDialog.ask(0, this, mf.format(arguments), new Callback<Boolean>() {
+					@Override
+					public void onCallback(Boolean result) {
+						if(result)
+						{
+							setValueAndClose();
+							if (callback != null)
+								callback.onCallback(Boolean.TRUE);
+						}
+						else
+						{
+							if (callback != null)
+								callback.onCallback(Boolean.FALSE);
+							return;
+						}
+					}
+				});
+			}
+			else
+			{
+				setValueAndClose();
+				if (callback != null)
+					callback.onCallback(Boolean.TRUE);
+			}
+		}
+		else
+		{
+			setValueAndClose();
+			if (callback != null)
+				callback.onCallback(Boolean.TRUE);
+		}		
 	}
 
 	private void setValueAndClose() {

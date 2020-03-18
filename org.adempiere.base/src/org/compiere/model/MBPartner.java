@@ -48,7 +48,7 @@ public class MBPartner extends X_C_BPartner
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -803727877324075871L;
+	private static final long serialVersionUID = -255154524310324997L;
 
 	/**
 	 * 	Get Empty Template Business Partner
@@ -64,8 +64,10 @@ public class MBPartner extends X_C_BPartner
 		//	Reset
 		if (template != null)
 		{
-			template.set_ValueNoCheck ("C_BPartner_ID", new Integer(0));
+			template.set_ValueNoCheck ("C_BPartner_ID", Integer.valueOf(0));
 			template.set_ValueNoCheck ("C_BPartner_UU", (String)null);
+			template.setAD_OrgBP_ID(0);
+			template.setLogo_ID(0);
 			template.setValue ("");
 			template.setName ("");
 			template.setName2 (null);
@@ -156,6 +158,23 @@ public class MBPartner extends X_C_BPartner
 		.firstOnly();
 		return retValue;
 	}	//	get
+	
+	/**
+	 * 	Get BPartner with taxID in a transaction
+	 *	@param ctx context 
+	 *	@param taxID taxID
+	 * 	@param trxName transaction
+	 *	@return BPartner or null
+	 */
+	public static MBPartner getFirstWithTaxID (Properties ctx, String taxID, String trxName)
+	{
+		final String whereClause = "TaxID=? AND AD_Client_ID=?";
+		MBPartner retValue = new Query(ctx, Table_Name, whereClause, trxName)
+		.setParameters(taxID, Env.getAD_Client_ID(ctx))
+		.setOrderBy(COLUMNNAME_C_BPartner_ID)
+		.first();
+		return retValue;
+	}	//	getFirstWithTaxID
 
 	/**
 	 * 	Get BPartner with Value
@@ -329,24 +348,24 @@ public class MBPartner extends X_C_BPartner
 	
 	
 	/** Users							*/
-	private MUser[]					m_contacts = null;
+	protected MUser[]				m_contacts = null;
 	/** Addressed						*/
-	private MBPartnerLocation[]		m_locations = null;
+	protected MBPartnerLocation[]	m_locations = null;
 	/** BP Bank Accounts				*/
-	private MBPBankAccount[]		m_accounts = null;
+	protected MBPBankAccount[]		m_accounts = null;
 	/** Prim Address					*/
-	private Integer					m_primaryC_BPartner_Location_ID = null;
+	protected Integer				m_primaryC_BPartner_Location_ID = null;
 	/** Prim User						*/
-	private Integer					m_primaryAD_User_ID = null;
+	protected Integer				m_primaryAD_User_ID = null;
 	/** BP Group						*/
-	private MBPGroup				m_group = null;
+	protected MBPGroup				m_group = null;
 	
 	/**
 	 * 	Load Default BPartner
 	 * 	@param AD_Client_ID client
 	 * 	@return true if loaded
 	 */
-	private boolean initTemplate (int AD_Client_ID)
+	protected boolean initTemplate (int AD_Client_ID)
 	{
 		if (AD_Client_ID == 0)
 			throw new IllegalArgumentException ("Client_ID=0");
@@ -681,7 +700,7 @@ public class MBPartner extends X_C_BPartner
 	 */
 	public void setPrimaryC_BPartner_Location_ID(int C_BPartner_Location_ID)
 	{
-		m_primaryC_BPartner_Location_ID = new Integer (C_BPartner_Location_ID);
+		m_primaryC_BPartner_Location_ID = Integer.valueOf(C_BPartner_Location_ID);
 	}	//	setPrimaryC_BPartner_Location_ID
 	
 	/**
@@ -690,7 +709,7 @@ public class MBPartner extends X_C_BPartner
 	 */
 	public void setPrimaryAD_User_ID(int AD_User_ID)
 	{
-		m_primaryAD_User_ID = new Integer (AD_User_ID);
+		m_primaryAD_User_ID = Integer.valueOf(AD_User_ID);
 	}	//	setPrimaryAD_User_ID
 	
 	

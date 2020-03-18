@@ -38,6 +38,7 @@ import org.adempiere.webui.component.DrillCommand;
 import org.adempiere.webui.component.TokenCommand;
 import org.adempiere.webui.component.ZoomCommand;
 import org.adempiere.webui.desktop.DefaultDesktop;
+import org.adempiere.webui.desktop.FavouriteController;
 import org.adempiere.webui.desktop.IDesktop;
 import org.adempiere.webui.session.SessionContextListener;
 import org.adempiere.webui.session.SessionManager;
@@ -128,7 +129,6 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 
     public AdempiereWebUI()
     {
-    	this.addEventListener(Events.ON_CLIENT_INFO, this);
     	this.setVisible(false);
 
     	userPreference = new UserPreference();
@@ -136,7 +136,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     	m_URLParameters = new ConcurrentHashMap<String, String[]>(Executions.getCurrent().getParameterMap());
     }
 
-    public void onCreate()
+	public void onCreate()
     {
         this.getPage().setTitle(ThemeManager.getBrowserTitle());
         
@@ -156,6 +156,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
         {
         	loginDesktop = new WLogin(this, false);  // FIN: (st) 20/09/2017 need to know if its a role change
             loginDesktop.createPart(this.getPage());
+            loginDesktop.getComponent().getRoot().addEventListener(Events.ON_CLIENT_INFO, this);
         }
         else
         {
@@ -186,6 +187,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     {
     	if (loginDesktop != null)
     	{
+    		loginDesktop.getComponent().getRoot().removeEventListener(Events.ON_CLIENT_INFO, this);
     		loginDesktop.detach();
     		loginDesktop = null;
     	}
@@ -242,7 +244,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 			mSession.saveEx();
 		}
 
-		 currSess.setAttribute("Check_AD_User_ID", Env.getAD_User_ID(ctx));
+		currSess.setAttribute("Check_AD_User_ID", Env.getAD_User_ID(ctx));
 
 		//enable full interface, relook into this when doing preference
 		Env.setContext(ctx, "#ShowTrl", true);
@@ -257,7 +259,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 
 		keyListener = new Keylistener();
 		keyListener.setPage(this.getPage());
-		keyListener.setCtrlKeys("@a@c@d@e@f@h@n@o@p@r@s@t@z@x@#left@#right@#up@#down@#home@#end#enter^u@u");
+		keyListener.setCtrlKeys("@a@c@d@e@f@h@n@o@p@r@s@t@z@x@#left@#right@#up@#down@#home@#end#enter^u@u@#pgdn@#pgup");
 		keyListener.setAutoBlur(false);
 		
 		//create new desktop
@@ -265,6 +267,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 		appDesktop.setClientInfo(clientInfo);
 		appDesktop.createPart(this.getPage());
 		this.getPage().getDesktop().setAttribute(APPLICATION_DESKTOP_KEY, new WeakReference<IDesktop>(appDesktop));
+		appDesktop.getComponent().getRoot().addEventListener(Events.ON_CLIENT_INFO, this);
 		
 		//track browser tab per session
 		SessionContextListener.addDesktopId(mSession.getAD_Session_ID(), getPage().getDesktop().getId());
@@ -280,6 +283,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 		BrowserToken.save(mSession, user);
 		
 		Env.setContext(ctx, "#UIClient", "zk");
+		Env.setContext(ctx, "#DBType", DB.getDatabase().getName());
 		StringBuilder localHttpAddr = new StringBuilder(Executions.getCurrent().getScheme());
 		localHttpAddr.append("://").append(Executions.getCurrent().getLocalAddr());
 		int port = Executions.getCurrent().getLocalPort();
@@ -288,8 +292,11 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 		}
 		Env.setContext(ctx, "#LocalHttpAddr", localHttpAddr.toString());		
 		Clients.response(new AuScript("zAu.cmd0.clearBusy()"));
-
-		processParameters();
+		
+		//init favorite
+		FavouriteController.getInstance(currSess);
+		
+		processParameters();	
     }
 
     private void processParameters() {
@@ -480,7 +487,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 			try
 			{
 				Class<?> clazz = this.getClass().getClassLoader().loadClass(className);
-				appDesktop = (IDesktop) clazz.newInstance();
+				appDesktop = (IDesktop) clazz.getDeclaredConstructor().newInstance();
 			}
 			catch (Throwable t)
 			{
@@ -579,22 +586,31 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 			clientInfo.desktopXOffset = c.getDesktopXOffset();
 			clientInfo.desktopYOffset = c.getDesktopYOffset();
 			clientInfo.orientation = c.getOrientation();
-			clientInfo.timeZone = c.getTimeZone();
-			IDesktop appDesktop = getAppDeskop();
-			if (appDesktop != null)
-				appDesktop.setClientInfo(clientInfo);
+			clientInfo.timeZone = c.getTimeZone();			
 			String ua = Servlets.getUserAgent((ServletRequest) Executions.getCurrent().getNativeRequest());
 			clientInfo.userAgent = ua;
 			ua = ua.toLowerCase();
-			clientInfo.tablet = Executions.getCurrent().getBrowser("mobile") !=null;
+			clientInfo.tablet = false;
+			if (Executions.getCurrent().getBrowser("mobile") !=null) {
+				clientInfo.tablet = true;
+			} else if (ua.contains("ipad") || ua.contains("iphone") || ua.contains("android")) {
+				clientInfo.tablet = true;
+			}
 			if (getDesktop() != null && getDesktop().getSession() != null) {
 				getDesktop().getSession().setAttribute(CLIENT_INFO, clientInfo);
+			} else if (Executions.getCurrent() != null){
+				Executions.getCurrent().getSession().setAttribute(CLIENT_INFO, clientInfo);
 			}
 			
 			Env.setContext(Env.getCtx(), "#clientInfo_desktopWidth", clientInfo.desktopWidth);
 			Env.setContext(Env.getCtx(), "#clientInfo_desktopHeight", clientInfo.desktopHeight);
 			Env.setContext(Env.getCtx(), "#clientInfo_orientation", clientInfo.orientation);
 			Env.setContext(Env.getCtx(), "#clientInfo_mobile", clientInfo.tablet);
+			
+			IDesktop appDesktop = getAppDeskop();
+			if (appDesktop != null)
+				appDesktop.setClientInfo(clientInfo);
+
 		}
 
 	}
@@ -607,7 +623,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 		loginDesktop = new WLogin(this, true);  // FIN: (st) 20/09/2017 need to know if its a role change
         loginDesktop.createPart(this.getPage());
         loginDesktop.changeRole(locale, properties);
-		
+        loginDesktop.getComponent().getRoot().addEventListener(Events.ON_CLIENT_INFO, this);
 	}
 
 	/**
@@ -663,6 +679,11 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 		properties.setProperty(SessionContextListener.SERVLET_SESSION_ID, newSession.getId());
 		
 		Executions.sendRedirect("index.zul");
+	}
+	
+	@Override
+	public ClientInfo getClientInfo() {
+		return clientInfo;
 	}
 	
 	/**

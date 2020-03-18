@@ -35,8 +35,6 @@ import org.compiere.util.Util;
 /**
  *	Persistent Rule Model
  *  @author Carlos Ruiz
- *  @author Silvano Trinchero, www.freepath.it
- *  		<li>IDEMPIERE-3243 refactored getScriptEngine to use Core.getScriptEngine   
  *  @version $Id: MRule.java
  *  
  */
@@ -69,7 +67,7 @@ public class MRule extends X_AD_Rule
 	 */
 	public static MRule get (Properties ctx, int AD_Rule_ID)
 	{
-		Integer key = new Integer (AD_Rule_ID);
+		Integer key = Integer.valueOf(AD_Rule_ID);
 		MRule retValue = (MRule) s_cache.get (key);
 		if (retValue != null)
 			return retValue;
@@ -105,7 +103,7 @@ public class MRule extends X_AD_Rule
 		
 		if (retValue != null)
 		{
-			Integer key = new Integer (retValue.getAD_Rule_ID());
+			Integer key = Integer.valueOf(retValue.getAD_Rule_ID());
 			s_cache.put (key, retValue);
 		}
 		return retValue;
@@ -200,12 +198,9 @@ public class MRule extends X_AD_Rule
 	 *	@return ScriptEngine
 	 */
 	public ScriptEngine getScriptEngine() {
-		
 		String engineName = getEngineName();
-		
-		if(engineName != null)
+		if (engineName != null)
 			engine = Core.getScriptEngine(engineName);
-		
 		return engine;
 	}
 

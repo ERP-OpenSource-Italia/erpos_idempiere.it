@@ -23,14 +23,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for AD_Tree
  *  @author iDempiere (generated) 
- *  @version Release 4.1 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_AD_Tree extends PO implements I_AD_Tree, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20170403L;
+	private static final long serialVersionUID = 20190106L;
 
     /** Standard Constructor */
     public X_AD_Tree (Properties ctx, int AD_Tree_ID, String trxName)
@@ -42,9 +42,11 @@ public class X_AD_Tree extends PO implements I_AD_Tree, I_Persistent
 			setIsAllNodes (false);
 			setIsDefault (false);
 // N
-			setIsLoadAllNodesImmediately (false);
-// N
+			setIsLoadAllNodesImmediately (true);
+// Y
 			setIsTreeDrivenByValue (false);
+// N
+			setIsValueDisplayed (false);
 // N
 			setName (null);
 			setTreeType (null);
@@ -254,6 +256,30 @@ public class X_AD_Tree extends PO implements I_AD_Tree, I_Persistent
 		return false;
 	}
 
+	/** Set Display Value.
+		@param IsValueDisplayed 
+		Displays Value column with the Display column
+	  */
+	public void setIsValueDisplayed (boolean IsValueDisplayed)
+	{
+		set_Value (COLUMNNAME_IsValueDisplayed, Boolean.valueOf(IsValueDisplayed));
+	}
+
+	/** Get Display Value.
+		@return Displays Value column with the Display column
+	  */
+	public boolean isValueDisplayed () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsValueDisplayed);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
 	/** Set Name.
 		@param Name 
 		Alphanumeric identifier of the entity
@@ -278,6 +304,34 @@ public class X_AD_Tree extends PO implements I_AD_Tree, I_Persistent
     {
         return new KeyNamePair(get_ID(), getName());
     }
+
+	public org.compiere.model.I_AD_Column getParent_Column() throws RuntimeException
+    {
+		return (org.compiere.model.I_AD_Column)MTable.get(getCtx(), org.compiere.model.I_AD_Column.Table_Name)
+			.getPO(getParent_Column_ID(), get_TrxName());	}
+
+	/** Set Parent Column.
+		@param Parent_Column_ID 
+		The link column on the parent tab.
+	  */
+	public void setParent_Column_ID (int Parent_Column_ID)
+	{
+		if (Parent_Column_ID < 1) 
+			set_Value (COLUMNNAME_Parent_Column_ID, null);
+		else 
+			set_Value (COLUMNNAME_Parent_Column_ID, Integer.valueOf(Parent_Column_ID));
+	}
+
+	/** Get Parent Column.
+		@return The link column on the parent tab.
+	  */
+	public int getParent_Column_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_Parent_Column_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
 
 	/** Set Process Now.
 		@param Processing Process Now	  */

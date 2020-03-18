@@ -15,6 +15,7 @@ package org.adempiere.webui.window;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.Tab;
@@ -24,8 +25,11 @@ import org.adempiere.webui.component.Tabpanels;
 import org.adempiere.webui.component.Tabs;
 import org.adempiere.webui.component.Textbox;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.util.Language;
+import org.owasp.html.PolicyFactory;
+import org.owasp.html.Sanitizers;
 import org.zkforge.ckez.CKeditor;
 import org.zkoss.zk.au.out.AuScript;
 import org.zkoss.zk.ui.event.Event;
@@ -46,7 +50,7 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 1188165765430615546L;
+	private static final long serialVersionUID = -1857623453350849161L;
 
 	private boolean editable;
 	private int maxSize;
@@ -84,11 +88,13 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 
 	private void init() {
 		setBorder("normal");
-		ZKUpdateUtil.setHeight(this, "450px");
-		ZKUpdateUtil.setWidth(this, "800px");
+		if (ThemeManager.isUseCSSForWindowSize()) {
+			ZKUpdateUtil.setWindowHeightX(this, 450);
+			ZKUpdateUtil.setWindowWidthX(this, 800);
+		}
 		setStyle("position: absolute;");
 		setSizable(false);
-		setSclass("popup-dialog");
+		setSclass("popup-dialog text-editor-dialog");
 		
 		Vlayout vbox = new Vlayout();
 		appendChild(vbox);
@@ -165,9 +171,12 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 		setMaximizable(true);
 	}
 
-	private void createEditor(org.zkoss.zul.Tabpanel tabPanel) {
+	private void createEditor(org.zkoss.zul.Tabpanel tabPanel) {		
 		editor = new CKeditor();
-		editor.setCustomConfigurationsPath("/js/ckeditor/config.js");
+		if (ClientInfo.isMobile())
+			editor.setCustomConfigurationsPath("/js/ckeditor/config-min.js");
+		else
+			editor.setCustomConfigurationsPath("/js/ckeditor/config.js");
 		editor.setToolbar("MyToolbar");
 		Map<String,Object> lang = new HashMap<String,Object>();
 		lang.put("language", Language.getLoginLanguage().getAD_Language());
@@ -179,7 +188,7 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 	}
 
 	public void onEditorCallback(Event event) {
-		text = (String) event.getData();
+		text = sanitize((String) event.getData());
 		detach();
 	}
 	
@@ -204,7 +213,8 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 			}			
 		} else if (event.getTarget().getId().equals(ConfirmPanel.A_RESET)) {
 			textBox.setText(text);
-			editor.setValue(text);
+			if (editor != null)
+				editor.setValue(text);
 		} else if (event.getName().equals(Events.ON_SELECT)) {
 			if (editable) {
 				if (tabbox.getSelectedIndex() == 0) {
@@ -221,7 +231,7 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 			} else if (event.getTarget() == editor) {
 				updateStatus(editor.getValue().length());
 			}
-		} 
+		}
 	}
 	
 	private void updateStatus(int newLength) {
@@ -254,6 +264,16 @@ public class WTextEditorDialog extends Window implements EventListener<Event>{
 	 */
 	public String getText() {
 		return text;
+	}
+
+	public static String sanitize(String untrustedHTML) {
+		final PolicyFactory policy = Sanitizers.BLOCKS
+				.and(Sanitizers.FORMATTING)
+				.and(Sanitizers.IMAGES)
+				.and(Sanitizers.LINKS)
+				.and(Sanitizers.STYLES)
+				.and(Sanitizers.TABLES);
+		return policy.sanitize(untrustedHTML);
 	}
 
 }

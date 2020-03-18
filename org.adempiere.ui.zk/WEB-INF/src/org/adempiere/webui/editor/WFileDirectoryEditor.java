@@ -42,8 +42,13 @@ public class WFileDirectoryEditor extends WEditor
 	public WFileDirectoryEditor(GridField gridField)
 	{
 		super(new FilenameBox(), gridField);
-		getComponent().setButtonImage(ThemeManager.getThemeResource("images/Open16.png"));
+		if (ThemeManager.isUseFontIconForImage())
+			getComponent().getButton().setIconSclass("z-icon-Open");
+		else
+			getComponent().setButtonImage(ThemeManager.getThemeResource("images/Open16.png"));
 		getComponent().getButton().setUpload("false");
+		if (gridField != null)
+			getComponent().getTextbox().setPlaceholder(gridField.getPlaceholder());
 	}
 
 	@Override

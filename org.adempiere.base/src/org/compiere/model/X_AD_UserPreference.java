@@ -22,14 +22,14 @@ import java.util.Properties;
 
 /** Generated Model for AD_UserPreference
  *  @author iDempiere (generated) 
- *  @version Release 4.1 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_AD_UserPreference extends PO implements I_AD_UserPreference, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20190106L;
 
     /** Standard Constructor */
     public X_AD_UserPreference (Properties ctx, int AD_UserPreference_ID, String trxName)
@@ -185,6 +185,48 @@ public class X_AD_UserPreference extends PO implements I_AD_UserPreference, I_Pe
 	public boolean isAutoNew () 
 	{
 		Object oo = get_Value(COLUMNNAME_AutoNew);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Detailed Zoom Across.
+		@param IsDetailedZoomAcross Detailed Zoom Across	  */
+	public void setIsDetailedZoomAcross (boolean IsDetailedZoomAcross)
+	{
+		set_Value (COLUMNNAME_IsDetailedZoomAcross, Boolean.valueOf(IsDetailedZoomAcross));
+	}
+
+	/** Get Detailed Zoom Across.
+		@return Detailed Zoom Across	  */
+	public boolean isDetailedZoomAcross () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsDetailedZoomAcross);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Use Similar To.
+		@param IsUseSimilarTo Use Similar To	  */
+	public void setIsUseSimilarTo (boolean IsUseSimilarTo)
+	{
+		set_Value (COLUMNNAME_IsUseSimilarTo, Boolean.valueOf(IsUseSimilarTo));
+	}
+
+	/** Get Use Similar To.
+		@return Use Similar To	  */
+	public boolean isUseSimilarTo () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsUseSimilarTo);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 

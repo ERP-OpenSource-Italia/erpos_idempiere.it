@@ -31,9 +31,11 @@ import org.adempiere.pipo2.PackOut;
 import org.adempiere.pipo2.PackoutItem;
 import org.adempiere.pipo2.SQLElementParameters;
 import org.compiere.model.X_AD_Package_Imp_Detail;
+import org.compiere.util.CacheMgt;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Trx;
+import org.compiere.util.Util;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
@@ -52,6 +54,7 @@ public class SQLStatementElementHandler extends AbstractElementHandler {
 			sql = sql.substring(0, sql.length() - 1);
 		sql=Env.parseContext(Env.getCtx(), 0, sql, false);  // tbayen IDEMPIERE-2140
 		Savepoint savepoint = null;
+		int count = 0;
 		PreparedStatement pstmt = null;
 		X_AD_Package_Imp_Detail impDetail = null;
 		impDetail = createImportDetail(ctx, element.qName, "", 0);
@@ -64,11 +67,11 @@ public class SQLStatementElementHandler extends AbstractElementHandler {
 
 			pstmt = DB.prepareStatement(sql, getTrxName(ctx));
 			if (DBType.equals("ALL")) {
-				int n = pstmt.executeUpdate();
-				if (log.isLoggable(Level.INFO)) log.info("Executed SQL Statement: "+ getStringValue(element, "statement") + " ReturnValue="+n);
+				count = pstmt.executeUpdate();
+				if (log.isLoggable(Level.INFO)) log.info("Executed SQL Statement: "+ getStringValue(element, "statement") + " ReturnValue="+count);
 			} else if (DB.isOracle() == true && DBType.equals("Oracle")) {
-				int n = pstmt.executeUpdate();
-				if (log.isLoggable(Level.INFO)) log.info("Executed SQL Statement for Oracle: "+ getStringValue(element, "statement") + " ReturnValue="+n);
+				count = pstmt.executeUpdate();
+				if (log.isLoggable(Level.INFO)) log.info("Executed SQL Statement for Oracle: "+ getStringValue(element, "statement") + " ReturnValue="+count);
 			} else if (DB.isPostgreSQL()
 					 && (   DBType.equals("Postgres")
 						 || DBType.equals("PostgreSQL")  // backward compatibility with old packages developed by hand
@@ -83,21 +86,30 @@ public class SQLStatementElementHandler extends AbstractElementHandler {
 				Statement stmt = null;
 				try {
 					stmt = pstmt.getConnection().createStatement();
-					int n = stmt.executeUpdate (sql);
-					if (log.isLoggable(Level.INFO)) log.info("Executed SQL Statement for PostgreSQL: "+ getStringValue(element,"statement") + " ReturnValue="+n);
+					count = stmt.executeUpdate (sql);
+					if (log.isLoggable(Level.INFO)) log.info("Executed SQL Statement for PostgreSQL: "+ getStringValue(element,"statement") + " ReturnValue="+count);
 				} finally {
 					DB.close(stmt);
 					stmt = null;
 				}
 			}	
+			logImportDetail (ctx, impDetail, 1, "SQLStatement",count,"Execute");
 			//F3P advanced packin backup
 			if(STDSysConfig.isAdvancedPackinBackup())
 			{
 				LITMPackageImpDetail.setDBType(impDetail, DBType);
 				LITMPackageImpDetail.setSQLStatement(impDetail, sql);
 			}
-			logImportDetail (ctx, impDetail, 1, "SQLStatement",1,"Execute");
 			ctx.packIn.getNotifier().addSuccessLine("-> " + sql);
+			// Cache Reset when deleting records via SQL
+			if (sql.toLowerCase().startsWith("delete from ")) {
+				String[] words = sql.split("[ \r\n]");
+				String table = words[2];
+				String tableName = DB.getSQLValueString(null, "SELECT TableName FROM AD_Table WHERE LOWER(TableName)=?", table.toLowerCase());
+				if (! Util.isEmpty(tableName)) {
+					CacheMgt.get().reset(tableName);
+				}
+			}
 		} catch (Exception e)	{
 			// rollback immediately on exception to avoid a wrong SQL stop the whole process
 			if (savepoint != null) 
@@ -114,7 +126,7 @@ public class SQLStatementElementHandler extends AbstractElementHandler {
 				savepoint = null;
 			}
 			ctx.packIn.getNotifier().addFailureLine("SQL statement failed but ignored, error (" + e.getLocalizedMessage() + "): ");
-			logImportDetail (ctx, impDetail, 0, "SQLStatement",1,"Execute");
+			logImportDetail (ctx, impDetail, 0, "SQLStatement",-1,"Execute");
 			ctx.packIn.getNotifier().addFailureLine("-> " + sql);
 			log.log(Level.SEVERE,"SQLStatement", e);
 		} finally {

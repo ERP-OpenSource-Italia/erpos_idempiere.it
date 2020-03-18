@@ -40,6 +40,7 @@ import org.adempiere.webui.dashboard.DPActivitiesModel;
 import org.adempiere.webui.editor.WSearchEditor;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.panel.StatusBarPanel;
+import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
@@ -138,8 +139,14 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 
         fAnswerList.setMold("select");
 
-    	bZoom.setImage(ThemeManager.getThemeResource("images/Zoom16.png"));
-    	bOK.setImage(ThemeManager.getThemeResource("images/Ok24.png"));
+        if (ThemeManager.isUseFontIconForImage())
+        	bZoom.setIconSclass("z-icon-Zoom");
+        else
+        	bZoom.setImage(ThemeManager.getThemeResource("images/Zoom16.png"));
+        if (ThemeManager.isUseFontIconForImage())
+        	bOK.setIconSclass("z-icon-Ok");
+        else
+        	bOK.setImage(ThemeManager.getThemeResource("images/Ok16.png"));
 
         MLookup lookup = MLookupFactory.get(Env.getCtx(), m_WindowNo,
                 0, 10443, DisplayType.Search);
@@ -421,7 +428,10 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 		fAnswerText.setVisible(false);
 		fAnswerList.setVisible(false);
 		fAnswerButton.setVisible(false);
-		fAnswerButton.setImage(ThemeManager.getThemeResource("images/mWindow.png"));
+		if (ThemeManager.isUseFontIconForImage())
+			fAnswerButton.setIconSclass("z-icon-Window");
+		else
+			fAnswerButton.setImage(ThemeManager.getThemeResource("images/mWindow.png"));
 		fTextMsg.setReadonly(!(selIndex >= 0));
 		bZoom.setEnabled(selIndex >= 0);
 		bOK.setEnabled(selIndex >= 0);
@@ -507,7 +517,8 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 		}
 		//	--
 		else if (MWFNode.ACTION_UserWindow.equals(node.getAction())
-			|| MWFNode.ACTION_UserForm.equals(node.getAction()))
+			|| MWFNode.ACTION_UserForm.equals(node.getAction())
+			|| MWFNode.ACTION_UserInfo.equals(node.getAction()))
 		{
 			fAnswerButton.setLabel(node.getName());
 			fAnswerButton.setTooltiptext(node.getDescription());
@@ -582,7 +593,9 @@ public class WWFActivity extends ADForm implements EventListener<Event>
 					loadActivities();
 					display(-1);
 				}				
-			}			
+			}					
+		}else if (MWFNode.ACTION_UserInfo.equals(node.getAction())){
+			SessionManager.getAppDesktop().openInfo(node.getAD_InfoWindow_ID());
 		}
 		else
 			log.log(Level.SEVERE, "No User Action:" + node.getAction());

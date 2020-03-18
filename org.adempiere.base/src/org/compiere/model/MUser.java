@@ -21,7 +21,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
@@ -34,6 +33,7 @@ import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 
 import org.adempiere.exceptions.DBException;
+import org.codehaus.groovy.classgen.GeneratorContext;
 import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
@@ -59,7 +59,7 @@ public class MUser extends X_AD_User
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 9027688865361175114L;
+	private static final long serialVersionUID = 7996468236476384128L;
 
 	/**
 	 * Get active Users of BPartner
@@ -137,7 +137,7 @@ public class MUser extends X_AD_User
 	 */
 	public static MUser get (Properties ctx, int AD_User_ID)
 	{
-		Integer key = new Integer(AD_User_ID);
+		Integer key = Integer.valueOf(AD_User_ID);
 		MUser retValue = (MUser)s_cache.get(key);
 		if (retValue == null)
 		{
@@ -214,7 +214,14 @@ public class MUser extends X_AD_User
 			
 			clientsValidated.add(user.getAD_Client_ID());
 			boolean valid = false;
-			if (hash_password) {
+			MSystem system = MSystem.get(Env.getCtx());
+			if (system == null)
+				throw new IllegalStateException("No System Info");
+			
+			
+			if (system.isLDAP() && ! Util.isEmpty(user.getLDAPUser())) {
+				valid = system.isLDAP(name, password);
+			} else if (hash_password) {
 				valid = user.authenticateHash(password);
 			} else {
 				// password not hashed
@@ -237,28 +244,10 @@ public class MUser extends X_AD_User
 	 */
 	public static String getNameOfUser (int AD_User_ID)
 	{
-		String name = "?";
-		//	Get ID
-		String sql = "SELECT Name FROM AD_User WHERE AD_User_ID=?";
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setInt(1, AD_User_ID);
-			rs = pstmt.executeQuery();
-			if (rs.next())
-				name = rs.getString(1);
-		}
-		catch (SQLException e)
-		{
-			s_log.log(Level.SEVERE, sql, e);
-		}
-		finally
-		{
-			DB.close(rs, pstmt);
-		}
-		return name;
+		MUser user = get(Env.getCtx(), AD_User_ID);
+		if (user.getAD_User_ID() != AD_User_ID)
+			return "?";
+		return user.getName();
 	}	//	getNameOfUser
 
 	
@@ -296,7 +285,7 @@ public class MUser extends X_AD_User
 		if (AD_User_ID == 0)
 		{
 			setIsFullBPAccess (true);
-			setNotificationType(NOTIFICATIONTYPE_EMail);
+			setNotificationType(NOTIFICATIONTYPE_None);
 		}		
 	}	//	MUser
 
@@ -787,7 +776,7 @@ public class MUser extends X_AD_User
 	
 	/**
 	 * 	Is User an Administrator?
-	 *	@return true id Admin
+	 *	@return true if Admin
 	 */
 	public boolean isAdministrator()
 	{
@@ -806,6 +795,33 @@ public class MUser extends X_AD_User
 		}
 		return m_isAdministrator.booleanValue();
 	}	//	isAdministrator
+
+	/**
+	 * 	User has access to URL form?
+	 *	@return true if user has access
+	 */
+	public boolean hasURLFormAccess(String url)
+	{
+		if (Util.isEmpty(url, true)) {
+			return false;
+		}
+		boolean hasAccess = false;
+		int formId = new Query(getCtx(), MForm.Table_Name, "ClassName=?", get_TrxName())
+				.setOnlyActiveRecords(true)
+				.setParameters(url)
+				.firstId();
+		if (formId > 0) {
+			for (MRole role : getRoles(0))
+			{
+				Boolean formAccess = role.getFormAccess(formId);
+				if (formAccess != null && formAccess.booleanValue()) {
+					hasAccess = true;
+					break;
+				}
+			}
+		}
+		return hasAccess;
+	}	//	hasURLFormAccess
 
 	/**
 	 * 	Has the user Access to BP info and resources
@@ -917,34 +933,27 @@ public class MUser extends X_AD_User
 				}
 			}
 		}
-			
-		if (getPassword() != null && getPassword().length() > 0 && (newRecord || is_ValueChanged("Password"))) {
+
+		boolean hasPassword = ! Util.isEmpty(getPassword());
+		if (hasPassword && (newRecord || is_ValueChanged("Password"))) {
 			// Validate password policies / IDEMPIERE-221
-			if (get_ValueOld("Salt") == null && get_Value("Salt") != null) { // being hashed
-				;
-			} else {
+			if (! (get_ValueOld("Salt") == null && get_Value("Salt") != null)) { // not being hashed
 				MPasswordRule pwdrule = MPasswordRule.getRules(getCtx(), get_TrxName());
 				if (pwdrule != null){
 					List<MPasswordHistory> passwordHistorys = MPasswordHistory.getPasswordHistoryForCheck(pwdrule.getDays_Reuse_Password(), this.getAD_User_ID());
-					// for long time user don't use this system, because all password in history table is out of check range. but we will want new password must difference latest password  
-					if (passwordHistorys.size() == 0 && !this.is_new() && this.get_ValueOld(MUser.COLUMNNAME_Password) != null){
-						Object oldSalt = this.get_ValueOld(MUser.COLUMNNAME_Salt);
-						Object oldPassword = this.get_ValueOld(MUser.COLUMNNAME_Password);
-						
-						MPasswordHistory latestPassword = new MPasswordHistory(oldSalt == null?null:oldSalt.toString(), oldPassword == null?null:oldPassword.toString());
-						passwordHistorys.add(latestPassword);
-					}
 					pwdrule.validate((getLDAPUser() != null ? getLDAPUser() : getName()), getPassword(), passwordHistorys);
 				}
-					
+				setDatePasswordChanged(new Timestamp(new Date().getTime()));
 			}
+		}
 
+		boolean hash_password = MSysConfig.getBooleanValue(MSysConfig.USER_PASSWORD_HASH, false);
+		if (   hasPassword
+			&& is_ValueChanged("Password")
+			&& (!newRecord || (hash_password && getSalt() == null))) {
 			// Hash password - IDEMPIERE-347
-			boolean hash_password = MSysConfig.getBooleanValue(MSysConfig.USER_PASSWORD_HASH, false);
 			if (hash_password)
 				setPassword(getPassword());
-			
-			setDatePasswordChanged(new Timestamp(new Date().getTime()));
 		}
 		
 		return true;
@@ -1075,17 +1084,24 @@ public class MUser extends X_AD_User
 	@Override
 	protected boolean afterSave(boolean newRecord, boolean success) {
 		if (getPassword() != null && getPassword().length() > 0 && (newRecord || is_ValueChanged("Password"))) {
-			MPasswordHistory passwordHistory = new MPasswordHistory(this.getCtx(), 0, this.get_TrxName());
-			passwordHistory.setSalt(this.getSalt());
-			passwordHistory.setPassword(this.getPassword());
-			// http://wiki.idempiere.org/en/System_user
-			if (!this.is_new() && this.getAD_User_ID() == 0){
-				passwordHistory.set_Value(MPasswordHistory.COLUMNNAME_AD_User_ID, 0);
-			}else{
-				passwordHistory.setAD_User_ID(this.getAD_User_ID());
+			MPasswordRule pwdrule = MPasswordRule.getRules(getCtx(), get_TrxName());
+			if (pwdrule != null && pwdrule.getDays_Reuse_Password() > 0) {
+				boolean hash_password = MSysConfig.getBooleanValue(MSysConfig.USER_PASSWORD_HASH, false);
+				if (! hash_password) {
+					log.severe("Saving password history: it is strongly encouraged to save password history just when using hashed passwords - WARNING! table AD_Password_History is possibly keeping plain passwords");
+				}
+				MPasswordHistory passwordHistory = new MPasswordHistory(this.getCtx(), 0, this.get_TrxName());
+				passwordHistory.setSalt(this.getSalt());
+				passwordHistory.setPassword(this.getPassword());
+				// http://wiki.idempiere.org/en/System_user
+				if (!this.is_new() && this.getAD_User_ID() == 0){
+					passwordHistory.set_Value(MPasswordHistory.COLUMNNAME_AD_User_ID, 0);
+				}else{
+					passwordHistory.setAD_User_ID(this.getAD_User_ID());
+				}
+				passwordHistory.setDatePasswordChanged(this.getUpdated());
+				passwordHistory.saveEx();
 			}
-			passwordHistory.setDatePasswordChanged(this.getUpdated());
-			passwordHistory.saveEx();
 		}
 		return super.afterSave(newRecord, success);
 	}

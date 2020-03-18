@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Tree
  *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @version Release 6.2
  */
 public interface I_AD_Tree 
 {
@@ -189,6 +189,19 @@ public interface I_AD_Tree
 	/** Get Driven by Search Key	  */
 	public boolean isTreeDrivenByValue();
 
+    /** Column name IsValueDisplayed */
+    public static final String COLUMNNAME_IsValueDisplayed = "IsValueDisplayed";
+
+	/** Set Display Value.
+	  * Displays Value column with the Display column
+	  */
+	public void setIsValueDisplayed (boolean IsValueDisplayed);
+
+	/** Get Display Value.
+	  * Displays Value column with the Display column
+	  */
+	public boolean isValueDisplayed();
+
     /** Column name Name */
     public static final String COLUMNNAME_Name = "Name";
 
@@ -201,6 +214,21 @@ public interface I_AD_Tree
 	  * Alphanumeric identifier of the entity
 	  */
 	public String getName();
+
+    /** Column name Parent_Column_ID */
+    public static final String COLUMNNAME_Parent_Column_ID = "Parent_Column_ID";
+
+	/** Set Parent Column.
+	  * The link column on the parent tab.
+	  */
+	public void setParent_Column_ID (int Parent_Column_ID);
+
+	/** Get Parent Column.
+	  * The link column on the parent tab.
+	  */
+	public int getParent_Column_ID();
+
+	public org.compiere.model.I_AD_Column getParent_Column() throws RuntimeException;
 
     /** Column name Processing */
     public static final String COLUMNNAME_Processing = "Processing";

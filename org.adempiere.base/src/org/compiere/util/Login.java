@@ -121,13 +121,13 @@ public class Login
 	{
 		//	Java System version check
 		String jVersion = System.getProperty("java.version");
-		if (jVersion.startsWith("1.8.0"))
+		if (jVersion.startsWith("1.8.0") || jVersion.startsWith("9.") || jVersion.startsWith("10.") || jVersion.startsWith("11."))
 			return true;
 
 		//  Error Message
 		StringBuilder msg = new StringBuilder();
 		msg.append(System.getProperty("java.vm.name")).append(" - ").append(jVersion);
-		msg.append("  <>  1.8.0");
+		msg.append("  <>  1.8.0 | 9 | 10 | 11");
 		//
 		if (isClient)
 			JOptionPane.showMessageDialog(null, msg.toString(),
@@ -266,12 +266,10 @@ public class Login
 		if (system.isLDAP())
 		{
 			authenticated = system.isLDAP(app_user, app_pwd);
-			if (authenticated){
+			if (authenticated) {
 				app_pwd = null;
-				authenticated=true;
 			}
-
-			// if not authenticated, use AD_User as backup
+			// if not authenticated, use AD_User as backup - just for non-LDAP users
 		}
 
 		boolean hash_password=MSysConfig.getBooleanValue(MSysConfig.USER_PASSWORD_HASH, false);
@@ -304,9 +302,11 @@ public class Login
 			// always do calculation to confuse timing based attacks
 			if ( user == null )
 				user = MUser.get(m_ctx, 0);
-			if ( user.authenticateHash(app_pwd) )
-			{
-				authenticated = true;
+			if (!system.isLDAP() || Util.isEmpty(user.getLDAPUser())) {
+				if ( user.authenticateHash(app_pwd) )
+				{
+					authenticated = true;
+				}
 			}
 		} 
 		else{
@@ -324,10 +324,11 @@ public class Login
 
 				while(rs1.next()){
 					MUser user = new MUser(m_ctx, rs1.getInt(1), null);
-					if (user.getPassword() != null && user.getPassword().equals(app_pwd)) {
-						authenticated=true;
+					if (!system.isLDAP() || Util.isEmpty(user.getLDAPUser())) {
+						if (user.getPassword() != null && user.getPassword().equals(app_pwd)) {
+							authenticated=true;
+						}
 					}
-					
 				}
 
 			}catch (Exception ex) {
@@ -819,6 +820,11 @@ public class Login
 			Env.setContext(m_ctx, Env.M_WAREHOUSE_ID, warehouse.getKey());
 			Ini.setProperty(Ini.P_WAREHOUSE, warehouse.getName());
 		}
+		else
+		{
+			Env.setContext(m_ctx, Env.M_WAREHOUSE_ID, "");
+			Ini.setProperty(Ini.P_WAREHOUSE, "");
+		}
 
 		//	Date (default today)
 		long today = System.currentTimeMillis();
@@ -1237,14 +1243,19 @@ public class Login
 		return null;
 	}	//	getPrincipal
 
+	public KeyNamePair[] getClients(String app_user, String app_pwd) {
+		return getClients(app_user, app_pwd, null);
+	}
+
 	/**
 	 *  Validate Client Login.
 	 *  Sets Context with login info
 	 *  @param app_user user id
 	 *  @param app_pwd password
+	 *  @param roleTypes comma separated list of the role types allowed to login (NULL can be added)
 	 *  @return client array or null if in error.
 	 */
-	public KeyNamePair[] getClients(String app_user, String app_pwd) {
+	public KeyNamePair[] getClients(String app_user, String app_pwd, String roleTypes) {
 		if (log.isLoggable(Level.INFO)) log.info("User=" + app_user);
 
 		if (Util.isEmpty(app_user))
@@ -1270,8 +1281,11 @@ public class Login
 
 		if (system.isLDAP())
 		{
-			authenticated = system.isLDAP(app_user, app_pwd);			
-			// if not authenticated, use AD_User as backup
+			authenticated = system.isLDAP(app_user, app_pwd);
+			if (authenticated) {
+				app_pwd = null;
+			}
+			// if not authenticated, use AD_User as backup (just for non-LDAP users)
 		}
 
 		boolean hash_password = MSysConfig.getBooleanValue(MSysConfig.USER_PASSWORD_HASH, false);
@@ -1285,10 +1299,15 @@ public class Login
 			where.append("EMail=?");
 		else
 			where.append("COALESCE(LDAPUser,Name)=?");
+		String whereRoleType = MRole.getWhereRoleType(roleTypes, "r");
 		where.append(" AND")
 				.append(" EXISTS (SELECT * FROM AD_User_Roles ur")
 				.append("         INNER JOIN AD_Role r ON (ur.AD_Role_ID=r.AD_Role_ID)")
-				.append("         WHERE ur.AD_User_ID=AD_User.AD_User_ID AND ur.IsActive='Y' AND r.IsActive='Y') AND ")
+				.append("         WHERE ur.AD_User_ID=AD_User.AD_User_ID AND ur.IsActive='Y' AND r.IsActive='Y'");
+		if (! Util.isEmpty(whereRoleType)) {
+			where.append(" AND ").append(whereRoleType);
+		}
+		where.append(") AND ")
 				.append(" EXISTS (SELECT * FROM AD_Client c")
 				.append("         WHERE c.AD_Client_ID=AD_User.AD_Client_ID")
 				.append("         AND c.IsActive='Y') AND ")
@@ -1315,7 +1334,7 @@ public class Login
 				if (minutes > MAX_ACCOUNT_LOCK_MINUTES)
 				{
 					boolean inactive = false;
-					if (MAX_INACTIVE_PERIOD_DAY > 0 && user.getDateLastLogin() != null)
+					if (MAX_INACTIVE_PERIOD_DAY > 0 && user.getDateLastLogin() != null && !user.isNoExpire())
 					{
 						long days = (now - user.getDateLastLogin().getTime()) / (1000 * 60 * 60 * 24);
 						if (days > MAX_INACTIVE_PERIOD_DAY)
@@ -1334,7 +1353,7 @@ public class Login
 				}					
 			}
 			
-			if (MAX_INACTIVE_PERIOD_DAY > 0 && !user.isLocked() && user.getDateLastLogin() != null)
+			if (MAX_INACTIVE_PERIOD_DAY > 0 && !user.isLocked() && user.getDateLastLogin() != null && !user.isNoExpire())
 			{
 				long days = (now - user.getDateLastLogin().getTime()) / (1000 * 60 * 60 * 24);
 				if (days > MAX_INACTIVE_PERIOD_DAY)
@@ -1357,16 +1376,20 @@ public class Login
 			clientsValidated.add(user.getAD_Client_ID());
 			boolean valid = false;
 			// authenticated by ldap
-			if (authenticated){
+			if (authenticated) {
 				valid = true;
-			} else if (hash_password) {
-				valid = user.authenticateHash(app_pwd);
 			} else {
-				// password not hashed
-				valid = user.getPassword() != null && user.getPassword().equals(app_pwd);
-			}			
+				if (!system.isLDAP() || Util.isEmpty(user.getLDAPUser())) {
+					if (hash_password) {
+						valid = user.authenticateHash(app_pwd);
+					} else {
+						// password not hashed
+						valid = user.getPassword() != null && user.getPassword().equals(app_pwd);
+					}			
+				}
+			}
 			
-			if (valid ) {			
+			if (valid ) {
 				if (user.isLocked())
 				{
 					validButLocked = true;
@@ -1509,17 +1532,24 @@ public class Login
 		}
 		return retValue;
 	}
+
+	public KeyNamePair[] getRoles(String app_user, KeyNamePair client) {
+		return getRoles(app_user, client, null);
+	}
+	
 	/**************************************************************************
 	 *  Load Roles.
 	 *  <p>
 	 *  Sets Client info in context and loads its roles
 	 *  @param  client    client information
+	 *  @param roleTypes comma separated list of the role types allowed to login (NULL can be added)
 	 *  @return list of valid roles KeyNodePairs or null if in error
 	 */
-	public KeyNamePair[] getRoles(String app_user, KeyNamePair client) {
+	public KeyNamePair[] getRoles(String app_user, KeyNamePair client, String roleTypes) {
 		if (client == null)
 			throw new IllegalArgumentException("Client missing");
 
+		String whereRoleType = MRole.getWhereRoleType(roleTypes, "r");
 		ArrayList<KeyNamePair> rolesList = new ArrayList<KeyNamePair>();
 		KeyNamePair[] retValue = null;
 		StringBuffer sql = new StringBuffer("SELECT u.AD_User_ID, r.AD_Role_ID,r.Name ")
@@ -1533,6 +1563,9 @@ public class Login
 		else
 			sql.append("COALESCE(u.LDAPUser,u.Name)=?");
 		sql.append(" AND r.IsMasterRole='N'");
+		if (! Util.isEmpty(whereRoleType)) {
+			sql.append(" AND ").append(whereRoleType);
+		}
 		sql.append(" AND u.IsActive='Y' AND EXISTS (SELECT * FROM AD_Client c WHERE u.AD_Client_ID=c.AD_Client_ID AND c.IsActive='Y')");
 		// don't show roles without org access
 		sql.append(" AND (");

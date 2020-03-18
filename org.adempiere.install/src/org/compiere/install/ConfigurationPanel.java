@@ -538,7 +538,7 @@ public class ConfigurationPanel extends JPanel implements ActionListener, IDBCon
 					m_success = true;
 				bTest.setEnabled(true);
 				m_testing = false;
-				return new Boolean(m_success);
+				return Boolean.valueOf(m_success);
 			}
 			//	Finish it
 			public void finished()
@@ -602,6 +602,8 @@ public class ConfigurationPanel extends JPanel implements ActionListener, IDBCon
 		}
 		if (!pass && critical)
 			cb.setBackground(Color.RED);
+		else if (!pass && !critical)
+			cb.setBackground(Color.YELLOW);
 		else
 			cb.setBackground(Color.GREEN);
 	}	//	setOK

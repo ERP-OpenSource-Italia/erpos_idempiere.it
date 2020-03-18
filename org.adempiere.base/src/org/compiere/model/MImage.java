@@ -60,7 +60,7 @@ public class MImage extends X_AD_Image
 		if (AD_Image_ID == 0)
 			return new MImage (ctx, AD_Image_ID, null);
 		//
-		Integer key = new Integer (AD_Image_ID);
+		Integer key = Integer.valueOf(AD_Image_ID);
 		MImage retValue = (MImage) s_cache.get (key);
 		if (retValue != null)
 			return retValue;
@@ -71,7 +71,7 @@ public class MImage extends X_AD_Image
 	} //	get
 
 	/**	Cache						*/
-	private static CCache<Integer,MImage> s_cache = new CCache<Integer,MImage>(Table_Name, 20);
+	private static CCache<Integer,MImage> s_cache = new CCache<Integer,MImage>(Table_Name, 20, 10);
 	
 	/**
 	 *  Constructor

@@ -39,11 +39,12 @@ esac
 # adjust these variables to your environment
 IDEMPIERE_USER=idempiere
 IDEMPIERE_HOME=/opt/idempiere-server
-JAVA_HOME=`ls -r /usr/lib/jvm/java-[678]-openjdk*/bin/javac /usr/lib/jvm/java-[8]-oracle*/bin/javac | head -1`
-JAVA_HOME=`dirname $JAVA_HOME`
+# in case you manual install java by use zip or your linux distros, or your java provider have difference pattern of path, please update here
+JAVA_HOME=`ls -r /usr/lib/jvm/java-1[12]-openjdk*/bin/javac | head -1`
 JAVA_HOME=`dirname $JAVA_HOME`
 SU=su
 export IDEMPIERE_HOME
+export TELNET_PORT=12612
 
 if [ $(id -u) != "0" ]
 then
@@ -254,9 +255,9 @@ configure_perform()
     if [ "x${ADEMPIERE_DB_SYSTEM}" = "x^TryLocalConnection^" ]
     then
         # recreate idempiere user from here as the RUN_ImportIdempiere requires it
-        $SU postgres -c "dropdb -U postgres idempiere" # > /dev/null 2>&1
-        $SU postgres -c "dropuser -U postgres idempiere" # > /dev/null 2>&1
-        $SU postgres -c "psql -U postgres -c \"CREATE ROLE adempiere SUPERUSER LOGIN PASSWORD '${ADEMPIERE_DB_PASSWORD}'\"" # > /dev/null 2>&1
+        $SU postgres -c "cd; dropdb -U postgres idempiere" # > /dev/null 2>&1
+        $SU postgres -c "cd; dropuser -U postgres idempiere" # > /dev/null 2>&1
+        $SU postgres -c "cd; psql -U postgres -c \"CREATE ROLE adempiere SUPERUSER LOGIN PASSWORD '${ADEMPIERE_DB_PASSWORD}'\"" # > /dev/null 2>&1
     fi
 
     if [ -f ${IDEMPIERE_HOME}/utils/RUN_ImportIdempiere.sh ]  
@@ -265,13 +266,13 @@ configure_perform()
        	$SU ${IDEMPIERE_USER} -c "cd ${IDEMPIERE_HOME}/utils; ( echo "" | ./RUN_ImportIdempiere.sh )" # > /dev/null 2>&1
 	echo "Done"
     fi
-    $SU ${IDEMPIERE_USER} -c "export PGPASSWORD=${ADEMPIERE_DB_PASSWORD}; psql -d idempiere -U adempiere -h localhost -p 5432 -c ''" > /dev/null 2>&1
+    $SU ${IDEMPIERE_USER} -c "cd; export PGPASSWORD=${ADEMPIERE_DB_PASSWORD}; psql -d idempiere -U adempiere -h localhost -p 5432 -c ''" > /dev/null 2>&1
     if [ $? -ne 0 ]
     then
         echo "Cannot connect to idempiere database, please verify and try again"
         exit 1
     fi
-    $SU ${IDEMPIERE_USER} -c "export PGPASSWORD=${ADEMPIERE_DB_PASSWORD}; psql -d idempiere -U adempiere -h localhost -p 5432 -c 'select count(*) from ad_system' 2>&1 | grep '1$'" > /dev/null 2>&1
+    $SU ${IDEMPIERE_USER} -c "cd; export PGPASSWORD=${ADEMPIERE_DB_PASSWORD}; psql -d idempiere -U adempiere -h localhost -p 5432 -c 'select count(*) from ad_system' 2>&1 | grep '1$'" > /dev/null 2>&1
     if [ $? -ne 0 ]
     then
         echo "Database not imported correctly, please verify and try again"
@@ -463,7 +464,7 @@ EOF
             if [ -z "$LINE" ]
             then
                 # Empty postgres password verify connection with local postgres user
-                $SU postgres -c "psql -U postgres -c ''"
+                $SU postgres -c "cd; psql -U postgres -c ''"
                 if [ $? -eq 0 ]
                 then
                     break
@@ -533,7 +534,7 @@ Enter postgres password:"
 }
 
 getidempierestatus() {
-    IDEMPIERESTATUSSTRING=$(ps ax | grep -v grep | grep ${IDEMPIERE_HOME})
+    IDEMPIERESTATUSSTRING=$(ps ax | grep java | grep ${IDEMPIERE_HOME} | grep -v grep)
     echo $IDEMPIERESTATUSSTRING | grep -q ${IDEMPIERE_HOME}
     IDEMPIERESTATUS=$?
 }
@@ -549,7 +550,7 @@ configure()
 	configure_perform
 	CONFIGURE_RUN=true
 	write_sysconfig
-	echo To access the iDempiere Server Home Page, start the server with '/etc/init.d/idempiere start'
+	echo To access the iDempiere Server Home Page, start the server with 'systemctl start idempiere'
         echo and then go to \"http://127.0.0.1:${ADEMPIERE_WEB_PORT}\"
         
 }
@@ -571,7 +572,7 @@ start () {
     echo -n "Starting iDempiere ERP: "
     export LOGFILE=$IDEMPIERE_HOME/log/idempiere_`date +%Y%m%d%H%M%S`.log
     $SU ${IDEMPIERE_USER} -c "mkdir -p $IDEMPIERE_HOME/log"
-    $SU ${IDEMPIERE_USER} -c "cd $IDEMPIERE_HOME;$IDEMPIERE_HOME/idempiere-server.sh &> $LOGFILE &"
+    $SU ${IDEMPIERE_USER} -c "export TELNET_PORT=$TELNET_PORT;cd $IDEMPIERE_HOME;$IDEMPIERE_HOME/idempiere-server.sh &> $LOGFILE &"
     RETVAL=$?
     if [ $RETVAL -eq 0 ] ; then
         # wait for server to be confirmed as started in logfile
@@ -579,7 +580,7 @@ start () {
         ITERATIONS=0
         while [ $STATUSTEST -eq 0 ] ; do
             sleep $SLEEPSECONDS
-            tail -n 9 $LOGFILE | grep -q '.*LoggedSessionListener.contextInitialized: context initialized.*' && STATUSTEST=1
+            cat $LOGFILE | grep -q '.*LoggedSessionListener.contextInitialized: context initialized.*' && STATUSTEST=1
             echo -n "."
             ITERATIONS=`expr $ITERATIONS + 1`
             if [ $ITERATIONS -gt $MAXITERATIONS ]
@@ -620,20 +621,20 @@ stop () {
     cd $IDEMPIERE_HOME/utils
     # try shutdown from OSGi console, then direct kill with signal 15, then signal 9
     log_warning_msg "Trying shutdown from OSGi console"
-    ( echo exit; echo y; sleep 5 ) | telnet localhost 12612 > /dev/null 2>&1
+    ( echo exit; echo y; sleep 5 ) | telnet localhost ${TELNET_PORT} > /dev/null 2>&1
     getidempierestatus
     if [ $IDEMPIERESTATUS -ne 0 ] ; then
         log_success_msg "Service stopped with OSGi shutdown"
     else
         log_warning_msg "Trying direct kill with signal -15"
-        kill -15 -`ps ax o pgid,command | grep -v grep | grep $IDEMPIERE_HOME | sed -e 's/^ *//g' | cut -f 1 -d " " | sort -u`
+        kill -15 -`ps ax o pgid,command | grep ${IDEMPIERE_HOME} | grep -v grep | sed -e 's/^ *//g' | cut -f 1 -d " " | sort -u`
         sleep 5
         getidempierestatus
         if [ $IDEMPIERESTATUS -ne 0 ] ; then
             log_success_msg "Service stopped with kill -15"
         else
             log_warning_msg "Trying direct kill with signal -9"
-            kill -9 -`ps ax o pgid,command | grep -v grep | grep $IDEMPIERE_HOME | sed -e 's/^ *//g' | cut -f 1 -d " " | sort -u`
+            kill -9 -`ps ax o pgid,command | grep ${IDEMPIERE_HOME} | grep -v grep | sed -e 's/^ *//g' | cut -f 1 -d " " | sort -u`
             sleep 5
             getidempierestatus
             if [ $IDEMPIERESTATUS -ne 0 ] ; then
@@ -664,7 +665,7 @@ dostatus () {
     if [ $IDEMPIERESTATUS -eq 0 ] ; then
 	echo
 	echo "iDempiere is running:"
-	ps ax | grep -v grep | grep ${IDEMPIERE_HOME} | sed 's/^[[:space:]]*\([[:digit:]]*\).*:[[:digit:]][[:digit:]][[:space:]]\(.*\)/\1 \2/'
+	ps ax | grep ${IDEMPIERE_HOME} | grep -v grep | sed 's/^[[:space:]]*\([[:digit:]]*\).*:[[:digit:]][[:digit:]][[:space:]]\(.*\)/\1 \2/'
 	echo
     else
 	echo "iDempiere is stopped"

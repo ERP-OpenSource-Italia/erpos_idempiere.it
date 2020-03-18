@@ -21,8 +21,10 @@ import java.awt.Color;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
+import java.util.Properties;
 
 import org.adempiere.webui.AdempiereWebUI;
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.Bandbox;
 import org.adempiere.webui.component.Button;
@@ -118,26 +120,34 @@ public abstract class WEditor implements EventListener<Event>, PropertyChangeLis
 		
 		// when field have label, add action zoom when click to label, and show menu when right click to label
 		if (!readOnly)
-		{				
-			if (popupMenu.isZoomEnabled() && this instanceof IZoomableEditor)
+		{		
+			//long press conflict with text selection gesture on mobile
+			if (ClientInfo.isMobile())
 			{
-				// add action zoom when click to label
-				label.addEventListener(Events.ON_CLICK, new EventListener<Event> (){
-					public void onEvent(Event event) throws Exception {
-						if (Events.ON_CLICK.equals(event.getName())) {
-							((IZoomableEditor)WEditor.this).actionZoom();
-						}
-
-					}
-				});
+				label.addEventListener(Events.ON_CLICK, evt-> popupMenu.open(label, "after_end"));
 			}
-
-			// show menu when right click to label
-			popupMenu.addContextElement(label);
-			
-			if (component instanceof XulElement) 
+			else
 			{
-				popupMenu.addContextElement((XulElement) component);
+				if (popupMenu.isZoomEnabled() && this instanceof IZoomableEditor)
+				{
+					// add action zoom when click to label
+					label.addEventListener(Events.ON_CLICK, new EventListener<Event> (){
+						public void onEvent(Event event) throws Exception {
+							if (Events.ON_CLICK.equals(event.getName())) {
+								((IZoomableEditor)WEditor.this).actionZoom();
+							}
+	
+						}
+					});
+				}
+	
+				// show menu when right click to label
+				popupMenu.addContextElement(label);
+				
+				if (component instanceof XulElement) 
+				{
+					popupMenu.addContextElement((XulElement) component);
+				}
 			}
 		}
 		
@@ -533,10 +543,15 @@ public abstract class WEditor implements EventListener<Event>, PropertyChangeLis
         return this.mandatory;
     }
 
+    public void dynamicDisplay()
+    {
+    	dynamicDisplay(gridField != null ? gridField.getVO().ctx : Env.getCtx());
+    }
+    
     /**
      * allow subclass to perform dynamic loading of data
      */
-    public void dynamicDisplay()
+    public void dynamicDisplay(Properties ctx)
     {
     	if (gridField != null)
     	{
@@ -544,15 +559,26 @@ public abstract class WEditor implements EventListener<Event>, PropertyChangeLis
     	}
     }
 
-	public void updateStyle() {
-		applyLabelStyles();
-		applyFieldStyles();
+	public void updateStyle(boolean applyDictionaryStyle) {
+		applyLabelStyles(applyDictionaryStyle);
+		applyFieldStyles(applyDictionaryStyle);
 	}
 
-	protected void applyLabelStyles() {
+	public void updateStyle() {
+		applyLabelStyles(true);
+		applyFieldStyles(true);
+	}
+
+	protected void applyLabelStyles(boolean applyDictionaryStyle) {
 		if (label != null) {
-			String style = (isZoomable() ? STYLE_ZOOMABLE_LABEL : "") + (isMandatoryStyle() ? STYLE_EMPTY_MANDATORY_LABEL : STYLE_NORMAL_LABEL);			
-			if (gridField.getAD_LabelStyle_ID() > 0) 
+			boolean zoomable = isZoomable();
+			String style = (zoomable ? STYLE_ZOOMABLE_LABEL : "") + (isMandatoryStyle() ? STYLE_EMPTY_MANDATORY_LABEL : STYLE_NORMAL_LABEL);
+			if (ClientInfo.isMobile()) {
+				if (!zoomable && popupMenu != null) {
+					style = style + STYLE_MOBILE_ZOOMABLE;
+				}
+			}
+			if (applyDictionaryStyle && gridField.getAD_LabelStyle_ID() > 0) 
 			{
 				String s = buildStyle(gridField.getAD_LabelStyle_ID());
 				if (!Util.isEmpty(s)) {
@@ -567,25 +593,56 @@ public abstract class WEditor implements EventListener<Event>, PropertyChangeLis
 		}
 	}
 	
-	protected  void setLabelStyle(String style) {
-		if (label != null)
-			label.setStyle(style);
-	}
-
-	protected void applyFieldStyles() {
-		if (gridField.getAD_FieldStyle_ID() > 0) 
-		{
-			String style = buildStyle(gridField.getAD_FieldStyle_ID());
-			setFieldStyle(style);
+	protected void setLabelStyle(String style) {
+		if (label != null) {
+			if (style != null && style.toLowerCase().startsWith(MStyle.SCLASS_PREFIX)) {
+				String sclass = style.substring(MStyle.SCLASS_PREFIX.length());
+				label.setSclass(sclass);
+			} else if (style != null && style.toLowerCase().startsWith(MStyle.ZCLASS_PREFIX)) {
+				String zclass = style.substring(MStyle.ZCLASS_PREFIX.length());
+				label.setZclass(zclass);
+			} else {
+				label.setStyle(style);
+			}
 		}
 	}
 
-	protected  void setFieldStyle(String style) {
+	protected void applyFieldStyles(boolean applyDictionaryStyle) {
+		String style = null;
+		if (applyDictionaryStyle && gridField.getAD_FieldStyle_ID() > 0) 
+		{
+			style = buildStyle(gridField.getAD_FieldStyle_ID());
+		}
+		setFieldStyle(style);
+	}
+
+	protected void setFieldStyle(String style) {
 		HtmlBasedComponent component = (HtmlBasedComponent) getComponent();
-		if (component instanceof EditorBox)
-			((EditorBox)component).getTextbox().setStyle(style);
-		else
-			component.setStyle(style);
+		if (style != null && style.startsWith(MStyle.SCLASS_PREFIX)) {
+			String sclass = style.substring(MStyle.SCLASS_PREFIX.length());
+			if (component instanceof EditorBox)
+				((EditorBox)component).getTextbox().setSclass(sclass);
+			else
+				component.setSclass(sclass);
+		} else if (style != null && style.startsWith(MStyle.ZCLASS_PREFIX)) {
+			String zclass = style.substring(MStyle.ZCLASS_PREFIX.length());
+			if (component instanceof EditorBox)
+				((EditorBox)component).getTextbox().setZclass(zclass);
+			else
+				component.setZclass(zclass);
+		} else {
+			if (component instanceof EditorBox)
+				((EditorBox)component).getTextbox().setStyle(style);
+			else
+				component.setStyle(style);
+		}
+	}
+	
+	/**
+	 * @return true if usable in find window, false otherwise
+	 */
+	public boolean isSearchable() {
+		return true;
 	}
 
 	protected String buildStyle(int AD_Style_ID) {
@@ -699,14 +756,14 @@ public abstract class WEditor implements EventListener<Event>, PropertyChangeLis
 	 * @return boolean
 	 */
 	protected boolean isShowPreference() {
-		return MRole.getDefault().isShowPreference() && gridField != null && !gridField.isEncrypted() && !gridField.isEncryptedColumn();
+		return MRole.getDefault().isShowPreference() && gridField != null && !gridField.isEncrypted() && !gridField.isEncryptedColumn() && !gridField.isVirtualColumn();
 	}
 
 	/**
 	 * @param popupMenu
 	 */
     protected void addChangeLogMenu(WEditorPopupMenu popupMenu) {
-		if (popupMenu != null && gridField != null && gridField.getGridTab() != null)
+		if (popupMenu != null && gridField != null && gridField.getGridTab() != null && !gridField.isVirtualColumn())
 		{
 			WFieldRecordInfo.addMenu(popupMenu);
 		}
@@ -785,6 +842,7 @@ public abstract class WEditor implements EventListener<Event>, PropertyChangeLis
 	private static final String STYLE_ZOOMABLE_LABEL = "cursor: pointer; text-decoration: underline;";
 	private static final String STYLE_NORMAL_LABEL = "color: #333;";
 	private static final String STYLE_EMPTY_MANDATORY_LABEL = "color: red;";
+	private static final String STYLE_MOBILE_ZOOMABLE = "cursor: pointer;";
 	
 	private static class EvaluateeWrapper implements Evaluatee {
 		

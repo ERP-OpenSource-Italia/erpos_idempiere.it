@@ -32,8 +32,10 @@ import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Listbox;
 import org.adempiere.webui.component.SimpleListModel;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.model.DataStatusEvent;
+import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.model.GridTable;
 import org.compiere.model.MChangeLog;
@@ -56,9 +58,11 @@ import org.zkoss.zhtml.Text;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zul.A;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.Div;
+import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Listhead;
 import org.zkoss.zul.Listheader;
 import org.zkoss.zul.North;
@@ -82,7 +86,7 @@ public class WRecordInfo extends Window implements EventListener<Event>
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -8325604065202356483L;
+	private static final long serialVersionUID = -7436682051825360216L;
 
 	/**
 	 *	Record Info
@@ -93,13 +97,24 @@ public class WRecordInfo extends Window implements EventListener<Event>
 	{
 		super ();
 		this.setTitle(title);
-		ZKUpdateUtil.setWidth(this, "500px");
-		ZKUpdateUtil.setHeight(this, "400px");
+		if (!ThemeManager.isUseCSSForWindowSize())
+		{
+			ZKUpdateUtil.setWindowWidthX(this, 500);
+			ZKUpdateUtil.setWindowHeightX(this, 400);
+		}
+		else
+		{
+			addCallback(AFTER_PAGE_ATTACHED, t-> {
+				ZKUpdateUtil.setCSSHeight(this);
+				ZKUpdateUtil.setCSSWidth(this);
+			});
+		}
 		this.setBorder("normal");
 		this.setSizable(true);
 		this.setClosable(true);
+		this.setMaximizable(true);
 		this.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "recordInfo");
-		this.setSclass("popup-dialog");
+		this.setSclass("popup-dialog record-info-dialog");
 		
 		try
 		{
@@ -123,6 +138,8 @@ public class WRecordInfo extends Window implements EventListener<Event>
 	private Vector<Vector<String>>	m_data = new Vector<Vector<String>>();
 	/** Info			*/
 	private StringBuffer	m_info = new StringBuffer();
+	/** Permalink			*/
+	private A				m_permalink = new A();
 
 	/** Date Time Format		*/
 	private SimpleDateFormat	m_dateTimeFormat = DisplayType.getDateFormat
@@ -184,7 +201,17 @@ public class WRecordInfo extends Window implements EventListener<Event>
 		South south = new South();
 		south.setSclass("dialog-footer");
 		south.setParent(layout);
-		south.appendChild(confirmPanel);
+		//
+		m_permalink.setTarget("_blank");
+		m_permalink.setLabel(Msg.getMsg(Env.getCtx(), "Permalink"));
+		m_permalink.setTooltiptext(Msg.getMsg(Env.getCtx(), "Permalink_tooltip"));
+		Hbox hbox = new Hbox();
+		hbox.setWidth("100%");
+		south.appendChild(hbox);
+		ZKUpdateUtil.setHflex(m_permalink, "true");
+		hbox.appendChild(m_permalink);
+		ZKUpdateUtil.setHflex(confirmPanel, "true");
+		hbox.appendChild(confirmPanel);
 		
 		confirmPanel.addActionListener(Events.ON_CLICK, this);
 	}	//	jbInit
@@ -222,43 +249,70 @@ public class WRecordInfo extends Window implements EventListener<Event>
 		
 		//get uuid
 		GridTable gridTable = null;
+		String tabName = null;
 		if (dse.getSource() instanceof GridTab) 
 		{
 			GridTab gridTab = (GridTab) dse.getSource();
 			gridTable = gridTab.getTableModel();
+			tabName = gridTab.getName();
 		}
 		else if (dse.getSource() instanceof GridTable)
 		{
-			gridTable = (GridTable) dse.getSource();			
+			gridTable = (GridTable) dse.getSource();
+			GridField firstField = gridTable.getField(0);
+			if (firstField != null && firstField.getGridTab() != null)
+				tabName = firstField.getGridTab().getName();
 		}
+
+		int Record_ID = -1;
+		if (dse.Record_ID instanceof Integer)
+			Record_ID = ((Integer)dse.Record_ID).intValue();
+		else
+			log.info("dynInit - Invalid Record_ID=" + dse.Record_ID);
+
+		MTable dbtable = null;
+		if (dse.AD_Table_ID != 0)
+			dbtable = MTable.get(Env.getCtx(), dse.AD_Table_ID);
+
 		if (gridTable != null && dse.getCurrentRow() >= 0 && dse.getCurrentRow() < gridTable.getRowCount())
 		{
 			PO po = gridTable.getPO(dse.getCurrentRow());
 			if (po != null) {
 				String uuidcol = po.getUUIDColumnName();
-				String uuid = po.get_ValueAsString(uuidcol);
+				String uuid = null;
+				if (po.is_new()) {
+					if (Record_ID == 0 && MTable.isZeroIDTable(dbtable.getTableName())) {
+						StringBuilder sql = new StringBuilder("SELECT ")
+								.append(uuidcol)
+								.append(" FROM ")
+								.append(dbtable.getTableName())
+								.append(" WHERE ")
+								.append(dbtable.getTableName())
+								.append("_ID=0");
+						uuid = DB.getSQLValueString(null, sql.toString());
+					}
+				} else {
+					uuid = po.get_ValueAsString(uuidcol);
+				}
 				if (!Util.isEmpty(uuid))
 					m_info.append("\n ").append(uuidcol).append("=").append(uuid);
+				m_permalink.setHref(AEnv.getZoomUrlTableID(po));
+				m_permalink.setVisible(po.get_KeyColumns().length == 1);
 			}
 		}
 		
 		//	Title
-		if (dse.AD_Table_ID != 0)
+		if (tabName == null && dse.AD_Table_ID != 0)
 		{
-			MTable table1 = MTable.get (Env.getCtx(), dse.AD_Table_ID);
-			setTitle(title + " - " + table1.getName());
+			tabName = dbtable.getName();
 		}
+		setTitle(title + " - " + tabName);
 
 		//	Only Client Preference can view Change Log
 		if (!MRole.PREFERENCETYPE_Client.equals(MRole.getDefault().getPreferenceType()))
 			return false;
 		
-		int Record_ID = 0;
-		if (dse.Record_ID instanceof Integer)
-			Record_ID = ((Integer)dse.Record_ID).intValue();
-		else
-			log.info("dynInit - Invalid Record_ID=" + dse.Record_ID);
-		if (Record_ID == 0)
+		if (Record_ID <= 0)
 			return false;
 		
 		//	Data
@@ -369,9 +423,9 @@ public class WRecordInfo extends Window implements EventListener<Event>
 			else if (column.getAD_Reference_ID() == DisplayType.Integer)
 			{
 				if (OldValue != null)
-					showOldValue = m_intFormat.format (new Integer (OldValue));
+					showOldValue = m_intFormat.format (Integer.valueOf(OldValue));
 				if (NewValue != null)
-					showNewValue = m_intFormat.format (new Integer (NewValue));
+					showNewValue = m_intFormat.format (Integer.valueOf(NewValue));
 			}
 			else if (DisplayType.isNumeric (column.getAD_Reference_ID ()))
 			{

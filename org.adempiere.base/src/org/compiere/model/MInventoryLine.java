@@ -17,9 +17,11 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.util.Properties;
 
+import org.compiere.process.DocAction;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
@@ -39,7 +41,7 @@ public class MInventoryLine extends X_M_InventoryLine
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -3864175464877913555L;
+	private static final long serialVersionUID = 7083622834698840042L;
 
 	/**
 	 * 	Get Inventory Line with parameters
@@ -136,11 +138,11 @@ public class MInventoryLine extends X_M_InventoryLine
 	}
 	
 	/** Manually created				*/
-	// private boolean 	m_isManualEntry = true;
+	//protected boolean 	m_isManualEntry = true;
 	/** Parent							*/
-	private MInventory 	m_parent = null;
+	protected MInventory 	m_parent = null;
 	/** Product							*/
-	private MProduct 	m_product = null;
+	protected MProduct 	m_product = null;
 	
 	/**
 	 * 	Get Product
@@ -171,7 +173,7 @@ public class MInventoryLine extends X_M_InventoryLine
 			if (product != null)
 			{
 				int precision = product.getUOMPrecision(); 
-				QtyCount = QtyCount.setScale(precision, BigDecimal.ROUND_HALF_UP);
+				QtyCount = QtyCount.setScale(precision, RoundingMode.HALF_UP);
 			}
 		}
 		super.setQtyCount(QtyCount);
@@ -190,7 +192,7 @@ public class MInventoryLine extends X_M_InventoryLine
 			if (product != null)
 			{
 				int precision = product.getUOMPrecision(); 
-				QtyInternalUse = QtyInternalUse.setScale(precision, BigDecimal.ROUND_HALF_UP);
+				QtyInternalUse = QtyInternalUse.setScale(precision, RoundingMode.HALF_UP);
 			}
 		}
 		super.setQtyInternalUse(QtyInternalUse);
@@ -260,27 +262,6 @@ public class MInventoryLine extends X_M_InventoryLine
 			log.saveError("ParentComplete", Msg.translate(getCtx(), "M_InventoryLine"));
 			return false;
 		}
-		/* IDEMPIERE-1770 - ASI validation must be moved to MInventory.prepareIt, saving a line without ASI is ok on draft
-		if (m_isManualEntry)
-		{
-			//	Product requires ASI
-			if (getM_AttributeSetInstance_ID() == 0)
-			{
-				MProduct product = MProduct.get(getCtx(), getM_Product_ID());
-				if (product != null && product.isASIMandatory(isSOTrx()))
-				{
-					if(product.getAttributeSet()==null){
-						log.saveError("NoAttributeSet", product.getValue());
-						return false;
-					}
-					if (! product.getAttributeSet().excludeTableEntry(MInventoryLine.Table_ID, isSOTrx())) {
-						log.saveError("FillMandatory", Msg.getElement(getCtx(), COLUMNNAME_M_AttributeSetInstance_ID));
-						return false;
-					}
-				}
-			}	//	No ASI
-		}	//	manual
-		*/
 
 		//	Set Line No
 		if (getLine() == 0)
@@ -329,7 +310,7 @@ public class MInventoryLine extends X_M_InventoryLine
 				log.saveError("Quantity", Msg.getElement(getCtx(), COLUMNNAME_QtyCount));
 				return false;
 			}
-			if (getQtyInternalUse().signum() == 0) {
+			if (getQtyInternalUse().signum() == 0 && !getParent().getDocAction().equals(DocAction.ACTION_Void)) {
 				log.saveError("FillMandatory", Msg.getElement(getCtx(), COLUMNNAME_QtyInternalUse));
 				return false;
 			}
@@ -408,7 +389,7 @@ public class MInventoryLine extends X_M_InventoryLine
 	/**
 	 * 	Create Material Allocations for new Instances
 	 */
-	/*private void createMA()
+	/*protected void createMA()
 	{
 		MStorageOnHand[] storages = MStorageOnHand.getAll(getCtx(), getM_Product_ID(), 
 			getM_Locator_ID(), get_TrxName());

@@ -87,7 +87,7 @@ public class GridField
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 2703129833179761682L;
+	private static final long serialVersionUID = -5923967271000455417L;
 
 	/**
 	 *  Field Constructor.
@@ -114,6 +114,7 @@ public class GridField
 	 * GridTab.processDependentFields will check this flag to avoid clearing of lookup field value that just have been set.
 	 **/ 
 	private boolean m_lookupEditorSettingValue = false;
+	private boolean m_lockedRecord = false;
 	
 	/**
 	 *  Dispose
@@ -309,6 +310,9 @@ public class GridField
 		Evaluator.parseDepends(list, m_vo.DisplayLogic);
 		Evaluator.parseDepends(list, m_vo.ReadOnlyLogic);
 		Evaluator.parseDepends(list, m_vo.MandatoryLogic);
+		// Virtual UI Column
+		if (m_vo.ColumnSQL != null && m_vo.ColumnSQL.length() > 0 && m_vo.ColumnSQL.startsWith("@SQL="))
+			Evaluator.parseDepends(list, m_vo.ColumnSQL.substring(5));
 		//  Lookup
 		if (m_lookup != null)
 			Evaluator.parseDepends(list, m_lookup.getValidation());
@@ -357,7 +361,7 @@ public class GridField
 		{
 			boolean retValue  = false;
 			if (m_vo.MandatoryLogic != null && m_vo.MandatoryLogic.startsWith("@SQL=")) {
-				retValue = mandatorySqlStatement();
+				retValue = Evaluator.parseSQLLogic(m_vo.MandatoryLogic, m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName);
 			}
 		// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
 			else if (m_vo.MandatoryLogic != null && m_vo.MandatoryLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
@@ -393,32 +397,6 @@ public class GridField
 		return isDisplayed (checkContext);
 	}	//	isMandatory
 
-	private boolean mandatorySqlStatement() {
-		String sql = m_vo.MandatoryLogic.substring(5); // w/o tag
-		sql = Env.parseContext(m_vo.ctx, m_vo.WindowNo, sql, false, false); // replace
-
-		// variables
-		if (sql.equals("")) {
-			log.log(Level.WARNING,"(" + m_vo.ColumnName + ") - Mandatory SQL variable parse failed: " + m_vo.MandatoryLogic);
-		} else {
-			PreparedStatement stmt = null;
-			ResultSet rs = null;
-			try {
-				stmt = DB.prepareStatement(sql, null);
-				rs = stmt.executeQuery();
-				if (rs.next())
-					return true;
-			} catch (SQLException e) {
-				log.log(Level.WARNING, "(" + m_vo.ColumnName + ") " + sql, e);
-			} finally {
-				DB.close(rs, stmt);
-				rs = null;
-				stmt = null;
-			}
-		}
-		return false;
-	}
-
 	/**
 	 *	Is parameter Editable - checks if parameter is Read Only
 	 *  @param checkContext if true checks Context
@@ -427,15 +405,24 @@ public class GridField
 	public boolean isEditablePara(boolean checkContext) {
 		if (checkContext && m_vo.ReadOnlyLogic.length() > 0)
 		{
-			// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
-			if(m_vo.ReadOnlyLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+			if (m_vo.ReadOnlyLogic.startsWith("@SQL="))
 			{
-				return evaluateScript(m_vo.ReadOnlyLogic);
+				boolean retValue = !Evaluator.parseSQLLogic(m_vo.ReadOnlyLogic, m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName);
+				if (!retValue)
+					return false;
 			}
-			boolean retValue = !Evaluator.evaluateLogic(this, m_vo.ReadOnlyLogic);
-			if (log.isLoggable(Level.FINEST)) log.finest(m_vo.ColumnName + " R/O(" + m_vo.ReadOnlyLogic + ") => R/W-" + retValue);
-			if (!retValue)
-				return false;
+			// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+			else if(m_vo.ReadOnlyLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+			{
+				return evaluateScript(m_vo.ReadOnlyLogic);			
+			}
+			else
+			{
+				boolean retValue = !Evaluator.evaluateLogic(this, m_vo.ReadOnlyLogic);
+				if (log.isLoggable(Level.FINEST)) log.finest(m_vo.ColumnName + " R/O(" + m_vo.ReadOnlyLogic + ") => R/W-" + retValue);
+				if (!retValue)
+					return false;
+			}
 		}
 
 		//  ultimately visibility decides
@@ -470,6 +457,8 @@ public class GridField
 	public boolean isEditable (Properties ctx, boolean checkContext,boolean isGrid)
 	{
 		if (isVirtualColumn())
+			return false;
+		if (m_lockedRecord)
 			return false;
 		
 		// FIN (st): IDEMPIERE-3308, check ui behaviour
@@ -540,15 +529,24 @@ public class GridField
 		//  Do we have a readonly rule
 		if (checkContext && m_vo.ReadOnlyLogic.length() > 0)
 		{
+			if (m_vo.ReadOnlyLogic.startsWith("@SQL="))
+			{
+				boolean retValue = !Evaluator.parseSQLLogic(m_vo.ReadOnlyLogic, m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName);
+				if (!retValue)
+					return false;
+			}
 			// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
-			if(m_vo.ReadOnlyLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+			else if(m_vo.ReadOnlyLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
 			{
 				return evaluateScript(m_vo.ReadOnlyLogic);
 			}
-			boolean retValue = !Evaluator.evaluateLogic(this, m_vo.ReadOnlyLogic);
-			if (log.isLoggable(Level.FINEST)) log.finest(m_vo.ColumnName + " R/O(" + m_vo.ReadOnlyLogic + ") => R/W-" + retValue);
-			if (!retValue)
-				return false;
+			else
+			{
+				boolean retValue = !Evaluator.evaluateLogic(this, m_vo.ReadOnlyLogic);
+				if (log.isLoggable(Level.FINEST)) log.finest(m_vo.ColumnName + " R/O(" + m_vo.ReadOnlyLogic + ") => R/W-" + retValue);
+				if (!retValue)
+					return false;
+			}
 		}
 		
 		//BF [ 2910368 ]
@@ -766,14 +764,14 @@ public class GridField
 			&& (m_vo.ColumnName.equals("AD_Client_ID") || m_vo.ColumnName.equals("AD_Org_ID")))
 		{
 			if (log.isLoggable(Level.FINE)) log.fine("[SystemAccess] " + m_vo.ColumnName + "=0");
-			return new Integer(0);
+			return Integer.valueOf(0);
 		}
 		//	Set Org to System, if Client access
 		else if (X_AD_Table.ACCESSLEVEL_SystemPlusClient.equals(Env.getContext(m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, GridTab.CTX_AccessLevel))
 			&& m_vo.ColumnName.equals("AD_Org_ID"))
 		{
 			if (log.isLoggable(Level.FINE)) log.fine("[ClientAccess] " + m_vo.ColumnName + "=0");
-			return new Integer(0);
+			return Integer.valueOf(0);
 		}
 		
 		return null;
@@ -1032,17 +1030,17 @@ public class GridField
 					int ii = Integer.parseInt(value);
 					if (ii < 0)
 						return null;
-					return new Integer(ii);
+					return Integer.valueOf(ii);
 				}
 				catch (Exception e)
 				{
 					log.warning("Cannot parse: " + value + " - " + e.getMessage());
 				}
-				return new Integer(0);
+				return Integer.valueOf(0);
 			}
 			//	Integer
 			if (m_vo.displayType == DisplayType.Integer)
-				return new Integer(value);
+				return Integer.valueOf(value);
 			
 			//	Number
 			if (DisplayType.isNumeric(m_vo.displayType))
@@ -1225,6 +1223,9 @@ public class GridField
 		//  ** dynamic content **
 		if (checkContext)
 		{
+			if (m_vo.DisplayLogic.startsWith("@SQL=")) {
+				return Evaluator.parseSQLLogic(m_vo.DisplayLogic, m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName);
+			}
 			Evaluatee evaluatee = new Evaluatee() {
 				public String get_ValueAsString(String variableName) {
 					return GridField.this.get_ValueAsString(ctx, variableName);
@@ -1419,10 +1420,15 @@ public class GridField
 	{
 		if (m_vo.ColumnSQL != null && m_vo.ColumnSQL.length() > 0)
 		{
-			if (withAS)
-				return m_vo.ColumnSQL + " AS " + m_vo.ColumnName;
+			String query;
+			if (m_vo.ColumnSQL.startsWith("@SQL="))
+				query = "NULL";
 			else
-				return m_vo.ColumnSQL;
+				query = m_vo.ColumnSQL;
+			if (withAS)
+				return query + " AS " + m_vo.ColumnName;
+			else
+				return query;
 		}
 		return m_vo.ColumnName;
 	}	//	getColumnSQL
@@ -1433,10 +1439,26 @@ public class GridField
 	 */
 	public boolean isVirtualColumn()
 	{
-		if (m_vo.ColumnSQL != null && m_vo.ColumnSQL.length() > 0)
-			return true; 
-		return false;
-	}	//	isColumnVirtual
+		return (m_vo.ColumnSQL != null && m_vo.ColumnSQL.length() > 0);
+	}	//	isVirtualColumn
+	
+	/**
+	 *  Is Virtual DB Column
+	 *  @return column is virtual DB
+	 */
+	public boolean isVirtualDBColumn()
+	{
+		return (m_vo.ColumnSQL != null && m_vo.ColumnSQL.length() > 0 && !m_vo.ColumnSQL.startsWith("@SQL="));
+	}	//	isVirtualDBColumn
+	
+	/**
+	 *  Is Virtual UI Column
+	 *  @return column is virtual UI
+	 */
+	public boolean isVirtualUIColumn()
+	{
+		return (m_vo.ColumnSQL != null && m_vo.ColumnSQL.length() > 0 && m_vo.ColumnSQL.startsWith("@SQL="));
+	}	//	isVirtualUIColumn
 	
 	/**
 	 * 	Get Header
@@ -1699,6 +1721,14 @@ public class GridField
 	public boolean isSelectionColumn()
 	{
 		return m_vo.IsSelectionColumn;
+	}
+	/**
+	 * 	Is HTML Field (display)
+	 *	@return html field
+	 */
+	public boolean isHtml()
+	{
+		return m_vo.IsHtml;
 	}
 	/**
 	 * 	Selection column sequence
@@ -2079,7 +2109,7 @@ public class GridField
 				|| (DisplayType.isID(dt) && getColumnName().endsWith("_ID")))
 			{
 				int i = Integer.parseInt(newValue);
-				setValue (new Integer(i), inserting);
+				setValue (Integer.valueOf(i), inserting);
 			}
 			//	Return BigDecimal
 			else if (DisplayType.isNumeric(dt))
@@ -2586,11 +2616,31 @@ public class GridField
 		return m_vo.displayType == DisplayType.Button && MColumn.ISTOOLBARBUTTON_Toolbar.equals(m_vo.IsToolbarButton);
 	}
 
+	public boolean isLockedRecord() {
+		return m_lockedRecord;
+	}
+
+	public void setLockedRecord(boolean lockedRecord) {
+		this.m_lockedRecord = lockedRecord;
+	}
+
 	public int getPA_DashboardContent_ID()
 	{
 		return m_vo.PA_DashboardContent_ID;
 	}
-	
+
+	public String getPlaceholder() {
+		return m_vo.Placeholder;
+	}
+
+	public String getPlaceholder2() {
+		return m_vo.Placeholder2;
+	}
+
+	public void setPlaceholder(String placeholder) {
+		m_vo.Placeholder = placeholder;
+	}
+
 	public GridField clone(Properties ctx)  
 	{
 		try {
@@ -2635,4 +2685,25 @@ public class GridField
 		return m_inserting;
 	}
 	//F3P end
+	public void processUIVirtualColumn() {
+		String sql = m_vo.ColumnSQL.substring(5);
+		sql = Env.parseContext(Env.getCtx(), getWindowNo(), sql, false);
+		if (Util.isEmpty(sql)) {
+			setValue(null, false);
+		} else {
+			if (DisplayType.isDate(m_vo.displayType)) {
+				Timestamp valueTS = DB.getSQLValueTSEx(null, sql, new Object[] {});
+				setValue(valueTS, false);
+			} else if (DisplayType.isNumeric(m_vo.displayType)) {
+				BigDecimal valueBD = DB.getSQLValueBDEx(null, sql, new Object[] {});
+				setValue(valueBD, false);
+			} else if (DisplayType.isID(m_vo.displayType)) {
+				int valueInt = DB.getSQLValueEx(null, sql, new Object[] {});
+				setValue(valueInt, false);
+			} else { // default to String
+				String valueStr = DB.getSQLValueStringEx(null, sql);
+				setValue(valueStr, false);
+			}
+		}
+	}
 }   //  GridField

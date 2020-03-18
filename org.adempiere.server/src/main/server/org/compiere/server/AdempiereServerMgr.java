@@ -31,6 +31,7 @@ import org.adempiere.server.AdempiereServerActivator;
 import org.adempiere.server.IServerFactory;
 import org.compiere.Adempiere;
 import org.compiere.model.AdempiereProcessor;
+import org.compiere.model.MScheduler;
 import org.compiere.model.MSession;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
@@ -50,13 +51,26 @@ public class AdempiereServerMgr implements ServiceTrackerCustomizer<IServerFacto
 {
 	private static ServiceTracker<IServerFactory<AdempiereServer, AdempiereProcessor>, IServerFactory<AdempiereServer, AdempiereProcessor>> serviceTracker;
 
+	public static int SERVER_STATE_NOT_SCHEDULE = 0;
+	public static int SERVER_STATE_STARTED = 1;
+	public static int SERVER_STATE_STOPPED = 2;
+	
 	/**
 	 * 	Get Adempiere Server Manager
 	 *	@return mgr
 	 */
 	public synchronized static AdempiereServerMgr get()
 	{
-		if (m_serverMgr == null)
+		return get(true);
+	}
+	
+	/**
+	 * 	Get Adempiere Server Manager
+	 *	@return mgr
+	 */
+	public synchronized static AdempiereServerMgr get(boolean createNew)
+	{
+		if (m_serverMgr == null && createNew)
 		{
 			m_serverMgr = new AdempiereServerMgr();
 			serviceTracker = new ServiceTracker<IServerFactory<AdempiereServer, AdempiereProcessor>, IServerFactory<AdempiereServer, AdempiereProcessor>>(AdempiereServerActivator.getBundleContext(), 
@@ -157,6 +171,35 @@ public class AdempiereServerMgr implements ServiceTrackerCustomizer<IServerFacto
 			}				
 		}
 	}
+	
+	/**
+	 * @param scheduler
+	 * @return true
+	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public boolean addScheduler(MScheduler scheduler) {
+		String serverId = scheduler.getServerID();
+		if (getServer(serverId) != null)
+			return false;
+		
+		//osgi server
+		List<IServerFactory> serverFactoryList = Service.locator().list(IServerFactory.class).getServices();
+		if (serverFactoryList != null && !serverFactoryList.isEmpty())
+		{		
+			for(IServerFactory factory : serverFactoryList )
+			{
+				if (factory.getProcessorClass().getName().equals(scheduler.getClass().getName())) {
+					AdempiereServer server = factory.create(m_ctx, scheduler);
+					if (server != null && AdempiereServer.isOKtoRunOnIP(scheduler)) {
+						m_servers.add(new ServerWrapper(server));
+						return start(serverId);
+					}
+				}
+			}
+		}
+		
+		return false;		
+	}
 
 	/**
 	 * 	Get Server Context
@@ -184,6 +227,8 @@ public class AdempiereServerMgr implements ServiceTrackerCustomizer<IServerFacto
 					continue;
 				//	Do start
 				//	replace
+				Env.setContext(Env.getCtx(), Env.AD_CLIENT_ID, server.getServer().getModel().getAD_Client_ID());
+				server.getServer().recalculateSleepMS();
 				server.start();
 			}
 			catch (Exception e)
@@ -191,6 +236,7 @@ public class AdempiereServerMgr implements ServiceTrackerCustomizer<IServerFacto
 				log.log(Level.SEVERE, "Server: " + server, e);
 			}
 		}	//	for all servers
+		Env.setContext(Env.getCtx(), Env.AD_CLIENT_ID, 0);
 		
 		//	Final Check
 		int noRunning = 0;
@@ -237,6 +283,7 @@ public class AdempiereServerMgr implements ServiceTrackerCustomizer<IServerFacto
 		try
 		{
 			//	replace
+			Env.setContext(Env.getCtx(), Env.AD_CLIENT_ID, server.getServer().getModel().getAD_Client_ID());
 			server.getServer().recalculateSleepMS();
 			server.start();
 		}
@@ -244,6 +291,10 @@ public class AdempiereServerMgr implements ServiceTrackerCustomizer<IServerFacto
 		{
 			log.log(Level.SEVERE, "Server=" + serverID, e);
 			return false;
+		}
+		finally
+		{
+			Env.setContext(Env.getCtx(), Env.AD_CLIENT_ID, 0);
 		}
 		if (log.isLoggable(Level.INFO)) log.info(server.toString());
 		return (server.scheduleFuture != null && !server.scheduleFuture.isDone());
@@ -413,6 +464,28 @@ public class AdempiereServerMgr implements ServiceTrackerCustomizer<IServerFacto
 		return retValue;
 	}	//	getAll
 	
+	public synchronized int getStatus(AdempiereProcessor processor)
+	{
+		int status = SERVER_STATE_NOT_SCHEDULE;
+		for (int i = 0; i < m_servers.size(); i++)
+		{
+			ServerWrapper server = m_servers.get(i);
+			AdempiereProcessor model = server.server.getModel();
+			if (model.getClass().getName().equals(processor.getClass().getName()) && model.getServerID().equals(processor.getServerID()))
+			{
+				if (server.scheduleFuture == null || server.scheduleFuture.isDone())
+				{
+					status = SERVER_STATE_STOPPED;
+				}
+				else
+				{
+					status = SERVER_STATE_STARTED;
+				}
+			}
+		}
+		return status;
+	}
+	
 	/**
 	 * 	Get Server with ID
 	 *	@param serverID server id
@@ -504,7 +577,9 @@ public class AdempiereServerMgr implements ServiceTrackerCustomizer<IServerFacto
 		public void run() {
 			if (server.isSleeping()) {
 				server.run();
-				scheduleFuture = Adempiere.getThreadPoolExecutor().schedule(this, server.getSleepMS(), TimeUnit.MILLISECONDS);
+				if (server.getSleepMS() != 0) {
+					scheduleFuture = Adempiere.getThreadPoolExecutor().schedule(this, server.getSleepMS(), TimeUnit.MILLISECONDS);
+				}
 			}  else {
 				//server busy, try again after one minute
 				scheduleFuture = Adempiere.getThreadPoolExecutor().schedule(this, 60 * 1000, TimeUnit.MILLISECONDS);
@@ -555,5 +630,27 @@ public class AdempiereServerMgr implements ServiceTrackerCustomizer<IServerFacto
 			if (serviceTracker != null)
 				serviceTracker.open();
 		}
+	}
+
+	public Boolean remove(String serverID) {
+		ServerWrapper server = getServer(serverID);
+		if (server == null)
+			return false;
+		
+		if (server.scheduleFuture != null && !server.scheduleFuture.isDone()) {
+			if (!stop(serverID)) {
+				return false;
+			}
+		}
+		
+		for (int i = 0; i < m_servers.size(); i++) {
+			server = m_servers.get(i);
+			if (serverID.equals(server.server.getServerID())) {
+				m_servers.remove(i);
+				return true;
+			}
+		}
+		
+		return false;
 	}
 }	//	AdempiereServerMgr

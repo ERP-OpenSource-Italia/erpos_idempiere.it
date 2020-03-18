@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Field
  *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @version Release 6.2
  */
 public interface I_AD_Field 
 {
@@ -582,6 +582,15 @@ public interface I_AD_Field
 	  * Type of obscuring the data (limiting the display)
 	  */
 	public String getObscureType();
+
+    /** Column name Placeholder */
+    public static final String COLUMNNAME_Placeholder = "Placeholder";
+
+	/** Set Placeholder	  */
+	public void setPlaceholder (String Placeholder);
+
+	/** Get Placeholder	  */
+	public String getPlaceholder();
 
     /** Column name ReadOnlyLogic */
     public static final String COLUMNNAME_ReadOnlyLogic = "ReadOnlyLogic";

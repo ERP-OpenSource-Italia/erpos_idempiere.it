@@ -1,7 +1,4 @@
 .fav-new-btn {
-	margin-left: 4px;
-	margin-bottom: 3px;
-	padding-left: 1px;
 }
 
 .fav-new-btn img {
@@ -51,7 +48,7 @@
 .dashboard-layout {
 	width: 100%;
 	height: 100%;
-	position: absolute;
+	position: relative;
 }
 
 .dashboard-widget {
@@ -97,6 +94,10 @@
 .favourites-box .z-toolbar-start {
 	float: right;
 }
+.favourites-box .trash-font-icon {
+	font-family: FontAwesome;
+	font-size: 20px;
+}
 
 .recentitems-box {
 	width: 100%;
@@ -111,6 +112,20 @@
 
 .recentitems-box .z-toolbar-start {
 	float: right;
+}
+.recentitems-box A.trash-toolbarbutton {
+	display: inline-block;
+}
+.recentitems-box .z-toolbar .z-toolbar-content {
+	display: inline-flex;
+	align-items: center;
+}
+.recentitems-box .trash-toolbarbutton .z-toolbarbutton-content {
+	font-size: 16px;
+}
+.recentitems-box .trash-font-icon {
+	font-family: FontAwesome;
+	font-size: 20px;
 }
 	
 .views-box {
@@ -131,6 +146,12 @@
 .views-box .link img {
 	height: 16px;
 	width: 16px;
+}
+.views-box .z-toolbarbutton [class^="z-icon"] {
+	text-align: center;
+}
+.views-box .z-toolbarbutton [class^="z-icon"]:before {
+	width: 14px;
 }
 
 .activities-box {
@@ -196,4 +217,11 @@
 	padding: 2px;
 	font-size: 11px;
 	font-weight: normal;
+}
+
+.fav-new-btn.z-toolbarbutton [class^="z-icon-"] {
+	font-size: smaller;
+	color: #333;
+	padding-left: 4px;
+	padding-right: 4px;
 }

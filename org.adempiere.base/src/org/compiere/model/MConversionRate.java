@@ -17,6 +17,7 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
@@ -32,6 +33,7 @@ import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
 import org.compiere.util.Trx;
 
 /**
@@ -45,7 +47,7 @@ public class MConversionRate extends X_C_Conversion_Rate
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -7938144674700640228L;
+	private static final long serialVersionUID = -3866898973541150020L;
 
 	/**	Logger						*/
 	private static CLogger		s_log = CLogger.getCLogger (MConversionRate.class);
@@ -142,7 +144,7 @@ public class MConversionRate extends X_C_Conversion_Rate
 		int stdPrecision = isCosting ? MCurrency.getCostingPrecision(ctx, CurTo_ID): MCurrency.getStdPrecision(ctx, CurTo_ID);		
 
 		if (retValue.scale() > stdPrecision)
-			retValue = retValue.setScale(stdPrecision, BigDecimal.ROUND_HALF_UP);
+			retValue = retValue.setScale(stdPrecision, RoundingMode.HALF_UP);
 			
 		return retValue;
 	}	//	convert
@@ -235,7 +237,7 @@ public class MConversionRate extends X_C_Conversion_Rate
 			C_ConversionType_ID = MConversionType.getDefault(AD_Client_ID);
 		//	Conversion Date
 		if (ConvDate == null)
-			ConvDate = new Timestamp (System.currentTimeMillis());
+			ConvDate = TimeUtil.getDay(null);
 
 		//	Get Rate
 		String sql = "SELECT MultiplyRate "
@@ -440,8 +442,67 @@ public class MConversionRate extends X_C_Conversion_Rate
 			log.saveError("Error", df.format(to) + " < " + df.format(from));
 			return false;
 		}
-		
+
+		if (isActive()) {
+			String whereClause = "(? BETWEEN ValidFrom AND ValidTo OR ? BETWEEN ValidFrom AND ValidTo) "
+					+ "AND C_Currency_ID=? AND C_Currency_ID_To=? "
+					+ "AND C_Conversiontype_ID=? "
+					+ "AND AD_Client_ID=? AND AD_Org_ID=?";
+			List<MConversionRate> convs = new Query(getCtx(), MConversionRate.Table_Name, whereClause, get_TrxName())
+					.setOnlyActiveRecords(true)
+					.setParameters(getValidFrom(), getValidTo(), 
+							getC_Currency_ID(), getC_Currency_ID_To(),
+							getC_ConversionType_ID(),
+							getAD_Client_ID(), getAD_Org_ID())
+					.list();
+			for (MConversionRate conv : convs) {
+				if (conv.getC_Conversion_Rate_ID() != getC_Conversion_Rate_ID()) {
+					log.saveError("Error", "Conversion rate overlaps with: "	+ conv.getValidFrom());
+					return false;
+				}
+			}
+		}
+
 		return true;
 	}	//	beforeSave
-	
+
+	private volatile static boolean recursiveCall = false;
+	@Override
+	protected boolean afterSave(boolean newRecord, boolean success) {
+		if (success && !recursiveCall) {
+			String whereClause = "ValidFrom=? AND ValidTo=? "
+					+ "AND C_Currency_ID=? AND C_Currency_ID_To=? "
+					+ "AND C_ConversionType_ID=? "
+					+ "AND AD_Client_ID=? AND AD_Org_ID=?";
+			MConversionRate reciprocal = new Query(getCtx(), MConversionRate.Table_Name, whereClause, get_TrxName())
+					.setParameters(getValidFrom(), getValidTo(), 
+							getC_Currency_ID_To(), getC_Currency_ID(),
+							getC_ConversionType_ID(),
+							getAD_Client_ID(), getAD_Org_ID())
+					.firstOnly();
+			if (reciprocal == null) {
+				// create reciprocal rate
+				reciprocal = new MConversionRate(getCtx(), 0, get_TrxName());
+				reciprocal.setValidFrom(getValidFrom());
+				reciprocal.setValidTo(getValidTo());
+				reciprocal.setC_ConversionType_ID(getC_ConversionType_ID());
+				reciprocal.setAD_Client_ID(getAD_Client_ID());
+				reciprocal.setAD_Org_ID(getAD_Org_ID());
+				// invert
+				reciprocal.setC_Currency_ID(getC_Currency_ID_To());
+				reciprocal.setC_Currency_ID_To(getC_Currency_ID());
+			}
+			// avoid recalculation
+			reciprocal.set_Value(COLUMNNAME_DivideRate, getMultiplyRate());
+			reciprocal.set_Value(COLUMNNAME_MultiplyRate, getDivideRate());
+			recursiveCall = true;
+			try {
+				reciprocal.saveEx();
+			} finally {
+				recursiveCall = false;
+			}
+		}
+		return success;
+	}
+
 }	//	MConversionRate

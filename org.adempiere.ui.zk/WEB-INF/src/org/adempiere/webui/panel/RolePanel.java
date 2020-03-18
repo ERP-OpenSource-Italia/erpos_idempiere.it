@@ -53,6 +53,7 @@ import org.compiere.util.KeyNamePair;
 import org.compiere.util.Language;
 import org.compiere.util.Login;
 import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
 import org.compiere.util.Util;
 import org.zkoss.zhtml.Table;
 import org.zkoss.zhtml.Td;
@@ -85,13 +86,13 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 4068073033610726196L;
+	private static final long serialVersionUID = 4486118071892173802L;
 
 	protected LoginWindow wndLogin;
 	protected Login login;
 
 	protected Combobox lstRole, lstClient, lstOrganisation, lstWarehouse;
-	protected Label lblRole, lblClient, lblOrganisation, lblWarehouse, lblDate;
+	protected Label lblRole, lblClient, lblDef, lblOrganisation, lblWarehouse, lblDate;
 	protected WDateEditor lstDate;
 	protected Button btnOk, btnCancel;
 
@@ -162,12 +163,10 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
         	AuFocus auf = null;
             if (lstClient.getItemCount() > 1) {
             	auf = new AuFocus(lstClient);
+            } else if (lstRole.getItemCount() > 1) {
+            	auf = new AuFocus(lstRole);
             } else {
-            	if (MSysConfig.getBooleanValue(MSysConfig.ALogin_ShowOneRole, true) || lstRole.getItemCount() > 1) {
-            		auf = new AuFocus(lstRole);
-            	} else {
-            		auf = new AuFocus(lstOrganisation);
-            	}
+           		auf = new AuFocus(lstOrganisation);
             }
             Clients.response(auf);
         } else {
@@ -232,6 +231,19 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
     	td.appendChild(lstRole);
 
     	tr = new Tr();
+        tr.setId("rowLabelDefault");
+        table.appendChild(tr);
+    	//td = new Td();
+    	//tr.appendChild(td);
+    	td = new Td();
+    	tr.appendChild(td);
+    	td.setSclass(ITheme.LOGIN_LABEL_CLASS);
+		div = new Div();
+		div.setStyle("text-align: right; text-decoration: underline");
+		div.appendChild(lblDef);
+    	td.appendChild(div);
+
+    	tr = new Tr();
         tr.setId("rowOrganisation");
         table.appendChild(tr);
     	td = new Td();
@@ -293,6 +305,10 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
         lblRole = new Label();
         lblRole.setId("lblRole");
         lblRole.setValue(Msg.getMsg(language,"Role"));
+
+        lblDef = new Label();
+        lblDef.setId("lblDef");
+        lblDef.setValue(Msg.getMsg(language,"Defaults"));
 
         lblOrganisation = new Label();
         lblOrganisation.setId("lblOrganisation");
@@ -382,14 +398,19 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
         //
 
         if (m_clientKNPairs!=null && m_clientKNPairs.length == 1) {
-        	// don't show client if is just one
+        	// disable client if is just one
 			lstClient.setSelectedIndex(0);
-			lblClient.setVisible(false);
-			lstClient.setVisible(false);
+			lstClient.setEnabled(false);
         } else {
-			lblClient.setVisible(true);
-			lstClient.setVisible(true);
+			lstClient.setEnabled(true);
         }
+        
+        // Disable date combo-box at login screen
+        if (!MSysConfig.getBooleanValue(MSysConfig.ALogin_ShowDate, true))
+        {
+        	lstDate.setReadWrite(false);
+        }
+
         setUserID();
         updateRoleList();
 
@@ -411,8 +432,8 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
 			{
 				initDefault=m_userpreference.getProperty( UserPreference.P_ROLE );
 			}
-            KeyNamePair clientKNPair = new KeyNamePair(new Integer((String)lstItemClient.getValue()), lstItemClient.getLabel());
-            KeyNamePair roleKNPairs[] = login.getRoles(m_userName, clientKNPair);
+            KeyNamePair clientKNPair = new KeyNamePair(Integer.valueOf((String)lstItemClient.getValue()), lstItemClient.getLabel());
+            KeyNamePair roleKNPairs[] = login.getRoles(m_userName, clientKNPair, LoginPanel.ROLE_TYPES_WEBUI);
             if (roleKNPairs != null && roleKNPairs.length > 0)
             {
                 for (int i = 0; i < roleKNPairs.length; i++)
@@ -434,22 +455,19 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
 
             //force reload of default role
             MRole.getDefault(m_ctx, true);
-            
-    		// If we have only one role, we can hide the combobox - metas-2009_0021_AP1_G94
-    		if (m_clientKNPairs.length == 1 && lstRole.getItemCount() == 1 && 
-    				(! MSysConfig.getBooleanValue(MSysConfig.ALogin_ShowOneRole, true) || m_isSso)) // FIN: (st) 20/09/2017 make sure if we have only one role and is sso we hide it
+
+    		// If we have only one role, we can make readonly the combobox
+    		if (lstRole.getItemCount() == 1 || m_isSso)) // FIN: (st) 20/09/2017 make sure if we have only one ro
     		{
     			lstRole.setSelectedIndex(0);
-    			lblRole.setVisible(false);
-    			lstRole.setVisible(false);
+    			lstRole.setEnabled(false);
     			
     			if(m_isSso)	// FIN: (st) 20/09/2017 hide if sso
     				m_show = false;
-    		}
-    		else
-    		{
-    			lblRole.setVisible(true);
-    			lstRole.setVisible(true);
+    		} else {
+    			lstRole.setEnabled(true);
+    			if(m_isSso)	// FIN: (st) 20/09/2017 hide if sso
+    				m_show = false;
     		}
         }
         setUserID();
@@ -470,7 +488,7 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
 			{
 				initDefault=m_userpreference.getProperty( UserPreference.P_ORG );
 			}
-            KeyNamePair RoleKNPair = new KeyNamePair(new Integer((String)lstItemRole.getValue()), lstItemRole.getLabel());
+            KeyNamePair RoleKNPair = new KeyNamePair(Integer.valueOf((String)lstItemRole.getValue()), lstItemRole.getLabel());
             KeyNamePair orgKNPairs[] = login.getOrgs(RoleKNPair);
             if(orgKNPairs != null && orgKNPairs.length > 0)
             {
@@ -510,6 +528,15 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
                 	lstOrganisation.setSelectedIndex(0);
                 }
             }
+
+            // If we have only one org, we can make readonly the combobox
+    		if (lstOrganisation.getItemCount() == 1)
+    		{
+    			lstOrganisation.setSelectedIndex(0);
+    			lstOrganisation.setEnabled(false);
+    		} else {
+    			lstOrganisation.setEnabled(true);
+    		}
             //
         }
         updateWarehouseList();
@@ -529,7 +556,7 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
 			{
 				initDefault=m_userpreference.getProperty( UserPreference.P_WAREHOUSE );
 			}
-            KeyNamePair organisationKNPair = new KeyNamePair(new Integer((String)lstItemOrganisation.getValue()), lstItemOrganisation.getLabel());
+            KeyNamePair organisationKNPair = new KeyNamePair(Integer.valueOf((String)lstItemOrganisation.getValue()), lstItemOrganisation.getLabel());
             KeyNamePair warehouseKNPairs[] = login.getWarehouses(organisationKNPair);
             if(warehouseKNPairs != null && warehouseKNPairs.length > 0)
             {
@@ -679,6 +706,20 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
 			});
             return;
 		}
+
+        // See if a popup should encourage user to change its password
+        if (!MUser.get(Env.getCtx()).isNoPasswordReset()) {
+            int notifyDay = MSysConfig.getIntValue(MSysConfig.USER_LOCKING_PASSWORD_NOTIFY_DAY, 0);
+            int pwdAgeDay = MSysConfig.getIntValue(MSysConfig.USER_LOCKING_MAX_PASSWORD_AGE_DAY, 0);
+            if (notifyDay > 0 && pwdAgeDay > 0) {
+            	Timestamp limit = TimeUtil.addDays(MUser.get(Env.getCtx()).getDatePasswordChanged(), pwdAgeDay);
+            	Timestamp notifyAfter = TimeUtil.addDays(limit, -notifyDay);
+            	Timestamp now = TimeUtil.getDay(null);
+
+            	if (now.after(notifyAfter))
+            		FDialog.warn(0, null, "", Msg.getMsg(Env.getCtx(), "YourPasswordWillExpireInDays", new Object[] {TimeUtil.getDaysBetween(now, limit)}));
+            }
+        }
 
         wndLogin.loginCompleted();
 

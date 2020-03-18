@@ -26,14 +26,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for M_MatchPO
  *  @author iDempiere (generated) 
- *  @version Release 4.1 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_M_MatchPO extends PO implements I_M_MatchPO, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20161030L;
+	private static final long serialVersionUID = 20190903L;
 
     /** Standard Constructor */
     public X_M_MatchPO (Properties ctx, int M_MatchPO_ID, String trxName)
@@ -486,6 +486,31 @@ public class X_M_MatchPO extends PO implements I_M_MatchPO, I_Persistent
 		if (bd == null)
 			 return Env.ZERO;
 		return bd;
+	}
+
+	public org.compiere.model.I_M_MatchPO getRef_MatchPO() throws RuntimeException
+    {
+		return (org.compiere.model.I_M_MatchPO)MTable.get(getCtx(), org.compiere.model.I_M_MatchPO.Table_Name)
+			.getPO(getRef_MatchPO_ID(), get_TrxName());	}
+
+	/** Set Referenced Match PO.
+		@param Ref_MatchPO_ID Referenced Match PO	  */
+	public void setRef_MatchPO_ID (int Ref_MatchPO_ID)
+	{
+		if (Ref_MatchPO_ID < 1) 
+			set_Value (COLUMNNAME_Ref_MatchPO_ID, null);
+		else 
+			set_Value (COLUMNNAME_Ref_MatchPO_ID, Integer.valueOf(Ref_MatchPO_ID));
+	}
+
+	/** Get Referenced Match PO.
+		@return Referenced Match PO	  */
+	public int getRef_MatchPO_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_Ref_MatchPO_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
 	}
 
 	public org.compiere.model.I_M_MatchPO getReversal() throws RuntimeException

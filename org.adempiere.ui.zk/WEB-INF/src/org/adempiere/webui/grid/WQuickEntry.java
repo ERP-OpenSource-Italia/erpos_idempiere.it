@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
-import org.adempiere.base.Core;
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.Window;
@@ -28,10 +28,12 @@ import org.adempiere.webui.editor.WebEditorFactory;
 import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.event.ValueChangeListener;
 import org.adempiere.webui.session.SessionManager;
+import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
+import org.compiere.model.GridTable;
 import org.compiere.model.GridWindow;
 import org.compiere.model.MField;
 import org.compiere.model.MLookup;
@@ -67,14 +69,17 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -8530102231615195037L;
+	private static final long serialVersionUID = -6385383768870354870L;
 
 	public static final String QUICK_ENTRY_MODE = "_QUICK_ENTRY_MODE_";
+	public static final String QUICK_ENTRY_CALLER_WINDOW = "_QUICK_ENTRY_CALLER_WINDOW_";
+	public static final String QUICK_ENTRY_CALLER_TAB = "_QUICK_ENTRY_CALLER_TAB_";
 
 	private static CLogger log = CLogger.getCLogger(WQuickEntry.class);
 
 	protected int m_WindowNo;
 	private int parent_WindowNo;
+	private int parent_TabNo;
 
 	List<GridField> quickFields = new ArrayList<GridField>();
 	protected List<WEditor> quickEditors = new ArrayList<WEditor>();
@@ -92,19 +97,27 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 	protected int m_AD_Window_ID;
 	
 	private boolean isHasField = false;
+
+	private String orientation;
+
+	public WQuickEntry(int WindowNo, int AD_Window_ID)
+	{
+		this(WindowNo, 0, AD_Window_ID);
+	}
+
 	/**
 	 *	Constructor.
 	 *	Requires call loadRecord
 	 * 	@param WindowNo	Window No
 	 * 	@param AD_Window_ID
 	 */
-
-	public WQuickEntry(int WindowNo, int AD_Window_ID)
+	public WQuickEntry(int WindowNo, int TabNo, int AD_Window_ID)
 	{
 		super();
 
 		m_AD_Window_ID = AD_Window_ID;
 		parent_WindowNo = WindowNo;
+		parent_TabNo = TabNo;
 		m_WindowNo = SessionManager.getAppDesktop().registerWindow(this);
 		log.info("R/O=" + m_readOnly);
 
@@ -118,6 +131,8 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 		}
 
 		Env.setContext(Env.getCtx(), m_WindowNo, QUICK_ENTRY_MODE, "Y");
+		Env.setContext(Env.getCtx(), m_WindowNo, QUICK_ENTRY_CALLER_WINDOW, parent_WindowNo);
+		Env.setContext(Env.getCtx(), m_WindowNo, QUICK_ENTRY_CALLER_TAB, parent_TabNo);
 				
 		// F3P: propagate context from source window
 		BaseEnvHelper.copyWindowEnv(Env.getCtx(), parent_WindowNo, m_WindowNo);
@@ -147,7 +162,16 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 
 	private void jbInit() throws Exception
 	{
-		ZKUpdateUtil.setWidth(this, "350px");
+		if (!ThemeManager.isUseCSSForWindowSize()) {
+			ZKUpdateUtil.setWindowWidthX(this, 350);
+		} else {
+			addCallback(AFTER_PAGE_ATTACHED, t -> {
+				ZKUpdateUtil.setCSSWidth(this);
+				ZKUpdateUtil.setCSSHeight(this);
+			});
+		}
+		
+		this.setSclass("quick-entry-dialog");
 		this.setBorder("normal");
 		this.setClosable(true);
 		this.setSizable(true);
@@ -156,8 +180,31 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 		ZKUpdateUtil.setWidth(centerPanel, "100%");
 
 		confirmPanel.addActionListener(Events.ON_CLICK, this);
+		
+		if (ClientInfo.isMobile())
+		{
+			if (ClientInfo.maxWidth(ClientInfo.EXTRA_SMALL_WIDTH) || ClientInfo.maxHeight(ClientInfo.SMALL_HEIGHT))
+			{
+				confirmPanel.addButtonSclass("btn-small small-image-btn");
+			}
+			orientation = ClientInfo.get().orientation;
+			ClientInfo.onClientInfo(this, this::onClientInfo);
+		}
 	}
 
+	protected void onClientInfo()
+	{
+		if (getPage() != null) {
+			String newOrientation = ClientInfo.get().orientation;
+			if (!newOrientation.equals(orientation)) {
+				orientation = newOrientation;
+				ZKUpdateUtil.setCSSWidth(this);
+				ZKUpdateUtil.setCSSHeight(this);
+				this.invalidate();
+			}			
+		}
+	}
+	
 	/**
 	 *	Dynamic Init
 	 */
@@ -225,6 +272,7 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 		}
 		Component field = editor.getComponent();
 		Hlayout layout = new Hlayout();
+		layout.setValign("middle");
 
 		ZKUpdateUtil.setHflex(layout, "10");
 
@@ -270,7 +318,7 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 			} else {
 				if (Record_ID > 0) {
 					String columnname = gridtab.getTableName() + "_ID";
-					id = Env.getContextAsInt(Env.getCtx(), parent_WindowNo, columnname);
+					id = Env.getContextAsInt(Env.getCtx(), parent_WindowNo, columnname, true);
 				}
 			}
 			MQuery query = new MQuery(gridtab.getAD_Table_ID());
@@ -320,6 +368,7 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 				initialValues.add(editor.getValue());
 			}
 			dynamicDisplay();
+    		updateStyleTab(quickTabs.get(0));
 			return true;
 		}
 
@@ -339,13 +388,12 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 			if (value != null) {
 				editor.setValue(value);
 				field.setValue(value, false);
-			} else {
-				editor.dynamicDisplay();
 			}
 			initialValues.add(editor.getValue());
 		}
 
 		dynamicDisplay();
+		updateStyleTab(quickTabs.get(0));
 		return true;
 	}	//	loadRecord
 
@@ -505,12 +553,16 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 				WEditor editor = quickEditors.get(idx);
 				GridTab gridTab = field.getGridTab();
 				String columnName = field.getColumnName();
+				GridTable mTable = gridTab.getTableModel();
+				int row = gridTab.getCurrentRow();
+				int col = mTable.findColumn(columnName);
 				// process dependencies and callouts for the changed field
 				if (evt.getSource() instanceof WLocationEditor && evt.getNewValue() == null && editor.getValue() != null) {
 					// ignore first call of WLocationEditor valuechange set to null
 					// it will be called later with correct value
 					// see WLocationEditor firing twice ValueChangeEvent (first with null and then with value)
 				} else {
+					mTable.setValueAt(evt.getNewValue(), row, col);
 					field.setValue(evt.getNewValue(), field.getGridTab().getTableModel().isInserting());
 					gridTab.processFieldChange(field);
 				}
@@ -528,12 +580,9 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 	    					mLookup.refresh();
 	    				}
 	    			}
-	    		}   //  for all dependent fields
-				if (   dependants.size() > 0
-					|| field.getCallout().length() > 0
-					|| Core.findCallout(gridTab.getTableName(), columnName).size() > 0) {
-					dynamicDisplay();
-	            }
+	    		}
+	    		dynamicDisplay();
+	    		updateStyleTab(gridTab);
 			}
 		}
 	}
@@ -545,12 +594,28 @@ public class WQuickEntry extends Window implements EventListener<Event>, ValueCh
 	{
 		for (int idxf = 0; idxf < quickFields.size(); idxf++) {
 			GridField field = quickFields.get(idxf);
+			GridTab gridTab = field.getGridTab();
+			String columnName = field.getColumnName();
+			GridTable mTable = gridTab.getTableModel();
+			int row = gridTab.getCurrentRow();
+			int col = mTable.findColumn(columnName);
 			WEditor editor = quickEditors.get(idxf);
-			editor.setValue(field.getValue());
+			editor.setValue(mTable.getValueAt(row, col)); //In case a callout changed the value and it is not reflected in field yet
 			editor.setReadWrite(field.isEditable(true));
 			editor.setVisible(field.isDisplayed(true));
 		}
 	} // dynamicDisplay
+
+	private void updateStyleTab(GridTab tab) {
+		for (int idxf = 0; idxf < quickFields.size(); idxf++) {
+			GridField field = quickFields.get(idxf);
+			GridTab gridTab = field.getGridTab();
+			if (tab == gridTab) {
+				WEditor editor = quickEditors.get(idxf);
+				editor.updateStyle();
+			}
+		}
+	}
 	
 	/**
 	 *	get size quickfields

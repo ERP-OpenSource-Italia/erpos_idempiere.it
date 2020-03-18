@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
+import org.adempiere.webui.Extensions;
 import org.adempiere.webui.component.Column;
 import org.adempiere.webui.component.Columns;
 import org.adempiere.webui.component.EditorBox;
@@ -36,6 +37,7 @@ import org.adempiere.webui.component.Urlbox;
 import org.adempiere.webui.editor.IZoomableEditor;
 import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.editor.WEditorPopupMenu;
+import org.adempiere.webui.editor.WSearchEditor;
 import org.adempiere.webui.editor.WebEditorFactory;
 import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.event.ValueChangeEvent;
@@ -50,20 +52,23 @@ import org.compiere.model.MClient;
 import org.compiere.model.MLookup;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MPInstancePara;
+import org.compiere.model.MProcess;
 import org.compiere.process.ProcessInfo;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.HtmlBasedComponent;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Div;
-import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Label;
+import org.zkoss.zul.Space;
+import org.zkoss.zul.impl.InputElement;
 import org.zkoss.zul.impl.XulElement;
 
 /**
@@ -79,7 +84,7 @@ public class ProcessParameterPanel extends Panel implements
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -6190176000439901932L;
+	private static final long serialVersionUID = 2388338147222636369L;
 
 	/**
 	 * Dynamic generated Parameter panel.
@@ -98,6 +103,7 @@ public class ProcessParameterPanel extends Panel implements
 		//
 		initComponent();
 		addEventListener("onDynamicDisplay", this);
+		addEventListener("onPostEditorValueChange", this);
 	} // ProcessParameterPanel
 	
 	private void initComponent() {
@@ -131,7 +137,7 @@ public class ProcessParameterPanel extends Panel implements
 																		// ranges
 	private ArrayList<GridField> m_mFields = new ArrayList<GridField>();
 	private ArrayList<GridField> m_mFields2 = new ArrayList<GridField>();
-	private ArrayList<Label> m_separators = new ArrayList<Label>();
+	private ArrayList<Space> m_separators = new ArrayList<Space>();
 	//
 	private Grid centerPanel = null;
 
@@ -202,7 +208,7 @@ public class ProcessParameterPanel extends Panel implements
 					+ "p.FieldLength, p.IsMandatory, p.IsRange, p.ColumnName, "
 					+ "p.DefaultValue, p.DefaultValue2, p.VFormat, p.ValueMin, p.ValueMax, "
 					+ "p.SeqNo, p.AD_Reference_Value_ID, vr.Code AS ValidationCode, "
-					+ "p.ReadOnlyLogic, p.DisplayLogic, p.IsEncrypted, NULL AS FormatPattern, p.MandatoryLogic "
+					+ "p.ReadOnlyLogic, p.DisplayLogic, p.IsEncrypted, NULL AS FormatPattern, p.MandatoryLogic, p.Placeholder, p.Placeholder2 "
 					+ "FROM AD_Process_Para p"
 					+ " LEFT OUTER JOIN AD_Val_Rule vr ON (p.AD_Val_Rule_ID=vr.AD_Val_Rule_ID) "
 					+ "WHERE p.AD_Process_ID=?" // 1
@@ -213,7 +219,7 @@ public class ProcessParameterPanel extends Panel implements
 					+ "p.FieldLength, p.IsMandatory, p.IsRange, p.ColumnName, "
 					+ "p.DefaultValue, p.DefaultValue2, p.VFormat, p.ValueMin, p.ValueMax, "
 					+ "p.SeqNo, p.AD_Reference_Value_ID, vr.Code AS ValidationCode, "
-					+ "p.ReadOnlyLogic, p.DisplayLogic, p.IsEncrypted, NULL AS FormatPattern,p.MandatoryLogic "
+					+ "p.ReadOnlyLogic, p.DisplayLogic, p.IsEncrypted, NULL AS FormatPattern,p.MandatoryLogic, t.Placeholder, t.Placeholder2 "
 					+ "FROM AD_Process_Para p"
 					+ " INNER JOIN AD_Process_Para_Trl t ON (p.AD_Process_Para_ID=t.AD_Process_Para_ID)"
 					+ " LEFT OUTER JOIN AD_Val_Rule vr ON (p.AD_Val_Rule_ID=vr.AD_Val_Rule_ID) "
@@ -327,8 +333,11 @@ public class ProcessParameterPanel extends Panel implements
 
 		//
 		if (voF.isRange) {
-			Hbox box = new Hbox();
+			Div box = new Div();
+			box.setStyle("display: flex; align-items: center;");
+			ZKUpdateUtil.setWidth(box, "100%");
 			box.appendChild(editor.getComponent());
+			ZKUpdateUtil.setWidth((HtmlBasedComponent) editor.getComponent(), "49%");
 			//
 			GridFieldVO voF2 = GridFieldVO.createParameter(voF);
 			GridField mField2 = new GridField(voF2);
@@ -342,7 +351,8 @@ public class ProcessParameterPanel extends Panel implements
 			// New Field value to be updated to editor
 			mField2.addPropertyChangeListener(editor2);
 			editor2.dynamicDisplay();
-			editor2.fillHorizontal();
+			ZKUpdateUtil.setWidth((HtmlBasedComponent) editor2.getComponent(), "49%");
+			setEditorPlaceHolder(editor2, mField2.getPlaceholder2());
 			// setup editor context menu
 			popupMenu = editor2.getPopupMenu();
 			if (popupMenu != null) {
@@ -354,7 +364,8 @@ public class ProcessParameterPanel extends Panel implements
 			mField2.setValue(defaultObject2, true);
 			//
 			m_wEditors2.add(editor2);
-			Label separator = new Label(" - ");
+			Space separator = new Space();
+			separator.setStyle("margin:0; width: 2%;");
 			m_separators.add(separator);
 			box.appendChild(separator);
 			box.appendChild(editor2.getComponent());
@@ -367,6 +378,21 @@ public class ProcessParameterPanel extends Panel implements
 		}
 		rows.appendChild(row);
 	} // createField
+
+	private void setEditorPlaceHolder(WEditor editor, String msg) {
+		Component c = editor.getComponent();
+		if (c instanceof InputElement) {
+			((InputElement) c).setPlaceholder(msg);
+		} else {
+			for (Component e : c.getChildren()) {
+				if (e instanceof InputElement) {
+					((InputElement) e).setPlaceholder(msg);
+					break;
+				}
+			}
+		}
+		
+	}
 
 	/**
 	 * Validate Parameter values
@@ -395,7 +421,7 @@ public class ProcessParameterPanel extends Panel implements
 						sb.append(", ");
 					sb.append(field.getHeader());
 					if (m_wEditors2.get(i) != null) // is a range
-						sb.append(" (").append(Msg.getMsg(Env.getCtx(), "From")).append(")");
+						sb.append(" (").append(Msg.getMsg(Env.getCtx(), "ProcessParameterRangeFrom")).append(")");
 				} else
 					field.setError(false);
 				// Check for Range
@@ -411,7 +437,7 @@ public class ProcessParameterPanel extends Panel implements
 						if (sb.length() > 0)
 							sb.append(", ");
 						sb.append(field2.getHeader());
-						sb.append(" (").append(Msg.getMsg(Env.getCtx(), "To")).append(")");
+						sb.append(" (").append(Msg.getMsg(Env.getCtx(), "ProcessParameterRangeTo")).append(")");
 					} else
 						field2.setError(false);
 				} // range field
@@ -423,6 +449,18 @@ public class ProcessParameterPanel extends Panel implements
 			return false;
 		}
 
+		if (m_processInfo.getAD_Process_ID() > 0) {
+			String className = MProcess.get(Env.getCtx(), m_processInfo.getAD_Process_ID()).getClassname();
+			List<IProcessParameterListener> listeners = Extensions.getProcessParameterListeners(className, null);
+			for(IProcessParameterListener listener : listeners) {
+				String error = listener.validate(this);
+				if (!Util.isEmpty(error)) {
+					FDialog.error(m_WindowNo, this, error);
+					return false;
+				}
+			}
+		}
+		
 		return true;
 	}	//	validateParameters
 	
@@ -438,6 +476,9 @@ public class ProcessParameterPanel extends Panel implements
 		{
 			GridField mField = (GridField)m_mFields.get(j);
 
+			if (!mField.isEditablePara(true))
+				continue; // Saved parameters must not change read-only parameters
+
 			//	Get Values
 			WEditor editor = (WEditor)m_wEditors.get(j);
 			WEditor editor2 = (WEditor)m_wEditors2.get(j);
@@ -451,7 +492,6 @@ public class ProcessParameterPanel extends Panel implements
 				MPInstancePara para = params[i];
 				if ( mField.getColumnName().equals(para.getParameterName()) )
 				{
-
 					if (para.getP_Date() != null || para.getP_Date_To() != null )
 					{
 						editor.setValue(para.getP_Date());
@@ -681,6 +721,7 @@ public class ProcessParameterPanel extends Panel implements
 				processDependencies (changedField);
 				// future processCallout (changedField);
 			}
+			Events.postEvent("onPostEditorValueChange", this, evt.getSource());
 		}
 		processNewValue(evt.getNewValue(), evt.getPropertyName());
 	}
@@ -709,8 +750,21 @@ public class ProcessParameterPanel extends Panel implements
     	else if (event.getName().equals("onDynamicDisplay")) {
     		dynamicDisplay();
     	}
+    	else if (event.getName().equals("onPostEditorValueChange")) {
+    		onPostEditorValueChange((WEditor)event.getData());
+    	}
 	}
 
+	private void onPostEditorValueChange(WEditor editor) {
+		if (m_processInfo.getAD_Process_ID() > 0) {
+			String className = MProcess.get(Env.getCtx(), m_processInfo.getAD_Process_ID()).getClassname();
+			List<IProcessParameterListener> listeners = Extensions.getProcessParameterListeners(className, editor.getColumnName());
+			for(IProcessParameterListener listener : listeners) {
+				listener.onChange(this, editor.getColumnName(), editor);
+			}
+		}
+	}
+	
 	/**
 	 *  Evaluate Dependencies
 	 *  @param changedField changed field
@@ -850,6 +904,54 @@ public class ProcessParameterPanel extends Panel implements
 			c = ((Urlbox)c).getTextbox();
 		}
 		((HtmlBasedComponent)c).focus();		
+	}
+	
+	/**
+	 * Get parameter field editor by column name
+	 * @param columnName
+	 * @return editor
+	 */
+	public WEditor getEditor(String columnName) {
+		for(int i = 0; i < m_mFields.size(); i++) {
+			if (m_mFields.get(i).getColumnName().equals(columnName)) {
+				return m_wEditors.get(i);
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Get parameter field value to editor by column name
+	 * @param columnName
+	 * @return editor
+	 */
+	public WEditor getEditorTo(String columnName) {
+		for(int i = 0; i < m_mFields.size(); i++) {
+			if (m_mFields.get(i).getColumnName().equals(columnName)) {
+				return m_wEditors2.get(i);
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * @return true if editor is showing dialog awaiting user action
+	 */
+	public boolean isWaitingForDialog() {
+		for (int i = 0; i < m_mFields.size(); i++) {
+			// Get Values
+			WEditor editor = (WEditor) m_wEditors.get(i);
+			WEditor editor2 = (WEditor) m_wEditors2.get(i);
+			if (editor != null && editor instanceof WSearchEditor) {
+				if (((WSearchEditor)editor).isShowingDialog())
+					return true;
+			} else if (editor2 != null && editor2 instanceof WSearchEditor) {
+				if (((WSearchEditor)editor2).isShowingDialog())
+					return true;
+			}
+		}
+		
+		return false;
 	}
 	
 	static class ZoomListener implements EventListener<Event> {

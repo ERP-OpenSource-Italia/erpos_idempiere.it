@@ -29,9 +29,12 @@ import java.util.logging.Level;
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.process.DocAction;
 import org.compiere.process.DocumentEngine;
+import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
 
 /**
  *  Journal Batch Model
@@ -51,7 +54,7 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -2494833602067696046L;
+	private static final long serialVersionUID = 5920767495976301905L;
 
 	/**
 	 * 	Create new Journal Batch by copying
@@ -175,12 +178,10 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 		super.setDateAcct(DateAcct);
 		if (DateAcct == null)
 			return;
-		if (getC_Period_ID() != 0)
-			return;
 		int C_Period_ID = MPeriod.getC_Period_ID(getCtx(), DateAcct, getAD_Org_ID());
 		if (C_Period_ID == 0)
-			log.warning("Period not found");
-		else
+			log.saveError("PeriodNotFound", " : " + DisplayType.getDateFormat().format(getDateAcct()));
+		else if (C_Period_ID != getC_Period_ID())
 			setC_Period_ID(C_Period_ID);
 	}	//	setDateAcct
 
@@ -274,9 +275,9 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 	}	//	process
 	
 	/**	Process Message 			*/
-	private String		m_processMsg = null;
+	protected String		m_processMsg = null;
 	/**	Just Prepared Flag			*/
-	private boolean		m_justPrepared = false;
+	protected boolean		m_justPrepared = false;
 
 	/**
 	 * 	Unlock Document.
@@ -474,7 +475,7 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 			{
 				// added AdempiereException by zuhri
 				if (!journal.processIt(DocAction.ACTION_Complete))
-					throw new AdempiereException("Failed when processing document - " + journal.getProcessMsg());
+					throw new AdempiereException(Msg.getMsg(getCtx(), "FailedProcessingDocument") + " - " + journal.getProcessMsg());
 				// end added
 				journal.saveEx();
 				if (!DocAction.STATUS_Completed.equals(journal.getDocStatus()))
@@ -506,10 +507,10 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 	/**
 	 * 	Set the definite document number after completed
 	 */
-	private void setDefiniteDocumentNo() {
+	protected void setDefiniteDocumentNo() {
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		if (dt.isOverwriteDateOnComplete()) {
-			setDateDoc(new Timestamp (System.currentTimeMillis()));
+			setDateDoc(TimeUtil.getDay(0));
 			if (getDateAcct().before(getDateDoc())) {
 				setDateAcct(getDateDoc());
 				MPeriod.testPeriodOpen(getCtx(), getDateAcct(), getC_DocType_ID(), getAD_Org_ID());
@@ -929,5 +930,47 @@ public class MJournalBatch extends X_GL_JournalBatch implements DocAction
 			StringBuilder msgd = new StringBuilder(desc).append(" | ").append(description);
 			setDescription(msgd.toString());
 		}
+	}
+	
+	/**************************************************************************
+	 * 	Before Save
+	 *	@param newRecord new
+	 *	@return true
+	 */
+	@Override
+	protected boolean beforeSave (boolean newRecord)
+	{
+		if (getDateDoc() == null)
+		{
+			if (getDateAcct() == null)
+				setDateDoc(new Timestamp(System.currentTimeMillis()));
+			else
+				setDateDoc(getDateAcct());
+		}
+		if (getDateAcct() == null)
+		{
+			setDateAcct(getDateDoc());
+			if (CLogger.peekError() != null)
+				return false;
+		}
+		else if (!isProcessed())
+		{
+			//validate period
+			int C_Period_ID = MPeriod.getC_Period_ID(getCtx(), getDateAcct(), getAD_Org_ID());
+			if (C_Period_ID == 0)
+			{
+				log.saveError("PeriodNotFound", " : " + DisplayType.getDateFormat().format(getDateAcct()));
+				return false;
+			}
+			else if (C_Period_ID != getC_Period_ID())
+			{
+				/* special case when assigning an adjustment period */
+				MPeriod currentPeriod = MPeriod.get(getCtx(), getC_Period_ID());
+				if (currentPeriod.isStandardPeriod())
+					setC_Period_ID(C_Period_ID);
+			}
+		}
+		
+		return true;
 	}
 }	//	MJournalBatch

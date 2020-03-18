@@ -21,11 +21,10 @@ import static org.compiere.model.SystemIDs.COLUMN_C_INVOICELINE_M_PRODUCT_ID;
 import static org.compiere.model.SystemIDs.COLUMN_C_INVOICE_C_BPARTNER_ID;
 
 import java.beans.PropertyChangeEvent;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.ValuePreference;
 import org.adempiere.webui.adwindow.ADWindow;
@@ -49,13 +48,13 @@ import org.adempiere.webui.window.WFieldRecordInfo;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.model.Lookup;
+import org.compiere.model.MColumn;
 import org.compiere.model.MLookup;
 import org.compiere.model.MLookupFactory;
 import org.compiere.model.MQuery;
-import org.compiere.model.MRole;
+import org.compiere.model.MTable;
 import org.compiere.model.X_AD_CtxHelp;
 import org.compiere.util.CLogger;
-import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.zkoss.zk.au.out.AuScript;
@@ -182,22 +181,35 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 		if (columnName.equals("C_BPartner_ID"))
 		{
 			popupMenu = new WEditorPopupMenu(true, true, isShowPreference(), true, true, false, lookup, this);
-			imageUrl = ThemeManager.getThemeResource("images/BPartner16.png");
+			if (ThemeManager.isUseFontIconForImage())
+				imageUrl = "z-icon-BPartner";
+			else
+				imageUrl = ThemeManager.getThemeResource("images/BPartner16.png");
 		}
 		else if (columnName.equals("M_Product_ID"))
 		{
 			popupMenu = new WEditorPopupMenu(true, true, isShowPreference(), false, false, false, lookup, this);
-			imageUrl = ThemeManager.getThemeResource("images/Product16.png");
+			if (ThemeManager.isUseFontIconForImage())
+				imageUrl = "z-icon-Product";
+			else
+				imageUrl = ThemeManager.getThemeResource("images/Product16.png");
 		}
 		else
 		{
 			popupMenu = new WEditorPopupMenu(true, true, isShowPreference(), false, false, false, lookup, this);
-			imageUrl = ThemeManager.getThemeResource("images/PickOpen16.png");
+			if (ThemeManager.isUseFontIconForImage())
+				imageUrl = "z-icon-More";
+			else
+				imageUrl = ThemeManager.getThemeResource("images/PickOpen16.png");
 		}
-		getComponent().getButton().setImage(imageUrl);
+		if (ThemeManager.isUseFontIconForImage())
+			getComponent().getButton().setIconSclass(imageUrl);
+		else
+			getComponent().getButton().setImage(imageUrl);
 
 		addChangeLogMenu(popupMenu);
-
+		if (gridField != null)
+			getComponent().getTextbox().setPlaceholder(gridField.getPlaceholder());
 		return;
 	}
 
@@ -357,7 +369,7 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 		int id = -1;
 		
 		if (m_tableName == null)	//	sets table name & key column
-			getDirectAccessSQL("*");
+			setTableAndKeyColumn();
 		
 		final InfoPanel ip = InfoManager.create(lookup, gridField, m_tableName, m_keyColumnName, getComponent().getText(), isMultiSelection, getWhereClause());
 		if (ip != null && ip.loadedOK() && ip.getRowCount() == 1)
@@ -387,7 +399,7 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 		if (log.isLoggable(Level.FINE))
 			log.fine(getColumnName() + " - Unique ID=" + id);
 
-		actionCombo(new Integer(id));          //  data binding
+		actionCombo(Integer.valueOf(id));          //  data binding
 		
 		Searchbox comp = getComponent();
 		Component parent = comp.getParent();
@@ -411,7 +423,10 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 
 	private void resetButtonState() {
 		getComponent().getButton().setEnabled(true);
-		getComponent().getButton().setImage(imageUrl);
+		if (ThemeManager.isUseFontIconForImage())
+			getComponent().getButton().setIconSclass(imageUrl);
+		else
+			getComponent().getButton().setImage(imageUrl);
 		getComponent().invalidate();
 	}
 
@@ -465,19 +480,7 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 		if(!getComponent().isEnabled())
 			return;
 		
-		// F3P: extended info
-		final QuickEntryExtendedInfo quExt = QuickEntryExtendedInfo.get(this, lookup);
-		
-		int zoomWindowId = gridField != null ? lookup.getZoom(Env.isSOTrx(Env.getCtx(), gridField.getWindowNo())) : lookup.getZoom(Env.isSOTrx(Env.getCtx()));
-		
-		// F3P: override window
-		
-		if(quExt.hasExtendedInfo() && quExt.getAD_Window_ID() > 0)
-			zoomWindowId = quExt.getAD_Window_ID();
 			
-		final WQuickEntry vqe = new WQuickEntry (lookup.getWindowNo(), zoomWindowId);
-		if (vqe.getQuickFields()<=0)
-			return;
 		int Record_ID = 0;
 		
 		//  if update, get current value
@@ -489,6 +492,28 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 				Record_ID = Integer.parseInt(value.toString());
 		}
 		
+    	if (lookup.getColumnName() != null) {
+    		String tableName = lookup.getColumnName().substring(0, lookup.getColumnName().indexOf("."));
+    		int zoomWinID = Env.getZoomWindowID(MTable.getTable_ID(tableName), Record_ID, lookup.getWindowNo());
+    		if (zoomWinID > 0)
+    			zoomWindowId = zoomWinID;
+    	}
+    	
+    	if (zoomWindowId < 0) {
+    		zoomWindowId = gridField != null ? lookup.getZoom(Env.isSOTrx(Env.getCtx(), gridField.getWindowNo())) : lookup.getZoom(Env.isSOTrx(Env.getCtx()));
+    	}
+    			
+	// F3P: extended info
+	final QuickEntryExtendedInfo quExt = QuickEntryExtendedInfo.get(this, lookup);
+		
+	// F3P: override window		
+	if(quExt.hasExtendedInfo() && quExt.getAD_Window_ID() > 0)
+		zoomWindowId = quExt.getAD_Window_ID();    	
+
+    	int tabNo = gridField != null && gridField.getGridTab() != null ? gridField.getGridTab().getTabNo() : 0;
+    	final WQuickEntry vqe = new WQuickEntry(lookup.getWindowNo(), tabNo, zoomWindowId);
+		if (vqe.getQuickFields()<=0)
+			return;
 		vqe.loadRecord (Record_ID);
 		
 		final int finalRecord_ID = Record_ID;
@@ -508,9 +533,9 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 					return;
 
 				//  Maybe new Record - put in cache
-				lookup.getDirect(new Integer(result), false, true);
-				setValue(new Integer(result));
-				actionCombo (new Integer(result));      //  data binding
+				lookup.getDirect(Integer.valueOf(result), false, true);
+				setValue(Integer.valueOf(result));
+				actionCombo (Integer.valueOf(result));      //  data binding
 				lookup.refresh();
 				
 				// F3P: Quizk entry save and zoom
@@ -561,7 +586,7 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 
 		vqe.setSizable(true);
 		adwindow = ADWindow.findADWindow(getComponent());
-		if (adwindow != null) {
+		if (adwindow != null && !ClientInfo.isMobile()) {
 			ADWindowContent content = adwindow.getADWindowContent();				
 			content.getComponent().getParent().appendChild(vqe);
 			content.showBusyMask(vqe);
@@ -596,7 +621,7 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 			queryValue = getComponent().getText();
 
 		if (m_tableName == null)	//	sets table name & key column
-			getDirectAccessSQL("*");
+			setTableAndKeyColumn();
 
 		final InfoPanel ip = InfoManager.create(lookup, gridField, m_tableName, m_keyColumnName, queryValue, isMultiSelection, whereClause);
 		if (ip != null)
@@ -604,7 +629,7 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 	}
 
 
-	protected void showInfoPanel(final InfoPanel ip) {
+	public void showInfoPanel(final InfoPanel ip) {
 		ip.setVisible(true);
 		ip.setStyle("border: 2px");
 		ip.setClosable(true);
@@ -659,226 +684,35 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 	}
 
 	/**
-	 * 	Generate Access SQL for Search.
-	 * 	The SQL returns the ID of the value entered
-	 * 	Also sets m_tableName and m_keyColumnName
-	 *	@param text uppercase text for LIKE comparison
-	 *	@return sql or ""
-	 *  Example
-	 *	SELECT C_Payment_ID FROM C_Payment WHERE UPPER(DocumentNo) LIKE x OR ...
+	 * 	Sets m_tableName and m_keyColumnName
 	 */
-	private String getDirectAccessSQL (String text)
-	{
-		String m_columnName = getColumnName();
-
-		StringBuffer sql = new StringBuffer();
-		m_tableName = m_columnName.substring(0, m_columnName.length()-3);
-		m_keyColumnName = m_columnName;
-
-		if (m_columnName.equals("M_Product_ID"))
-		{
+	private void setTableAndKeyColumn() {
+		if (lookup != null && lookup instanceof MLookup) {
+			// foreign table defined in lookup
+			m_keyColumnName = ((MLookup)lookup).getColumnName();
+			if (m_keyColumnName.contains(".")) {
+				m_tableName = m_keyColumnName.substring(0, m_keyColumnName.indexOf("."));
+				m_keyColumnName = m_keyColumnName.substring(m_keyColumnName.indexOf(".")+1);
+			} else {
+				m_tableName = m_keyColumnName.substring(0, m_keyColumnName.length()-3);
+			}
+		} else if (getGridField() != null && getGridField().getGridTab() != null && getGridField().getAD_Column_ID() > 0) {
+			// field - this search editor comes from a window, when it comes from process parameter it doesn't have a gridtab
+			MColumn column = MColumn.get(Env.getCtx(), getGridField().getAD_Column_ID());
+			m_tableName = column.getReferenceTableName();
+			MTable table = MTable.get(Env.getCtx(), m_tableName);
+			m_keyColumnName = table.getKeyColumns()[0];
+		} else {
+			// no field - the search editor is defined programatically
+			m_keyColumnName = getColumnName();
+			m_tableName = m_keyColumnName.substring(0, m_keyColumnName.length()-3);
+		}
+		if (m_keyColumnName.equals("M_Product_ID")) {
 			//	Reset
 			Env.setContext(Env.getCtx(), lookup.getWindowNo(), Env.TAB_INFO, "M_Product_ID", "0");
 			Env.setContext(Env.getCtx(), lookup.getWindowNo(), Env.TAB_INFO, "M_AttributeSetInstance_ID", "0");
 			Env.setContext(Env.getCtx(), lookup.getWindowNo(), Env.TAB_INFO, "M_Locator_ID", "0");
-
-			sql.append("SELECT M_Product_ID FROM M_Product WHERE (UPPER(Value) LIKE ")
-				.append(DB.TO_STRING(text))
-				.append(" OR UPPER(Name) LIKE ").append(DB.TO_STRING(text))
-				.append(" OR UPC LIKE ").append(DB.TO_STRING(text)).append(")");
 		}
-		else if (m_columnName.equals("C_BPartner_ID"))
-		{
-			sql.append("SELECT C_BPartner_ID FROM C_BPartner WHERE (UPPER(Value) LIKE ")
-				.append(DB.TO_STRING(text))
-				.append(" OR UPPER(Name) LIKE ").append(DB.TO_STRING(text)).append(")");
-		}
-		else if (m_columnName.equals("C_Order_ID"))
-		{
-			sql.append("SELECT C_Order_ID FROM C_Order WHERE UPPER(DocumentNo) LIKE ")
-				.append(DB.TO_STRING(text));
-		}
-		else if (m_columnName.equals("C_Invoice_ID"))
-		{
-			sql.append("SELECT C_Invoice_ID FROM C_Invoice WHERE UPPER(DocumentNo) LIKE ")
-				.append(DB.TO_STRING(text));
-		}
-		else if (m_columnName.equals("M_InOut_ID"))
-		{
-			sql.append("SELECT M_InOut_ID FROM M_InOut WHERE UPPER(DocumentNo) LIKE ")
-				.append(DB.TO_STRING(text));
-		}
-		else if (m_columnName.equals("C_Payment_ID"))
-		{
-			sql.append("SELECT C_Payment_ID FROM C_Payment WHERE UPPER(DocumentNo) LIKE ")
-				.append(DB.TO_STRING(text));
-		}
-		else if (m_columnName.equals("GL_JournalBatch_ID"))
-		{
-			sql.append("SELECT GL_JournalBatch_ID FROM GL_JournalBatch WHERE UPPER(DocumentNo) LIKE ")
-				.append(DB.TO_STRING(text));
-		}
-		else if (m_columnName.equals("SalesRep_ID"))
-		{
-			sql.append("SELECT AD_User_ID FROM AD_User WHERE UPPER(Name) LIKE ")
-				.append(DB.TO_STRING(text));
-
-			m_tableName = "AD_User";
-			m_keyColumnName = "AD_User_ID";
-		}
-
-		//	Predefined
-
-		if (sql.length() > 0)
-		{
-			String wc = getWhereClause();
-
-			if (wc != null && wc.length() > 0)
-				sql.append(" AND ").append(wc);
-
-			sql.append(" AND IsActive='Y'");
-			//	***
-
-			if (log.isLoggable(Level.FINEST)) log.finest(m_columnName + " (predefined) " + sql.toString());
-
-			return MRole.getDefault().addAccessSQL(sql.toString(),
-				m_tableName, MRole.SQL_NOTQUALIFIED, MRole.SQL_RO);
-		}
-
-		//	Check if it is a Table Reference
-
-		if (lookup != null && lookup instanceof MLookup)
-		{
-			int AD_Reference_ID = ((MLookup)lookup).getAD_Reference_Value_ID();
-
-			if (AD_Reference_ID != 0)
-			{
-				boolean isValueDisplayed = false;
-				String query = "SELECT kc.ColumnName, dc.ColumnName, t.TableName, rt.IsValueDisplayed "
-					+ "FROM AD_Ref_Table rt"
-					+ " INNER JOIN AD_Column kc ON (rt.AD_Key=kc.AD_Column_ID)"
-					+ " INNER JOIN AD_Column dc ON (rt.AD_Display=dc.AD_Column_ID)"
-					+ " INNER JOIN AD_Table t ON (rt.AD_Table_ID=t.AD_Table_ID) "
-					+ "WHERE rt.AD_Reference_ID=?";
-
-				String displayColumnName = null;
-				PreparedStatement pstmt = null;
-				ResultSet rs = null;
-
-				try
-				{
-					pstmt = DB.prepareStatement(query, null);
-					pstmt.setInt(1, AD_Reference_ID);
-					rs = pstmt.executeQuery();
-
-					if (rs.next())
-					{
-						m_keyColumnName = rs.getString(1);
-						displayColumnName = rs.getString(2);
-						m_tableName = rs.getString(3);
-						String t = rs.getString(4);
-						isValueDisplayed = "Y".equalsIgnoreCase(t);
-					}
-				}
-				catch (Exception e)
-				{
-					log.log(Level.SEVERE, query, e);
-				}
-				finally
-				{
-					DB.close(rs, pstmt);
-				}
-
-
-				if (displayColumnName != null)
-				{
-					sql = new StringBuffer();
-					sql.append("SELECT ").append(m_keyColumnName)
-						.append(" FROM ").append(m_tableName)
-						.append(" WHERE (UPPER(").append(displayColumnName)
-						.append(") LIKE ").append(DB.TO_STRING(text));
-					if (isValueDisplayed)
-					{
-						sql.append(" OR UPPER(").append("Value")
-						   .append(") LIKE ").append(DB.TO_STRING(text));
-					}
-					sql.append(")");
-					sql.append(" AND IsActive='Y'");
-
-					String wc = getWhereClause();
-
-					if (wc != null && wc.length() > 0)
-						sql.append(" AND ").append(wc);
-
-					//	***
-
-					if (log.isLoggable(Level.FINEST)) log.finest(m_columnName + " (Table) " + sql.toString());
-
-					return MRole.getDefault().addAccessSQL(sql.toString(),
-								m_tableName, MRole.SQL_NOTQUALIFIED, MRole.SQL_RO);
-				}
-			} // Table Reference
-		} // MLookup
-
-		/** Check Well Known Columns of Table - assumes TableDir	**/
-
-		String query = "SELECT t.TableName, c.ColumnName "
-			+ "FROM AD_Column c "
-			+ " INNER JOIN AD_Table t ON (c.AD_Table_ID=t.AD_Table_ID AND t.IsView='N') "
-			+ "WHERE (c.ColumnName IN ('DocumentNo', 'Value', 'Name') OR c.IsIdentifier='Y')"
-			+ " AND c.AD_Reference_ID IN (10,14)"
-			+ " AND EXISTS (SELECT * FROM AD_Column cc WHERE cc.AD_Table_ID=t.AD_Table_ID"
-				+ " AND cc.IsKey='Y' AND cc.ColumnName=?)";
-
-		m_keyColumnName = m_columnName;
-		sql = new StringBuffer();
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement(query, null);
-			pstmt.setString(1, m_keyColumnName);
-			rs = pstmt.executeQuery();
-
-			while (rs.next())
-			{
-				if (sql.length() != 0)
-					sql.append(" OR ");
-
-				m_tableName = rs.getString(1);
-				sql.append("UPPER(").append(rs.getString(2)).append(") LIKE ").append(DB.TO_STRING(text));
-			}
-		}
-		catch (SQLException ex)
-		{
-			log.log(Level.SEVERE, query, ex);
-		}
-		finally
-		{
-			DB.close(rs, pstmt);
-			rs = null;
-			pstmt = null;
-		}
-		//
-		if (sql.length() == 0)
-		{
-			log.log(Level.SEVERE, m_columnName + " (TableDir) - no standard/identifier columns");
-			return "";
-		}
-		//
-		StringBuffer retValue = new StringBuffer ("SELECT ")
-			.append(m_columnName).append(" FROM ").append(m_tableName)
-			.append(" WHERE ").append(sql)
-			.append(" AND IsActive='Y'");
-
-		String wc = getWhereClause();
-
-		if (wc != null && wc.length() > 0)
-			retValue.append(" AND ").append(wc);
-		//	***
-		if (log.isLoggable(Level.FINEST)) log.finest(m_columnName + " (TableDir) " + sql.toString());
-		return MRole.getDefault().addAccessSQL(retValue.toString(),
-					m_tableName, MRole.SQL_NOTQUALIFIED, MRole.SQL_RO);
 	}
 
 	private String getWhereClause()
@@ -1003,6 +837,16 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 		return null;
 	}
 	
+	
+	@Override
+	public void dynamicDisplay(Properties ctx) {
+		if (lookup instanceof MLookup) {
+			((MLookup) lookup).getLookupInfo().ctx = ctx;
+		}
+		super.dynamicDisplay(ctx);
+	}
+
+
 	static class CustomSearchBox extends Searchbox {
 
 		/**
@@ -1015,9 +859,15 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 			super.onPageAttached(newpage, oldpage);
 			if (newpage != null) {
 				String w = "try{var btn=jq('#'+this.parent.uuid+' @button').zk.$();}catch(err){}";
-				getTextbox().setWidgetListener("onChange", "try{"+w+"btn.setImage(\""
+				if (ThemeManager.isUseFontIconForImage()) {
+					String sclass = "z-icon-spinner z-icon-spin";
+					getTextbox().setWidgetListener("onChange", "try{"+w+"btn.setIconSclass('" + sclass + "');"
+							+ "btn.setDisabled(true, {adbs: false, skip: false});}catch(err){}");
+				} else {
+					getTextbox().setWidgetListener("onChange", "try{"+w+"btn.setImage(\""
 						+ Executions.getCurrent().encodeURL(IN_PROGRESS_IMAGE)+"\");"
 						+ "btn.setDisabled(true, {adbs: false, skip: false});}catch(err){}");
+				}
 			}
 		}
 		

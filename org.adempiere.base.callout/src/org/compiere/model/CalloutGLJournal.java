@@ -17,6 +17,7 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -52,7 +53,6 @@ public class CalloutGLJournal extends CalloutEngine
 		if (value == null)
 			return "";
 
-		int AD_Client_ID = Env.getContextAsInt(ctx, WindowNo, "AD_Client_ID");
 		Timestamp DateAcct = null;
 		if (colName.equals("DateAcct"))
 			DateAcct = (Timestamp)value;
@@ -68,14 +68,13 @@ public class CalloutGLJournal extends CalloutEngine
 			mTab.setValue("DateAcct", value);
 		}
 
-		//  When DateAcct is changed, set C_Period_ID
-		else if (colName.equals("DateAcct"))
+		//  When DateAcct/Org is changed, set C_Period_ID
+		else if (colName.equals("DateAcct") || colName.equals("AD_Org_ID"))
 		{
 			String sql = "SELECT C_Period_ID "
 				+ "FROM C_Period "
 				+ "WHERE C_Year_ID IN "
-				+ "	(SELECT C_Year_ID FROM C_Year WHERE C_Calendar_ID ="
-				+ "  (SELECT C_Calendar_ID FROM AD_ClientInfo WHERE AD_Client_ID=?))"
+				+ "	(SELECT C_Year_ID FROM C_Year WHERE C_Calendar_ID=?)"
 				+ " AND ? BETWEEN StartDate AND EndDate"
 				// globalqss - cruiz - Bug [ 1577712 ] Financial Period Bug
 				+ " AND IsActive='Y'"
@@ -85,7 +84,9 @@ public class CalloutGLJournal extends CalloutEngine
 			try
 			{
 				pstmt = DB.prepareStatement(sql, null);
-				pstmt.setInt(1, AD_Client_ID);
+				int AD_Org_ID = mTab.getValue("AD_Org_ID") != null ? ((Number)mTab.getValue("AD_Org_ID")).intValue() : 0;
+				int C_Calendar_ID = MPeriod.getC_Calendar_ID(ctx, AD_Org_ID);
+				pstmt.setInt(1, C_Calendar_ID);
 				pstmt.setTimestamp(2, DateAcct);
 				rs = pstmt.executeQuery();
 				if (rs.next())
@@ -103,7 +104,7 @@ public class CalloutGLJournal extends CalloutEngine
 				pstmt = null;
 			}
 			if (C_Period_ID != 0)
-				mTab.setValue("C_Period_ID", new Integer(C_Period_ID));
+				mTab.setValue("C_Period_ID", Integer.valueOf(C_Period_ID));
 		}
 
 		//  When C_Period_ID is changed, check if in DateAcct range and set to end date if not
@@ -120,16 +121,12 @@ public class CalloutGLJournal extends CalloutEngine
 				rs = pstmt.executeQuery();
 				if (rs.next())
 				{
-					String PeriodType = rs.getString(1);
 					Timestamp StartDate = rs.getTimestamp(2);
 					Timestamp EndDate = rs.getTimestamp(3);
-					if (PeriodType.equals("S")) //  Standard Periods
-					{
-						//  out of range - set to last day
-						if (DateAcct == null
-							|| DateAcct.before(StartDate) || DateAcct.after(EndDate))
-							mTab.setValue("DateAcct", EndDate);
-					}
+					//  out of range - set to last day
+					if (DateAcct == null
+						|| DateAcct.before(StartDate) || DateAcct.after(EndDate))
+						mTab.setValue("DateAcct", EndDate);
 				}
 			}
 			catch (SQLException e)
@@ -222,10 +219,10 @@ public class CalloutGLJournal extends CalloutEngine
 			AmtSourceCr = Env.ZERO;
 
 		BigDecimal AmtAcctDr = AmtSourceDr.multiply(CurrencyRate);
-		AmtAcctDr = AmtAcctDr.setScale(Precision, BigDecimal.ROUND_HALF_UP);
+		AmtAcctDr = AmtAcctDr.setScale(Precision, RoundingMode.HALF_UP);
 		mTab.setValue("AmtAcctDr", AmtAcctDr);
 		BigDecimal AmtAcctCr = AmtSourceCr.multiply(CurrencyRate);
-		AmtAcctCr = AmtAcctCr.setScale(Precision, BigDecimal.ROUND_HALF_UP);
+		AmtAcctCr = AmtAcctCr.setScale(Precision, RoundingMode.HALF_UP);
 		mTab.setValue("AmtAcctCr", AmtAcctCr);
 
 		return "";
@@ -295,6 +292,28 @@ public class CalloutGLJournal extends CalloutEngine
 			mTab.setValue("UserElement1_ID", combi.getUserElement1_ID() != 0 ? combi.getUserElement1_ID() : null);
 			mTab.setValue("UserElement2_ID", combi.getUserElement2_ID() != 0 ? combi.getUserElement2_ID() : null);
 		}
+		return "";
+	}
+	
+	/**
+	 *  Journal - Acct Schema
+	 *  Set Currency from C_AcctSchema_ID
+	 *	@param ctx context
+	 *	@param WindowNo window no
+	 *	@param mTab tab
+	 *	@param mField field
+	 *	@param value value
+	 *	@return null or error message
+	 */
+	public String acctSchema(Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value)
+	{
+		if (value == null)
+			return "";
+		
+		int C_AcctSchema_ID = Env.getContextAsInt(ctx, WindowNo, "C_AcctSchema_ID");
+		MAcctSchema as = MAcctSchema.get (ctx, C_AcctSchema_ID);
+		mTab.setValue("C_Currency_ID", as.getC_Currency_ID());
+		
 		return "";
 	}
 }	//	CalloutGLJournal

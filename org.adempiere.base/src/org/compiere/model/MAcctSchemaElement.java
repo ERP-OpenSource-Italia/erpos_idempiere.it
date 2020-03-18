@@ -57,7 +57,7 @@ public class MAcctSchemaElement extends X_C_AcctSchema_Element
 	 */
 	public static MAcctSchemaElement[] getAcctSchemaElements (MAcctSchema as)
 	{
-		Integer key = new Integer (as.getC_AcctSchema_ID());
+		Integer key = Integer.valueOf(as.getC_AcctSchema_ID());
 		MAcctSchemaElement[] retValue = (MAcctSchemaElement[]) s_cache.get (key);
 		if (retValue != null)
 			return retValue;
@@ -520,9 +520,6 @@ public class MAcctSchemaElement extends X_C_AcctSchema_Element
 	 */
 	private void updateData (String element, int id)
 	{
-		StringBuilder msguvd = new StringBuilder(element).append("=").append(id);
-		MAccount.updateValueDescription(getCtx(),msguvd.toString(), get_TrxName());
-		//
 		StringBuilder sql = new StringBuilder("UPDATE C_ValidCombination SET ").append(element).append("=").append(id)
 			.append(" WHERE ").append(element).append(" IS NULL AND AD_Client_ID=").append(getAD_Client_ID());
 		int noC = DB.executeUpdate(sql.toString(), get_TrxName());
@@ -532,6 +529,9 @@ public class MAcctSchemaElement extends X_C_AcctSchema_Element
 		int noF = DB.executeUpdate(sql.toString(), get_TrxName());
 		//
 		if (log.isLoggable(Level.FINE)) log.fine("ValidCombination=" + noC + ", Fact=" + noF);
+		//
+		StringBuilder msguvd = new StringBuilder(element).append("=").append(id);
+		MAccount.updateValueDescription(getCtx(),msguvd.toString(), get_TrxName());
 	}	//	updateData
 	
 	@Override

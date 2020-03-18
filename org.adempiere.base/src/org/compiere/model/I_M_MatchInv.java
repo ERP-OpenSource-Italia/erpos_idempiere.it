@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for M_MatchInv
  *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @version Release 6.2
  */
 public interface I_M_MatchInv 
 {
@@ -285,6 +285,17 @@ public interface I_M_MatchInv
 	  * Quantity
 	  */
 	public BigDecimal getQty();
+
+    /** Column name Ref_MatchInv_ID */
+    public static final String COLUMNNAME_Ref_MatchInv_ID = "Ref_MatchInv_ID";
+
+	/** Set Referenced Match Invoice	  */
+	public void setRef_MatchInv_ID (int Ref_MatchInv_ID);
+
+	/** Get Referenced Match Invoice	  */
+	public int getRef_MatchInv_ID();
+
+	public org.compiere.model.I_M_MatchInv getRef_MatchInv() throws RuntimeException;
 
     /** Column name Reversal_ID */
     public static final String COLUMNNAME_Reversal_ID = "Reversal_ID";

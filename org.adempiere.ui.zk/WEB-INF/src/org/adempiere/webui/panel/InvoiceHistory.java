@@ -35,6 +35,7 @@ import org.adempiere.webui.component.Tabs;
 import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.component.Window;
 import org.adempiere.webui.info.InfoProductWindow;
+import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.model.MDocType;
 import org.compiere.model.MPriceList;
@@ -99,7 +100,7 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 			log.log(Level.SEVERE, "", ex);
 		}
 		
-		this.setSclass("popup-dialog");
+		this.setSclass("popup-dialog invoice-history-dialog");
 		AEnv.showCenterWindow(parent, this);
 		if (parent instanceof InfoProductWindow)
 			showDetailATP = ((InfoProductWindow)parent).isShowDetailATP();
@@ -208,12 +209,26 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 		tabbox.addEventListener(Events.ON_SELECT, this);
 		confirmPanel.addActionListener(this);
         
-		Borderlayout borderlayout = new Borderlayout();
-		ZKUpdateUtil.setWidth(this, "700px");
-		ZKUpdateUtil.setHeight(this, "400px");
+		Borderlayout borderlayout = new Borderlayout();	
+		if (!ThemeManager.isUseCSSForWindowSize())
+		{
+			ZKUpdateUtil.setWindowWidthX(this, 700);
+			ZKUpdateUtil.setWindowHeightX(this, 400);
+		}
+		else
+		{
+			addCallback(AFTER_PAGE_ATTACHED, t-> {
+				ZKUpdateUtil.setCSSHeight(this);
+				ZKUpdateUtil.setCSSWidth(this);
+				this.invalidate();
+			});
+		}
         borderlayout.setStyle("border: none; position: relative");
 		this.appendChild(borderlayout);
 		this.setClosable(true);
+		this.setSizable(true);
+		this.setMaximizable(true);
+		this.setBorder("normal");
 		
 		North north = new North();
 		north.setStyle("border: none");
@@ -356,7 +371,7 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 					line.add(rs.getBigDecimal(2));  //	Price
 				
 				line.add(rs.getString(3));  //	Currency
-				line.add(new Double(rs.getDouble(5)));      //  Qty
+				line.add(Double.valueOf(rs.getDouble(5)));      //  Qty
 				
 				if(m_showPriceHistory) // F3P: conditionally add price
 				{
@@ -617,9 +632,9 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 				Vector<Object> line = new Vector<Object>(6);
 				//	1-Name, 2-MovementQty, 3-MovementDate, 4-IsSOTrx, 5-DocumentNo
 				line.add(rs.getString(1));      		//  Name
-				line.add(new Double(rs.getDouble(2)));  //  Qty
+				line.add(Double.valueOf(rs.getDouble(2)));  //  Qty
 				line.add(rs.getTimestamp(3));   		//  Date
-				line.add(new Boolean("Y".equals(rs.getString(4))));	//  IsSOTrx
+				line.add(Boolean.valueOf("Y".equals(rs.getString(4))));	//  IsSOTrx
 				line.add(rs.getString(5));				//  DocNo
 				line.add(rs.getString(6));				//  Warehouse
 				data.add(line);
@@ -710,10 +725,10 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 				line.add(null);							//  Date
 				double qtyOnHand = rs.getDouble(1);
 				qty += qtyOnHand;
-				line.add(new Double(qtyOnHand));  		//  Qty
+				line.add(Double.valueOf(qtyOnHand));  		//  Qty
 				line.add(null);							//  BPartner
-				line.add(new Double(rs.getDouble(3)));  //  QtyOrdered
-				line.add(new Double(rs.getDouble(2)));  //  QtyReserved
+				line.add(Double.valueOf(rs.getDouble(3)));  //  QtyOrdered
+				line.add(Double.valueOf(rs.getDouble(2)));  //  QtyReserved
 				line.add(rs.getString(7));      		//  Locator
 				String asi = rs.getString(4);
 				if (showDetailATP && (asi == null || asi.length() == 0))
@@ -769,15 +784,15 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 				Double qtyOrdered = null;
 				if (MDocType.DOCBASETYPE_PurchaseOrder.equals(DocBaseType))
 				{
-					qtyOrdered = new Double(oq);
+					qtyOrdered = Double.valueOf(oq);
 					qty += oq;
 				}
 				else
 				{
-					qtyReserved = new Double(oq);
+					qtyReserved = Double.valueOf(oq);
 					qty -= oq;
 				}
-				line.add(new Double(qty)); 		 		//  Qty
+				line.add(Double.valueOf(qty)); 		 		//  Qty
 				line.add(rs.getString(6));				//  BPartner
 				line.add(qtyOrdered);					//  QtyOrdered
 				line.add(qtyReserved);					//  QtyReserved

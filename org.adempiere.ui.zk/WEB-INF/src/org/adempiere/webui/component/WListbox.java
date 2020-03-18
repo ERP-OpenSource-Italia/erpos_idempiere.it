@@ -60,7 +60,7 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -706774424788688953L;
+	private static final long serialVersionUID = -5501893389366975849L;
 
 	/**	Logger. */
 	private static CLogger logger = CLogger.getCLogger(WListbox.class);
@@ -238,7 +238,7 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 			return false;
 		}
 		
-		// F3P: If allowed, use idcolumn as a switch for read/write
+		// F3P: If allowed, use idcolumn as a switch for read/write (Some logic as boolean)
 		
 		if(allowIDColumnForReadWrite 
 			&& column != 0
@@ -249,7 +249,7 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 		}
 
 		//  is the column read/write?
-		if (m_readWriteColumn.contains(new Integer(column)))
+		if (m_readWriteColumn.contains(Integer.valueOf(column)))
 		{
 			return true;
 		}
@@ -332,7 +332,7 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 	 */
 	public void setColumnReadOnly (int index, boolean readOnly)
 	{
-		Integer indexObject = new Integer(index);
+		Integer indexObject = Integer.valueOf(index);
 
 		//  Column is ReadWrite
 		if (m_readWriteColumn.contains(indexObject))
@@ -418,7 +418,7 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
             }
 
             //  add to model
-            addColumn(layout[columnIndex].getColHeader(), layout[columnIndex].getColDescription());
+            addColumn(layout[columnIndex].getColHeader(), layout[columnIndex].getColDescription(), layout[columnIndex].getAD_Reference_ID());
 
             // set the colour column
             if (layout[columnIndex].isColorColumn())
@@ -485,16 +485,20 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 		addColumn(header, null);
 	}
 	
+	public void addColumn (String header, String description)
+	{
+		addColumn(header, description, 0);
+	}
 	/**
 	 *  Add Table Column and specify the column header.
 	 *
 	 *  @param header	name of column header
 	 *  @param description
 	 */
-	public void addColumn (String header, String description)
+	public void addColumn (String header, String description, int AD_Reference_ID)
 	{
 		WListItemRenderer renderer = (WListItemRenderer)getItemRenderer();
-		renderer.addColumn(Util.cleanAmp(header), description);
+		renderer.addColumn(Util.cleanAmp(header), description, AD_Reference_ID);
 		getModel().addColumn();
 
 		return;
@@ -637,7 +641,7 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 					}
 					else if (columnClass == Boolean.class)
 					{
-						data = new Boolean(rs.getString(rsColIndex).equals("Y"));
+						data = Boolean.valueOf(rs.getString(rsColIndex).equals("Y"));
 					}
 					else if (columnClass == Timestamp.class)
 					{
@@ -649,11 +653,11 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 					}
 					else if (columnClass == Double.class)
 					{
-						data = new Double(rs.getDouble(rsColIndex));
+						data = Double.valueOf(rs.getDouble(rsColIndex));
 					}
 					else if (columnClass == Integer.class)
 					{
-						data = new Integer(rs.getInt(rsColIndex));
+						data = Integer.valueOf(rs.getInt(rsColIndex));
 					}
 					else if (columnClass == KeyNamePair.class)
 					{
@@ -757,7 +761,7 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 					}
 					else if (columnClass == Double.class)
 					{
-						data = new Double(((BigDecimal)data).doubleValue());
+						data = Double.valueOf(((BigDecimal)data).doubleValue());
 					}
 				}
 				//  store
@@ -1239,15 +1243,15 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 					}
 					else if (c == Double.class)
 					{
-						Double subtotal = new Double(0);
+						Double subtotal = Double.valueOf(0);
 						if(total[col] != null)
 							subtotal = (Double)(total[col]);
 						
 						Double amt =  (Double) data;
 						if(subtotal == null)
-							subtotal = new Double(0);
+							subtotal = Double.valueOf(0);
 						if(amt == null )
-							amt = new Double(0);
+							amt = Double.valueOf(0);
 						total[col] = subtotal + amt;
 						
 					}		

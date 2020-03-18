@@ -790,7 +790,7 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 			int lineNo = 0;
 			while (rs.next ())
 			{
-					imp = new X_I_Invoice (getCtx (), rs, get_TrxName()); // F3P: get in transaction
+				X_I_Invoice imp = new X_I_Invoice (getCtx (), rs, get_TrxName());
 					potentialErrorImp = imp; // F3P: mark processing imp
 				String cmpDocumentNo = imp.getDocumentNo();
 				if (cmpDocumentNo == null)
@@ -823,9 +823,9 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 					if (oldDocumentNo == null)
 						oldDocumentNo = "";
 					//
-						//F3P: reset list
-						lstImportedIInvoice = new LinkedList<X_I_Invoice>();
-					invoice = new MInvoice (getCtx(), 0, null);
+					invoice = new MInvoice (getCtx(), 0, get_TrxName());
+					//F3P: reset list
+					lstImportedIInvoice = new LinkedList<X_I_Invoice>();
 					invoice.setClientOrg (imp.getAD_Client_ID(), imp.getAD_Org_ID());
 					invoice.setC_DocTypeTarget_ID(imp.getC_DocType_ID());
 					invoice.setIsSOTrx(imp.isSOTrx());

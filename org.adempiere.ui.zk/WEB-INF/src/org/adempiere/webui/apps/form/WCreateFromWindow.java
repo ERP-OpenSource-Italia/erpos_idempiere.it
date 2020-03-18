@@ -13,6 +13,7 @@
  *****************************************************************************/
 package org.adempiere.webui.apps.form;
 
+import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Label;
@@ -26,6 +27,7 @@ import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.event.WTableModelEvent;
 import org.adempiere.webui.event.WTableModelListener;
 import org.adempiere.webui.panel.StatusBarPanel;
+import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
 import org.compiere.grid.CreateFrom;
@@ -105,6 +107,12 @@ public class WCreateFromWindow extends Window implements EventListener<Event>, W
 		North north = new North();
 		contentPane.appendChild(north);
 		north.appendChild(parameterPanel);
+		north.setAutoscroll(true);
+		north.setSplittable(true);
+		north.setCollapsible(true);
+		LayoutUtils.addSlideSclass(north);
+		ZKUpdateUtil.setVflex(parameterPanel, "1");
+		ZKUpdateUtil.setHflex(parameterPanel, "1");
 		
 		Center center = new Center();
         contentPane.appendChild(center);
@@ -157,8 +165,19 @@ public class WCreateFromWindow extends Window implements EventListener<Event>, W
 		southPanel.appendChild(new Separator());
 		southPanel.appendChild(statusBar);
 		
-		ZKUpdateUtil.setWidth(this, "750px");
-		ZKUpdateUtil.setHeight(this, "550px");
+		if (!ThemeManager.isUseCSSForWindowSize())
+		{
+			ZKUpdateUtil.setWindowWidthX(this, 750);
+			ZKUpdateUtil.setWindowHeightX(this, 550);
+		}
+		else
+		{
+			addCallback(AFTER_PAGE_ATTACHED, t -> {
+				ZKUpdateUtil.setCSSHeight(this);
+				ZKUpdateUtil.setCSSWidth(this);
+			});
+		}
+		setSclass("create-from-window");
 		setSizable(true);
 		setBorder("normal");
 		ZKUpdateUtil.setWidth(contentPane, "100%");
@@ -280,6 +299,16 @@ public class WCreateFromWindow extends Window implements EventListener<Event>, W
 		}
 	}
 	
+	public StatusBarPanel getStatusBar()
+	{
+		return statusBar;
+	}
+
+	public void setStatusBar(StatusBarPanel statusBar)
+	{
+		this.statusBar = statusBar;
+	}
+	
 	public WListbox getWListbox()
 	{
 		return dataTable;
@@ -298,7 +327,7 @@ public class WCreateFromWindow extends Window implements EventListener<Event>, W
 	public boolean isCancel() 
 	{
 		return isCancel;
-	}
+	}	
 	
 	//F3P
 	/**

@@ -59,7 +59,7 @@ public class WPAttributeEditor extends WEditor implements ContextMenuListener
 	private GridTab m_GridTab;
 
 	/**	No Instance Key					*/
-	private static Integer		NO_INSTANCE = new Integer(0);
+	private static Integer		NO_INSTANCE = Integer.valueOf(0);
 
 	public WPAttributeEditor(GridTab gridTab, GridField gridField)
 	{
@@ -69,7 +69,10 @@ public class WPAttributeEditor extends WEditor implements ContextMenuListener
 	}
 
 	private void initComponents() {
-		getComponent().setButtonImage(ThemeManager.getThemeResource("images/PAttribute16.png"));
+		if (ThemeManager.isUseFontIconForImage())
+			getComponent().getButton().setIconSclass("z-icon-PAttribute");
+		else
+			getComponent().setButtonImage(ThemeManager.getThemeResource("images/PAttribute16.png"));
 		// getComponent().addEventListener(Events.ON_CLICK, this); // IDEMPIERE-426 - dup listener, already set at WEditor
 
 		m_WindowNo = gridField.getWindowNo();
@@ -81,6 +84,9 @@ public class WPAttributeEditor extends WEditor implements ContextMenuListener
 		addChangeLogMenu(popupMenu);
 		
 		getComponent().getTextbox().setReadonly(true);
+
+		if (gridField != null)
+			getComponent().getTextbox().setPlaceholder(gridField.getPlaceholder());
 	}
 
 	@Override
@@ -271,7 +277,7 @@ public class WPAttributeEditor extends WEditor implements ContextMenuListener
 		if (M_AttributeSetInstance_ID == 0)
 			setValue(null);
 		else
-			setValue(new Integer(M_AttributeSetInstance_ID));
+			setValue(Integer.valueOf(M_AttributeSetInstance_ID));
 
 		ValueChangeEvent vce = new ValueChangeEvent(this, gridField.getColumnName(), new Object(), getValue());
 		fireValueChange(vce);

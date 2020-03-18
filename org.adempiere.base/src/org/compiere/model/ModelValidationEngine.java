@@ -36,6 +36,7 @@ import org.adempiere.base.event.IEventManager;
 import org.adempiere.base.event.IEventTopics;
 import org.adempiere.base.event.ImportEventData;
 import org.adempiere.base.event.LoginEventData;
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.model.ImportValidator;
 import org.adempiere.process.ImportProcess;
 import org.compiere.acct.Fact;
@@ -242,6 +243,9 @@ public class ModelValidationEngine
 					String error;
 					try {
 						ScriptEngine engine = loginRule.getScriptEngine();
+						if (engine == null) {
+							throw new AdempiereException("Engine not found: " + loginRule.getEngineName());
+						}
 						
 						if(engine == null)
 							log.severe("Null engine: " + loginRule.getAD_Rule_ID() + " (" + loginRule.getValue() + ")");
@@ -384,8 +388,10 @@ public class ModelValidationEngine
 					String error;
 					try {
 						ScriptEngine engine = rule.getScriptEngine();
+						if (engine == null) {
+							throw new AdempiereException("Engine not found: " + rule.getEngineName());
+						}
 						Bindings bindings = engine.createBindings();
-
 						MRule.setContext(bindings, po.getCtx(), 0);  // no window
 						// now add the method arguments to the engine
 						bindings.put(MRule.ARGUMENTS_PREFIX + "Ctx", po.getCtx());
@@ -549,6 +555,9 @@ public class ModelValidationEngine
 					String error;
 					try {
 						ScriptEngine engine = rule.getScriptEngine();
+						if (engine == null) {
+							throw new AdempiereException("Engine not found: " + rule.getEngineName());
+						}
 						Bindings bindings = engine.createBindings();
 
 						MRule.setContext(bindings, po.getCtx(), 0);  // no window
@@ -629,7 +638,7 @@ public class ModelValidationEngine
 			return;
 		//
 		String propertyName =
-			m_globalValidators.contains(listener)
+			(listener instanceof ModelValidator && m_globalValidators.contains((ModelValidator)listener))
 				? tableName + "*"
 				: tableName + listener.getAD_Client_ID();
 		ArrayList<FactsValidator> list = m_factsValidateListeners.get(propertyName);
@@ -674,7 +683,7 @@ public class ModelValidationEngine
 		if (tableName == null || listener == null)
 			return;
 		String propertyName =
-			m_globalValidators.contains(listener)
+			(listener instanceof ModelValidator && m_globalValidators.contains((ModelValidator)listener))
 				? tableName + "*"
 				: tableName + listener.getAD_Client_ID();
 		ArrayList<FactsValidator> list = m_factsValidateListeners.get(propertyName);
@@ -741,7 +750,7 @@ public class ModelValidationEngine
 			{
 				validator = list.get(i);
 				if (validator.getAD_Client_ID() == po.getAD_Client_ID()
-						|| m_globalValidators.contains(validator))
+						|| (validator instanceof ModelValidator && m_globalValidators.contains((ModelValidator)validator)))
 				{
 					String error = validator.factsValidate(schema, facts, po);
 					if (error != null && error.length() > 0)

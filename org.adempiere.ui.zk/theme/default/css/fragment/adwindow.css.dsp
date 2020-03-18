@@ -3,8 +3,6 @@
 <%-- breadcrumb --%>
 .breadcrumb-toolbar-button {
 	background-color: transparent; 
-	display:inline-block; 
-	width: 22px; 
 	height: 22px;
 }
 .breadcrumb-toolbar-button img {
@@ -14,9 +12,16 @@
 .breadcrumb-record-info {
 	font-size: 12px;
 }
+.breadcrumb-toolbar-button [class^="z-icon-"] {
+	padding-left: 4px;
+	padding-right: 4px;
+}
 
 .adwindow-form > .z-grid-body {
 	background-color: #F9F9F9;
+}
+.adwindow-form.z-grid > .z-grid-body {
+	overflow: visible !important;
 }
 
 .adwindow-layout {
@@ -74,9 +79,13 @@
 .adwindow-toolbar {
 	border: 0px;
 	padding: 2px 4px;
-	height: 26px;
+	height: 36px;
 	background-image: none;
 	background-color: #fff;
+}
+.adwindow-toolbar.mobile {
+	position: relative;
+	overflow: hidden;
 }
 
 .adwindow-breadcrumb {
@@ -243,4 +252,28 @@
 	line-height: 12px;
 	left: 4px;
 	height: 12px;
+}
+
+@media screen and (max-height: 767px) {
+	.adtab-form-borderlayout.mobile.z-borderlayout > div > .z-south-collapsed > .z-borderlayout-icon.z-icon-chevron-up {
+		display: none;
+	}
+	.adtab-form-borderlayout.mobile.z-borderlayout > div > .adwindow-gridview-detail.z-south {
+		height: 50% !important;
+	}
+}
+@media screen and (max-height: 600px) {
+	.adtab-form-borderlayout.mobile.z-borderlayout > div > .adwindow-gridview-detail.z-south {
+		height: 60% !important;
+	}
+}
+@media screen and (max-height: 500px) {
+	.adtab-form-borderlayout.mobile.z-borderlayout > div > .adwindow-gridview-detail.z-south {
+		height: 70% !important;
+	}
+}
+@media screen and (max-height: 400px) {
+	.adtab-form-borderlayout.mobile.z-borderlayout > div > .adwindow-gridview-detail.z-south {
+		height: 80% !important;
+	}
 }

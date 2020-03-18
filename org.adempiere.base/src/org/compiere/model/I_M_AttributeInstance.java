@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for M_AttributeInstance
  *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @version Release 6.2
  */
 public interface I_M_AttributeInstance 
 {
@@ -173,6 +173,15 @@ public interface I_M_AttributeInstance
 	  * Search key for the record in the format required - must be unique
 	  */
 	public String getValue();
+
+    /** Column name ValueDate */
+    public static final String COLUMNNAME_ValueDate = "ValueDate";
+
+	/** Set Value Date	  */
+	public void setValueDate (Timestamp ValueDate);
+
+	/** Get Value Date	  */
+	public Timestamp getValueDate();
 
     /** Column name ValueNumber */
     public static final String COLUMNNAME_ValueNumber = "ValueNumber";

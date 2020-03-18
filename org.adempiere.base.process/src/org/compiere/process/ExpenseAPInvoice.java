@@ -28,6 +28,7 @@ import org.compiere.model.MBPartner;
 import org.compiere.model.MDocType;
 import org.compiere.model.MInvoice;
 import org.compiere.model.MInvoiceLine;
+import org.compiere.model.MPriceList;
 import org.compiere.model.MTimeExpense;
 import org.compiere.model.MTimeExpenseLine;
 import org.compiere.model.PO;
@@ -180,6 +181,10 @@ public class ExpenseAPInvoice extends SvrProcess
 						break;
 					}
 					invoice.setM_PriceList_ID(te.getM_PriceList_ID());
+					
+					MPriceList pl = MPriceList.get(getCtx(), te.getM_PriceList_ID(), get_TrxName());
+					invoice.setIsTaxIncluded(pl.isTaxIncluded());
+
 					invoice.setSalesRep_ID(te.getDoc_User_ID());
 					StringBuilder descr = new StringBuilder().append(Msg.translate(getCtx(), "S_TimeExpense_ID")) 
 						.append(": ").append(te.getDocumentNo()).append(" " )

@@ -26,6 +26,8 @@ import org.compiere.print.MPrintFormatItem;
 import org.compiere.print.MPrintPaper;
 import org.compiere.print.PrintData;
 import org.compiere.print.PrintDataElement;
+import org.compiere.util.DisplayType;
+import org.compiere.util.Util;
 
 /**
  * Export PrintData to Excel (XLS) file
@@ -56,10 +58,14 @@ extends AbstractExcelExporter
 			m_printData.setRowIndex(row);
 		//
 		MPrintFormatItem item = m_printFormat.getItem(col);
-		int AD_Column_ID = item.getAD_Column_ID();
 		Object obj = null;
-		if (AD_Column_ID > 0)
-			obj = m_printData.getNode(Integer.valueOf(AD_Column_ID));
+
+		if (item.isTypeField() || item.isTypePrintFormat() && item.isImageField()) {
+			int AD_Column_ID = item.getAD_Column_ID();
+			if (AD_Column_ID > 0)
+				obj = m_printData.getNode(Integer.valueOf(AD_Column_ID));
+		}
+
 		if (obj != null && obj instanceof PrintDataElement) {
 			return (PrintDataElement)obj;
 		}
@@ -191,5 +197,25 @@ extends AbstractExcelExporter
 		sheet.setMargin(HSSFSheet.LeftMargin, ((double)paper.getMarginLeft()) / 72);
 		sheet.setMargin(HSSFSheet.BottomMargin, ((double)paper.getMarginBottom()) / 72);
 		//
+	}
+	
+	@Override
+	protected String getCellFormat(int row, int col) {
+		String cellFormat = null;
+		PrintDataElement pde = getPDE(row, col);
+		
+		if (pde != null && !Util.isEmpty(pde.getM_formatPattern())) {
+			String formatPattern = pde.getM_formatPattern();
+			int displayType = pde.getDisplayType();
+			if (DisplayType.isDate(displayType)) {
+				cellFormat = DisplayType.getDateFormat(displayType, getLanguage(), formatPattern).toPattern();
+			} else if (DisplayType.isNumeric(displayType)) {
+				cellFormat = DisplayType.getNumberFormat(displayType, getLanguage(), formatPattern).toPattern();
+			}
+		} else {
+			return super.getCellFormat(row, col);
+		}
+		
+		return cellFormat;
 	}
 }

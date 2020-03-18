@@ -54,10 +54,6 @@ import it.idempiere.base.util.STDSysConfig;
  * 
  * @author Teo Sarca, SC ARHIPAC SERVICE SRL
  *			<li>BF [ 2588043 ] Insufficient message ProductNotOnPriceList
- * @author Michael Judd, www.akunagroup.com
- * 			<li>BF [ 1733602 ] Price List including Tax Error - when a user changes the orderline or
- * 				invoice line for a product on a price list that includes tax, the net amount is
- * 				incorrectly calculated.
  */
 public class MOrderLine extends X_C_OrderLine
 {
@@ -244,7 +240,7 @@ public class MOrderLine extends X_C_OrderLine
 	public void setHeaderInfo (MOrder order)
 	{
 		m_parent = order;
-		m_precision = new Integer(order.getPrecision());
+		m_precision = Integer.valueOf(order.getPrecision());
 		m_M_PriceList_ID = order.getM_PriceList_ID();
 		m_IsSOTrx = order.isSOTrx();
 	}	//	setHeaderInfo
@@ -348,9 +344,8 @@ public class MOrderLine extends X_C_OrderLine
 		//	Calculate Discount
 		setDiscount(m_productPrice.getDiscount());
 		//	Set UOM
-		// F3P not reset C_UOM_ID
 		if(getC_UOM_ID() == 0)
-			setC_UOM_ID(m_productPrice.getC_UOM_ID()); 
+			setC_UOM_ID(m_productPrice.getC_UOM_ID());
 	}	//	setPrice
 
 	/**
@@ -363,7 +358,6 @@ public class MOrderLine extends X_C_OrderLine
 		m_productPrice = Core.getProductPricing();
 		m_productPrice.setOrderLine(this, get_TrxName());
 		m_productPrice.setM_PriceList_ID(M_PriceList_ID);
-		
 		//
 		m_productPrice.calculatePrice();
 		return m_productPrice;
@@ -395,53 +389,9 @@ public class MOrderLine extends X_C_OrderLine
 	public void setLineNetAmt ()
 	{
 		BigDecimal bd = getPriceActual().multiply(getQtyOrdered()); 
-		
-		boolean documentLevel = getTax().isDocumentLevel();
-		
-		//	juddm: Tax Exempt & Tax Included in Price List & not Document Level - Adjust Line Amount
-		//  http://sourceforge.net/tracker/index.php?func=detail&aid=1733602&group_id=176962&atid=879332
-		if (isTaxIncluded() && !documentLevel)	{
-			BigDecimal taxStdAmt = Env.ZERO, taxThisAmt = Env.ZERO;
-			
-			MTax orderTax = getTax();
-			MTax stdTax = null;
-			
-			//	get the standard tax
-			if (getProduct() == null)
-			{
-				if (getCharge() != null)	// Charge 
-				{
-					stdTax = new MTax (getCtx(), 
-							((MTaxCategory) getCharge().getC_TaxCategory()).getDefaultTax().getC_Tax_ID(),
-							get_TrxName());
-				}
-					
-			}
-			else	// Product
-				stdTax = new MTax (getCtx(), 
-							((MTaxCategory) getProduct().getC_TaxCategory()).getDefaultTax().getC_Tax_ID(), 
-							get_TrxName());
-
-			if (stdTax != null)
-			{
-				if (log.isLoggable(Level.FINE)){
-					log.fine("stdTax rate is " + stdTax.getRate());
-					log.fine("orderTax rate is " + orderTax.getRate());
-				}
-								
-				taxThisAmt = taxThisAmt.add(orderTax.calculateTax(bd, isTaxIncluded(), getPrecision()));
-				taxStdAmt = taxStdAmt.add(stdTax.calculateTax(bd, isTaxIncluded(), getPrecision()));
-				
-				bd = bd.subtract(taxStdAmt).add(taxThisAmt);
-				
-				if (log.isLoggable(Level.FINE)) log.fine("Price List includes Tax and Tax Changed on Order Line: New Tax Amt: " 
-						+ taxThisAmt + " Standard Tax Amt: " + taxStdAmt + " Line Net Amt: " + bd);	
-			}
-			
-		}
 		int precision = getPrecision();
 		if (bd.scale() > precision)
-			bd = bd.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			bd = bd.setScale(precision, RoundingMode.HALF_UP);
 		
 		// F3P: doc discount
 		
@@ -496,7 +446,7 @@ public class MOrderLine extends X_C_OrderLine
 			MCurrency cur = MCurrency.get(getCtx(), getC_Currency_ID());
 			if (cur.get_ID() != 0)
 			{
-				m_precision = new Integer (cur.getStdPrecision());
+				m_precision = Integer.valueOf(cur.getStdPrecision());
 				return m_precision.intValue();
 			}
 		}
@@ -505,7 +455,7 @@ public class MOrderLine extends X_C_OrderLine
 			+ "FROM C_Currency c INNER JOIN C_Order x ON (x.C_Currency_ID=c.C_Currency_ID) "
 			+ "WHERE x.C_Order_ID=?";
 		int i = DB.getSQLValue(get_TrxName(), sql, getC_Order_ID());
-		m_precision = new Integer(i);
+		m_precision = Integer.valueOf(i);
 		return m_precision.intValue();
 	}	//	getPrecision
 	
@@ -576,7 +526,7 @@ public class MOrderLine extends X_C_OrderLine
 	public void setM_AttributeSetInstance_ID (int M_AttributeSetInstance_ID)
 	{
 		if (M_AttributeSetInstance_ID == 0)		//	 0 is valid ID
-			set_Value("M_AttributeSetInstance_ID", new Integer(0));
+			set_Value("M_AttributeSetInstance_ID", Integer.valueOf(0));
 		else
 			super.setM_AttributeSetInstance_ID (M_AttributeSetInstance_ID);
 	}	//	setM_AttributeSetInstance_ID
@@ -899,7 +849,7 @@ public class MOrderLine extends X_C_OrderLine
 		if (QtyEntered != null && getC_UOM_ID() != 0)
 		{
 			int precision = MUOM.getPrecision(getCtx(), getC_UOM_ID());
-			QtyEntered = QtyEntered.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			QtyEntered = QtyEntered.setScale(precision, RoundingMode.HALF_UP);
 		}
 		super.setQtyEntered (QtyEntered);
 	}	//	setQtyEntered
@@ -914,7 +864,7 @@ public class MOrderLine extends X_C_OrderLine
 		if (QtyOrdered != null && product != null)
 		{
 			int precision = product.getUOMPrecision();
-			QtyOrdered = QtyOrdered.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			QtyOrdered = QtyOrdered.setScale(precision, RoundingMode.HALF_UP);
 		}
 		super.setQtyOrdered(QtyOrdered);
 	}	//	setQtyOrdered
@@ -1000,7 +950,7 @@ public class MOrderLine extends X_C_OrderLine
 		if (getM_Product_ID() == 0)
 			setM_AttributeSetInstance_ID(0);
 		//	Product
-		else	//	Set/check Product Price
+		else if (!isProcessed())	//	Set/check Product Price
 		{
 			//	Set Price if Actual = 0
 			if (m_productPrice == null 

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE language>
 
 <!-- lang.xml
 	Purpose:
@@ -39,10 +40,11 @@ Copyright (C) 2007 Ashley G Ramdass (ADempiere WebUI).
 	<javascript src="/js/token.js" charset="UTF-8"/>
 	<javascript src="/js/window.js" charset="UTF-8"/>
 	<javascript src="/js/html2canvas.js" charset="UTF-8"/>
-+	<javascript src="/js/jquery.maskedinput.js" charset="UTF-8"/>
+	<javascript src="/js/jquery.maskedinput.js" charset="UTF-8"/>
 	<javascript src="/js/photobooth_min.js" charset="UTF-8"/>
 
 
 	<javascript package="jawwa.atmosphere" merge="false" />
+	<javascript package="org.idempiere.websocket" merge="false" />
 	
 </language>

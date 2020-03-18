@@ -26,9 +26,12 @@ import java.util.logging.Level;
 
 import org.compiere.process.DocAction;
 import org.compiere.process.DocumentEngine;
+import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
 
 /**
  *  GL Journal Model
@@ -52,7 +55,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -364132249042527640L;
+	private static final long serialVersionUID = 6116307358915557651L;
 
 	/**
 	 * 	Standard Constructor
@@ -73,7 +76,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 			//
 			setCurrencyRate (Env.ONE);
 		//	setC_ConversionType_ID(0);
-			setDateAcct (new Timestamp(System.currentTimeMillis()));
+		//	setDateAcct (new Timestamp(System.currentTimeMillis()));
 			setDateDoc (new Timestamp(System.currentTimeMillis()));
 		//	setDescription (null);
 			setDocAction (DOCACTION_Complete);
@@ -168,12 +171,10 @@ public class MJournal extends X_GL_Journal implements DocAction
 		super.setDateAcct(DateAcct);
 		if (DateAcct == null)
 			return;
-		if (getC_Period_ID() != 0)
-			return;
 		int C_Period_ID = MPeriod.getC_Period_ID(getCtx(), DateAcct, getAD_Org_ID());
 		if (C_Period_ID == 0)
-			log.warning("setDateAcct - Period not found");
-		else
+			log.saveError("PeriodNotFound", " : " + DisplayType.getDateFormat().format(getDateAcct()));
+		else if (C_Period_ID != getC_Period_ID())
 			setC_Period_ID(C_Period_ID);
 	}	//	setDateAcct
 
@@ -305,7 +306,28 @@ public class MJournal extends X_GL_Journal implements DocAction
 				setDateDoc(getDateAcct());
 		}
 		if (getDateAcct() == null)
+		{
 			setDateAcct(getDateDoc());
+			if (CLogger.peekError() != null)
+				return false;
+		}
+		else if (!isProcessed())
+		{
+			//validate period
+			int C_Period_ID = MPeriod.getC_Period_ID(getCtx(), getDateAcct(), getAD_Org_ID());
+			if (C_Period_ID == 0)
+			{
+				log.saveError("PeriodNotFound", " : " + DisplayType.getDateFormat().format(getDateAcct()));
+				return false;
+			}
+			else if (C_Period_ID != getC_Period_ID())
+			{
+				/* special case when assigning an adjustment period */
+				MPeriod currentPeriod = MPeriod.get(getCtx(), getC_Period_ID());
+				if (currentPeriod.isStandardPeriod())
+					setC_Period_ID(C_Period_ID);
+			}
+		}
 
 		// IDEMPIERE-63
 		// for documents that can be reactivated we cannot allow changing 
@@ -371,7 +393,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Update Batch total
 	 *	@return true if ok
 	 */
-	private boolean updateBatch()
+	protected boolean updateBatch()
 	{
 		if (getGL_JournalBatch_ID()!=0) {	// idempiere 344 - nmicoud
 			StringBuilder sql = new StringBuilder("UPDATE GL_JournalBatch jb")
@@ -400,9 +422,9 @@ public class MJournal extends X_GL_Journal implements DocAction
 	}	//	process
 	
 	/**	Process Message 			*/
-	private String		m_processMsg = null;
+	protected String		m_processMsg = null;
 	/**	Just Prepared Flag			*/
-	private boolean		m_justPrepared = false;
+	protected boolean		m_justPrepared = false;
 
 	/**
 	 * 	Unlock Document.
@@ -526,8 +548,8 @@ public class MJournal extends X_GL_Journal implements DocAction
 			}
 			// end BF [2789319] No check of Actual, Budget, Statistical attribute
 			
-			AmtSourceDr = AmtSourceDr.add(line.getAmtSourceDr());
-			AmtSourceCr = AmtSourceCr.add(line.getAmtSourceCr());
+			AmtSourceDr = AmtSourceDr.add(line.getAmtAcctDr()); // multi-currency
+			AmtSourceCr = AmtSourceCr.add(line.getAmtAcctCr());
 		}
 		setTotalDr(AmtSourceDr);
 		setTotalCr(AmtSourceCr);
@@ -627,11 +649,11 @@ public class MJournal extends X_GL_Journal implements DocAction
 	/**
 	 * 	Set the definite document number after completed
 	 */
-	private void setDefiniteDocumentNo() {
+	protected void setDefiniteDocumentNo() {
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		if (dt.isOverwriteDateOnComplete()) {
 			if (this.getProcessedOn().signum() == 0) {
-				setDateDoc(new Timestamp (System.currentTimeMillis()));
+				setDateDoc(TimeUtil.getDay(0));
 				if (getDateAcct().before(getDateDoc())) {
 					setDateAcct(getDateDoc());
 					MPeriod.testPeriodOpen(getCtx(), getDateAcct(), getC_DocType_ID(), getAD_Org_ID());

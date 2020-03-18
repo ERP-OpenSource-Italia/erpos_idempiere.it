@@ -68,7 +68,7 @@ public class MPeriod extends X_C_Period
 		if (C_Period_ID <= 0)
 			return null;
 		//
-		Integer key = new Integer(C_Period_ID);
+		Integer key = Integer.valueOf(C_Period_ID);
 		MPeriod retValue = (MPeriod) s_cache.get (key);
 		if (retValue != null)
 			return retValue;
@@ -88,7 +88,7 @@ public class MPeriod extends X_C_Period
 	 */
 	public static MPeriod get (Properties ctx, Timestamp DateAcct)
 	{	
-		return get(ctx, DateAcct, 0);
+		return get(ctx, DateAcct, 0, null);
 	}	//	get
 	
 	/**
@@ -170,7 +170,7 @@ public class MPeriod extends X_C_Period
 			while (rs.next())
 			{
 				MPeriod period = new MPeriod(ctx, rs, trxName);
-				Integer key = new Integer(period.getC_Period_ID());
+				Integer key = Integer.valueOf(period.getC_Period_ID());
 				s_cache.put (key, period);
 				if (period.isStandardPeriod())
 					retValue = period;
@@ -200,7 +200,7 @@ public class MPeriod extends X_C_Period
 	 */
 	public static int getC_Period_ID (Properties ctx, Timestamp DateAcct)
 	{
-		MPeriod period = get (ctx, DateAcct);
+		MPeriod period = get (ctx, DateAcct, 0, null);
 		if (period == null)
 			return 0;
 		return period.getC_Period_ID();
@@ -215,7 +215,7 @@ public class MPeriod extends X_C_Period
 	 */
 	public static int getC_Period_ID (Properties ctx, Timestamp DateAcct, int AD_Org_ID)
 	{
-		MPeriod period = get (ctx, DateAcct, AD_Org_ID);
+		MPeriod period = get (ctx, DateAcct, AD_Org_ID, null);
 		if (period == null)
 			return 0;
 		return period.getC_Period_ID();
@@ -254,7 +254,7 @@ public class MPeriod extends X_C_Period
 			s_log.warning("No DocBaseType");
 			return false;
 		}
-		MPeriod period = MPeriod.get (ctx, DateAcct, AD_Org_ID);
+		MPeriod period = MPeriod.get (ctx, DateAcct, AD_Org_ID, null);
 		if (period == null)
 		{
 			s_log.warning("No Period for " + DateAcct + " (" + DocBaseType + ")");
@@ -282,7 +282,8 @@ public class MPeriod extends X_C_Period
 		int idxdate = -1;
 		if (   tableID == MInventory.Table_ID
 				|| tableID == MMovement.Table_ID
-				|| tableID == MProduction.Table_ID) {
+				|| tableID == MProduction.Table_ID
+				|| tableID == MProjectIssue.Table_ID) {
 			idxdate = po.get_ColumnIndex("MovementDate");
 		} else if (   tableID == MRequisition.Table_ID) {
 			idxdate = po.get_ColumnIndex("DateDoc");
@@ -333,6 +334,8 @@ public class MPeriod extends X_C_Period
 			} else if (   tableID == MAssetDisposed.Table_ID
 					|| tableID == MDepreciationExp.Table_ID) {
 				docBaseType = MDocType.DOCBASETYPE_GLDocument; // seems like a bug of fixed assets - must use GLJournal instead of GLDocument?
+			} else if (tableID == MProjectIssue.Table_ID) {
+				docBaseType = MDocType.DOCBASETYPE_ProjectIssue;
 			} else {
 				s_log.warning("Could not find C_DocType_ID for " + table.getTableName());
 				return true;
@@ -370,6 +373,16 @@ public class MPeriod extends X_C_Period
 			orgID = po.get_ValueAsInt(idxorg);
 		}
 
+		if (tableID == MJournal.Table_ID || tableID == MJournalBatch.Table_ID) {
+			// special case for journal that has direct period
+			int periodID = po.get_ValueAsInt("C_Period_ID");
+			MPeriod period = MPeriod.get(ctx, periodID);
+			boolean open = period.isOpen(docBaseType, dateAcct);
+			if (!open)
+				s_log.warning(period.getName() + ": Not open for " + docBaseType + " (" + dateAcct + ")");
+			return open;
+		}
+
 		return isOpen(ctx, dateAcct, docBaseType, orgID);
 	}	//	isOpen
 
@@ -395,7 +408,7 @@ public class MPeriod extends X_C_Period
 	public static MPeriod getFirstInYear (Properties ctx, Timestamp DateAcct, int AD_Org_ID)
 	{
 		MPeriod retValue = null;
-		int C_Calendar_ID = MPeriod.get(ctx, DateAcct, AD_Org_ID).getC_Calendar_ID();
+		int C_Calendar_ID = MPeriod.get(ctx, DateAcct, AD_Org_ID, null).getC_Calendar_ID();
 
         String sql = "SELECT * "
                     + "FROM C_Period "
@@ -777,7 +790,7 @@ public class MPeriod extends X_C_Period
 	public static void testPeriodOpen(Properties ctx, Timestamp dateAcct, String docBaseType)
 	throws PeriodClosedException 
 	{
-		if (!MPeriod.isOpen(ctx, dateAcct, docBaseType)) {
+		if (!MPeriod.isOpen(ctx, dateAcct, docBaseType, 0)) {
 			throw new PeriodClosedException(dateAcct, docBaseType);
 		}
 	}
@@ -812,7 +825,7 @@ public class MPeriod extends X_C_Period
 	throws PeriodClosedException
 	{
 		MDocType dt = MDocType.get(ctx, C_DocType_ID);
-		testPeriodOpen(ctx, dateAcct, dt.getDocBaseType());
+		testPeriodOpen(ctx, dateAcct, dt.getDocBaseType(), 0);
 	}
 	
 	/**
@@ -839,9 +852,9 @@ public class MPeriod extends X_C_Period
 	{
 		if (m_C_Calendar_ID == 0)
 		{
-			MYear year = (MYear) getC_Year();
-			if (year != null)
-				m_C_Calendar_ID = year.getC_Calendar_ID();
+			int calId = DB.getSQLValueEx(null, "SELECT C_Calendar_ID FROM C_Year WHERE C_Year_ID=?", getC_Year_ID());
+			if (calId >= 0)
+				m_C_Calendar_ID = calId;
 			else
 				log.severe("@NotFound@ C_Year_ID=" + getC_Year_ID());
 		}

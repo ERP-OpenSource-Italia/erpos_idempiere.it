@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Role
  *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @version Release 6.2
  */
 public interface I_AD_Role 
 {
@@ -547,6 +547,15 @@ public interface I_AD_Role
 	  * Determines what preferences the user can set
 	  */
 	public String getPreferenceType();
+
+    /** Column name RoleType */
+    public static final String COLUMNNAME_RoleType = "RoleType";
+
+	/** Set Role Type	  */
+	public void setRoleType (String RoleType);
+
+	/** Get Role Type	  */
+	public String getRoleType();
 
     /** Column name Supervisor_ID */
     public static final String COLUMNNAME_Supervisor_ID = "Supervisor_ID";

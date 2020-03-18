@@ -75,7 +75,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -9210893813732918522L;
+	private static final long serialVersionUID = -3191227310812025813L;
 
 	/**
 	 * 	Get Payments Of BPartner
@@ -287,7 +287,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	 */
 	public static MInvoice get (Properties ctx, int C_Invoice_ID)
 	{
-		Integer key = new Integer (C_Invoice_ID);
+		Integer key = Integer.valueOf(C_Invoice_ID);
 		MInvoice retValue = (MInvoice) s_cache.get (key);
 		if (retValue != null)
 			return retValue;
@@ -728,7 +728,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		
 		List<MInvoiceLine> list = new Query(getCtx(), I_C_InvoiceLine.Table_Name, whereClauseFinal, get_TrxName())
 										.setParameters(getC_Invoice_ID())
-										.setOrderBy(I_C_InvoiceLine.COLUMNNAME_Line)
+										.setOrderBy("Line, C_InvoiceLine_ID")
 										.list();
 		
 		// F3P: set parent invoice, this may avoid many queries to get the parent of each line at the cost of iterating over every single line
@@ -778,7 +778,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 		m_lines = null;
 	}	//	renumberLines
-
+	
 	/**
 	 * 	Copy Lines From other Invoice.
 	 *	@param otherInvoice invoice
@@ -786,7 +786,19 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	 * 	@param setOrder set order links
 	 *	@return number of lines copied
 	 */
-	public int copyLinesFrom (MInvoice otherInvoice, boolean counter, boolean setOrder)
+	public int copyLinesFrom (MInvoice otherInvoice, boolean counter, boolean setOrder){
+		return copyLinesFrom (otherInvoice, counter, setOrder, true);
+	}
+
+	/**
+	 * 	Copy Lines From other Invoice.
+	 *	@param otherInvoice invoice
+	 * 	@param counter create counter links
+	 * 	@param setOrder set order links
+	 *  @param copyClientOrg copy also Client and Org
+	 *	@return number of lines copied
+	 */
+	public int copyLinesFrom (MInvoice otherInvoice, boolean counter, boolean setOrder, boolean copyClientOrg)
 	{
 		if (isProcessed() || isPosted() || otherInvoice == null)
 			return 0;
@@ -801,7 +813,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			{
 				MInvoiceLine line = new MInvoiceLine (getCtx(), 0, get_TrxName());
 				MInvoiceLine fromLine = fromLines[i];
-				if (counter)	//	header
+			if (counter || !copyClientOrg)	//	header
 					PO.copyValues (fromLine, line, getAD_Client_ID(), getAD_Org_ID());
 				else
 					PO.copyValues (fromLine, line, fromLine.getAD_Client_ID(), fromLine.getAD_Org_ID());
@@ -1211,6 +1223,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			int no = DB.executeUpdate(sql.toString(), get_TrxName());
 			if (log.isLoggable(Level.FINE)) log.fine("Lines -> #" + no);
 		}
+		
 		return true;
 	}	//	afterSave
 
@@ -1887,7 +1900,10 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			payment.setC_Invoice_ID(getC_Invoice_ID());
 			payment.setC_Currency_ID(getC_Currency_ID());			
 			payment.setC_DocType_ID(doctype.getC_DocType_ID());
-			payment.setPayAmt(getGrandTotal());
+			if (isCreditMemo())
+				payment.setPayAmt(getGrandTotal().negate());
+			else
+				payment.setPayAmt(getGrandTotal());
 			payment.setIsPrepayment(false);					
 			payment.setDateAcct(getDateAcct());
 			payment.setDateTrx(getDateInvoiced());
@@ -1928,10 +1944,11 @@ public class MInvoice extends X_C_Invoice implements DocAction
 				&& !isReversal())
 			{
 				MInOutLine receiptLine = new MInOutLine (getCtx(),line.getM_InOutLine_ID(), get_TrxName());
-				BigDecimal matchQty = line.getQtyInvoiced();
+				BigDecimal movementQty = receiptLine.getM_InOut().getMovementType().charAt(1) == '-' ? receiptLine.getMovementQty().negate() : receiptLine.getMovementQty();
+				BigDecimal matchQty = isCreditMemo() ? line.getQtyInvoiced().negate() : line.getQtyInvoiced();
 	
-				if (receiptLine.getMovementQty().compareTo(matchQty) < 0)
-					matchQty = receiptLine.getMovementQty();
+				if (movementQty.compareTo(matchQty) < 0)
+					matchQty = movementQty;
 	
 				MMatchInv inv = new MMatchInv(line, getDateInvoiced(), matchQty);
 				if (!inv.save(get_TrxName()))
@@ -1951,8 +1968,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 					|| line.getM_Product_ID() == 0)
 				{
 					ol = new MOrderLine (getCtx(), line.getC_OrderLine_ID(), get_TrxName());
-					if (line.getQtyInvoiced() != null)
-					{
+					if (line.getQtyInvoiced() != null) {
 						//F3P if credit memo negate qty
 						BigDecimal qty = line.getQtyInvoiced();
 						if(isCreditMemo())
@@ -1972,7 +1988,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 					&& !isReversal())
 				{
 					//	MatchPO is created also from MInOut when Invoice exists before Shipment
-					BigDecimal matchQty = line.getQtyInvoiced();
+					BigDecimal matchQty = isCreditMemo() ? line.getQtyInvoiced().negate() : line.getQtyInvoiced();					
 					MMatchPO po = MMatchPO.create (line, null,
 						getDateInvoiced(), matchQty);
 					if (po != null) 
@@ -1983,7 +1999,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 							return DocAction.STATUS_Invalid;
 						}
 						matchPO++;
-						if (!po.isPosted() && po.getM_InOutLine_ID() > 0) // match po don't post if receipt is not assigned, and it doesn't create avg po record
+						if (!po.isPosted())
 							addDocsPostProcess(po);
 						
 						MMatchInv[] matchInvoices = MMatchInv.getInvoiceLine(getCtx(), line.getC_InvoiceLine_ID(), get_TrxName());
@@ -1995,12 +2011,19 @@ public class MInvoice extends X_C_Invoice implements DocAction
 								{
 									addDocsPostProcess(matchInvoice);
 								}
+								
+								if (matchInvoice.getRef_MatchInv_ID() > 0)
+								{
+									MMatchInv refMatchInv = new MMatchInv(getCtx(), matchInvoice.getRef_MatchInv_ID(), get_TrxName());
+									if (!refMatchInv.isPosted())
+										addDocsPostProcess(refMatchInv);
+								}
 							}
 						}
 					}
 				}
 			}
-
+			
 			//Update QtyInvoiced RMA Line
 			if (line.getM_RMALine_ID() != 0)
 			{				
@@ -2283,7 +2306,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			return;
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		if (dt.isOverwriteDateOnComplete()) {
-			// F3P: date invoiced should not have the time component
+			setDateInvoiced(TimeUtil.getDay(0));
 			// setDateInvoiced(new Timestamp (System.currentTimeMillis()));
 			Timestamp tsNow = TimeUtil.getDay(System.currentTimeMillis());
 			setDateInvoiced(tsNow);
@@ -2399,7 +2422,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 				counter.setDocAction(counterDT.getDocAction());
 				// added AdempiereException by zuhri
 				if (!counter.processIt(counterDT.getDocAction()))
-					throw new AdempiereException("Failed when processing document - " + counter.getProcessMsg());
+					throw new AdempiereException(Msg.getMsg(getCtx(), "FailedProcessingDocument") + " - " + counter.getProcessMsg());
 				// end added
 				counter.saveEx(get_TrxName());
 			}
@@ -2554,6 +2577,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		//	Reverse/Delete Matching
 		if (!isSOTrx())
 		{
+			MatchPOAutoMatch.unmatch(getCtx(), getC_Invoice_ID(), get_TrxName());
+			
 			MMatchInv[] mInv = MMatchInv.getInvoice(getCtx(), getC_Invoice_ID(), get_TrxName());
 			for (int i = 0; i < mInv.length; i++)
 			{
@@ -2566,7 +2591,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 					return null;
 				}
 				addDocsPostProcess(new MMatchInv(Env.getCtx(), mInv[i].getReversal_ID(), get_TrxName()));
-			}
+			}			
+			
 			MMatchPO[] mPO = MMatchPO.getInvoice(getCtx(), getC_Invoice_ID(), get_TrxName());
 			for (int i = 0; i < mPO.length; i++)
 			{
@@ -2575,12 +2601,19 @@ public class MInvoice extends X_C_Invoice implements DocAction
 				
 				if (mPO[i].getM_InOutLine_ID() == 0)
 				{
-					if (!mPO[i].reverse(reversalDate)) 
+					if(mPO[i].isPosted())
 					{
-						m_processMsg = "Could not Reverse MatchPO";
-						return null;
+						if (!mPO[i].reverse(reversalDate)) 
+						{
+							m_processMsg = "Could not Reverse MatchPO";
+							return null;
+						}
+						addDocsPostProcess(new MMatchPO(Env.getCtx(), mPO[i].getReversal_ID(), get_TrxName()));
+					} 
+					else
+					{
+						mPO[i].deleteEx(true);						
 					}
-					addDocsPostProcess(new MMatchPO(Env.getCtx(), mPO[i].getReversal_ID(), get_TrxName()));
 				}
 				else
 				{
@@ -2614,6 +2647,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		reversal.setReversal(true);
 
 		//	Reverse Line Qty
+		MInvoiceLine[] oLines = getLines(false);
 		MInvoiceLine[] rLines = reversal.getLines(true);
 		
 		// F3P: set as processing
@@ -2625,13 +2659,18 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			for (int i = 0; i < rLines.length; i++)
 			{
 				MInvoiceLine rLine = rLines[i];
-				rLine.setQtyEntered(rLine.getQtyEntered().negate());
-				rLine.setQtyInvoiced(rLine.getQtyInvoiced().negate());
-				rLine.setLineNetAmt(rLine.getLineNetAmt().negate());
-				if (rLine.getTaxAmt() != null && rLine.getTaxAmt().compareTo(Env.ZERO) != 0)
-					rLine.setTaxAmt(rLine.getTaxAmt().negate());
-				if (rLine.getLineTotalAmt() != null && rLine.getLineTotalAmt().compareTo(Env.ZERO) != 0)
-					rLine.setLineTotalAmt(rLine.getLineTotalAmt().negate());
+			rLine.getParent().setReversal(true);
+			MInvoiceLine oLine = oLines[i];
+			rLine.setQtyEntered(oLine.getQtyEntered().negate());
+			rLine.setQtyInvoiced(oLine.getQtyInvoiced().negate());
+			rLine.setLineNetAmt(oLine.getLineNetAmt().negate());
+			rLine.setTaxAmt(oLine.getTaxAmt().negate());
+			rLine.setLineTotalAmt(oLine.getLineTotalAmt().negate());
+			rLine.setPriceActual(oLine.getPriceActual());
+			rLine.setPriceList(oLine.getPriceList());
+			rLine.setPriceLimit(oLine.getPriceLimit());
+			rLine.setPriceEntered(oLine.getPriceEntered());
+			rLine.setC_UOM_ID(oLine.getC_UOM_ID());
 				if (!rLine.save(get_TrxName()))
 				{
 					m_processMsg = "Could not correct Invoice Reversal Line";
@@ -2724,7 +2763,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		rLine.saveEx();
 		// added AdempiereException by zuhri
 		if (!alloc.processIt(DocAction.ACTION_Complete))
-			throw new AdempiereException("Failed when processing document - " + alloc.getProcessMsg());
+			throw new AdempiereException(Msg.getMsg(getCtx(), "FailedProcessingDocument") + " - " + alloc.getProcessMsg());
 		// end added
 		alloc.saveEx();
 		

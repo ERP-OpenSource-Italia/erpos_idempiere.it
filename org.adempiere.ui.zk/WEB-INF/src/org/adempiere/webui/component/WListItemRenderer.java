@@ -26,6 +26,7 @@ import java.util.Set;
 
 import org.adempiere.base.Service;
 import org.adempiere.webui.AdempiereWebUI;
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.event.TableValueChangeEvent;
 import org.adempiere.webui.event.TableValueChangeListener;
 import org.adempiere.webui.factory.ICellComponentFactory;
@@ -218,8 +219,7 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	 * @param columnIndex	The column in which the cell is to be placed.
 	 * @return	The list cell component.
 	 */
-	// F3P: from private to protected to allow overriding
-	protected Listcell getCellComponent(WListbox table, Object field, 
+	protected Listcell getCellComponent(WListbox table, Object field,
 									  int rowIndex, int columnIndex)
 	{
 		ListCell listcell = new ListCell();
@@ -238,12 +238,17 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 			
 			if (factories != null) {
 				for(ICellComponentFactory factory : factories) 
+						if (ClientInfo.isMobile())
+							numberbox.getButton().setVisible(false);
 				{
 					boolean managed = factory.createCellComponent(this, listcell, table, field, rowIndex, columnIndex, 
 							isCellEditable, cellFactoryIdentifier);
+					refId = m_tableColumns.get(columnIndex).getAD_Reference_ID();
+				}
 					
 					if(managed)
 						break;	
+				SimpleDateFormat dateFormat = DisplayType.getDateFormat(refId, AEnv.getLanguage(Env.getCtx()));
 				}
 			}
 		}
@@ -280,7 +285,10 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	{
 		addColumn(header, null);
 	}
-	
+	public void addColumn(String header, String description)
+	{
+		addColumn(header, description, 0);
+	}
 	/**
 	 *  Add Table Column.
 	 *  after adding a column, you need to set the column classes again
@@ -289,13 +297,14 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	 *  @param header The header text for the column
 	 *  @param description
 	 */
-	public void addColumn(String header, String description)
+	public void addColumn(String header, String description, int AD_Reference_ID)
 	{
 		WTableColumn tableColumn;
 
 		tableColumn = new WTableColumn();
 		tableColumn.setHeaderValue(Util.cleanAmp(header));
 		tableColumn.setTooltipText(description);
+		tableColumn.setAD_Reference_ID(AD_Reference_ID);
 		m_tableColumns.add(tableColumn);
 
 		return;
@@ -349,6 +358,8 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
         	{
         		header = new ListHeader("");
         		ZKUpdateUtil.setWidth(header, "30px");
+        		header.setAlign("center");
+        		header.setValign("middle");
         	}
         	else
         	{
@@ -760,6 +771,10 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 		{
 			m_tableColumns.get(index).setColumnClass(classType);
 		}
+	}
+	
+	public List<WTableColumn> getTableColumns() {
+		return Collections.unmodifiableList(m_tableColumns);
 	}
 
 	//F3P: IDEMPIERE-3318 - Factory for generating cell renderers

@@ -57,7 +57,7 @@ public final class MLookup extends Lookup implements Serializable
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 2228200000988048623L;
+	private static final long serialVersionUID = 2288661955135689187L;
 
 	/**
 	 *  MLookup Constructor
@@ -109,7 +109,7 @@ public final class MLookup extends Lookup implements Serializable
 	/** Number of max rows to load	*/
 	private static final int	MAX_ROWS = 5000;
 	/**	Indicator for Null			*/
-	private static Integer 		MINUS_ONE = new Integer(-1);
+	private static Integer 		MINUS_ONE = Integer.valueOf(-1);
 
 	/** The Lookup Info Value Object        */
 	private MLookupInfo         m_info = null;
@@ -504,6 +504,11 @@ public final class MLookup extends Lookup implements Serializable
 	private Object					m_directNullKey = null;
 	private Future<?> m_loaderFuture;
 
+	public NamePair getDirect (Object key, boolean saveInCache, boolean cacheLocal)
+	{
+		return getDirect(key, saveInCache, cacheLocal, null);
+	}	//	getDirect
+
 	/**
 	 *	Get Data Direct from Table.
 	 *  @param key key
@@ -511,7 +516,7 @@ public final class MLookup extends Lookup implements Serializable
 	 * 	@param cacheLocal cache locally for r/o
 	 *  @return value
 	 */
-	public NamePair getDirect (Object key, boolean saveInCache, boolean cacheLocal)
+	public NamePair getDirect (Object key, boolean saveInCache, boolean cacheLocal, String trxName)
 	{
 		// FIN (st): IDEMPIERE-3308, check cache validity
 		saveInCache = (saveInCache && m_bUseCache);
@@ -540,7 +545,7 @@ public final class MLookup extends Lookup implements Serializable
 		try
 		{
 			//	SELECT Key, Value, Name FROM ...
-			pstmt = DB.prepareStatement(m_info.QueryDirect, null);
+			pstmt = DB.prepareStatement(m_info.QueryDirect, trxName);
 			if (isNumber)
 				pstmt.setInt(1, Integer.parseInt(key.toString()));
 			else
@@ -559,7 +564,7 @@ public final class MLookup extends Lookup implements Serializable
 					int keyValue = rs.getInt(1);
 					KeyNamePair p = new KeyNamePair(keyValue, name.toString());
 					if (saveInCache)		//	save if
-						m_lookup.put(new Integer(keyValue), p);
+						m_lookup.put(Integer.valueOf(keyValue), p);
 					directValue = p;
 				}
 				else
@@ -906,7 +911,7 @@ public final class MLookup extends Lookup implements Serializable
 					{
 						int key = rs.getInt(1);
 						KeyNamePair p = new KeyNamePair(key, name.toString());
-						m_lookup.put(new Integer(key), p);
+						m_lookup.put(Integer.valueOf(key), p);
 					}
 					else
 					{

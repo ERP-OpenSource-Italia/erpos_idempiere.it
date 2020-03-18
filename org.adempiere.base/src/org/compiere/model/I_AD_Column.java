@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Column
  *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @version Release 6.2
  */
 public interface I_AD_Column 
 {
@@ -418,6 +418,19 @@ public interface I_AD_Column
 	  */
 	public String getIsEncrypted();
 
+    /** Column name IsHtml */
+    public static final String COLUMNNAME_IsHtml = "IsHtml";
+
+	/** Set HTML.
+	  * Text has HTML tags
+	  */
+	public void setIsHtml (boolean IsHtml);
+
+	/** Get HTML.
+	  * Text has HTML tags
+	  */
+	public boolean isHtml();
+
     /** Column name IsIdentifier */
     public static final String COLUMNNAME_IsIdentifier = "IsIdentifier";
 
@@ -580,6 +593,15 @@ public interface I_AD_Column
 	public int getPA_DashboardContent_ID();
 
 	public org.compiere.model.I_PA_DashboardContent getPA_DashboardContent() throws RuntimeException;
+
+    /** Column name Placeholder */
+    public static final String COLUMNNAME_Placeholder = "Placeholder";
+
+	/** Set Placeholder	  */
+	public void setPlaceholder (String Placeholder);
+
+	/** Get Placeholder	  */
+	public String getPlaceholder();
 
     /** Column name ReadOnlyLogic */
     public static final String COLUMNNAME_ReadOnlyLogic = "ReadOnlyLogic";

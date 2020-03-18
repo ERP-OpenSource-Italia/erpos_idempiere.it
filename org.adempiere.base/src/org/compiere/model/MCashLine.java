@@ -45,7 +45,7 @@ public class MCashLine extends X_C_CashLine
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 2962077554051498950L;
+	private static final long serialVersionUID = 5023249596033465923L;
 
 
 	/**
@@ -93,13 +93,13 @@ public class MCashLine extends X_C_CashLine
 	}	//	MCashLine
 
 	/** Parent					*/
-	private MCash			m_parent = null;
+	protected MCash		m_parent = null;
 	/** Cash Book				*/
-	private MCashBook 		m_cashBook = null;
+	protected MCashBook 	m_cashBook = null;
 	/** Bank Account			*/
-	private MBankAccount 	m_bankAccount = null;
+	protected MBankAccount 	m_bankAccount = null;
 	/** Invoice					*/
-	private MInvoice		m_invoice = null;
+	protected MInvoice		m_invoice = null;
 	
 
 	/**
@@ -160,7 +160,7 @@ public class MCashLine extends X_C_CashLine
 			order.setC_CashLine_ID(getC_CashLine_ID());
 			// added AdempiereException by Zuhri
 			if (!order.processIt(MOrder.ACTION_WaitComplete))
-				throw new AdempiereException("Failed when processing document - " + order.getProcessMsg());
+				throw new AdempiereException(Msg.getMsg(getCtx(), "FailedProcessingDocument") + " - " + order.getProcessMsg());
 			// end added
 			order.saveEx(trxName);
 			//	Set Invoice
@@ -439,7 +439,7 @@ public class MCashLine extends X_C_CashLine
 	 * 	Statement Difference, Ending Balance
 	 *	@return true if success
 	 */
-	private boolean updateHeader()
+	protected boolean updateHeader()
 	{
 		String sql = "UPDATE C_Cash c"
 			+ " SET StatementDifference="

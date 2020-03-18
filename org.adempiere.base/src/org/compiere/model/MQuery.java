@@ -27,6 +27,7 @@ import java.util.logging.Level;
 
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
@@ -45,6 +46,11 @@ import org.compiere.util.ValueNamePair;
  */
 public class MQuery implements Serializable
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 481623650333512326L;
+
 	/**
 	 *	Get Query from Parameter
 	 *	@param ctx context (to determine language)
@@ -81,7 +87,7 @@ public class MQuery implements Serializable
 			SQL = "SELECT ip.ParameterName,ip.P_String,ip.P_String_To,"			//	1..3
 				+ "ip.P_Number,ip.P_Number_To,"									//	4..5
 				+ "ip.P_Date,ip.P_Date_To, ip.Info,ip.Info_To, "				//	6..9
-				+ "pp.Name, pp.IsRange "										//	10..11
+				+ "pp.Name, pp.IsRange, pp.AD_Reference_ID "					//	10..12
 				+ "FROM AD_PInstance_Para ip, AD_PInstance i, AD_Process_Para pp "
 				+ "WHERE i.AD_PInstance_ID=ip.AD_PInstance_ID"
 				+ " AND pp.AD_Process_ID=i.AD_Process_ID"
@@ -92,7 +98,7 @@ public class MQuery implements Serializable
 		else
 			SQL = "SELECT ip.ParameterName,ip.P_String,ip.P_String_To, ip.P_Number,ip.P_Number_To,"
 				+ "ip.P_Date,ip.P_Date_To, ip.Info,ip.Info_To, "
-				+ "ppt.Name, pp.IsRange "
+				+ "ppt.Name, pp.IsRange, pp.AD_Reference_ID "
 				+ "FROM AD_PInstance_Para ip, AD_PInstance i, AD_Process_Para pp, AD_Process_Para_Trl ppt "
 				+ "WHERE i.AD_PInstance_ID=ip.AD_PInstance_ID"
 				+ " AND pp.AD_Process_ID=i.AD_Process_ID"
@@ -126,11 +132,11 @@ public class MQuery implements Serializable
 				Double P_Number = null;
 				double d = rs.getDouble(4);
 				if (!rs.wasNull())
-					P_Number = new Double(d);
+					P_Number = Double.valueOf(d);
 				Double P_Number_To = null;
 				d = rs.getDouble(5);
 				if (!rs.wasNull())
-					P_Number_To = new Double(d);
+					P_Number_To = Double.valueOf(d);
 				//
 				Timestamp P_Date = rs.getTimestamp(6);
 				Timestamp P_Date_To = rs.getTimestamp(7);
@@ -140,6 +146,8 @@ public class MQuery implements Serializable
 				//
 				String Name = rs.getString(10);
 				boolean isRange = "Y".equals(rs.getString(11));
+				//
+				int Reference_ID = rs.getInt(12);
 				//
 				if (s_log.isLoggable(Level.FINE)) s_log.fine(ParameterName + " S=" + P_String + "-" + P_String_To
 					+ ", N=" + P_Number + "-" + P_Number_To + ", D=" + P_Date + "-" + P_Date_To
@@ -184,7 +192,7 @@ public class MQuery implements Serializable
 					else	//	P_Number_To != null
 					{
 						if (P_Number == null)
-							query.addRestriction("TRUNC("+ParameterName+")", MQuery.LESS_EQUAL, 
+							query.addRestriction(ParameterName, MQuery.LESS_EQUAL, 
 								P_Number_To, Name, Info);
 						else
 							query.addRangeRestriction(ParameterName, 
@@ -194,23 +202,22 @@ public class MQuery implements Serializable
 				//	Date
 				else if (P_Date != null || P_Date_To != null)
 				{
+					String paramName = (Reference_ID == DisplayType.DateTime) ? ParameterName
+							: "TRUNC(" + ParameterName + ")";
+
 					if (P_Date_To == null)
 					{
 						if (isRange)
-							query.addRestriction("TRUNC("+ParameterName+")", MQuery.GREATER_EQUAL, 
-								P_Date, Name, Info);
+							query.addRestriction(paramName, MQuery.GREATER_EQUAL, P_Date, Name, Info);
 						else
-							query.addRestriction("TRUNC("+ParameterName+")", MQuery.EQUAL, 
-								P_Date, Name, Info);
+							query.addRestriction(paramName, MQuery.EQUAL, P_Date, Name, Info);
 					}
-					else	//	P_Date_To != null
+					else // P_Date_To != null
 					{
 						if (P_Date == null)
-							query.addRestriction("TRUNC("+ParameterName+")", MQuery.LESS_EQUAL, 
-								P_Date_To, Name, Info);
+							query.addRestriction(paramName, MQuery.LESS_EQUAL, P_Date_To, Name, Info);
 						else
-							query.addRangeRestriction("TRUNC("+ParameterName+")", 
-								P_Date, P_Date_To, Name, Info, Info_To);
+							query.addRangeRestriction(paramName, P_Date, P_Date_To, Name, Info, Info_To);
 					}
 				}
 			}
@@ -306,7 +313,7 @@ public class MQuery implements Serializable
 		MQuery query = new MQuery();
 		if (columnName.endsWith("_ID"))
 			query.setTableName(columnName.substring(0, columnName.length()-3));
-		query.addRestriction(columnName, EQUAL, new Integer(value));
+		query.addRestriction(columnName, EQUAL, Integer.valueOf(value));
 		query.setRecordCount(1);	//	guess
 		return query;
 	}	//	getEqualQuery
@@ -356,9 +363,6 @@ public class MQuery implements Serializable
 	{	//	Use Client Context as r/o
 		m_TableName = MTable.getTableName (Env.getCtx(), AD_Table_ID);
 	}	//	MQuery
-
-	/**	Serialization Info	**/
-	private static final long serialVersionUID = 4883859385509199306L;
 
 	/**	Table Name					*/
 	private String		m_TableName = "";
@@ -478,6 +482,11 @@ public class MQuery implements Serializable
 		new ValueNamePair (NOT_NULL,		" !NULL "),
 		new ValueNamePair (IN,				" IN ")	//FIN (acg) add operator IN
 	};
+	/**	Operators for encrypted fields								*/
+	public static final ValueNamePair[]	OPERATORS_ENCRYPTED = new ValueNamePair[] {
+		new ValueNamePair (NULL,			" NULL "),
+		new ValueNamePair (NOT_NULL,		" !NULL ")
+	};
 
 	/**	Operators for Numbers, Dates, Integers	*/
 	public static final ValueNamePair[]	OPERATORS_NUMBERS = new ValueNamePair[] {
@@ -550,7 +559,7 @@ public class MQuery implements Serializable
 		int Code)
 	{
 		Restriction r = new Restriction (ColumnName, Operator,
-			new Integer(Code), null, null, true, 0);
+			Integer.valueOf(Code), null, null, true, 0);
 		m_list.add(r);
 	}	//	addRestriction
 
@@ -1047,7 +1056,7 @@ class Restriction  implements Serializable
 		if (code instanceof Boolean)
 			Code = ((Boolean)code).booleanValue() ? "Y" : "N";
 		else if (code instanceof KeyNamePair)
-			Code = new Integer(((KeyNamePair)code).getKey());
+			Code = Integer.valueOf(((KeyNamePair)code).getKey());
 		else if (code instanceof ValueNamePair)
 			Code = ((ValueNamePair)code).getValue();
 		else
@@ -1144,10 +1153,10 @@ class Restriction  implements Serializable
 			MTable table = MTable.get(Env.getCtx(), tableName);
 			if (table != null) {
 				for (MColumn col : table.getColumns(false)) {
-					String colSQL = col.getColumnSQL();
+					String colSQL = col.getColumnSQL(true);
 					if (colSQL != null && colSQL.contains("@"))
 						colSQL = Env.parseContext(Env.getCtx(), -1, colSQL, false, true);
-					if (ColumnName.equals(colSQL)) {
+					if (colSQL != null && ColumnName.equals(colSQL.trim()))  {
 						virtualColumn = true;
 						break;
 					}
@@ -1162,12 +1171,23 @@ class Restriction  implements Serializable
 			int pos = ColumnName.lastIndexOf('(')+1;	//	including (
 			int end = ColumnName.indexOf(')');
 			//	We have a Function in the ColumnName
-			if (pos != -1 && end != -1)
+			if (pos != -1 && end != -1 && !(pos-1==ColumnName.indexOf('(') && ColumnName.trim().startsWith("(")))
 				sb.append(ColumnName.substring(0, pos))
 					.append(tableName).append(".").append(ColumnName.substring(pos, end))
 					.append(ColumnName.substring(end));
 			else
-				sb.append(tableName).append(".").append(ColumnName);
+			{
+				int selectIndex = ColumnName.toLowerCase().indexOf("select ");
+				int fromIndex = ColumnName.toLowerCase().indexOf(" from ");
+				if (selectIndex >= 0 && fromIndex > 0) 
+				{
+					sb.append(ColumnName);
+				}
+				else
+				{
+					sb.append(tableName).append(".").append(ColumnName);
+				}
+			}
 		}
 		else
 			sb.append(ColumnName);
@@ -1175,8 +1195,13 @@ class Restriction  implements Serializable
 		sb.append(Operator);
 		if ( ! (Operator.equals(MQuery.NULL) || Operator.equals(MQuery.NOT_NULL)))
 		{
-			if (Code instanceof String)
-				sb.append(DB.TO_STRING(Code.toString()));
+			if (Code instanceof String) {
+				if (ColumnName.toUpperCase().startsWith("UPPER(")) {
+					sb.append("UPPER("+DB.TO_STRING(Code.toString())+")");
+				} else {
+					sb.append(DB.TO_STRING(Code.toString()));
+				}
+			}
 			else if (Code instanceof Timestamp)
 				sb.append(DB.TO_DATE((Timestamp)Code, false));
 			else

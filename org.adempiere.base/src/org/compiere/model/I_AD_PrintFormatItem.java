@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_PrintFormatItem
  *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @version Release 6.2
  */
 public interface I_AD_PrintFormatItem 
 {
@@ -501,6 +501,19 @@ public interface I_AD_PrintFormatItem
 	  * Start with new page
 	  */
 	public boolean isPageBreak();
+
+    /** Column name IsPrintBarcodeText */
+    public static final String COLUMNNAME_IsPrintBarcodeText = "IsPrintBarcodeText";
+
+	/** Set Print Barcode Text.
+	  * Print barcode text at the bottom of barcode
+	  */
+	public void setIsPrintBarcodeText (boolean IsPrintBarcodeText);
+
+	/** Get Print Barcode Text.
+	  * Print barcode text at the bottom of barcode
+	  */
+	public boolean isPrintBarcodeText();
 
     /** Column name IsPrinted */
     public static final String COLUMNNAME_IsPrinted = "IsPrinted";

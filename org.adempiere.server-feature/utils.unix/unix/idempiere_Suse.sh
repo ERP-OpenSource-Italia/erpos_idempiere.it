@@ -19,6 +19,7 @@
 # adjust these variables to your environment
 IDEMPIERE_HOME=/opt/idempiere-server
 IDEMPIEREUSER=idempiere
+export TELNET_PORT=12612
 
 # Shell functions sourced from /etc/rc.status:
 #      rc_check         check and set local and overall rc status
@@ -53,8 +54,8 @@ IDEMPIERESTATUS=
 MAXITERATIONS=60 
 
 getidempierestatus() {
-    IDEMPIERESTATUSSTRING=$(ps ax | grep -v grep | grep $IDEMPIERE_HOME)
-    echo $IDEMPIERESTATUSSTRING | grep -q $IDEMPIERE_HOME
+    IDEMPIERESTATUSSTRING=$(ps ax | grep java | grep ${IDEMPIERE_HOME} | grep -v grep)
+    echo $IDEMPIERESTATUSSTRING | grep -q ${IDEMPIERE_HOME}
     IDEMPIERESTATUS=$?
 }
 
@@ -69,7 +70,7 @@ start () {
     cd $IDEMPIERE_HOME
     export LOGFILE=$IDEMPIERE_HOME/log/idempiere_`date +%Y%m%d%H%M%S`.log
     su $IDEMPIEREUSER -c "mkdir -p $IDEMPIERE_HOME/log"
-    su $IDEMPIEREUSER -c "cd $IDEMPIERE_HOME;$IDEMPIERE_HOME/idempiere-server.sh &> $LOGFILE &"
+    su $IDEMPIEREUSER -c "export TELNET_PORT=$TELNET_PORT;cd $IDEMPIERE_HOME;$IDEMPIERE_HOME/idempiere-server.sh &> $LOGFILE &"
     RETVAL=$?
     if [ $RETVAL -eq 0 ] ; then
         # wait for server to be confirmed as started in logfile
@@ -77,7 +78,7 @@ start () {
         ITERATIONS=0
         while [ $STATUSTEST -eq 0 ] ; do
             sleep 2
-            tail -n 9 $LOGFILE | grep -q '.*LoggedSessionListener.contextInitialized: context initialized.*' && STATUSTEST=1
+            cat $LOGFILE | grep -q '.*LoggedSessionListener.contextInitialized: context initialized.*' && STATUSTEST=1
             echo -n "."
             ITERATIONS=`expr $ITERATIONS + 1`
             if [ $ITERATIONS -gt $MAXITERATIONS ]
@@ -111,20 +112,20 @@ stop () {
     cd $IDEMPIERE_HOME
     # try shutdown from OSGi console, then direct kill with signal 15, then signal 9
     log_warning_msg "Trying shutdown from OSGi console"
-    ( echo exit; echo y; sleep 5 ) | telnet localhost 12612 > /dev/null 2>&1
+    ( echo exit; echo y; sleep 5 ) | telnet localhost ${TELNET_PORT} > /dev/null 2>&1
     getidempierestatus
     if [ $IDEMPIERESTATUS -ne 0 ] ; then
         echo "Service stopped with OSGi shutdown"
     else
         echo "Trying direct kill with signal -15"
-        kill -15 -`ps ax o pgid,command | grep -v grep | grep $IDEMPIERE_HOME | sed -e 's/^ *//g' | cut -f 1 -d " " | sort -u`
+        kill -15 -`ps ax o pgid,command | grep ${IDEMPIERE_HOME} | grep -v grep | sed -e 's/^ *//g' | cut -f 1 -d " " | sort -u`
         sleep 5
         getidempierestatus
         if [ $IDEMPIERESTATUS -ne 0 ] ; then
             echo "Service stopped with kill -15"
         else
             echo "Trying direct kill with signal -9"
-            kill -9 -`ps ax o pgid,command | grep -v grep | grep $IDEMPIERE_HOME | sed -e 's/^ *//g' | cut -f 1 -d " " | sort -u`
+            kill -9 -`ps ax o pgid,command | grep ${IDEMPIERE_HOME} | grep -v grep | sed -e 's/^ *//g' | cut -f 1 -d " " | sort -u`
             sleep 5
             getidempierestatus
             if [ $IDEMPIERESTATUS -ne 0 ] ; then
@@ -140,7 +141,7 @@ stop () {
 
 restart () {
     stop
-    sleep 1
+    sleep 2
     start
     rc_status
 }
@@ -160,7 +161,7 @@ status () {
     if [ $IDEMPIERESTATUS -eq 0 ] ; then
 	echo
 	echo "iDempiere is running:"
-	ps ax | grep -v grep | grep $IDEMPIERE_HOME | sed 's/^[[:space:]]*\([[:digit:]]*\).*:[[:digit:]][[:digit:]][[:space:]]\(.*\)/\1 \2/'
+	ps ax | grep ${IDEMPIERE_HOME} | grep -v grep | sed 's/^[[:space:]]*\([[:digit:]]*\).*:[[:digit:]][[:digit:]][[:space:]]\(.*\)/\1 \2/'
 	echo
     else
 	echo "iDempiere is stopped"
@@ -176,9 +177,6 @@ case "$1" in
     stop)
 	stop
 	;;
-    reload)
-	restart
-	;;
     restart)
 	restart
 	;;
@@ -189,7 +187,7 @@ case "$1" in
 	status
 	;;
     *)
-	echo $"Usage: $0 {start|stop|reload|restart|condrestart|status}"
+	echo $"Usage: $0 {start|stop|restart|condrestart|status}"
 	exit 1
 esac
 

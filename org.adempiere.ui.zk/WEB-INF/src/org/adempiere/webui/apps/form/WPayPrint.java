@@ -25,8 +25,12 @@ import java.util.List;
 import java.util.logging.Level;
 
 import org.adempiere.util.Callback;
+import org.adempiere.webui.ClientInfo;
+import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Button;
+import org.adempiere.webui.component.Column;
+import org.adempiere.webui.component.Columns;
 import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Grid;
 import org.adempiere.webui.component.GridFactory;
@@ -104,6 +108,7 @@ public class WPayPrint extends PayPrint implements IFormController, EventListene
 			Center center = new Center();
 			contentLayout.appendChild(center);
 			center.appendChild(centerPanel);
+			center.setAutoscroll(true);
 			South south = new South();
 			south.setStyle("border: none");
 			contentLayout.appendChild(south);
@@ -113,7 +118,7 @@ public class WPayPrint extends PayPrint implements IFormController, EventListene
 		{
 			log.log(Level.SEVERE, "", e);
 		}
-	}	//	init
+	}	//	WPayPrint
 
 	//  Static Variables
 	protected Panel centerPanel = new Panel();
@@ -212,12 +217,24 @@ public class WPayPrint extends PayPrint implements IFormController, EventListene
 		row.appendChild(lSumPayments.rightAlign()) ;
 		row.appendChild(fSumPayments.getComponent()) ;
 
+		if (ClientInfo.maxWidth(ClientInfo.MEDIUM_WIDTH))
+		{
+			Columns cols = new Columns();
+			centerLayout.appendChild(cols);
+			Column col = new Column();
+			col.setHflex("min");
+			cols.appendChild(col);
+			col = new Column();
+			col.setHflex("1");
+			cols.appendChild(col);
+			LayoutUtils.compactTo(centerLayout, 2);
+		}
+
 		southPanel.getButton(ConfirmPanel.A_OK).setVisible(false);
 		bExport.setDisabled(true);
 		bPrint.setDisabled(true);
 		fDepositBatch.setReadWrite(false);
-		fDocumentNo.setReadWrite(false);
-	}   //  VPayPrint
+	}   //  zkInit
 
 	/**
 	 *  Dynamic Init
@@ -250,7 +267,7 @@ public class WPayPrint extends PayPrint implements IFormController, EventListene
 			return;
 		//
 		m_C_PaySelection_ID = C_PaySelection_ID;
-		paySelectSearch.setValue(new Integer(m_C_PaySelection_ID));
+		paySelectSearch.setValue(Integer.valueOf(m_C_PaySelection_ID));
 		loadPaySelectInfo();
 	}	//	setsetPaySelection
 

@@ -23,14 +23,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for A_Depreciation_Table_Header
  *  @author iDempiere (generated) 
- *  @version Release 4.1 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciation_Table_Header, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20170418L;
+	private static final long serialVersionUID = 20190106L;
 
     /** Standard Constructor */
     public X_A_Depreciation_Table_Header (Properties ctx, int A_Depreciation_Table_Header_ID, String trxName)
@@ -90,14 +90,6 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 		return (String)get_Value(COLUMNNAME_A_Depreciation_Table_Code);
 	}
 
-    /** Get Record ID/ColumnName
-        @return ID/ColumnName pair
-      */
-    public KeyNamePair getKeyNamePair() 
-    {
-        return new KeyNamePair(get_ID(), getA_Depreciation_Table_Code());
-    }
-
 	/** Set A_Depreciation_Table_Header_ID.
 		@param A_Depreciation_Table_Header_ID A_Depreciation_Table_Header_ID	  */
 	public void setA_Depreciation_Table_Header_ID (int A_Depreciation_Table_Header_ID)
@@ -117,6 +109,14 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 			 return 0;
 		return ii.intValue();
 	}
+
+    /** Get Record ID/ColumnName
+        @return ID/ColumnName pair
+      */
+    public KeyNamePair getKeyNamePair() 
+    {
+        return new KeyNamePair(get_ID(), String.valueOf(getA_Depreciation_Table_Header_ID()));
+    }
 
 	/** Set A_Depreciation_Table_Header_UU.
 		@param A_Depreciation_Table_Header_UU A_Depreciation_Table_Header_UU	  */
@@ -139,9 +139,7 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 	/** Rate = RT */
 	public static final String A_TABLE_RATE_TYPE_Rate = "RT";
 	/** Set Type.
-		@param A_Table_Rate_Type 
-		Define if Depreciation is made by value or by rate (percentual)
-	  */
+		@param A_Table_Rate_Type Type	  */
 	public void setA_Table_Rate_Type (String A_Table_Rate_Type)
 	{
 
@@ -149,8 +147,7 @@ public class X_A_Depreciation_Table_Header extends PO implements I_A_Depreciatio
 	}
 
 	/** Get Type.
-		@return Define if Depreciation is made by value or by rate (percentual)
-	  */
+		@return Type	  */
 	public String getA_Table_Rate_Type () 
 	{
 		return (String)get_Value(COLUMNNAME_A_Table_Rate_Type);

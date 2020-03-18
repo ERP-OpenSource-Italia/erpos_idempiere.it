@@ -26,6 +26,8 @@ import java.util.List;
 import org.adempiere.base.Service;
 import org.adempiere.webui.component.WListItemRenderer;
 import org.adempiere.webui.component.WListbox;
+import org.adempiere.base.ServiceQuery;
+import org.adempiere.webui.apps.IProcessParameterListener;
 import org.adempiere.webui.editor.IEditorPopupMenuItem;
 import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.factory.ICellComponentFactory;
@@ -60,6 +62,20 @@ public class Extensions {
 			}
 		}
 		return null;
+	}
+	
+	/**
+	 * 
+	 * @param processClass
+	 * @param columnName
+	 * @return list of parameter listener
+	 */
+	public static List<IProcessParameterListener> getProcessParameterListeners(String processClass, String columnName) {
+		ServiceQuery query = new ServiceQuery();
+		query.put("ProcessClass", processClass);
+		if (columnName != null)
+			query.put("|(ColumnName", columnName+")(ColumnName="+columnName+",*)(ColumnName="+"*,"+columnName+",*)(ColumnName=*,"+columnName+")");
+		return Service.locator().list(IProcessParameterListener.class, null, query).getServices();
 	}
 	
 	/** Get the additional menu items for the editor

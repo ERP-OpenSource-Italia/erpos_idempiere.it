@@ -37,6 +37,7 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
 import java.util.logging.Level;
@@ -59,6 +60,7 @@ import org.compiere.model.MClient;
 import org.compiere.model.MColumn;
 import org.compiere.model.MLookupCache;
 import org.compiere.model.MQuery;
+import org.compiere.model.MRefList;
 import org.compiere.model.MRole;
 import org.compiere.model.MSession;
 import org.compiere.model.MSysConfig;
@@ -875,14 +877,8 @@ public final class Env
 			throw new IllegalArgumentException ("Require Context");
 		String s = getContext(ctx, WindowNo, context, false);
 		//	JDBC Format YYYY-MM-DD	example 2000-09-11 00:00:00.0
-		if (s == null || s.equals(""))
-		{
-			if (!"#date".equalsIgnoreCase(context))
-			{
-				log.log(Level.WARNING, "No value for: " + context);
-			}
+		if (Util.isEmpty(s))
 			return new Timestamp(System.currentTimeMillis());
-		}
 
 		// BUG:3075946 KTU - Fix Thai Date
 		/*
@@ -1153,6 +1149,45 @@ public final class Env
 	{
 		return Language.getLoginLanguage();
 	}	//	getLanguage
+
+	/**
+	 * @param ctx
+	 * @return Language
+	 */
+	public static Language getLocaleLanguage(Properties ctx) {
+		Locale locale = getLocale(ctx);
+		Language language = Env.getLanguage(ctx);
+		if (!language.getLocale().equals(locale)) {
+			Language tmp = Language.getLanguage(locale.toString());
+			String adLanguage = language.getAD_Language();
+			language = new Language(tmp.getName(), adLanguage, tmp.getLocale(), tmp.isDecimalPoint(),
+	    			tmp.getDateFormat().toPattern(), tmp.getMediaSize());
+		}
+		return language;
+	}
+
+	public static final String LOCALE = "#Locale";
+	/**
+	 * @param ctx
+	 * @return Locale
+	 */
+	public static Locale getLocale(Properties ctx) {
+		String value = Env.getContext(ctx, Env.LOCALE);
+        Locale locale = null;
+        if (value != null && value.length() > 0)
+        {
+	        String[] components = value.split("\\_");
+	        String language = components.length > 0 ? components[0] : "";
+	        String country = components.length > 1 ? components[1] : "";
+	        locale = new Locale(language, country);
+        }
+        else
+        {
+        	locale = Env.getLanguage(ctx).getLocale();
+        }
+
+        return locale;
+	}
 
 	public static ArrayList<String> getSupportedLanguages()
 	{
@@ -1748,7 +1783,7 @@ public final class Env
 					//LS end
 					if (v != null) {
 						if (format != null && format.length() > 0) {
-							if (v instanceof Integer && (Integer) v > 0 && !Util.isEmpty(foreignTable)) {
+							if (v instanceof Integer && (Integer) v >= 0 && (!Util.isEmpty(foreignTable) || token.equalsIgnoreCase(po.get_TableName()+"_ID"))){
 								int tblIndex = format.indexOf(".");
 								String tableName = null;
 								if (tblIndex > 0)
@@ -1756,7 +1791,7 @@ public final class Env
 								else
 									tableName = foreignTable;
 								MTable table = MTable.get(ctx, tableName);
-								if (table != null && tableName.equalsIgnoreCase(foreignTable)) {
+								if (table != null && (tableName.equalsIgnoreCase(foreignTable) || tableName.equalsIgnoreCase(po.get_TableName()))) {
 									String columnName = tblIndex > 0 ? format.substring(tblIndex + 1) : format;
 									MColumn column = table.getColumn(columnName);
 									if (column != null) {
@@ -1769,6 +1804,12 @@ public final class Env
 										}
 									}
 								}
+							} else if (v instanceof String && !Util.isEmpty((String) v) && !Util.isEmpty(foreignTable) && foreignTable.equals(MRefList.Table_Name) && !Util.isEmpty(format)) {
+								int refID = colToken.getAD_Reference_Value_ID();
+								if (format.equals("Name"))
+									outStr.append(MRefList.getListName(getCtx(), refID, (String) v));
+								else if (format.equals("Description"))
+									outStr.append(MRefList.getListDescription(getCtx(), DB.getSQLValueStringEx(null, "SELECT Name FROM AD_Reference WHERE AD_Reference_ID = ?", refID), (String) v));
 							} else if (v instanceof Date) {
 								SimpleDateFormat df = new SimpleDateFormat(format);
 								outStr.append(df.format((Date)v));
@@ -2121,7 +2162,7 @@ public final class Env
 	 */
 	public static String getStandardReportFooterTrademarkText() {
 		String s = MSysConfig.getValue(MSysConfig.STANDARD_REPORT_FOOTER_TRADEMARK_TEXT, Env.getAD_Client_ID(Env.getCtx()));
-		if (Util.isEmpty(s))
+		if (Util.isEmpty(s, true))
 			s = Env.getContext(Env.getCtx(), STANDARD_REPORT_FOOTER_TRADEMARK_TEXT);
 		if (Util.isEmpty(s))
 			s = Adempiere.ADEMPIERE_R;

@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_RevenueRecognition
  *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @version Release 6.2
  */
 public interface I_C_RevenueRecognition 
 {
@@ -112,6 +112,19 @@ public interface I_C_RevenueRecognition
 	  * Optional short description of the record
 	  */
 	public String getDescription();
+
+    /** Column name FixedRecogDay */
+    public static final String COLUMNNAME_FixedRecogDay = "FixedRecogDay";
+
+	/** Set Fixed recognition day.
+	  * Day of the period recognition occurs
+	  */
+	public void setFixedRecogDay (int FixedRecogDay);
+
+	/** Get Fixed recognition day.
+	  * Day of the period recognition occurs
+	  */
+	public int getFixedRecogDay();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";

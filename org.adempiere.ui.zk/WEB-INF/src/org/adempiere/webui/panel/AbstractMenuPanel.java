@@ -23,6 +23,7 @@ import java.util.Properties;
 import org.adempiere.util.Callback;
 import org.adempiere.webui.adwindow.ADTabpanel;
 import org.adempiere.webui.adwindow.ADWindow;
+import org.adempiere.webui.apps.MenuSearchController;
 import org.adempiere.webui.exception.ApplicationException;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
@@ -167,32 +168,50 @@ public abstract class AbstractMenuPanel extends Panel implements EventListener<E
                 
                 if (mChildNode.isReport())
                 {
-                	link.setImage(ThemeManager.getThemeResource("images/mReport.png"));
+                	if (ThemeManager.isUseFontIconForImage())
+                		link.setIconSclass("z-icon-Report");
+                	else
+                		link.setImage(ThemeManager.getThemeResource("images/mReport.png"));
                 	treeitem.setAttribute("menu.type", "report");
                 }
                 else if (mChildNode.isProcess() || mChildNode.isTask())
                 {
-                	link.setImage(ThemeManager.getThemeResource("images/mProcess.png"));
+                	if (ThemeManager.isUseFontIconForImage())
+                		link.setIconSclass("z-icon-Process");
+                	else
+                		link.setImage(ThemeManager.getThemeResource("images/mProcess.png"));
                 	treeitem.setAttribute("menu.type", "process");
                 }
                 else if (mChildNode.isWorkFlow())
                 {
-                	link.setImage(ThemeManager.getThemeResource("images/mWorkFlow.png"));
+                	if (ThemeManager.isUseFontIconForImage())
+                		link.setIconSclass("z-icon-Workflow");
+                	else
+                		link.setImage(ThemeManager.getThemeResource("images/mWorkFlow.png"));
                 	treeitem.setAttribute("menu.type", "workflow");
                 }
                 else if (mChildNode.isForm())
                 {
-                	link.setImage(ThemeManager.getThemeResource("images/mForm.png"));
+                	if (ThemeManager.isUseFontIconForImage())
+                		link.setIconSclass("z-icon-Form");
+                	else
+                		link.setImage(ThemeManager.getThemeResource("images/mForm.png"));
                 	treeitem.setAttribute("menu.type", "form");
                 }
                 else if (mChildNode.isInfo())
                 {
-                	link.setImage(ThemeManager.getThemeResource("images/mInfo.png"));
+                	if (ThemeManager.isUseFontIconForImage())
+                		link.setIconSclass("z-icon-Info");
+                	else
+                		link.setImage(ThemeManager.getThemeResource("images/mInfo.png"));
                 	treeitem.setAttribute("menu.type", "info");
                 }
                 else // Window
                 {
-                	link.setImage(ThemeManager.getThemeResource("images/mWindow.png"));
+                	if (ThemeManager.isUseFontIconForImage())
+                		link.setIconSclass("z-icon-Window");
+                	else
+                		link.setImage(ThemeManager.getThemeResource("images/mWindow.png"));
                 	treeitem.setAttribute("menu.type", "window");
 
                 	Toolbarbutton newBtn = createNewButton();
@@ -205,6 +224,7 @@ public abstract class AbstractMenuPanel extends Panel implements EventListener<E
                 link.setSclass("menu-href");
                 
                 treeitem.getTreerow().setDraggable("favourite"); // Elaine 2008/07/24
+                treeitem.setAttribute(MenuSearchController.M_TREE_NODE_ATTR, mChildNode);
             }
         }
     }
@@ -212,6 +232,11 @@ public abstract class AbstractMenuPanel extends Panel implements EventListener<E
     public Toolbarbutton createNewButton()
     {
     	Toolbarbutton newBtn = new Toolbarbutton(null, ThemeManager.getThemeResource("images/New10.png"));
+    	if (ThemeManager.isUseFontIconForImage())
+		{
+			newBtn.setImage(null);
+			newBtn.setIconSclass("z-icon-New");
+		}
     	newBtn.setSclass("menu-href-newbtn");
     	return newBtn;
     }

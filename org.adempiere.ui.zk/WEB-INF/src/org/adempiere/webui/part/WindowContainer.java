@@ -15,6 +15,7 @@ package org.adempiere.webui.part;
 
 import java.util.List;
 
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.component.Menupopup;
 import org.adempiere.webui.component.Tab;
 import org.adempiere.webui.component.Tab.DecorateInfo;
@@ -22,17 +23,23 @@ import org.adempiere.webui.component.Tabbox;
 import org.adempiere.webui.component.Tabpanel;
 import org.adempiere.webui.component.Tabpanels;
 import org.adempiere.webui.component.Tabs;
+import org.adempiere.webui.component.ToolBar;
+import org.adempiere.webui.component.ToolBarButton;
 import org.adempiere.webui.desktop.TabbedDesktop;
 import org.adempiere.webui.panel.IHelpContext;
 import org.adempiere.webui.session.SessionManager;
+import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.model.X_AD_CtxHelp;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.zkoss.zk.ui.Component;
+import org.zkoss.zk.ui.Page;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
+import org.zkoss.zk.ui.event.KeyEvent;
+import org.zkoss.zk.ui.event.OpenEvent;
 import org.zkoss.zk.ui.event.SwipeEvent;
 import org.zkoss.zul.Menuitem;
 
@@ -41,8 +48,18 @@ import org.zkoss.zul.Menuitem;
  * @author Low Heng Sin
  *
  */
-public class WindowContainer extends AbstractUIPart 
+public class WindowContainer extends AbstractUIPart implements EventListener<Event>
 {
+	private static final String OPTION_CLOSE = "Close";
+	private static final String OPTION_CLOSE_OTHER_WINDOWS = "CloseOtherWindows";
+	private static final String OPTION_CLOSE_WINDOWS_TO_THE_LEFT = "CloseWindowsToTheLeft";
+	private static final String OPTION_CLOSE_WINDOWS_TO_THE_RIGHT = "CloseWindowsToTheRight";
+	private static final String OPTION_CLOSE_ALL_WINDOWS = "CloseAllWindows";
+
+	public static final String ON_MOBILE_SET_SELECTED_TAB = "onMobileSetSelectedTab";
+
+	private static final String ON_AFTER_TAB_CLOSE = "onAfterTabClose";
+
 	private static final String ON_DEFER_SET_SELECTED_TAB = "onDeferSetSelectedTab";
 
 	public static final String ON_WINDOW_CONTAINER_SELECTION_CHANGED_EVENT = "onWindowContainerSelectionChanged";
@@ -51,7 +68,9 @@ public class WindowContainer extends AbstractUIPart
 	
 	private static final int MAX_TITLE_LENGTH = 30;
     
-    private Tabbox           tabbox;
+    private Tabbox  tabbox;
+    private ToolBar toolbar;
+    private ToolBarButton tabListBtn;
 
     public WindowContainer()
     {
@@ -73,6 +92,11 @@ public class WindowContainer extends AbstractUIPart
     protected Component doCreatePart(Component parent)
     {
         tabbox = new Tabbox();
+        tabbox.addEventListener("onPageAttached", this);
+        tabbox.addEventListener("onPageDetached", this);
+        tabbox.setSupportTabDragDrop(!isMobile());
+        tabbox.setActiveBySeq(true);
+        tabbox.setCheckVisibleOnlyForNextActive(!isMobile());
         tabbox.setSclass("desktop-tabbox");
         tabbox.setId("desktop_tabbox");
         tabbox.setMaximalHeight(true);
@@ -84,6 +108,13 @@ public class WindowContainer extends AbstractUIPart
 					setSelectedTab(tab);
 			}
 		});
+        tabbox.addEventListener(ON_AFTER_TAB_CLOSE, evt -> {
+        	if (isMobile()) {
+	        	updateMobileTabState(tabbox.getSelectedTab());
+	        	updateTabListButton();
+	        	tabbox.getTabs().invalidate();
+        	}
+        });
         
         Tabpanels tabpanels = new Tabpanels();
         Tabs tabs = new Tabs();
@@ -100,10 +131,60 @@ public class WindowContainer extends AbstractUIPart
         else
         	tabbox.setPage(page);
         
+        toolbar = new ToolBar();
+        toolbar.setSclass("window-container-toolbar");
+        tabbox.appendChild(toolbar);
+        if (isMobile())
+        {
+        	ToolBarButton homeButton = new ToolBarButton();
+        	if (ThemeManager.isUseFontIconForImage())
+        		homeButton.setIconSclass("z-icon-Home");
+        	else
+        		homeButton.setImage(ThemeManager.getThemeResource("images/Home16.png"));
+        	homeButton.setSclass("window-container-toolbar-btn");
+        	homeButton.addEventListener(Events.ON_CLICK, evt -> setSelectedTab(tabbox.getTabpanel(0).getLinkedTab()));
+        	toolbar.appendChild(homeButton);
+        	
+        	tabListBtn = new ToolBarButton();
+        	if (ThemeManager.isUseFontIconForImage()) 
+        	{
+        		tabListBtn.setIconSclass("z-icon-Expand");
+        	} 
+        	else 
+        	{
+        		tabListBtn.setImage(ThemeManager.getThemeResource("images/expand-header.png"));
+        	}
+        	tabListBtn.setSclass("window-container-toolbar-btn");
+        	tabListBtn.addEventListener(Events.ON_CLICK, evt -> showTabList());
+        	tabListBtn.setVisible(false);
+        	toolbar.appendChild(tabListBtn);        	        	 
+        }
+        
         return tabbox;
     }
     
-    /**
+    private void showTabList() {
+		org.zkoss.zul.Tabs tabs = tabbox.getTabs();
+		List<Component> list = tabs.getChildren();
+		Menupopup popup = new Menupopup();
+		for(int i = 1; i < list.size(); i++) {
+			Tab tab = (Tab) list.get(i);
+			Menuitem item = new Menuitem(tab.getLabel());
+			item.setValue(Integer.toString(i));
+			item.setTooltiptext(tab.getTooltiptext());
+			popup.appendChild(item);
+			item.addEventListener(Events.ON_CLICK, evt -> {
+				Menuitem t = (Menuitem) evt.getTarget();
+				String s = t.getValue();
+				Integer ti = Integer.parseInt(s);
+				setSelectedTab(tabbox.getTabpanel(ti.intValue()).getLinkedTab());
+			});
+		}
+		popup.setPage(tabbox.getPage());
+		popup.open(tabListBtn, "after_start");
+	}
+
+	/**
      * @deprecated keep for compatible, replace by {@link #addWindow(Component, String, boolean, DecorateInfo)}
      * @param comp
      * @param title
@@ -184,7 +265,29 @@ public class WindowContainer extends AbstractUIPart
      */
     public Tab insertBefore(Tab refTab, Component comp, String title, boolean closeable, boolean enable, DecorateInfo decorateInfo)
     {
-        final Tab tab = new Tab();
+        final Menupopup popupClose = new Menupopup();
+        final Tab tab = new Tab() {
+        	/**
+			 * 
+			 */
+			private static final long serialVersionUID = 2387473442130217806L;
+
+			@Override
+        	public void close() {
+        		super.close();
+        		popupClose.detach();
+        	}
+
+			@Override
+			public void onPageDetached(Page page) {
+				super.onPageDetached(page);
+				if (tabbox != null && tabbox.getPage() != null) {
+					Events.postEvent(ON_AFTER_TAB_CLOSE, tabbox, null);
+				}
+			}        	
+        };
+        popupClose.addEventListener(Events.ON_OPEN, this);
+        popupClose.setAttribute("tab", tab);
         tab.setDecorateInfo(decorateInfo);
         if (title != null) 
         {
@@ -208,6 +311,9 @@ public class WindowContainer extends AbstractUIPart
 			public void onEvent(Event event) throws Exception {
 				Tab tab = (Tab)event.getTarget();
 				org.zkoss.zul.Tabpanel panel = tab.getLinkedPanel();
+				if (panel == null) {
+					System.console().printf("error");
+				}
 				Component component = panel.getFirstChild();
 				if (component != null && component.getAttribute(ITabOnSelectHandler.ATTRIBUTE_KEY) instanceof ITabOnSelectHandler)
 				{
@@ -221,7 +327,11 @@ public class WindowContainer extends AbstractUIPart
 					SessionManager.getAppDesktop().updateHelpContext(X_AD_CtxHelp.CTXTYPE_Home, 0);
 			}
 		});
-
+        //disable text selection of tab label on mobile to
+        //fix conflict with long press context menu
+        if (ClientInfo.isMobile())
+        	tab.setClientAttribute("onselectstart", "return false");
+        
         Tabpanel tabpanel = null;
         if (comp instanceof Tabpanel) {
         	tabpanel = (Tabpanel) comp;
@@ -255,66 +365,101 @@ public class WindowContainer extends AbstractUIPart
         	else
         		setSelectedTab(tab);
         }
-        
-        Menupopup popupClose = new Menupopup();
+
         Menuitem mi;
-        if(tab.getIndex()!=0){
-        	mi = new Menuitem(Msg.getMsg(Env.getCtx(), "Close"));
+        if (tab.getIndex() != 0) {
+        	mi = new Menuitem(Msg.getMsg(Env.getCtx(), OPTION_CLOSE));
+        	mi.setAttribute("option", OPTION_CLOSE);
         	popupClose.appendChild(mi);
         	mi.addEventListener(Events.ON_CLICK, new EventListener<Event>() {
         		public void onEvent(Event event) throws Exception {
         			int currentTabIndex = tab.getIndex();
+        			int focusTabIndex = currentTabIndex;
         			int tabsSizeBeforeClose = tabbox.getTabs().getChildren().size();
-
-        			if ( tabsSizeBeforeClose == currentTabIndex + 1 ) {
-        				currentTabIndex--;
+        			if (tabsSizeBeforeClose == currentTabIndex + 1) {
+        				focusTabIndex = currentTabIndex - 1;
         			}
-        			if ( tab.getPreviousSibling() != null ) {
-        				tab.onClose();
-        				// Update the current tab index.
-        				if ( tabsSizeBeforeClose != tabbox.getTabs().getChildren().size() )
-        					tabbox.setSelectedIndex( currentTabIndex );
-        			}
+        			closeTabs(tab, currentTabIndex, currentTabIndex, focusTabIndex);
         		}
         	});
 
-        	mi = new Menuitem(Msg.getMsg(Env.getCtx(), "CloseOtherWindows"));
+        	mi = new Menuitem(Msg.getMsg(Env.getCtx(), OPTION_CLOSE_OTHER_WINDOWS));
+        	mi.setAttribute("option", OPTION_CLOSE_OTHER_WINDOWS);
         	popupClose.appendChild(mi);
         	mi.addEventListener(Events.ON_CLICK, new EventListener<Event>() {
         		public void onEvent(Event event) throws Exception {
+        			int currentTabIndex = tab.getIndex();
+        			closeTabs(tab, currentTabIndex + 1, -1, currentTabIndex); // Right
         			int focusTabIndex = 1;
-        			List<Component> tabs = tabbox.getTabs().getChildren();
-        			for ( int i = tabs.size() - 1; i > 0; i-- ) {
-        				if(!((Tab)tabs.get( i )).equals(tab)){
-        					((Tab)tabs.get( i )).setSelected(false);
+        			closeTabs(tab, 1, currentTabIndex - 1, focusTabIndex); // Left
+        		}
+        	});
 
-        					((Tab)tabs.get( i )).onClose();
-        				}
-        			}
-        			tabbox.setSelectedIndex(focusTabIndex);
+        	mi = new Menuitem(Msg.getMsg(Env.getCtx(), OPTION_CLOSE_WINDOWS_TO_THE_LEFT));
+        	mi.setAttribute("option", OPTION_CLOSE_WINDOWS_TO_THE_LEFT);
+        	popupClose.appendChild(mi);
+        	mi.addEventListener(Events.ON_CLICK, new EventListener<Event>() {
+        		public void onEvent(Event event) throws Exception {
+        			int currentTabIndex = tab.getIndex();
+        			int focusTabIndex = 1;
+        			closeTabs(tab, 1, currentTabIndex - 1, focusTabIndex);
+        		}
+        	});
+
+        	mi = new Menuitem(Msg.getMsg(Env.getCtx(), OPTION_CLOSE_WINDOWS_TO_THE_RIGHT));
+        	mi.setAttribute("option", OPTION_CLOSE_WINDOWS_TO_THE_RIGHT);
+        	popupClose.appendChild(mi);
+        	mi.addEventListener(Events.ON_CLICK, new EventListener<Event>() {
+        		public void onEvent(Event event) throws Exception {
+        			int currentTabIndex = tab.getIndex();
+        			closeTabs(tab, currentTabIndex + 1, -1, currentTabIndex);
         		}
         	});
         }
 
-		mi = new Menuitem(Msg.getMsg(Env.getCtx(), "CloseAllWindows"));
-		mi.addEventListener(Events.ON_CLICK, new EventListener<Event>() {
-			public void onEvent(Event event) throws Exception {
-				int focusTabIndex = 0;
-				List<Component> tabs = tabbox.getTabs().getChildren();
-				for ( int i = tabs.size() - 1; i > 0; i-- ) {
-					((Tab)tabs.get( i )).setSelected(false);
-					((Tab)tabs.get( i )).onClose();
-				}
-				tabbox.setSelectedIndex( focusTabIndex );
-			}
-		});
-		popupClose.appendChild(mi);
-		ZKUpdateUtil.setWidth(popupClose, "auto");
-		popupClose.setPage(tab.getPage());
-		tab.setContext(popupClose);
-        
+        mi = new Menuitem(Msg.getMsg(Env.getCtx(), OPTION_CLOSE_ALL_WINDOWS));
+        mi.setAttribute("option", OPTION_CLOSE_ALL_WINDOWS);
+        popupClose.appendChild(mi);
+        mi.addEventListener(Events.ON_CLICK, new EventListener<Event>() {
+        	public void onEvent(Event event) throws Exception {
+        		int focusTabIndex = 0;
+        		closeTabs(tab, 1, -1, focusTabIndex);
+        	}
+        });
+
+        ZKUpdateUtil.setWidth(popupClose, "auto");
+        popupClose.setPage(tab.getPage());
+        tab.setContext(popupClose);
+
+		updateTabListButton();
         return tab;
     }
+
+    protected void closeTabs(Tab tab, int start, int end, int focus) {
+    	List<Component> tabs = tabbox.getTabs().getChildren();
+    	if (end == -1) {
+    		end = tabs.size() - 1;
+    	}
+    	for (int i = end; i >= start; i--) {
+    		((Tab)tabs.get( i )).setSelected(false);
+    		((Tab)tabs.get( i )).onClose();
+    	}
+    	tabbox.setSelectedIndex(focus);
+    	Events.postEvent(ON_AFTER_TAB_CLOSE, tabbox, null);
+    }
+
+	private void updateTabListButton() {
+		if (isMobile() && tabListBtn != null) {
+			int cnt = tabbox.getTabs().getChildren().size()-1;
+			if (cnt > 0) {
+				tabListBtn.setLabel(Integer.toString(cnt));
+				tabListBtn.setVisible(true);
+			} else {
+				tabListBtn.setLabel("");
+				tabListBtn.setVisible(false);
+			}
+		}
+	}
 
 	public void setTabTitle(String title, int windowNo) {
 		setTabTitle(title, getTab(windowNo));
@@ -383,10 +528,35 @@ public class WindowContainer extends AbstractUIPart
      */
     public void setSelectedTab(org.zkoss.zul.Tab tab)
     {
-    	tabbox.setSelectedTab(tab);
+    	if (isMobile())
+    		updateMobileTabState(tab);
+    	tabbox.setSelectedTab(tab); 
+    	if (isMobile())
+    		tabbox.getTabs().invalidate();
     }
 
-    /**
+	private void updateMobileTabState(org.zkoss.zul.Tab tab) {
+		if (isMobile() && tabListBtn != null)
+    	{
+    		List<Component> tabs = tabbox.getTabs().getChildren();
+    		for(Component c: tabs) {
+    			if (c instanceof Tab) {
+    				Tab t = (Tab) c;
+    				t.setVisible(t == tab);
+    				t.getLinkedPanel().setVisible(t == tab);
+    				if (t.isVisible()) {
+    					Events.postEvent(ON_MOBILE_SET_SELECTED_TAB, t.getLinkedPanel(), null);
+    				}
+    			}
+    		}    		
+    	}
+	}
+
+    private boolean isMobile() {
+		return ClientInfo.isMobile();
+	}
+
+	/**
      * 
      * @return true if successfully close the active window
      */
@@ -431,5 +601,69 @@ public class WindowContainer extends AbstractUIPart
 	 */
 	public Tabbox getComponent() {
 		return tabbox;
+	}
+	
+	/**
+	 * @return toolbar
+	 */
+	public ToolBar getToobar() {
+		return toolbar;
+	}
+
+	@Override
+	public void onEvent(Event event) throws Exception {
+		
+		if (event.getTarget() == tabbox && "onPageDetached".equals(event.getName())) {
+			try {
+				SessionManager.getSessionApplication().getKeylistener().removeEventListener(Events.ON_CTRL_KEY, this);
+			} catch (Exception e) {}
+		}else if (event.getTarget() == tabbox && "onPageAttached".equals(event.getName())) {
+			try {
+				SessionManager.getSessionApplication().getKeylistener().addEventListener(Events.ON_CTRL_KEY, this);
+			} catch (Exception e) {}
+		}else if (event instanceof OpenEvent && event.getTarget() instanceof Menupopup) {
+			if (((OpenEvent)event).isOpen()) {
+				Menupopup popup = (Menupopup) event.getTarget();
+				List<Component> tabs = tabbox.getTabs().getChildren();
+				int tabsSize = tabs.size();
+				int currentTabIdx = -1;
+				if (popup.getAttribute("tab") != null) {
+					Tab currentTab = (Tab) popup.getAttribute("tab");
+					for ( int i = tabsSize - 1; i > 0; i-- ) {
+						Tab tab = ((Tab)tabs.get(i));
+						if (currentTab.equals(tab)) {
+							currentTabIdx = i;
+							break;
+						}
+					}
+				}
+				if (currentTabIdx > 0) {
+					List<Component> items = popup.getChildren();
+					for (Component item : items) {
+						if (item instanceof Menuitem) {
+							String option = (String) item.getAttribute("option");
+							boolean visible =
+									   (OPTION_CLOSE.equals(option))
+									|| (tabsSize > 2 && (OPTION_CLOSE_OTHER_WINDOWS.equals(option) || OPTION_CLOSE_ALL_WINDOWS.equals(option)))
+									|| (currentTabIdx < tabsSize - 1 && OPTION_CLOSE_WINDOWS_TO_THE_RIGHT.equals(option))
+									|| (currentTabIdx > 1 && OPTION_CLOSE_WINDOWS_TO_THE_LEFT.equals(option));
+							item.setVisible(visible);
+						}
+					}
+				}
+			}
+		}else if (Events.ON_CTRL_KEY.equals(event.getName())) {
+			KeyEvent keyEvent = (KeyEvent) event;
+			if (keyEvent.isAltKey() && keyEvent.getKeyCode() == KeyEvent.PAGE_DOWN
+					&& tabbox.getSelectedTab() != null && tabbox.getSelectedTab().getNextSibling() != null) {
+				tabbox.setSelectedTab((org.zkoss.zul.Tab)tabbox.getSelectedTab().getNextSibling());
+				keyEvent.stopPropagation();
+			}else if (keyEvent.isAltKey() && keyEvent.getKeyCode() == KeyEvent.PAGE_UP
+					&& tabbox.getSelectedTab() != null && tabbox.getSelectedTab().getPreviousSibling() != null) {
+				tabbox.setSelectedTab((org.zkoss.zul.Tab)tabbox.getSelectedTab().getPreviousSibling());
+				keyEvent.stopPropagation();
+			}
+		}
+		
 	}
 }

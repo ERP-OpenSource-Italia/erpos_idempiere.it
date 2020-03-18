@@ -33,6 +33,8 @@ import java.util.regex.Pattern;
 import javax.activation.DataSource;
 
 import org.adempiere.webui.AdempiereWebUI;
+import org.adempiere.webui.ClientInfo;
+import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.AttachmentItem;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.Checkbox;
@@ -117,17 +119,23 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 	{
 		super();
         this.setTitle(title);
-        this.setSclass("popup-dialog");
+        this.setSclass("popup-dialog email-dialog");
 		this.setClosable(true);
 		this.setBorder("normal");
-		ZKUpdateUtil.setWidth(this, "80%");
-		ZKUpdateUtil.setHeight(this, "80%");
+		if (!ThemeManager.isUseCSSForWindowSize())
+		{
+			ZKUpdateUtil.setWidth(this, "80%");
+			ZKUpdateUtil.setHeight(this, "80%");
+		}
 		this.setShadow(true);
 		this.setMaximizable(true);
 		this.setSizable(true);
 		        
 		fMessage = new CKeditor();
-		fMessage.setCustomConfigurationsPath("/js/ckeditor/config.js");
+		if (ClientInfo.isMobile())
+			fMessage.setCustomConfigurationsPath("/js/ckeditor/config-min.js");
+		else
+			fMessage.setCustomConfigurationsPath("/js/ckeditor/config.js");
 		fMessage.setToolbar("MyToolbar");
 		Map<String,Object> lang = new HashMap<String,Object>();
 		lang.put("language", Language.getLoginLanguage().getAD_Language());
@@ -224,6 +232,11 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 		if (MUser.get(Env.getCtx()).isAddMailTextAutomatically()) {
 			addMailText();
 		}
+		if (newpage != null && ThemeManager.isUseCSSForWindowSize()) {
+			ZKUpdateUtil.setCSSHeight(this);
+			ZKUpdateUtil.setCSSWidth(this);
+			this.invalidate();
+		}
 	}
 
 	/**
@@ -237,7 +250,7 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 		lSubject.setValue(Msg.getMsg(Env.getCtx(), "Subject") + ":");
 		lAttachment.setValue(Msg.getMsg(Env.getCtx(), "Attachment") + ":");
 		fFrom.setReadonly(true);
-		isAcknowledgmentReceipt.setLabel(Msg.getMsg(Env.getCtx(), "Acknowledge"));
+		isAcknowledgmentReceipt.setLabel(Msg.getMsg(Env.getCtx(), "RequestReadReceipt"));
 		//
 				
 		Grid grid = new Grid();
@@ -247,10 +260,10 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
         
         Columns columns = new Columns();
         Column column = new Column();
-        ZKUpdateUtil.setWidth(column, "30%");
+        ZKUpdateUtil.setWidth(column, "10%");
         columns.appendChild(column);
         column = new Column();
-        ZKUpdateUtil.setWidth(column, "70%");
+        ZKUpdateUtil.setWidth(column, "90%");
         columns.appendChild(column);
         grid.appendChild(columns);
         
@@ -277,7 +290,7 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 		
 		row = new Row();
 		rows.appendChild(row);
-		row.appendChild(isAcknowledgmentReceipt);
+		row.appendChild(new Label(""));
 		row.appendChild(fTo);
 		ZKUpdateUtil.setHflex(fTo, "1");
 		
@@ -295,6 +308,11 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 		row.appendChild(new Label(""));
 		row.appendChild(fCc);
 		ZKUpdateUtil.setHflex(fCc, "1");
+		
+		row = new Row();
+		rows.appendChild(row);
+		row.appendChild(new Label(""));
+		row.appendChild(isAcknowledgmentReceipt);
 				
 		row = new Row();
 		rows.appendChild(row);
@@ -338,11 +356,16 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 		confirmPanel.addActionListener(this);
 		
 		Button btn = new Button();
-		btn.setImage(ThemeManager.getThemeResource("images/Attachment24.png"));
+		if (ThemeManager.isUseFontIconForImage())
+			btn.setIconSclass("z-icon-Attachment");
+		else
+			btn.setImage(ThemeManager.getThemeResource("images/Attachment24.png"));
 		btn.setUpload(AdempiereWebUI.getUploadSetting());
 		btn.addEventListener(Events.ON_UPLOAD, this);
 		btn.setTooltiptext(Msg.getMsg(Env.getCtx(), "Attachment"));
 		confirmPanel.addComponentsLeft(btn);
+		if (ThemeManager.isUseFontIconForImage())
+			LayoutUtils.addSclass("large-toolbarbutton", btn);
 
 		bAddDefaultMailText = new Button();
 		bAddDefaultMailText.setImage(ThemeManager.getThemeResource("images/DefaultMailText.png"));
@@ -514,7 +537,7 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 				return;
 			}
 
-			StringTokenizer st = new StringTokenizer(getTo(), " ,;", false);
+			StringTokenizer st = new StringTokenizer(getTo(), ",;", false);
 			String to = st.nextToken();
 			EMail email = m_client.createEMail(getFrom(), to, getSubject(), replaceBASE64Img(getMessage()), true);
 			String status = "Check Setup";
@@ -523,7 +546,7 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 				while (st.hasMoreTokens())
 					email.addTo(st.nextToken());
 				// cc
-				StringTokenizer stcc = new StringTokenizer(getCc(), " ,;", false);
+				StringTokenizer stcc = new StringTokenizer(getCc(), ",;", false);
 				while (stcc.hasMoreTokens())
 				{
 					String cc = stcc.nextToken();
@@ -894,5 +917,4 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 	{
 		isAcknowledgmentReceipt.setChecked(bAck);
 	}
-
 }	//	WEMailDialog

@@ -42,7 +42,7 @@ public class GridTabVO implements Evaluatee, Serializable
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -7973388282943436222L;
+	private static final long serialVersionUID = -1353087123788176368L;
 
 	/**************************************************************************
 	 *	Create MTab VO
@@ -500,7 +500,9 @@ public class GridTabVO implements Evaluatee, Serializable
 	public  boolean     IsHighVolume = false;
 	/** Process			*/
 	public	int		    AD_Process_ID = 0;
-	/** Commot Warning	*/
+	/** Process UUID		*/
+	public  String		AD_Process_UU;
+	/** Commit Warning	*/
 	public  String	    CommitWarning;
 	/** Where			*/
 	public  String	    WhereClause;

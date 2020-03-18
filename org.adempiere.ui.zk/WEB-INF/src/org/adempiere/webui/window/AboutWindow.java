@@ -14,11 +14,15 @@
 package org.adempiere.webui.window;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.Properties;
 import java.util.Vector;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.webui.LayoutUtils;
+import org.adempiere.webui.WebUIActivator;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.Checkbox;
@@ -28,6 +32,7 @@ import org.adempiere.webui.component.Grid;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.ListHead;
 import org.adempiere.webui.component.ListHeader;
+import org.adempiere.webui.component.ListModelTable;
 import org.adempiere.webui.component.Listbox;
 import org.adempiere.webui.component.ListboxFactory;
 import org.adempiere.webui.component.Row;
@@ -39,6 +44,7 @@ import org.adempiere.webui.component.Tabpanel;
 import org.adempiere.webui.component.Tabpanels;
 import org.adempiere.webui.component.Tabs;
 import org.adempiere.webui.component.ToolBarButton;
+import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.component.Window;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.factory.ButtonFactory;
@@ -46,13 +52,19 @@ import org.adempiere.webui.theme.ThemeManager;
 import org.adempiere.webui.util.FeedbackManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.Adempiere;
+import org.compiere.minigrid.IDColumn;
 import org.compiere.model.MUser;
 import org.compiere.util.CLogErrorBuffer;
 import org.compiere.util.CLogMgt;
 import org.compiere.util.Env;
 import org.compiere.util.Ini;
+import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
+import org.compiere.util.SecureEngine;
 import org.compiere.util.Util;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleException;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zhtml.Pre;
 import org.zkoss.zhtml.Text;
@@ -81,7 +93,7 @@ public class AboutWindow extends Window implements EventListener<Event> {
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -305598686065143269L;
+	private static final long serialVersionUID = 7922577248288156723L;
 
 	private Checkbox bErrorsOnly;
 	private Listbox logTable;
@@ -91,10 +103,25 @@ public class AboutWindow extends Window implements EventListener<Event> {
 	protected Button btnErrorEmail;
 	protected Button btnViewLog;
 	protected Tab tabLog;
+	protected Tab tabPlugins;
 
 	protected Button btnAdempiereLog;
+	protected Button btnReloadLogProps;
 
 	private Listbox levelListBox;
+
+	private WListbox pluginsTable;
+	private Listbox pluginActions;
+	private Button pluginProcess;
+	private Vector<Vector<Object>> pluginData;
+	private Vector<String> pluginColumnNames;
+
+	private static final int PLUGIN_ACTION_NONE = 0;
+	private static final int PLUGIN_ACTION_STOP = 1;
+	private static final int PLUGIN_ACTION_START = 2;
+	private static final int PLUGIN_ACTION_UPDATE = 3;
+	private static final int PLUGIN_ACTION_UNINSTALL = 4;
+	private static final int PLUGIN_ACTION_INSTALL = 5;
 
 	public AboutWindow() {
 		super();
@@ -108,7 +135,7 @@ public class AboutWindow extends Window implements EventListener<Event> {
 		
 		this.setPosition("center");
 		this.setTitle(ThemeManager.getBrowserTitle());
-		this.setSclass("popup-dialog");
+		this.setSclass("popup-dialog about-window");
 		this.setClosable(true);
 		this.setMaximizable(true);
 		this.setSizable(true);
@@ -146,8 +173,18 @@ public class AboutWindow extends Window implements EventListener<Event> {
 		southPane.appendChild(btnOk);
 
 		this.setBorder("normal");
-		ZKUpdateUtil.setWidth(this, "600px");
-		ZKUpdateUtil.setHeight(this, "450px");
+		if (!ThemeManager.isUseCSSForWindowSize())
+		{
+			ZKUpdateUtil.setWindowWidthX(this, 600);
+			ZKUpdateUtil.setWindowHeightX(this, 450);
+		}
+		else
+		{
+			addCallback(AFTER_PAGE_ATTACHED, t-> {
+				ZKUpdateUtil.setCSSHeight(this);
+				ZKUpdateUtil.setCSSWidth(this);
+			});
+		}
 		this.setShadow(true);
 		this.setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
 	}
@@ -181,6 +218,16 @@ public class AboutWindow extends Window implements EventListener<Event> {
 		tab.setParent(tabs);
 		tabPanel = createTrace();
 		tabPanel.setParent(tabPanels);
+
+		//Plugins
+		tab = new Tab();
+		tab.setLabel("Plugins");
+		tabPlugins= tab;
+		tabPanel = createPlugins();
+		if (tabPanel != null) {
+			tab.setParent(tabs);
+			tabPanel.setParent(tabPanels);
+		}
 	}
 
 	protected Tabpanel createTrace() {
@@ -224,14 +271,20 @@ public class AboutWindow extends Window implements EventListener<Event> {
 				levelListBox.setEnabled(true);
 				levelListBox.setTooltiptext("Set trace level. Warning: this will effect all session not just the current session");
 				levelLabel.setTooltiptext("Set trace level. Warning: this will effect all session not just the current session");
+
 				btnAdempiereLog = new Button("iDempiere Log");
 				btnAdempiereLog.setTooltiptext("Download iDempiere log file from server");
 				LayoutUtils.addSclass("txt-btn", btnAdempiereLog);
 				btnAdempiereLog.addEventListener(Events.ON_CLICK, this);
-
 				hbox.appendChild(new Space());
 				hbox.appendChild(btnAdempiereLog);
 
+				btnReloadLogProps = new Button("Reload Log Props");
+				btnReloadLogProps.setTooltiptext("Reload the configuration of log levels from idempiere.properties file");
+				LayoutUtils.addSclass("txt-btn", btnReloadLogProps);
+				btnReloadLogProps.addEventListener(Events.ON_CLICK, this);
+				hbox.appendChild(new Space());
+				hbox.appendChild(btnReloadLogProps);
 			}
 		}
 
@@ -299,6 +352,175 @@ public class AboutWindow extends Window implements EventListener<Event> {
 			tabLog.setLabel(Msg.getMsg(Env.getCtx(), "Errors") + " (" + data.size() + ")");
 		else
 			tabLog.setLabel(Msg.getMsg(Env.getCtx(), "TraceInfo") + " (" + data.size() + ")");
+	}
+
+	protected Tabpanel createPlugins() {
+		Properties ctx = Env.getCtx();
+		MUser user = MUser.get(ctx);
+		Tabpanel tabPanel = null;
+		if (Env.getAD_Client_ID(ctx) == 0 && user.isAdministrator()) {
+			tabPanel = new Tabpanel();
+			Vbox vbox = new Vbox();
+			ZKUpdateUtil.setHflex(vbox, "1");
+			ZKUpdateUtil.setVflex(vbox, "1");
+
+			pluginColumnNames = new Vector<String>();
+			pluginColumnNames.add("");
+			pluginColumnNames.add(Msg.getMsg(ctx, "Id"));
+			pluginColumnNames.add(Msg.getMsg(ctx, "State"));
+			pluginColumnNames.add(Msg.getCleanMsg(ctx, "Name"));
+			pluginColumnNames.add(Msg.getMsg(ctx, "Version"));
+
+			pluginsTable = ListboxFactory.newDataTableAutoSize();
+			pluginData = new Vector<Vector<Object>>();
+			int i = 0;
+			pluginsTable.setColumnClass(i++, IDColumn.class, true);        //  0-bundleId
+			pluginsTable.setColumnClass(i++, Integer.class, true);         //  1-bundleId
+			pluginsTable.setColumnClass(i++, String.class, true);          //  2-State
+			pluginsTable.setColumnClass(i++, String.class, true);          //  3-SymbolicName
+			pluginsTable.setColumnClass(i++, String.class, true);          //  4-Version
+			vbox.appendChild(pluginsTable);
+			ZKUpdateUtil.setVflex(pluginsTable, "1");
+			ZKUpdateUtil.setHflex(pluginsTable, "1");
+			refreshPluginTable();
+			pluginsTable.autoSize();
+			pluginsTable.addEventListener(Events.ON_SELECT, this);
+			
+			pluginActions = new Listbox(
+					new KeyNamePair[] {
+							new KeyNamePair(PLUGIN_ACTION_NONE, ""),
+							new KeyNamePair(PLUGIN_ACTION_STOP, Msg.getMsg(ctx, "Stop")),
+							new KeyNamePair(PLUGIN_ACTION_START, Msg.getMsg(ctx, "Start")),
+							new KeyNamePair(PLUGIN_ACTION_UPDATE, Msg.getMsg(ctx, "Update")),
+							new KeyNamePair(PLUGIN_ACTION_UNINSTALL, Msg.getMsg(ctx, "Uninstall")),
+							new KeyNamePair(PLUGIN_ACTION_INSTALL, Msg.getMsg(ctx, "Install"))
+					});
+			pluginActions.setId("pluginActions");
+			pluginActions.setRows(0);
+			pluginActions.setMold("select");
+			ZKUpdateUtil.setWidth(pluginActions, "200px");
+			refreshActionList();
+			pluginProcess = new Button(Msg.getMsg(ctx, "Process"));
+			pluginProcess.addEventListener(Events.ON_CLICK, this);
+			Div div = new Div();
+			div.setStyle("text-align: right;");
+			div.appendChild(pluginActions);
+			div.appendChild(pluginProcess);
+			vbox.appendChild(div);
+			vbox.setParent(tabPanel);
+
+			tabPlugins.setLabel(Msg.getMsg(ctx, "Plugins") + " (" + pluginData.size() + ")");
+		}
+
+		return tabPanel;
+	}
+
+	private String state(int state) {
+		switch (state) {
+		case Bundle.ACTIVE:
+			return "ACTIVE";
+		case Bundle.INSTALLED:
+			return "INSTALLED";
+		case Bundle.RESOLVED:
+			return "RESOLVED";
+		case Bundle.STARTING:
+			return "STARTING";
+		case Bundle.STOPPING:
+			return "STOPPING";
+		case Bundle.UNINSTALLED:
+			return "UNINSTALLED";
+		default:
+			return "UNKNOWN";
+		}
+	}
+
+	private void refreshActionList() {
+		pluginActions.getItemAtIndex(PLUGIN_ACTION_UPDATE).setVisible(false); // not implemented yet
+		pluginActions.getItemAtIndex(PLUGIN_ACTION_UNINSTALL).setVisible(false); // not implemented yet
+		pluginActions.getItemAtIndex(PLUGIN_ACTION_INSTALL).setVisible(false); // not implemented yet
+		pluginActions.getItemAtIndex(PLUGIN_ACTION_STOP).setVisible(false);
+		pluginActions.getItemAtIndex(PLUGIN_ACTION_START).setVisible(false);
+		pluginActions.setSelectedItem(null);
+		Bundle bundle = getSelectedBundle();
+		if (bundle == null)
+			return;
+		int state = bundle.getState();
+		if (bundle.getBundleId() == 0) {
+			// bundle 0 cannot be stopped
+		} else if (state == Bundle.ACTIVE) {
+			pluginActions.getItemAtIndex(PLUGIN_ACTION_STOP).setVisible(true);
+		} else if (state == Bundle.RESOLVED) {
+			pluginActions.getItemAtIndex(PLUGIN_ACTION_START).setVisible(true);
+		} else if (state == Bundle.INSTALLED) {
+			// no options yet for installed
+		} else if (state == Bundle.STARTING) {
+			// no options yet for starting
+		} else if (state == Bundle.STOPPING) {
+			// no options yet for stopping
+		} else if (state == Bundle.UNINSTALLED) {
+			// no options yet for uninstalled
+		}
+	}
+
+	private Bundle getSelectedBundle() {
+		Bundle retValue = null;
+		int idx = pluginsTable.getSelectedIndex();
+		if (idx >= 0) {
+			Integer selectedPlugin = (Integer) pluginsTable.getModel().getDataAt(idx, 1);
+			Vector<Object> pluginVector = pluginData.get(selectedPlugin);
+			int pluginId = ((IDColumn)pluginVector.get(0)).getRecord_ID();
+			BundleContext bundleCtx = WebUIActivator.getBundleContext();
+			retValue = bundleCtx.getBundle(pluginId);
+		}
+		return retValue;
+	}
+
+	private void processPlugin() {
+		Listitem actionItem = pluginActions.getSelectedItem();
+		if (actionItem != null && actionItem.getValue() instanceof Integer) {
+			int action = (Integer)actionItem.getValue();
+			Bundle bundle = getSelectedBundle();
+			if (action == PLUGIN_ACTION_STOP && bundle != null) {
+				try {
+					bundle.stop();
+				} catch (BundleException e) {
+					throw new AdempiereException(e);
+				}
+			} else if (action == PLUGIN_ACTION_START && bundle != null) {
+				try {
+					bundle.start();
+				} catch (BundleException e) {
+					throw new AdempiereException(e);
+				}
+			} else if (action == PLUGIN_ACTION_UPDATE && bundle != null) {
+				// PLUGIN_ACTION_UPDATE not implemented yet
+			} else if (action == PLUGIN_ACTION_UNINSTALL && bundle != null) {
+				// PLUGIN_ACTION_UNINSTALL not implemented yet
+			} else if (action == PLUGIN_ACTION_INSTALL && bundle != null) {
+				// PLUGIN_ACTION_INSTALL not implemented yet
+			}
+		}
+		refreshPluginTable();
+		refreshActionList();
+	}
+
+	private void refreshPluginTable() {
+		pluginsTable.getModel().removeAll(pluginData);
+		pluginData.removeAllElements();
+
+		BundleContext bundleCtx = WebUIActivator.getBundleContext();
+		for (Bundle bundle : bundleCtx.getBundles()) {
+			Vector<Object> line = new Vector<Object>();
+			Integer bundl = Long.valueOf(bundle.getBundleId()).intValue(); // potential problem converting Long to Integer, but WListBox cannot order Long
+			line.add(new IDColumn(bundl));
+			line.add(bundl);
+			line.add(state(bundle.getState()));
+			line.add(bundle.getSymbolicName());
+			line.add(bundle.getVersion());
+			pluginData.add(line);
+		}
+		ListModelTable model = new ListModelTable(pluginData);
+		pluginsTable.setData(model, pluginColumnNames);
 	}
 
 	protected Tabpanel createInfo() {
@@ -503,10 +725,65 @@ public class AboutWindow extends Window implements EventListener<Event> {
 			cmd_errorEMail();
 		else if (event.getTarget() == btnAdempiereLog)
 			downloadAdempiereLogFile();
+		else if (event.getTarget() == btnReloadLogProps)
+			reloadLogProps();
 		else if (event.getTarget() == levelListBox)
 			setTraceLevel();
-		else if (Events.ON_CLICK.equals(event.getName()))
-			this.detach();
+        else if (Events.ON_SELECT.equals(event.getName()) && event.getTarget() == pluginsTable)
+        	refreshActionList();
+		else if (Events.ON_CLICK.equals(event.getName())) {
+			if (event.getTarget() == pluginProcess)
+				processPlugin();
+			else
+				this.detach();
+		}
+	}
+
+	private void reloadLogProps() {
+		Properties props = new Properties();
+		String propertyFileName = Ini.getFileName(false);
+		FileInputStream fis = null;
+		try {
+			fis = new FileInputStream(propertyFileName);
+			props.load(fis);
+		} catch (Exception e) {
+			throw new AdempiereException("Could not load properties file, cause: " + e.getLocalizedMessage());
+		} finally {
+			if (fis != null) {
+				try {
+					fis.close();
+				} catch (Exception e) {}
+			}
+		}
+		String globalLevel = props.getProperty(Ini.P_TRACELEVEL);
+		if (! Util.isEmpty(globalLevel)) {
+			globalLevel = SecureEngine.decrypt(globalLevel, 0);
+			if (! Util.isEmpty(globalLevel)) {
+				CLogMgt.setLevel(globalLevel);
+				Level level = CLogMgt.getLevel();
+				for (int i = 0; i < CLogMgt.LEVELS.length; i++) {
+					if (CLogMgt.LEVELS[i].intValue() == level.intValue()) {
+						levelListBox.setSelectedIndex(i);
+						break;
+					}
+				}
+			}
+		}
+		for(Object key : props.keySet()) {
+			if (key instanceof String) {
+				String s = (String)key;
+				if (s.endsWith("."+Ini.P_TRACELEVEL)) {
+					String level = props.getProperty(s);
+					if (! Util.isEmpty(level)) {
+						level = SecureEngine.decrypt(level, 0);
+						if (! Util.isEmpty(level)) {
+							s = s.substring(0, s.length() - ("."+Ini.P_TRACELEVEL).length());
+							CLogMgt.setLevel(s, level);
+						}
+					}
+				}
+			}
+		}
 	}
 
 	private void setTraceLevel() {
@@ -555,8 +832,8 @@ public class AboutWindow extends Window implements EventListener<Event> {
 		w.setClosable(true);
 		w.setMaximizable(true);
 		w.setSizable(true);
-		ZKUpdateUtil.setWidth(w, "600px");
-		ZKUpdateUtil.setHeight(w, "500px");
+		ZKUpdateUtil.setWindowWidthX(w, 600);
+		ZKUpdateUtil.setWindowHeightX(w, 500);
 		Textarea textbox = new Textarea();
 		textbox.setDynamicProperty("readonly", "true");
 		textbox.setStyle("width:99%; height: 99%; margin: auto; display: inline-block;");

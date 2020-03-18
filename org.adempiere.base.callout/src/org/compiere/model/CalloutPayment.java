@@ -17,6 +17,7 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -94,9 +95,9 @@ public class CalloutPayment extends CalloutEngine
 			rs = pstmt.executeQuery ();
 			if (rs.next ())
 			{
-				mTab.setValue ("C_BPartner_ID", new Integer (rs.getInt (1)));
+				mTab.setValue ("C_BPartner_ID", Integer.valueOf(rs.getInt (1)));
 				int C_Currency_ID = rs.getInt (2); // Set Invoice Currency
-				mTab.setValue ("C_Currency_ID", new Integer (C_Currency_ID));
+				mTab.setValue ("C_Currency_ID", Integer.valueOf(C_Currency_ID));
 				//
 				BigDecimal InvoiceOpen = rs.getBigDecimal (3); // Set Invoice
 				// OPen Amount
@@ -170,9 +171,9 @@ public class CalloutPayment extends CalloutEngine
 			rs = pstmt.executeQuery ();
 			if (rs.next ())
 			{
-				mTab.setValue ("C_BPartner_ID", new Integer (rs.getInt (1)));
+				mTab.setValue ("C_BPartner_ID", Integer.valueOf(rs.getInt (1)));
 				int C_Currency_ID = rs.getInt (2); // Set Order Currency
-				mTab.setValue ("C_Currency_ID", new Integer (C_Currency_ID));
+				mTab.setValue ("C_Currency_ID", Integer.valueOf(C_Currency_ID));
 				//
 				BigDecimal GrandTotal = rs.getBigDecimal (3); // Set Pay
 				// Amount
@@ -448,7 +449,7 @@ public class CalloutPayment extends CalloutEngine
 			}
 			//
 			InvoiceOpenAmt = InvoiceOpenAmt.multiply (CurrencyRate).setScale (
-				currency.getStdPrecision (), BigDecimal.ROUND_HALF_UP);
+				currency.getStdPrecision (), RoundingMode.HALF_UP);
 			if (log.isLoggable(Level.FINE)) log.fine ("Rate=" + CurrencyRate + ", InvoiceOpenAmt="
 				+ InvoiceOpenAmt);
 		}
@@ -457,19 +458,19 @@ public class CalloutPayment extends CalloutEngine
 			|| colName.equals ("C_ConversionType_ID"))
 		{
 			PayAmt = PayAmt.multiply (CurrencyRate).setScale (
-				currency.getStdPrecision (), BigDecimal.ROUND_HALF_UP);
+				currency.getStdPrecision (), RoundingMode.HALF_UP);
 			mTab.setValue ("PayAmt", PayAmt);
 			DiscountAmt = DiscountAmt.multiply (CurrencyRate).setScale (
-				currency.getStdPrecision (), BigDecimal.ROUND_HALF_UP);
+				currency.getStdPrecision (), RoundingMode.HALF_UP);
 			mTab.setValue ("DiscountAmt", DiscountAmt);
 			WriteOffAmt = WriteOffAmt.multiply (CurrencyRate).setScale (
-				currency.getStdPrecision (), BigDecimal.ROUND_HALF_UP);
+				currency.getStdPrecision (), RoundingMode.HALF_UP);
 			mTab.setValue ("WriteOffAmt", WriteOffAmt);
 			OverUnderAmt = OverUnderAmt.multiply (CurrencyRate).setScale (
-				currency.getStdPrecision (), BigDecimal.ROUND_HALF_UP);
+				currency.getStdPrecision (), RoundingMode.HALF_UP);
 			mTab.setValue ("OverUnderAmt", OverUnderAmt);
 		}
-		// No Invoice - Set Discount, Witeoff, Under/Over to 0
+		// No Invoice - Set Discount, Writeoff, Under/Over to 0
 		else if (C_Invoice_ID == 0)
 		{
 			if (Env.ZERO.compareTo (DiscountAmt) != 0)
@@ -484,8 +485,12 @@ public class CalloutPayment extends CalloutEngine
 				&& (!processed)
 				&& "Y".equals (Env.getContext (ctx, WindowNo, "IsOverUnderPayment")))
 			{
-				OverUnderAmt = InvoiceOpenAmt.subtract (PayAmt).subtract (
-					DiscountAmt).subtract (WriteOffAmt);
+				OverUnderAmt = InvoiceOpenAmt.subtract (PayAmt).subtract(DiscountAmt).subtract (WriteOffAmt);
+				if (OverUnderAmt.signum() > 0) { // no discount because is not paid in full
+					DiscountAmt = Env.ZERO;
+					mTab.setValue ("DiscountAmt", DiscountAmt);
+					OverUnderAmt = InvoiceOpenAmt.subtract (PayAmt).subtract(DiscountAmt).subtract (WriteOffAmt);
+				}
 				mTab.setValue ("OverUnderAmt", OverUnderAmt);
 			}
 			else if (colName.equals ("PayAmt")

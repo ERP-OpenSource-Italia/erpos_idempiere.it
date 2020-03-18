@@ -27,6 +27,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Properties;
 import java.util.logging.Level;
 
 import org.compiere.model.MAttachment;
@@ -42,9 +43,11 @@ import org.compiere.model.MScheduler;
 import org.compiere.model.MSchedulerLog;
 import org.compiere.model.MSchedulerPara;
 import org.compiere.model.MUser;
+import org.compiere.print.MPrintFormat;
 import org.compiere.process.ProcessInfo;
 import org.compiere.process.ProcessInfoUtil;
 import org.compiere.process.ServerProcessCtl;
+import org.compiere.util.CCache;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
@@ -71,32 +74,35 @@ public class Scheduler extends AdempiereServer
 	public Scheduler (MScheduler model)
 	{
 		super (model, 30);	//	30 seconds delay
-		m_model = model;
+		AD_Scheduler_ID = model.getAD_Scheduler_ID();
 	//	m_client = MClient.get(model.getCtx(), model.getAD_Client_ID());
 	}	//	Scheduler
 
-	/**	The Concrete Model			*/
-	protected MScheduler			m_model = null;
 	/**	Last Summary				*/
 	protected StringBuffer 		m_summary = new StringBuffer();
 	/** Transaction					*/
 	protected Trx					m_trx = null;
+
+	protected int AD_Scheduler_ID;
+
+	private static CCache<Integer,MScheduler> s_cache = new CCache<Integer,MScheduler>(MScheduler.Table_Name, 10, 60, true);
 
 	/**
 	 * 	Work
 	 */
 	protected void doWork ()
 	{
-		m_summary = new StringBuffer(m_model.toString())
+		MScheduler scheduler = get(getCtx(), AD_Scheduler_ID);
+		m_summary = new StringBuffer(scheduler.toString())
 			.append(" - ");
 
 		// Prepare a ctx for the report/process - BF [1966880]
-		MClient schedclient = MClient.get(getCtx(), m_model.getAD_Client_ID());
+		MClient schedclient = MClient.get(getCtx(), scheduler.getAD_Client_ID());
 		Env.setContext(getCtx(), "#AD_Client_ID", schedclient.getAD_Client_ID());
 		Env.setContext(getCtx(), "#AD_Language", schedclient.getAD_Language());
-		Env.setContext(getCtx(), "#AD_Org_ID", m_model.getAD_Org_ID());
-		if (m_model.getAD_Org_ID() != 0) {
-			MOrgInfo schedorg = MOrgInfo.get(getCtx(), m_model.getAD_Org_ID(), null);
+		Env.setContext(getCtx(), "#AD_Org_ID", scheduler.getAD_Org_ID());
+		if (scheduler.getAD_Org_ID() != 0) {
+			MOrgInfo schedorg = MOrgInfo.get(getCtx(), scheduler.getAD_Org_ID(), null);
 			if (schedorg.getM_Warehouse_ID() > 0)
 				Env.setContext(getCtx(), "#M_Warehouse_ID", schedorg.getM_Warehouse_ID());
 		}
@@ -104,14 +110,14 @@ public class Scheduler extends AdempiereServer
 		Env.setContext(getCtx(), "#SalesRep_ID", getAD_User_ID());
 		// TODO: It can be convenient to add  AD_Scheduler.AD_Role_ID
 		MUser scheduser = MUser.get(getCtx(), getAD_User_ID());
-		MRole[] schedroles = scheduser.getRoles(m_model.getAD_Org_ID());
+		MRole[] schedroles = scheduser.getRoles(scheduler.getAD_Org_ID());
 		if (schedroles != null && schedroles.length > 0)
 			Env.setContext(getCtx(), "#AD_Role_ID", schedroles[0].getAD_Role_ID()); // first role, ordered by AD_Role_ID
 		Timestamp ts = new Timestamp(System.currentTimeMillis());
 		SimpleDateFormat dateFormat4Timestamp = new SimpleDateFormat("yyyy-MM-dd"); 
 		Env.setContext(getCtx(), "#Date", dateFormat4Timestamp.format(ts)+" 00:00:00" );    //  JDBC format
 
-		MProcess process = new MProcess(getCtx(), m_model.getAD_Process_ID(), null);
+		MProcess process = new MProcess(getCtx(), scheduler.getAD_Process_ID(), null);
 		try
 		{
 			m_trx = Trx.get(Trx.createTrxName("Scheduler"), true);
@@ -133,10 +139,10 @@ public class Scheduler extends AdempiereServer
 		}
 		
 		//
-		int no = m_model.deleteLog();
+		int no = scheduler.deleteLog();
 		m_summary.append(" Logs deleted=").append(no);
 		//
-		MSchedulerLog pLog = new MSchedulerLog(m_model, m_summary.toString());
+		MSchedulerLog pLog = new MSchedulerLog(scheduler, m_summary.toString());
 		pLog.setReference("#" + String.valueOf(p_runCount)
 			+ " - " + TimeUtil.formatElapsed(new Timestamp(p_startWork)));
 		pLog.saveEx();
@@ -151,31 +157,52 @@ public class Scheduler extends AdempiereServer
 	protected String runProcess(MProcess process) throws Exception
 	{
 		if (log.isLoggable(Level.INFO)) log.info(process.toString());
+		MScheduler scheduler = get(getCtx(), AD_Scheduler_ID);
 		
 		boolean isReport = (process.isReport() || process.getAD_ReportView_ID() > 0 || process.getJasperReport() != null || process.getAD_PrintFormat_ID() > 0);
-		String schedulerName = Env.parseContext(getCtx(), -1, m_model.getName(), false, true);
+		String schedulerName = Env.parseContext(getCtx(), -1, scheduler.getName(), false, true);
 		
 		//	Process (see also MWFActivity.performWork
-		int AD_Table_ID = m_model.getAD_Table_ID();
-		int Record_ID = m_model.getRecord_ID();
+		int AD_Table_ID = scheduler.getAD_Table_ID();
+		int Record_ID = scheduler.getRecord_ID();
 		//
 		MPInstance pInstance = new MPInstance(process, Record_ID);
 		fillParameter(pInstance);
 		//
 		ProcessInfo pi = new ProcessInfo (process.getName(), process.getAD_Process_ID(), AD_Table_ID, Record_ID);
 		pi.setAD_User_ID(getAD_User_ID());
-		pi.setAD_Client_ID(m_model.getAD_Client_ID());
+		pi.setAD_Client_ID(scheduler.getAD_Client_ID());
 		pi.setAD_PInstance_ID(pInstance.getAD_PInstance_ID());
+		pi.setAD_Process_UU(process.getAD_Process_UU());
 		pi.setIsBatch(true);
 		pi.setPrintPreview(true);
+		pi.setReportType(scheduler.getReportOutputType());
+		int AD_PrintFormat_ID = scheduler.getAD_PrintFormat_ID();
+		if (AD_PrintFormat_ID > 0) 
+		{
+			MPrintFormat format = new MPrintFormat(Env.getCtx(), AD_PrintFormat_ID, null);
+			pi.setSerializableObject(format);
+		}
 		MUser from = new MUser(getCtx(), pi.getAD_User_ID(), null);
 		
 		pi.setTransactionName(m_trx != null ? m_trx.getTrxName() : null);
+		if (!Util.isEmpty(process.getJasperReport())) 
+		{
+			pi.setExport(true);
+			if ("HTML".equals(pi.getReportType())) 
+				pi.setExportFileExtension("html");
+			else if ("CSV".equals(pi.getReportType()))
+				pi.setExportFileExtension("csv");
+			else if ("XLS".equals(pi.getReportType()))
+				pi.setExportFileExtension("xls");
+			else
+				pi.setExportFileExtension("pdf");
+		}
 		ServerProcessCtl.process(pi, m_trx);
 		if ( pi.isError() ) // note, this call close the transaction, don't use m_trx below
 		{
 			// notify supervisor if error
-			int supervisor = m_model.getSupervisor_ID();
+			int supervisor = scheduler.getSupervisor_ID();
 			if (supervisor > 0)
 			{
 				MUser user = new MUser(getCtx(), supervisor, null);
@@ -187,20 +214,20 @@ public class Scheduler extends AdempiereServer
 				
 				if (email)
 				{
-					MClient client = MClient.get(m_model.getCtx(), m_model.getAD_Client_ID());
+					MClient client = MClient.get(scheduler.getCtx(), scheduler.getAD_Client_ID());
 					client.sendEMail(from, user, schedulerName, pi.getSummary() + " " + pi.getLogInfo(), null);
 				}
 				if (notice) {
 					int AD_Message_ID = 442; // HARDCODED ProcessRunError
 					MNote note = new MNote(getCtx(), AD_Message_ID, supervisor, null);
-					note.setClientOrg(m_model.getAD_Client_ID(), m_model.getAD_Org_ID());
+					note.setClientOrg(scheduler.getAD_Client_ID(), scheduler.getAD_Org_ID());
 					note.setTextMsg(schedulerName+"\n"+pi.getSummary());
 					note.setRecord(MPInstance.Table_ID, pi.getAD_PInstance_ID());
 					note.saveEx();
 					String log = pi.getLogInfo(true);
 					if (log != null &&  log.trim().length() > 0) {
 						MAttachment attachment = new MAttachment (getCtx(), MNote.Table_ID, note.getAD_Note_ID(), null);
-						attachment.setClientOrg(m_model.getAD_Client_ID(), m_model.getAD_Org_ID());
+						attachment.setClientOrg(scheduler.getAD_Client_ID(), scheduler.getAD_Org_ID());
 						attachment.setTextMsg(schedulerName);
 						attachment.addEntry("ProcessLog.html", log.getBytes("UTF-8"));
 						attachment.saveEx();
@@ -210,12 +237,12 @@ public class Scheduler extends AdempiereServer
 		}
 		
 		// always notify recipients
-		Integer[] userIDs = m_model.getRecipientAD_User_IDs();
+		Integer[] userIDs = scheduler.getRecipientAD_User_IDs();
 		if (userIDs.length > 0) 
 		{
 			ProcessInfoUtil.setLogFromDB(pi);
 			List<File> fileList = new ArrayList<File>();
-			if (isReport) {
+			if (isReport && pi.getPDFReport() != null) {
 				fileList.add(pi.getPDFReport());
 			}
 			if (pi.isExport() && pi.getExportFile() != null)
@@ -234,10 +261,10 @@ public class Scheduler extends AdempiereServer
 					if (isReport)
 						AD_Message_ID = 884; //	HARDCODED SchedulerResult
 					MNote note = new MNote(getCtx(), AD_Message_ID, userIDs[i].intValue(), null);
-					note.setClientOrg(m_model.getAD_Client_ID(), m_model.getAD_Org_ID());
+					note.setClientOrg(scheduler.getAD_Client_ID(), scheduler.getAD_Org_ID());
 					if (isReport) {
 						note.setTextMsg(schedulerName);
-						note.setDescription(m_model.getDescription());
+						note.setDescription(scheduler.getDescription());
 						note.setRecord(AD_Table_ID, Record_ID);
 					} else {
 						note.setTextMsg(schedulerName + "\n" + pi.getSummary());
@@ -248,7 +275,7 @@ public class Scheduler extends AdempiereServer
 						if (fileList != null && !fileList.isEmpty()) {
 							//	Attachment
 							attachment = new MAttachment (getCtx(), MNote.Table_ID, note.getAD_Note_ID(), null);
-							attachment.setClientOrg(m_model.getAD_Client_ID(), m_model.getAD_Org_ID());
+							attachment.setClientOrg(scheduler.getAD_Client_ID(), scheduler.getAD_Org_ID());
 							attachment.setTextMsg(schedulerName);
 							for (File entry : fileList)
 								attachment.addEntry(entry);
@@ -258,7 +285,7 @@ public class Scheduler extends AdempiereServer
 						if (log != null &&  log.trim().length() > 0) {
 							if (attachment == null) {
 								attachment = new MAttachment (getCtx(), MNote.Table_ID, note.getAD_Note_ID(), null);
-								attachment.setClientOrg(m_model.getAD_Client_ID(), m_model.getAD_Org_ID());
+								attachment.setClientOrg(scheduler.getAD_Client_ID(), scheduler.getAD_Org_ID());
 								attachment.setTextMsg(schedulerName);
 							}
 							attachment.addEntry("ProcessLog.html", log.getBytes("UTF-8"));
@@ -271,11 +298,11 @@ public class Scheduler extends AdempiereServer
 				
 				if (email)
 				{
-					MMailText mailTemplate = new MMailText(getCtx(), m_model.getR_MailText_ID(), null);
+					MMailText mailTemplate = new MMailText(getCtx(), scheduler.getR_MailText_ID(), null);
 					String mailContent = "";
 					
 					if (mailTemplate.is_new()){
-						mailContent = m_model.getDescription();
+						mailContent = scheduler.getDescription();
 					}else{
 						mailTemplate.setUser(user);
 						mailTemplate.setLanguage(Env.getContext(getCtx(), "#AD_Language"));
@@ -284,7 +311,7 @@ public class Scheduler extends AdempiereServer
 						schedulerName = mailTemplate.getMailHeader();
 					}
 
-					MClient client = MClient.get(m_model.getCtx(), m_model.getAD_Client_ID());
+					MClient client = MClient.get(scheduler.getCtx(), scheduler.getAD_Client_ID());
 					if (fileList != null && !fileList.isEmpty()) {
 						client.sendEMailAttachments(from, user, schedulerName, mailContent, fileList);
 					} else {
@@ -307,13 +334,14 @@ public class Scheduler extends AdempiereServer
 	}	//	runProcess
 
 	protected int getAD_User_ID() {
+		MScheduler scheduler = get(getCtx(), AD_Scheduler_ID);
 		int AD_User_ID;
-		if (m_model.getSupervisor_ID() > 0)
-			AD_User_ID = m_model.getSupervisor_ID();
-		else if (m_model.getCreatedBy() > 0)
-			AD_User_ID = m_model.getCreatedBy();
-		else if (m_model.getUpdatedBy() > 0)
-			AD_User_ID = m_model.getUpdatedBy();
+		if (scheduler.getSupervisor_ID() > 0)
+			AD_User_ID = scheduler.getSupervisor_ID();
+		else if (scheduler.getCreatedBy() > 0)
+			AD_User_ID = scheduler.getCreatedBy();
+		else if (scheduler.getUpdatedBy() > 0)
+			AD_User_ID = scheduler.getUpdatedBy();
 		else
 			AD_User_ID = 100; //fall back to SuperUser
 		return AD_User_ID;
@@ -325,7 +353,7 @@ public class Scheduler extends AdempiereServer
 	 */
 	protected void fillParameter(MPInstance pInstance)
 	{
-		MSchedulerPara[] sParams = m_model.getParameters (false);
+		MSchedulerPara[] sParams = get(getCtx(), AD_Scheduler_ID).getParameters (false);
 		MPInstancePara[] iParams = pInstance.getParameters();
 		for (int pi = 0; pi < iParams.length; pi++)
 		{
@@ -574,4 +602,25 @@ public class Scheduler extends AdempiereServer
 		return "#" + p_runCount + " - Last=" + m_summary.toString();
 	}	//	getServerInfo
 
+	/**
+	 * @param ctx
+	 * @param AD_Scheduler_ID
+	 * @return MScheduler
+	 */
+	protected static MScheduler get(Properties ctx, int AD_Scheduler_ID)
+	{
+		Integer key = Integer.valueOf(AD_Scheduler_ID);
+		MScheduler retValue = (MScheduler)s_cache.get(key);
+		if (retValue == null)
+		{
+			retValue = new MScheduler(ctx, AD_Scheduler_ID, null);
+			if (AD_Scheduler_ID == 0)
+			{
+				String trxName = null;
+				retValue.load(trxName);	//	load System Record
+			}
+			s_cache.put(key, retValue);
+		}
+		return retValue;
+	}	//	get
 }	//	Scheduler

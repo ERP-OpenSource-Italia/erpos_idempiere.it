@@ -55,13 +55,18 @@ public class WAccountEditor extends WEditor implements ContextMenuListener
 	public WAccountEditor(GridField gridField)
 	{
 		super(new Combinationbox(), gridField);
-		getComponent().setButtonImage(ThemeManager.getThemeResource("images/Account16.png"));
+		if (ThemeManager.isUseFontIconForImage())
+			getComponent().getButton().setIconSclass("z-icon-Account");
+		else
+			getComponent().setButtonImage(ThemeManager.getThemeResource("images/Account16.png"));
 
 		m_mAccount = new MAccountLookup (gridField.getVO().ctx, gridField.getWindowNo());
 		
 		popupMenu = new WEditorPopupMenu(false, false, true);
 		popupMenu.addMenuListener(this);
 		addChangeLogMenu(popupMenu);
+		if (gridField != null)
+			getComponent().getTextbox().setPlaceholder(gridField.getPlaceholder());
 	}
 
 	@Override
@@ -80,9 +85,9 @@ public class WAccountEditor extends WEditor implements ContextMenuListener
 	@Override
 	public Object getValue()
 	{
-		//if (m_mAccount.C_ValidCombination_ID == 0)
-		//	return null;
-		return new Integer (m_mAccount.C_ValidCombination_ID);
+		if (m_mAccount.C_ValidCombination_ID == 0)
+			return null;
+		return Integer.valueOf(m_mAccount.C_ValidCombination_ID);
 	}
 
 	@Override
@@ -96,7 +101,11 @@ public class WAccountEditor extends WEditor implements ContextMenuListener
 	 */
 	public void cmd_button()
 	{
-		int C_AcctSchema_ID = Env.getContextAsInt(Env.getCtx(), gridField.getWindowNo(), "C_AcctSchema_ID");
+		int C_AcctSchema_ID;
+		if (gridField.getGridTab() != null)
+			C_AcctSchema_ID = Env.getContextAsInt(Env.getCtx(), gridField.getWindowNo(), gridField.getGridTab().getTabNo(), "C_AcctSchema_ID");
+		else
+			C_AcctSchema_ID = Env.getContextAsInt(Env.getCtx(), gridField.getWindowNo(), "C_AcctSchema_ID");
 		// Try to get C_AcctSchema_ID from global context - teo_sarca BF [ 1830531 ]
 		if (C_AcctSchema_ID <= 0)
 		{
@@ -166,6 +175,9 @@ public class WAccountEditor extends WEditor implements ContextMenuListener
 		{
 			pstmt = DB.prepareStatement(sql, null);
 			pstmt.setInt(1, C_AcctSchema_ID);
+			boolean useSimilarTo = "Y".equals(Env.getContext(Env.getCtx(), "P|IsUseSimilarTo"));
+			if (useSimilarTo && text.contains("*"))
+				text = text.replaceAll("\\*", "\\\\*");
 			pstmt.setString(2, text.toUpperCase());
 			pstmt.setString(3, text.toUpperCase());
 			rs = pstmt.executeQuery();
@@ -189,7 +201,7 @@ public class WAccountEditor extends WEditor implements ContextMenuListener
 		//	We have a Value
 		if (C_ValidCombination_ID > 0)
 		{
-			Integer newValue = new Integer(C_ValidCombination_ID);
+			Integer newValue = Integer.valueOf(C_ValidCombination_ID);
 			Object oldValue = m_value;
 			m_value = newValue;
 			ValueChangeEvent changeEvent = new ValueChangeEvent(this, this.getColumnName(), oldValue, newValue);

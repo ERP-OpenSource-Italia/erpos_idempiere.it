@@ -45,6 +45,7 @@ public class PackInProcess extends SvrProcess {
 	private String m_packageDirectory = null;
 	public int p_PackIn_ID = 0;
 
+	@SuppressWarnings("unused")
 	private String packageName = null;
 	private String packageVersion = null;
 
@@ -130,7 +131,7 @@ public class PackInProcess extends SvrProcess {
 
 		PackIn packIn = new PackIn();
 		packIn.setPackageDirectory(m_packageDirectory);
-		packIn.setPackageName(packageName);
+		packIn.setPackageName(adPackageImp.getName());
 		packIn.setPackageVersion(packageVersion);
 		packIn.setUpdateDictionary(m_UpdateDictionary);
 		packIn.getNotifier().setFileName(zipFilepath.getName());
@@ -146,7 +147,8 @@ public class PackInProcess extends SvrProcess {
 			commitEx(); // we need to commit to capture HERE when the deferred validation of foreign keys can fail
 		} catch (Exception e) {
 			adPackageImp.setP_Msg(e.getLocalizedMessage());
-			packIn.getNotifier().addStatusLine(e.getLocalizedMessage());
+			packIn.getNotifier().addFailureLine(e.getLocalizedMessage());
+			packIn.setSuccess(false);
 			log.log(Level.SEVERE, "importXML:", e);
 			throw e;
 		} finally {

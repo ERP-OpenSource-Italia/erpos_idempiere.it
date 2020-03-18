@@ -111,50 +111,20 @@ public class ToolbarCustomButton implements EventListener<Event>, Evaluatee {
 			
 			return;
 		}
-			
-		
-		boolean visible = false;
-		//F3P Aggiunta variante per logica di visibilita' tramite sql 
-		if(displayLogic.toLowerCase().startsWith("@sql="))
-		{
-			if(tabNo == -1)
+
+		boolean visible = true;
+		if (displayLogic.startsWith("@SQL=")) {
+			ADWindow adwindow = ADWindow.get(windowNo);
+			if (adwindow == null)
 				return;
 			
-			String	defStr = "";
-			String sql = displayLogic.substring(5);	//	w/o tag
-			//sql = Env.parseContext(m_vo.ctx, m_vo.WindowNo, sql, false, true);	//	replace variables
-			//hengsin, capture unparseable error to avoid subsequent sql exception
-			sql = Env.parseContext(Env.getCtx(),windowNo, tabNo, sql, false, false);	//	replace variables
-			if (sql.equals(""))
-				log.log(Level.WARNING, " Default SQL variable parse failed");
-			else {
-				PreparedStatement stmt = null;
-				ResultSet rs = null;
-				try {
-					stmt = DB.prepareStatement(sql, null);
-					rs = stmt.executeQuery();
-					if (rs.next())
-						defStr = rs.getString(1);
-					else {
-						if (log.isLoggable(Level.INFO))
-							log.log(Level.INFO, " no Result: " + sql);
-					}
-				}
-				catch (SQLException e) {
-					log.log(Level.WARNING, sql, e);
-				}
-				finally{
-					DB.close(rs, stmt);
-					rs = null;
-					stmt = null;
-				}
-			}
-			if (!Util.isEmpty(defStr))
-				visible = Util.asBoolean(defStr);
-		}//F3P End
-		else
-		{
-			visible = Evaluator.evaluateLogic(this, displayLogic);
+			IADTabpanel adTabpanel = adwindow.getADWindowContent().getADTab().getSelectedTabpanel();
+			if (adTabpanel == null)
+				return;
+			
+			visible = Evaluator.parseSQLLogic(displayLogic, Env.getCtx(), windowNo, adTabpanel.getTabNo(), mToolbarButton.getActionName());
+		}else {
+			visible = Evaluator.evaluateLogic(this, displayLogic);	
 		}
 		
 		if(visible) // F3P: if the action is IAction2, we 'and' IAction2 visibility too
@@ -166,8 +136,8 @@ public class ToolbarCustomButton implements EventListener<Event>, Evaluatee {
 				IAction2 act2 = (IAction2)action;
 				visible = act2.isVisible(ADWindow.get(windowNo));
 			}
-		}
-		
+		}	
+
 		toolbarButton.setVisible(visible);
 	}
 	

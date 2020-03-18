@@ -105,7 +105,7 @@ public class WMediaDialog extends Window implements EventListener<Event>
 		{
 			log.log(Level.SEVERE, "", ex);
 		}		
-	} // WAttachment
+	} // WMediaDialog
 
 	/**
 	 *	Static setup.
@@ -125,9 +125,19 @@ public class WMediaDialog extends Window implements EventListener<Event>
 	
 	void staticInit() throws Exception
 	{
-		ZKUpdateUtil.setWidth(this, "500px");
-		ZKUpdateUtil.setHeight(this, "500px");
+		if (!ThemeManager.isUseCSSForWindowSize())
+		{
+			ZKUpdateUtil.setWindowWidthX(this, 500);
+			ZKUpdateUtil.setWindowHeightX(this, 500);
+		}
+		else
+		{
+			addCallback("afterPageAttached", t -> afterPageAttached());
+		}
+		this.setSclass("media-dialog");
 		this.setClosable(true);
+		this.setSizable(true);
+		this.setMaximizable(true);
 		this.setBorder("normal");
 		this.appendChild(mainPanel);
 		ZKUpdateUtil.setHeight(mainPanel, "100%");
@@ -184,9 +194,16 @@ public class WMediaDialog extends Window implements EventListener<Event>
 		bCancel.addEventListener(Events.ON_CLICK, this);
 		
 		confirmPanel.appendChild(bOk);
-		confirmPanel.appendChild(bCancel);		
+		confirmPanel.appendChild(bCancel);
+		confirmPanel.setStyle("float: right;");
 	}
 	
+	private void  afterPageAttached() {
+		ZKUpdateUtil.setCSSHeight(this);
+		ZKUpdateUtil.setCSSWidth(this);
+		
+	}
+
 	/**
 	 * 	Dispose
 	 */
@@ -220,7 +237,9 @@ public class WMediaDialog extends Window implements EventListener<Event>
 				AMedia media = createMedia();
 				
 				preview.setContent(media);
+				preview.setClientAttribute("sandbox", "");
 				preview.setVisible(true);
+				preview.invalidate();
 			}
 			catch (Exception e)
 			{
@@ -244,7 +263,7 @@ public class WMediaDialog extends Window implements EventListener<Event>
 		{
 			Clob clob = (Clob)m_data;
 			long length = clob.length() > 100 ? 100 : clob.length();
-			String data = ((Clob)m_data).getSubString(1, new Long(length).intValue());
+			String data = ((Clob)m_data).getSubString(1, Long.valueOf(length).intValue());
 			if (data.toUpperCase().indexOf("<html>") >= 0)
 			{
 				contentType = "text/html";
@@ -351,5 +370,6 @@ public class WMediaDialog extends Window implements EventListener<Event>
 	public Object getData() {
 		return m_data;
 	}
+	
 	
 }

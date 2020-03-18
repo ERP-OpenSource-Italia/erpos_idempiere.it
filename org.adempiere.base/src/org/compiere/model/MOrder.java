@@ -45,6 +45,7 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
 import org.compiere.util.Util;
 
 import it.idempiere.base.model.LITMBPartnerLocation;
@@ -631,6 +632,7 @@ public class MOrder extends X_C_Order implements DocAction
 			line.setQtyDelivered(Env.ZERO);
 			line.setQtyInvoiced(Env.ZERO);
 			line.setQtyReserved(Env.ZERO);
+			line.setQtyLostSales(Env.ZERO);
 			line.setDateDelivered(null);
 			line.setDateInvoiced(null);
 			//
@@ -931,7 +933,7 @@ public class MOrder extends X_C_Order implements DocAction
 			+" WHERE iol.M_InOut_ID=M_InOut.M_InOut_ID"
 			+" AND iol.C_OrderLine_ID=ol.C_OrderLine_ID"
 			+" AND ol.C_Order_ID=?)";
-		List<MInvoice> list = new Query(getCtx(), I_M_InOut.Table_Name, whereClause, get_TrxName())
+		List<MInOut> list = new Query(getCtx(), MInOut.Table_Name, whereClause, get_TrxName())
 									.setParameters(get_ID())
 									.setOrderBy("M_InOut_ID DESC")
 									.list();
@@ -1570,12 +1572,7 @@ public class MOrder extends X_C_Order implements DocAction
 			if (line.getM_Product_ID() > 0 && line.getM_AttributeSetInstance_ID() == 0) {
 				MProduct product = line.getProduct();
 				if (product.isASIMandatory(isSOTrx())) {
-					if(product.getAttributeSet()==null){
-						m_processMsg = "@NoAttributeSet@=" + product.getValue();
-						return DocAction.STATUS_Invalid;
-
-					}
-					if (! product.getAttributeSet().excludeTableEntry(MOrderLine.Table_ID, isSOTrx())) {
+					if (product.getAttributeSet() != null && !product.getAttributeSet().excludeTableEntry(MOrderLine.Table_ID, isSOTrx())) {
 						StringBuilder msg = new StringBuilder("@M_AttributeSet_ID@ @IsMandatory@ (@Line@ #")
 							.append(line.getLine())
 							.append(", @M_Product_ID@=")
@@ -2543,7 +2540,7 @@ public class MOrder extends X_C_Order implements DocAction
 		if (dt.isOverwriteDateOnComplete()) {
 			/* a42niem - BF IDEMPIERE-63 - check if document has been completed before */ 
 			if (this.getProcessedOn().signum() == 0) {
-				setDateOrdered(new Timestamp (System.currentTimeMillis()));
+				setDateOrdered(TimeUtil.getDay(0));
 				if (getDateAcct().before(getDateOrdered())) {
 					setDateAcct(getDateOrdered());
 					MPeriod.testPeriodOpen(getCtx(), getDateAcct(), getC_DocType_ID(), getAD_Org_ID());
@@ -2609,7 +2606,7 @@ public class MOrder extends X_C_Order implements DocAction
 			if (oLine.getQtyEntered().compareTo(oLine.getQtyOrdered()) != 0)
 				ioLine.setQtyEntered(MovementQty
 					.multiply(oLine.getQtyEntered())
-					.divide(oLine.getQtyOrdered(), 6, BigDecimal.ROUND_HALF_UP));
+					.divide(oLine.getQtyOrdered(), 6, RoundingMode.HALF_UP));
 			if (!ioLine.save(get_TrxName()))
 			{
 				m_processMsg = "Could not create Shipment Line";
@@ -2618,7 +2615,7 @@ public class MOrder extends X_C_Order implements DocAction
 		}
 		// added AdempiereException by zuhri
 		if (!shipment.processIt(DocAction.ACTION_Complete))
-			throw new AdempiereException("Failed when processing document - " + shipment.getProcessMsg());
+			throw new AdempiereException(Msg.getMsg(getCtx(), "FailedProcessingDocument") + " - " + shipment.getProcessMsg());
 		// end added
 		shipment.saveEx(get_TrxName());
 		if (!DOCSTATUS_Completed.equals(shipment.getDocStatus()))
@@ -2696,7 +2693,7 @@ public class MOrder extends X_C_Order implements DocAction
 					iLine.setQtyEntered(iLine.getQtyInvoiced());
 				else
 					iLine.setQtyEntered(iLine.getQtyInvoiced().multiply(oLine.getQtyEntered())
-						.divide(oLine.getQtyOrdered(), 12, BigDecimal.ROUND_HALF_UP));
+						.divide(oLine.getQtyOrdered(), 12, RoundingMode.HALF_UP));
 				if (!iLine.save(get_TrxName()))
 				{
 					m_processMsg = "Could not create Invoice Line from Order Line";
@@ -2721,7 +2718,7 @@ public class MOrder extends X_C_Order implements DocAction
 		
 		// added AdempiereException by zuhri
 		if (!invoice.processIt(DocAction.ACTION_Complete))
-			throw new AdempiereException("Failed when processing document - " + invoice.getProcessMsg());
+			throw new AdempiereException(Msg.getMsg(getCtx(), "FailedProcessingDocument") + " - " + invoice.getProcessMsg());
 		// end added
 		invoice.saveEx(get_TrxName());
 		setC_CashLine_ID(invoice.getC_CashLine_ID());
@@ -2843,7 +2840,7 @@ public class MOrder extends X_C_Order implements DocAction
 				counter.setDocAction(counterDT.getDocAction());
 				// added AdempiereException by zuhri
 				if (!counter.processIt(counterDT.getDocAction()))
-					throw new AdempiereException("Failed when processing document - " + counter.getProcessMsg());
+					throw new AdempiereException(Msg.getMsg(getCtx(), "FailedProcessingDocument") + " - " + counter.getProcessMsg());
 				// end added
 				counter.saveEx(get_TrxName());
 			}

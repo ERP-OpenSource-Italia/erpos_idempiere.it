@@ -17,6 +17,8 @@
 
 package org.adempiere.webui.adwindow;
 
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -28,6 +30,7 @@ import java.util.logging.Level;
 import org.adempiere.base.Core;
 import org.adempiere.base.UIBehaviour;
 import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.util.Callback;
 import org.adempiere.webui.AdempiereIdGenerator;
 import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.ClientInfo;
@@ -68,6 +71,7 @@ import org.compiere.model.GridTable;
 import org.compiere.model.GridWindow;
 import org.compiere.model.I_AD_Preference;
 import org.compiere.model.Lookup;
+import org.compiere.model.MColumn;
 import org.compiere.model.MLookup;
 import org.compiere.model.MPreference;
 import org.compiere.model.MRole;
@@ -136,7 +140,7 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -3728896318124756192L;
+	private static final long serialVersionUID = 5117210424909609150L;
 
 	private static final String ON_SAVE_OPEN_PREFERENCE_EVENT = "onSaveOpenPreference";
 
@@ -179,13 +183,13 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 
     private GridView		  listPanel;
 
-    private Map<String, List<Row>> fieldGroupContents = new HashMap<String, List<Row>>();
+    private Map<String, List<Row>> fieldGroupContents;
 
-    private Map<String, List<org.zkoss.zul.Row>> fieldGroupHeaders = new HashMap<String, List<org.zkoss.zul.Row>>();
+    private Map<String, List<org.zkoss.zul.Row>> fieldGroupHeaders;
 
 	private ArrayList<Row> rowList;
 
-	List<Group> allCollapsibleGroups = new ArrayList<Group>();
+	List<Group> allCollapsibleGroups;
 
 	private Borderlayout formContainer = null;
 
@@ -206,8 +210,12 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 	/** DefaultFocusField		*/
 	private WEditor	defaultFocusField = null;
 
+	private int numberOfFormColumns;
+
 	public static final String ON_TOGGLE_EVENT = "onToggle";
-	
+
+	private static final String DEFAULT_PANEL_WIDTH = "300px";
+
 	private static enum SouthEvent {
     	SLIDE(),
     	OPEN(),
@@ -235,6 +243,8 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 		});
         addEventListener(ON_POST_INIT_EVENT, this);
         addEventListener(ON_SAVE_OPEN_PREFERENCE_EVENT, this);
+        if (ClientInfo.isMobile())
+        	ClientInfo.onClientInfo(this, this::onClientInfo);
     }
 
     private void initComponents()
@@ -263,13 +273,10 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 		South south = borderLayout.getSouth();
 		if (south == null) {			
 			south = new South();
+			LayoutUtils.addSlideSclass(south);
 			borderLayout.appendChild(south);
-			south.setWidgetOverride("doClick_", "function (evt){this.$supers('doClick_', arguments);" +
-					"var target = evt.domTarget;if (!target.id) target = target.parentNode;" +
-					"if(this.$n('colled') == target) {" +
-					"var se = new zk.Event(this, 'onSlide', null, {toServer: true}); zAu.send(se); } }");
 			south.addEventListener(Events.ON_OPEN, this);
-			south.addEventListener("onSlide", this);
+			south.addEventListener(Events.ON_SLIDE, this);
 			
 			south.addEventListener(Events.ON_SWIPE, new EventListener<SwipeEvent>() {
 
@@ -280,7 +287,8 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 						South south = borderLayout.getSouth();
 						if (south.isOpen()) {
 							south.setOpen(false);
-							onSouthEvent(SouthEvent.CLOSE);
+							OpenEvent openEvent = new OpenEvent(Events.ON_OPEN, south, false);
+							Events.postEvent(openEvent);
 						}
 					}
 				}
@@ -291,15 +299,17 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 		south.setVisible(true);
 		south.setCollapsible(true);
 		south.setSplittable(true);
-		south.setOpen(isOpenDetailPane());
+		south.setOpen(isOpenDetailPane());		
 		south.setSclass("adwindow-gridview-detail");
+		if (!south.isOpen())
+			LayoutUtils.addSclass("slide", south);
 		String height = heigthDetailPane();
 		if (! Util.isEmpty(height)) {
 			try {
 				ClientInfo browserInfo = SessionManager.getAppDesktop().getClientInfo();
 				int browserHeight = browserInfo.desktopHeight;
 				int prefHeight = Integer.valueOf(height.replace("px", ""));
-				int topmarginpx = MSysConfig.getIntValue("TOP_MARGIN_PIXELS_FOR_HEADER", 222);
+				int topmarginpx = MSysConfig.getIntValue(MSysConfig.TOP_MARGIN_PIXELS_FOR_HEADER, 222);
 				int maxHeight = browserHeight - topmarginpx;
 				if (prefHeight <= maxHeight) {
 					height = Integer.toString(prefHeight) + "px";
@@ -343,14 +353,10 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 				Env.getAD_Client_ID(Env.getCtx()), gridTab.getKeyColumnName());
 
 		StringBuilder cssContent = new StringBuilder();
-		cssContent.append(".adtab-form-borderlayout .z-south-colpsd:before { ");
+		cssContent.append(".adtab-form-borderlayout .z-south-collapsed:before { ");
 		cssContent.append("content: \"");
 		cssContent.append(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Detail")));
 		cssContent.append("\"; ");
-		cssContent.append("position: relative; font-size: 12px; font-weight: bold; ");
-		cssContent.append("top: 3px; ");
-		cssContent.append("left: 4px; ");
-		cssContent.append("z-index: -1; ");
 		cssContent.append("} ");
 		Style style = new Style();
 		style.setContent(cssContent.toString());
@@ -361,15 +367,22 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 			Borderlayout layout = new Borderlayout();
 			layout.setParent(this);
 			layout.setSclass("adtab-form-borderlayout");
+			if (ClientInfo.isMobile())
+				LayoutUtils.addSclass("mobile", layout);
 			
 			treePanel = new ADTreePanel(windowNo, gridTab.getTabNo());
 			West west = new West();
 			west.appendChild(treePanel);
-			ZKUpdateUtil.setWidth(west, "300px");
+			ZKUpdateUtil.setWidth(west, widthTreePanel());
 			west.setCollapsible(true);
 			west.setSplittable(true);
 			west.setAutoscroll(true);
 			layout.appendChild(west);
+			LayoutUtils.addSlideSclass(west);
+			if (isMobile()) {
+				west.setOpen(false);
+				LayoutUtils.addSclass("slide", west);
+			}
 
 			Center center = new Center();
 			Vlayout div = new Vlayout();
@@ -399,6 +412,8 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 			Borderlayout layout = new Borderlayout();
 			layout.setParent(this);
 			layout.setSclass("adtab-form-borderlayout");
+			if (ClientInfo.isMobile())
+				LayoutUtils.addSclass("mobile", layout);
 						
 			Center center = new Center();
 			layout.appendChild(center);
@@ -419,26 +434,74 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
     @Override
     public void createUI()
     {
-    	if (uiCreated) return;
-
-    	uiCreated = true;
+    	createUI(false);
+    }
+    
+    protected void createUI(boolean update)
+    {
+    	if (update) 
+    	{
+    		if (!uiCreated) return;
+    	}
+    	else
+    	{
+    		if (uiCreated) return;
+    		uiCreated = true;
+    	}
+    	
+    	fieldGroupContents = new HashMap<String, List<Row>>();
+    	fieldGroupHeaders = new HashMap<String, List<org.zkoss.zul.Row>>();
+    	allCollapsibleGroups = new ArrayList<Group>();
     	
     	int numCols=gridTab.getNumColumns();
     	if (numCols <= 0) {
-    		numCols=4;
+    		numCols=6;
     	}
 
+		//adapt layout for phone and tablet
+		int diff = 0;
+		if (isMobile())
+		{
+			if (ClientInfo.maxWidth(ClientInfo.EXTRA_SMALL_WIDTH-1)) {
+	    		if (numCols > 3) {
+	    			diff = numCols - 3;
+	    			numCols=3;
+	    		}
+	    	} else if (ClientInfo.maxWidth(ClientInfo.MEDIUM_WIDTH-1)) {
+	    		if (numCols > 6) {
+	    			diff = numCols - 6;
+	    			numCols=6;
+	    		}
+	    	}
+		}
+    	
+    	this.numberOfFormColumns = numCols;
+    	
+    	if (update)
+    		form.getColumns().detach();
     	// set size in percentage per column leaving a MARGIN on right
-    	Columns columns = new Columns();
+    	Columns columns = new Columns();    	
     	form.appendChild(columns);
-    	int equalWidth = 98 / numCols;
+    	double equalWidth = 95.00d / numCols;
+    	DecimalFormat decimalFormat = new DecimalFormat("0.00");
+    	decimalFormat.setRoundingMode(RoundingMode.DOWN);
+    	String columnWidth = decimalFormat.format(equalWidth);
 
-    	for (int h=0;h<numCols;h++){
+    	for (int h=0;h<numCols+1;h++){
     		Column col = new Column();
-    		ZKUpdateUtil.setWidth(col, equalWidth + "%");
+    		if (h == numCols) {
+    			ZKUpdateUtil.setWidth(col, "5%");
+    		} else {
+    			ZKUpdateUtil.setWidth(col, columnWidth + "%");
+    		}
     		columns.appendChild(col);
     	}
 
+    	if (update) {
+    		form.getRows().detach();
+    		rowList = null;
+    		currentGroup = null;
+    	}
     	Rows rows = form.newRows();
         GridField fields[] = gridTab.getFields();
         Row row = new Row();
@@ -452,17 +515,23 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
         		continue;
 
         	if (field.isToolbarButton()) {
-        		WButtonEditor editor = (WButtonEditor) WebEditorFactory.getEditor(gridTab, field, false);
+        		WButtonEditor editor = null;
+        		if (update)
+        			editor = (WButtonEditor) findEditor(field);
+        		else
+        			editor = (WButtonEditor) WebEditorFactory.getEditor(gridTab, field, false);
 
         		if (editor != null) {
-        			if (windowPanel != null)
-    					editor.addActionListener(windowPanel);
-        			editor.setGridTab(this.getGridTab());
-        			editor.setADTabpanel(this);
-        			field.addPropertyChangeListener(editor);
-        			editors.add(editor);
-        			editor.getComponent().setId(field.getColumnName());
-        			toolbarButtonEditors.add(editor);
+        			if (!update) {
+	        			if (windowPanel != null)
+	    					editor.addActionListener(windowPanel);
+	        			editor.setGridTab(this.getGridTab());
+	        			editor.setADTabpanel(this);
+	        			field.addPropertyChangeListener(editor);
+	        			editors.add(editor);
+	        			editor.getComponent().setId(field.getColumnName());
+	        			toolbarButtonEditors.add(editor);
+        			}
                 	if (field.isToolbarOnlyButton())
                 		continue;
         		}
@@ -525,8 +594,20 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
         		actualxpos = 0;
         	}
 
+        	// get the column span for field
+			int columnSpan = field.getColumnSpan();
+        	int xpos = field.getXPosition();
+        	if (xpos + columnSpan > numCols && diff > 0)
+        	{
+        		xpos = xpos - diff;
+        		if (xpos <= 0)
+        			xpos = 1;
+        		if (xpos == 1 && (field.getDisplayType() == DisplayType.YesNo || field.getDisplayType() == DisplayType.Button || field.isFieldOnly()))
+        			xpos = 2;
+        	}
+        	
 			//normal field
-        	if (field.getXPosition() <= actualxpos) {
+        	if (xpos <= actualxpos) {
         		// Fill right part of the row with spacers until number of columns
         		if (numCols - actualxpos + 1 > 0)
         			row.appendCellChild(createSpacer(), numCols - actualxpos + 1);
@@ -538,29 +619,38 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
         		actualxpos = 0;
         	}
     		// Fill left part of the field
-        	if (field.getXPosition()-1 - actualxpos > 0)
-        		row.appendCellChild(createSpacer(), field.getXPosition()-1 - actualxpos);
+        	if (xpos-1 - actualxpos > 0)
+        		row.appendCellChild(createSpacer(), xpos-1 - actualxpos);
         	boolean paintLabel = ! (field.getDisplayType() == DisplayType.Button || field.getDisplayType() == DisplayType.YesNo || field.isFieldOnly()); 
+
+        	// Adjust column spam to the remain columns size
+			int remainCols = numCols - actualxpos;
+    		if (columnSpan > remainCols)
+    			columnSpan = remainCols-1 > 0 ? remainCols-1 : 1;
+
         	if (field.isHeading())
-        		actualxpos = field.getXPosition();
+        		actualxpos = xpos;
         	else
-        		actualxpos = field.getXPosition() + field.getColumnSpan()-1 + (paintLabel ? 1 : 0);
+        		actualxpos = xpos + columnSpan-1 + (paintLabel ? 1 : 0);
 
         	if (! field.isHeading()) {
 
-        		WEditor editor = WebEditorFactory.getEditor(gridTab, field, false);
+        		WEditor editor = update ? findEditor(field) : WebEditorFactory.getEditor(gridTab, field, false);
 
         		if (editor != null) // Not heading
         		{
-        			editor.getComponent().setWidgetOverride("fieldHeader", HelpController.escapeJavascriptContent(field.getHeader()));
-        			editor.getComponent().setWidgetOverride("fieldDescription", HelpController.escapeJavascriptContent(field.getDescription()));
-        			editor.getComponent().setWidgetOverride("fieldHelp", HelpController.escapeJavascriptContent(field.getHelp()));
-        			editor.getComponent().setWidgetListener("onFocus", "zWatch.fire('onFieldTooltip', this, null, this.fieldHeader(), this.fieldDescription(), this.fieldHelp());");
+        			if (!update)
+        			{
+        				editor.getComponent().setWidgetOverride("fieldHeader", HelpController.escapeJavascriptContent(field.getHeader()));
+        				editor.getComponent().setWidgetOverride("fieldDescription", HelpController.escapeJavascriptContent(field.getDescription()));
+        				editor.getComponent().setWidgetOverride("fieldHelp", HelpController.escapeJavascriptContent(field.getHelp()));
+        				editor.getComponent().setWidgetListener("onFocus", "zWatch.fire('onFieldTooltip', this, null, this.fieldHeader(), this.fieldDescription(), this.fieldHelp());");
         			
-        			editor.setGridTab(this.getGridTab());
-        			field.addPropertyChangeListener(editor);
-        			editors.add(editor);
-        			editorComps.add(editor.getComponent());
+        				editor.setGridTab(this.getGridTab());
+        				field.addPropertyChangeListener(editor);
+        				editors.add(editor);
+        				editorComps.add(editor.getComponent());
+        			}
         			if (paintLabel) {
         				Div div = new Div();
         				div.setSclass("form-label");
@@ -570,53 +660,75 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
         					div.appendChild(label.getDecorator());
         				row.appendCellChild(div,1);
         			}
-        			row.appendCellChild(editor.getComponent(), field.getColumnSpan());
+
+        			row.appendCellChild(editor.getComponent(),  columnSpan );
         			//to support float/absolute editor
         			row.getLastCell().setStyle("position: relative; overflow: visible;");
 
-        			if (editor instanceof WButtonEditor)
+        			if (!update)
         			{
-        				if (windowPanel != null)
-        					((WButtonEditor)editor).addActionListener(windowPanel);
-        			}
-        			else
-        			{
-        				editor.addValueChangeListener(dataBinder);
+	        			if (editor instanceof WButtonEditor)
+	        			{
+	        				if (windowPanel != null)
+	        					((WButtonEditor)editor).addActionListener(windowPanel);
+	        			}
+	        			else
+	        			{
+	        				editor.addValueChangeListener(dataBinder);
+	        			}
         			}
         			
         			//	Default Focus
         			if (defaultFocusField == null && field.isDefaultFocus())
         				defaultFocusField = editor;
 
-        			//stretch component to fill grid cell
-        			editor.fillHorizontal();
-        			
-        			Component fellow = editor.getComponent().getFellowIfAny(field.getColumnName());
-        			if (fellow == null) {
-        				editor.getComponent().setId(field.getColumnName());
-        			}
-
-        			//setup editor context menu
-        			WEditorPopupMenu popupMenu = editor.getPopupMenu();
-        			if (popupMenu != null)
+        			if (!update)
         			{
-        				popupMenu.addMenuListener((ContextMenuListener)editor);
-        				popupMenu.setId(field.getColumnName()+"-popup");
-        				this.appendChild(popupMenu);
-        				if (!field.isFieldOnly())
-        				{
-        					Label label = editor.getLabel();
-        					if (popupMenu.isZoomEnabled() && editor instanceof IZoomableEditor)
-        					{
-        						label.addEventListener(Events.ON_CLICK, new ZoomListener((IZoomableEditor) editor));
-        					}
-
-        					popupMenu.addContextElement(label);
-        					if (editor.getComponent() instanceof XulElement) 
-        					{
-        						popupMenu.addContextElement((XulElement) editor.getComponent());
-        					}
-        				}        				        				
+	        			//stretch component to fill grid cell
+	        			editor.fillHorizontal();
+	        			
+	        			Component fellow = editor.getComponent().getFellowIfAny(field.getColumnName());
+	        			if (fellow == null) {
+	        				editor.getComponent().setId(field.getColumnName());
+	        			}
+	
+	        			//setup editor context menu
+	        			WEditorPopupMenu popupMenu = editor.getPopupMenu();
+	        			if (popupMenu == null) 
+	        			{
+	        				popupMenu = new WEditorPopupMenu(false, false, false, false, false, false, null);
+	        				popupMenu.addSuggestion(field);
+	        			}
+	        			if (popupMenu != null)
+	        			{
+	        				if (editor instanceof ContextMenuListener)
+	        					popupMenu.addMenuListener((ContextMenuListener)editor);
+	        				popupMenu.setId(field.getColumnName()+"-popup");
+	        				this.appendChild(popupMenu);
+	        				if (!field.isFieldOnly())
+	        				{
+	        					Label label = editor.getLabel();
+	        					if (ClientInfo.isMobile())
+	        					{
+	        						WEditorPopupMenu finalPopupMenu = popupMenu;
+	        						label.addEventListener(Events.ON_CLICK, evt-> finalPopupMenu.open(label, "after_start"));
+	        					}
+	        					else
+	        					{
+		        					if (popupMenu.isZoomEnabled() && editor instanceof IZoomableEditor)
+		        					{
+		        						label.addEventListener(Events.ON_CLICK, new ZoomListener((IZoomableEditor) editor));
+		        					}
+		
+		        					popupMenu.addContextElement(label);
+		        					if (editor.getComponent() instanceof XulElement) 
+		        					{
+		        						popupMenu.addContextElement((XulElement) editor.getComponent());
+		        					}
+	        					}
+	        				} 
+	        				popupMenu.addSuggestion(field);
+	        			}      
         			}
         		}
         	}
@@ -639,10 +751,11 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
         if (rowList != null)
 			rowList.add(row);
 
-        loadToolbarButtons();
+        if (!update)
+        	loadToolbarButtons();
         		
         //create tree
-        if (gridTab.isTreeTab() && treePanel != null) {
+        if (!update && gridTab.isTreeTab() && treePanel != null) {
         	int AD_Tree_ID = Env.getContextAsInt (Env.getCtx(), getWindowNo(), "AD_Tree_ID", true);
         	int AD_Tree_ID_Default = MTree.getDefaultAD_Tree_ID (Env.getAD_Client_ID(Env.getCtx()), gridTab.getKeyColumnName());
         	
@@ -650,14 +763,29 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
     			treePanel.initTree(AD_Tree_ID, windowNo);
     			Events.echoEvent(ON_DEFER_SET_SELECTED_NODE, this, null);
     		} else if (AD_Tree_ID_Default != 0) {
-    			treePanel.initTree(AD_Tree_ID_Default, windowNo);
+    			int linkColId = MTree.get(Env.getCtx(), AD_Tree_ID_Default, null).getParent_Column_ID();
+    			String linkColName = null;
+    			int linkID = 0;
+    			if (linkColId > 0) {
+    				linkColName = MColumn.getColumnName(Env.getCtx(), linkColId);
+    				linkID = Env.getContextAsInt(Env.getCtx(), windowNo, linkColName, true);
+    			}
+    			treePanel.initTree(AD_Tree_ID_Default, windowNo, linkColName, linkID);
     			Events.echoEvent(ON_DEFER_SET_SELECTED_NODE, this, null);
     		}        	
         }
 
-        if (!gridTab.isSingleRow() && !isGridView())
+        if (!update && !gridTab.isSingleRow() && !isGridView())
         	switchRowPresentation();                
     }
+
+	private WEditor findEditor(GridField field) {
+		for(WEditor editor : editors) {
+			if (editor.getGridField() == field)
+				return editor;
+		}
+		return null;
+	}
 
 	private void loadToolbarButtons() {
 		//get extra toolbar process buttons
@@ -1064,7 +1192,8 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
         } else {
         	if (activate) {
         		formContainer.setVisible(activate);
-        		focusToFirstEditor();
+        		if (!isMobile())
+        			focusToFirstEditor();
         	}
         }
 
@@ -1200,6 +1329,8 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
     }
     
     private boolean isOpenDetailPane() {
+    	if (isMobile())
+    		return false;
     	boolean open = true;
     	int windowId = getGridTab().getAD_Window_ID();
 		int adTabId = getGridTab().getAD_Tab_ID();
@@ -1220,6 +1351,15 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 			height = Env.getPreference(Env.getCtx(), windowId, adTabId+"|DetailPane.Height", false);
 		}
     	return height;
+    }
+
+    private String widthTreePanel() {
+    	String width = null;
+    	int windowId = getGridTab().getAD_Window_ID();
+    	int adTabId = getGridTab().getAD_Tab_ID();
+    	if (windowId > 0 && adTabId > 0)
+    		width = Env.getPreference(Env.getCtx(), windowId, adTabId+"|TreePanel.Width", false);
+    	return Util.isEmpty(width) ? DEFAULT_PANEL_WIDTH : width;
     }
 
     private void navigateTo(DefaultTreeNode<MTreeNode> value) {
@@ -1252,7 +1392,7 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 			throw new AdempiereException(Msg.getMsg(Env.getCtx(),"RecordIsNotInCurrentSearch"));
 		}
 
-		windowPanel.onTreeNavigate(row);				
+		windowPanel.onTreeNavigate(gridTab, row);				
 	}
 
     /**
@@ -1339,6 +1479,21 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
         			if (isTreeDrivenByValue())
         				treePanel.prepareForRefresh();
 				}
+        		
+        		if ("Saved".equals(e.getAD_Message()) && model.find(null, gridTab.getRecord_ID()) != null && !isTreeDrivenByValue())
+        		{
+        			DefaultTreeNode<Object> treeNode = model.find(null, gridTab.getRecord_ID());
+        			if (treeNode != null) { // 
+        				MTreeNode data = (MTreeNode) treeNode.getData();
+
+        				String label = (isValueDisplayed() ? (gridTab.getValue("Value").toString() + " - ") : "") + gridTab.get_ValueAsString("Name");
+        				if (!data.getName().equals(label)) {
+        					data.setName(label);
+        					treeNode.setData(data);
+        				}
+        			}
+				}
+
         		if (refresh)
         		{
         			int AD_Tree_ID = Env.getContextAsInt (Env.getCtx(), getWindowNo(), "AD_Tree_ID", true);
@@ -1354,13 +1509,25 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
     				else
     				{
     					AD_Tree_ID = MTree.getDefaultAD_Tree_ID (Env.getAD_Client_ID(Env.getCtx()), gridTab.getKeyColumnName());
-    					treePanel.initTree(AD_Tree_ID, windowNo);
+        				treePanel.prepareForRefresh();
+            			int linkColId = MTree.get(Env.getCtx(), AD_Tree_ID, null).getParent_Column_ID();
+            			String linkColName = null;
+            			int linkID = 0;
+            			if (linkColId > 0) {
+            				linkColName = MColumn.getColumnName(Env.getCtx(), linkColId);
+            				linkID = Env.getContextAsInt(Env.getCtx(), windowNo, linkColName, true);
+            			}
+            			if (treePanel.initTree(AD_Tree_ID, windowNo, linkColName, linkID))
+            				echoDeferSetSelectedNodeEvent();
+            			else
+            				setSelectedNode(gridTab.getRecord_ID());
     				}
 					
 				}    
-        		
-        	}else if(e.isInserting() && gridTab.getRecord_ID() < 0 && gridTab.getTabLevel() > 0 )
-        	{		
+
+        	} else if (e.isInserting() && gridTab.getRecord_ID() < 0 && gridTab.getTabLevel() > 0
+        			&& gridTab.getParentTab() != null && gridTab.getParentTab().getValue("AD_Tree_ID") != null)
+        	{
     			int AD_Tree_ID = Integer.parseInt(gridTab.getParentTab().getValue("AD_Tree_ID").toString());
     			treePanel.initTree(AD_Tree_ID, windowNo);
     		}
@@ -1412,7 +1579,9 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 				String value = gridTab.getValue("Value").toString();
 				parentID = PO.retrieveIdOfParentValue(value, getTableName(), Env.getAD_Client_ID(Env.getCtx()), null);
 				parentNode = model.find(treeNode, parentID);
-				name = value + " - " + name;
+				if (isValueDisplayed()) {
+					name = value + " - " + name;
+				}
 			}
 			MTreeNode node = new MTreeNode (gridTab.getRecord_ID(), 0, name, description,
 					parentID, summary, imageIndicator, false, null);
@@ -1457,7 +1626,7 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 				}
 
 				boolean changed = false;
-				if (isTreeDrivenByValue()) {
+				if (isValueDisplayed()) {
 					String value = (String) gridTab.getValue("Value");
 					String name = (String) gridTab.getValue("Name");
 					String full = value + " - " + name;
@@ -1554,7 +1723,7 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 
 	@Override
 	public void focus() {
-		if (form.isVisible())
+		if (form.isVisible() && !isMobile())
 			this.focusToFirstEditor(true);
 		else
 			listPanel.focus();
@@ -1792,36 +1961,85 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 		return retValue;
 	}
 
+	private boolean isValueDisplayed() {
+		SimpleTreeModel model = (SimpleTreeModel)(TreeModel<?>) treePanel.getTree().getModel();
+		boolean retValue = false;
+		retValue = model.isValueDisplayed();
+		return retValue;
+	}
+
 	@Override
 	public void onPageDetached(Page page) {
 		if (formContainer.getSouth() != null) {
 			if (formContainer.getSouth().isVisible() && formContainer.getSouth().isOpen()) {
 				String height = formContainer.getSouth().getHeight();
-				if (! Util.isEmpty(height)) {
-		    		int windowId = getGridTab().getAD_Window_ID();
-		    		int adTabId = getGridTab().getAD_Tab_ID();
-		    		if (windowId > 0 && adTabId > 0) {
-		    			Query query = new Query(Env.getCtx(), MTable.get(Env.getCtx(), I_AD_Preference.Table_ID), "AD_Window_ID=? AND Attribute=? AND AD_User_ID=? AND AD_Process_ID IS NULL AND PreferenceFor = 'W'", null);
-		    			int userId = Env.getAD_User_ID(Env.getCtx());
-		    			MPreference preference = query.setOnlyActiveRecords(true)
-		    										  .setApplyAccessFilter(true)
-		    										  .setParameters(windowId, adTabId+"|DetailPane.Height", userId)
-		    										  .first();
-		    			if (preference == null || preference.getAD_Preference_ID() <= 0) {
-		    				preference = new MPreference(Env.getCtx(), 0, null);
-		    				preference.setAD_Window_ID(windowId);
-		    				preference.set_ValueOfColumn("AD_User_ID", userId); // required set_Value for System=0 user
-		    				preference.setAttribute(adTabId+"|DetailPane.Height");
-		    			}
-	    				preference.setValue(height);
-		    			preference.saveEx();
-		    			//update current context
-		    			Env.getCtx().setProperty("P"+windowId+"|"+adTabId+"|DetailPane.Height", height);
-		    		}
-				}
+				if (! Util.isEmpty(height))
+					savePreference("DetailPane.Height", height);
+			}
+		}
+		if (treePanel != null && formContainer.getWest() != null) {
+			if (formContainer.getWest().isVisible() && formContainer.getWest().isOpen()) {
+				String width = formContainer.getWest().getWidth();
+				if (! Util.isEmpty(width))
+					savePreference("TreePanel.Width", width);
 			}
 		}
 		super.onPageDetached(page);
+	}
+
+	void savePreference(String attribute, String value)
+	{
+		int windowId = getGridTab().getAD_Window_ID();
+		int adTabId = getGridTab().getAD_Tab_ID();
+		if (windowId > 0 && adTabId > 0) {
+			Query query = new Query(Env.getCtx(), MTable.get(Env.getCtx(), I_AD_Preference.Table_ID), "AD_Window_ID=? AND Attribute=? AND AD_User_ID=? AND AD_Process_ID IS NULL AND PreferenceFor = 'W'", null);
+			int userId = Env.getAD_User_ID(Env.getCtx());
+			MPreference preference = query.setOnlyActiveRecords(true)
+					.setApplyAccessFilter(true)
+					.setParameters(windowId, adTabId+"|"+attribute, userId)
+					.first();
+			if (preference == null || preference.getAD_Preference_ID() <= 0) {
+				preference = new MPreference(Env.getCtx(), 0, null);
+				preference.setAD_Window_ID(windowId);
+				preference.set_ValueOfColumn("AD_User_ID", userId); // required set_Value for System=0 user
+				preference.setAttribute(adTabId+"|"+attribute);
+			}
+			preference.setValue(value);
+			preference.saveEx();
+			//update current context
+			Env.getCtx().setProperty("P"+windowId+"|"+adTabId+"|"+attribute, value);
+		}
+	}
+
+	protected void onClientInfo() {
+		if (!uiCreated || gridTab == null) return;
+		int numCols=gridTab.getNumColumns();
+    	if (numCols <= 0) {
+    		numCols=6;
+    	}
+
+    	if (ClientInfo.maxWidth(ClientInfo.EXTRA_SMALL_WIDTH-1)) {
+    		if (numCols > 3) {
+    			numCols=3;
+    		}
+    	} else if (ClientInfo.maxWidth(ClientInfo.MEDIUM_WIDTH-1)) {
+    		if (numCols > 6) {
+    			numCols=6;
+    		}
+    	}
+		if (numCols > 0 && numCols != numberOfFormColumns) {
+			createUI(true);
+			dynamicDisplay(0);
+		}
+	};
+	
+	protected boolean isMobile() {
+		return ClientInfo.isMobile();
+	}
+	@Override
+	public void editorTraverse(Callback<WEditor> editorTaverseCallback) {
+		editorTraverse(editorTaverseCallback, editors);
+		
 	}
 	
 	// F3P: method to minimize detail tab

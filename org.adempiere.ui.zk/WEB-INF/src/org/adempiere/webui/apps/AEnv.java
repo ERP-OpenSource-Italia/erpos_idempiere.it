@@ -35,9 +35,9 @@ import java.util.logging.Level;
 
 import javax.servlet.ServletRequest;
 
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.adwindow.ADWindow;
 import org.adempiere.webui.component.Window;
-import org.adempiere.webui.desktop.IDesktop;
 import org.adempiere.webui.editor.WTableDirEditor;
 import org.adempiere.webui.info.InfoWindow;
 import org.adempiere.webui.session.SessionManager;
@@ -90,7 +90,7 @@ import com.itextpdf.text.pdf.PdfWriter;
  */
 public final class AEnv
 {
-	public static final String LOCALE = "#Locale";
+	public static final String LOCALE = Env.LOCALE;
 	
 	/**
 	 *  Show in the center of the screen.
@@ -663,15 +663,7 @@ public final class AEnv
 	 * @return Language
 	 */
 	public static Language getLanguage(Properties ctx) {
-		Locale locale = getLocale(ctx);
-		Language language = Env.getLanguage(ctx);
-		if (!language.getLocale().equals(locale)) {
-			Language tmp = Language.getLanguage(locale.toString());
-			String adLanguage = language.getAD_Language();
-			language = new Language(tmp.getName(), adLanguage, tmp.getLocale(), tmp.isDecimalPoint(),
-	    			tmp.getDateFormat().toPattern(), tmp.getMediaSize());
-		}
-		return language;
+		return Env.getLocaleLanguage(ctx);
 	}
 
 	/**
@@ -679,21 +671,7 @@ public final class AEnv
 	 * @return Locale
 	 */
 	public static Locale getLocale(Properties ctx) {
-		String value = Env.getContext(ctx, AEnv.LOCALE);
-        Locale locale = null;
-        if (value != null && value.length() > 0)
-        {
-	        String[] components = value.split("\\_");
-	        String language = components.length > 0 ? components[0] : "";
-	        String country = components.length > 1 ? components[1] : "";
-	        locale = new Locale(language, country);
-        }
-        else
-        {
-        	locale = Env.getLanguage(ctx).getLocale();
-        }
-
-        return locale;
+		return Env.getLocale(ctx);
 	}
 
 	/**
@@ -709,9 +687,15 @@ public final class AEnv
 			sb.append(prefix);
 		if (windowNo > 0){
 			sb.append(Env.getContext(ctx, windowNo, "_WinInfo_WindowName", false)).append(": ");
-			final String documentNo = Env.getContext(ctx, windowNo, "DocumentNo", false);
-			final String value = Env.getContext(ctx, windowNo, "Value", false);
-			final String name = Env.getContext(ctx, windowNo, "Name", false);
+			String documentNo = Env.getContext(ctx, windowNo, "DocumentNo", false);
+			if (Util.isEmpty(documentNo)) // try first tab
+				documentNo = Env.getContext(ctx, windowNo, 0, "DocumentNo", false);
+			String value = Env.getContext(ctx, windowNo, "Value", false);
+			if (Util.isEmpty(value)) // try first tab
+				value = Env.getContext(ctx, windowNo, 0, "Value", false);
+			String name = Env.getContext(ctx, windowNo, "Name", false);
+			if (Util.isEmpty(name)) // try first tab
+				name = Env.getContext(ctx, windowNo, 0, "Name", false);
 			if(!"".equals(documentNo)) {
 				sb.append(documentNo).append("  ");
 			}
@@ -779,11 +763,11 @@ public final class AEnv
 	}
 	
 	/**
+	 * @deprecated replace by ClientInfo.isMobile()
 	 * @return true if running on a tablet
 	 */
 	public static boolean isTablet() {
-		IDesktop appDesktop = SessionManager.getAppDesktop();
-		return appDesktop != null ? appDesktop.getClientInfo().tablet : false;
+		return ClientInfo.isMobile();
 	}
 	
 	/**
@@ -824,9 +808,9 @@ public final class AEnv
 
 	private static String m_ApplicationUrl = null;
 	public static String getApplicationUrl() {
-		String url = MSysConfig.getValue("APPLICATION_URL", Env.getAD_Client_ID(Env.getCtx()));
+		String url = MSysConfig.getValue(MSysConfig.APPLICATION_URL, Env.getAD_Client_ID(Env.getCtx()));
 		if (!Util.isEmpty(url) && !url.equals("USE_HARDCODED"))
-			return MSysConfig.getValue("APPLICATION_URL", Env.getAD_Client_ID(Env.getCtx()));
+			return MSysConfig.getValue(MSysConfig.APPLICATION_URL, Env.getAD_Client_ID(Env.getCtx()));
 		if (m_ApplicationUrl != null)
 			return m_ApplicationUrl;
 		int port = Executions.getCurrent().getServerPort();

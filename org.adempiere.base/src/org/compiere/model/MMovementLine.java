@@ -17,6 +17,7 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.util.List;
 import java.util.Properties;
@@ -38,7 +39,7 @@ public class MMovementLine extends X_M_MovementLine
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -4078367839033015886L;
+	private static final long serialVersionUID = -5753062311388766921L;
 
 	/**
 	 * 	Standard Cosntructor
@@ -137,14 +138,14 @@ public class MMovementLine extends X_M_MovementLine
 			if (product != null)
 			{
 				int precision = product.getUOMPrecision(); 
-				MovementQty = MovementQty.setScale(precision, BigDecimal.ROUND_HALF_UP);
+				MovementQty = MovementQty.setScale(precision, RoundingMode.HALF_UP);
 			}
 		}
 		super.setMovementQty(MovementQty);
 	}	//	setMovementQty
 	
 	/** Parent							*/
-	private MMovement m_parent = null;
+	protected MMovement m_parent = null;
 	
 	/**
 	 * get Parent
@@ -208,22 +209,6 @@ public class MMovementLine extends X_M_MovementLine
 		if (newRecord || is_ValueChanged(COLUMNNAME_MovementQty))
 			setMovementQty(getMovementQty());
 
-		//      Mandatory Instance
-		/* IDEMPIERE-1770 - ASI validation must be moved to MMovement.prepareIt, saving a line without ASI is ok on draft
-		MProduct product = getProduct();
-		if (getM_AttributeSetInstance_ID() == 0) {
-			if (product != null && product.isASIMandatory(true)) {
-				if (product.getAttributeSet()==null) {
-					log.saveError("NoAttributeSet", product.getValue());
-					return false;
-				}
-				if (! product.getAttributeSet().excludeTableEntry(MMovementLine.Table_ID, true)) {  // outgoing
-					log.saveError("FillMandatory", Msg.getElement(getCtx(), COLUMNNAME_M_AttributeSetInstance_ID));
-					return false;
-				}
-			}
-		}
-		*/
 		if (getM_AttributeSetInstanceTo_ID() == 0)
 		{
 			//instance id default to same for movement between locator 
@@ -233,19 +218,6 @@ public class MMovementLine extends X_M_MovementLine
 					setM_AttributeSetInstanceTo_ID(getM_AttributeSetInstance_ID());
 			}
 
-			/* IDEMPIERE-1770 - ASI validation must be moved to MMovement.prepareIt, saving a line without ASI is ok on draft
-			if (product != null && product.isASIMandatory(false) && getM_AttributeSetInstanceTo_ID() == 0)
-			{
-				if (product.getAttributeSet()==null) {
-					log.saveError("NoAttributeSet", product.getValue());
-					return false;
-				}
-				if (! product.getAttributeSet().excludeTableEntry(MMovementLine.Table_ID, false)) { // incoming
-					log.saveError("FillMandatory", Msg.getElement(getCtx(), COLUMNNAME_M_AttributeSetInstanceTo_ID));
-					return false;
-				}
-			}
-			*/
 		}       //      ASI
 
 		return true;

@@ -26,6 +26,7 @@ import java.util.logging.Level;
 
 import org.adempiere.exceptions.DBException;
 import org.adempiere.model.MTabCustomization;
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.adwindow.GridView;
 import org.adempiere.webui.component.Button;
@@ -50,6 +51,7 @@ import org.compiere.model.MTab;
 import org.compiere.model.Query;
 import org.compiere.model.X_AD_Tab_Customization;
 import org.compiere.util.CLogger;
+import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.NamePair;
@@ -130,7 +132,7 @@ public class CustomizeGridViewPanel extends Panel
 
 	private boolean uiCreated;
 	private boolean m_saved = false;
-	private ConfirmPanel confirmPanel = new ConfirmPanel(true);
+	private ConfirmPanel confirmPanel = new ConfirmPanel(true, false, true, false, false, false);
 	
 /**
 	 * Static Layout
@@ -184,8 +186,11 @@ public class CustomizeGridViewPanel extends Panel
 		EventListener<Event> crossListMouseListener = new DragListener();
 		yesList.addOnDropListener(crossListMouseListener);
 		noList.addOnDropListener(crossListMouseListener);
-		yesList.setItemDraggable(true);
-		noList.setItemDraggable(true);
+		if (!ClientInfo.isMobile()) 
+		{
+			yesList.setItemDraggable(true);
+			noList.setItemDraggable(true);
+		}
 
 		actionListener = new EventListener<Event>()
 		{
@@ -262,7 +267,8 @@ public class CustomizeGridViewPanel extends Panel
 		chkSaveWidth.setLabel(Msg.getMsg(Env.getCtx(), "SaveColumnWidth"));
 
 		sep = new Separator("vertical");
-		sep.setSpacing("200px");
+		if (ClientInfo.minWidth(ClientInfo.SMALL_WIDTH))
+			sep.setSpacing("200px");
 		southPanel.appendChild(sep);
 		lblGridMode.setValue(Msg.getMsg(Env.getCtx(), "OpenInGridMode"));
 		southPanel.appendChild(lblGridMode);
@@ -285,6 +291,9 @@ public class CustomizeGridViewPanel extends Panel
 				} else if (event.getTarget().equals(
 						confirmPanel.getButton(ConfirmPanel.A_CANCEL))) {
 					getParent().detach();
+				} else if (event.getTarget().equals(confirmPanel.getButton(ConfirmPanel.A_RESET))) {
+					tableSeqs.clear();
+					loadData();
 				}
 			}
 

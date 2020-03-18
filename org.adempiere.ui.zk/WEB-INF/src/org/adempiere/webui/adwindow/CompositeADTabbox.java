@@ -214,7 +214,7 @@ public class CompositeADTabbox extends AbstractADTabbox
 					return false;
 				} 
 				tabPanel.getGridTab().dataRefreshAll(true, true);
-				tabPanel.getGridTab().refreshParentTabs(); // F3P: refresh parent tabs
+				tabPanel.getGridTab().refreshParentTabs();
 				return true;
 			}
 
@@ -657,7 +657,7 @@ public class CompositeADTabbox extends AbstractADTabbox
 						detailPane.setSelectedIndex(0);
 						activateDetailIfVisible();
 					} else {
-						if (((ADTabpanel) headerTab).isDetailVisible()) {
+						if (((ADTabpanel) headerTab).isDetailVisible() && detailPane.getSelectedADTabpanel() != null) {
 							IADTabpanel selectDetailPanel = detailPane.getSelectedADTabpanel();
 							if (!selectDetailPanel.isVisible()) {							
 								selectDetailPanel.setVisible(true);

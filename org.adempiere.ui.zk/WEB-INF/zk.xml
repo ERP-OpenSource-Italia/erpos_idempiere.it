@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE zk>
 
 	<!--
 		zk.xml Copyright (C) 2006 Potix Corporation. All Rights Reserved.
@@ -24,7 +25,6 @@
 
 	<!--  false to use compress js which is much smaller. change to true if you need to debug -->
 	<client-config>
-		<debug-js>true</debug-js>
 		<processing-prompt-delay>500</processing-prompt-delay>
 	</client-config>
 
@@ -61,6 +61,10 @@
  		<device-type>ajax</device-type>
       	<server-push-class>fi.jawsy.jawwa.zk.atmosphere.AtmosphereServerPush</server-push-class>
 	</device-config>
+	<!-- device-config>
+ 		<device-type>ajax</device-type>
+      	<server-push-class>org.idempiere.ui.zk.websocket.WebSocketServerPush</server-push-class>
+	</device-config -->
 
 	<!-- true for better performance and lower resource usage -->
 	<system-config>
@@ -94,7 +98,7 @@
 	</library-property>	
 	<!-- turn off borderlayout animation -->	
 	<library-property>
-    	<name>org.zkoss.zul.borderlayout.animation.disabed</name>
+    	<name>org.zkoss.zul.borderlayout.animation.disabled</name>
     	<value>true</value>
 	</library-property>
 	<library-property>
@@ -105,7 +109,18 @@
 	    <name>org.zkoss.zul.grid.rod</name>
 	    <value>true</value>
 	</library-property>
-		
+    <library-property>
+       <name>org.zkoss.zk.ui.EventListener.duplicateIgnored</name>
+       <value>true</value>
+    </library-property>
+    <library-property>
+    	<name>org.zkoss.zul.nativebar</name>
+    	<value>true</value>
+    </library-property>
+    <library-property>
+        <name>org.zkoss.theme.preferred</name>
+        <value>breeze</value>
+    </library-property>
 	<preference>
     	<name>org.zkoss.zk.ui.WebApp.name</name>
     	<value>iDempiere</value>

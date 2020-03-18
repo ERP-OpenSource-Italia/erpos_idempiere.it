@@ -17,6 +17,7 @@
 package org.compiere.acct;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -124,7 +125,7 @@ public final class FactLine extends X_Fact_Acct
 		reversal.setC_LocTo_ID(getC_LocTo_ID());
 		reversal.setC_LocFrom_ID(getC_LocFrom_ID());
 		reversal.setUser1_ID(getUser1_ID());
-		reversal.setUser2_ID(getUser1_ID());
+		reversal.setUser2_ID(getUser2_ID());
 		reversal.setUserElement1_ID(getUserElement1_ID());
 		reversal.setUserElement2_ID(getUserElement2_ID());
 		
@@ -252,14 +253,14 @@ public final class FactLine extends X_Fact_Acct
 		int precision = MCurrency.getStdPrecision(getCtx(), C_Currency_ID);
 		if (AmtSourceDr != null && AmtSourceDr.scale() > precision)
 		{
-			BigDecimal AmtSourceDr1 = AmtSourceDr.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			BigDecimal AmtSourceDr1 = AmtSourceDr.setScale(precision, RoundingMode.HALF_UP);
 			if (AmtSourceDr1.compareTo(AmtSourceDr) != 0)
 				log.warning("Source DR Precision " + AmtSourceDr + " -> " + AmtSourceDr1);
 			setAmtSourceDr(AmtSourceDr1);
 		}
 		if (AmtSourceCr != null && AmtSourceCr.scale() > precision)
 		{
-			BigDecimal AmtSourceCr1 = AmtSourceCr.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			BigDecimal AmtSourceCr1 = AmtSourceCr.setScale(precision, RoundingMode.HALF_UP);
 			if (AmtSourceCr1.compareTo(AmtSourceCr) != 0)
 				log.warning("Source CR Precision " + AmtSourceCr + " -> " + AmtSourceCr1);
 			setAmtSourceCr(AmtSourceCr1);
@@ -326,14 +327,14 @@ public final class FactLine extends X_Fact_Acct
 		int precision = MCurrency.getStdPrecision(getCtx(), C_Currency_ID);
 		if (AmtAcctDr != null && AmtAcctDr.scale() > precision)
 		{
-			BigDecimal AmtAcctDr1 = AmtAcctDr.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			BigDecimal AmtAcctDr1 = AmtAcctDr.setScale(precision, RoundingMode.HALF_UP);
 			if (AmtAcctDr1.compareTo(AmtAcctDr) != 0)
 				log.warning("Accounted DR Precision " + AmtAcctDr + " -> " + AmtAcctDr1);
 			setAmtAcctDr(AmtAcctDr1);
 		}
 		if (AmtAcctCr != null && AmtAcctCr.scale() > precision)
 		{
-			BigDecimal AmtAcctCr1 = AmtAcctCr.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			BigDecimal AmtAcctCr1 = AmtAcctCr.setScale(precision, RoundingMode.HALF_UP);
 			if (AmtAcctCr1.compareTo(AmtAcctCr) != 0)
 				log.warning("Accounted CR Precision " + AmtAcctCr + " -> " + AmtAcctCr1);
 			setAmtAcctCr(AmtAcctCr1);
@@ -728,7 +729,7 @@ public final class FactLine extends X_Fact_Acct
 		
 		Timestamp convDate = getDateAcct();
 
-		if ( m_docLine != null && ( m_doc instanceof Doc_BankStatement || m_doc instanceof Doc_AllocationHdr ) )
+		if (m_docLine != null && m_doc instanceof Doc_BankStatement)
 			convDate = m_docLine.getDateConv();				
 			
 		
@@ -941,8 +942,8 @@ public final class FactLine extends X_Fact_Acct
 			if (getUser2_ID() == 0)
 				setUser2_ID (m_acct.getUser2_ID());
 			
-			//  Revenue Recognition for AR Invoices
-			if (m_doc.getDocumentType().equals(Doc.DOCTYPE_ARInvoice) 
+			//  Revenue Recognition for AR/AP Invoices
+			if ((m_doc.getDocumentType().equals(Doc.DOCTYPE_ARInvoice) || m_doc.getDocumentType().equals(Doc.DOCTYPE_APInvoice)) 
 				&& m_docLine != null 
 				&& m_docLine.getC_RevenueRecognition_ID() != 0)
 			{
@@ -1004,14 +1005,13 @@ public final class FactLine extends X_Fact_Acct
 		int	C_Campaign_ID, int C_Activity_ID, 
 		int User1_ID, int User2_ID, int UserElement1_ID, int UserElement2_ID)
 	{
-		if (log.isLoggable(Level.FINE)) log.fine("From Accout_ID=" + Account_ID);
+		if (log.isLoggable(Level.FINE)) log.fine("From Account_ID=" + Account_ID);
 		//  get VC for P_Revenue (from Product)
 		MAccount revenue = MAccount.get(getCtx(),
 			AD_Client_ID, AD_Org_ID, getC_AcctSchema_ID(), Account_ID, C_SubAcct_ID,
 			M_Product_ID, C_BPartner_ID, AD_OrgTrx_ID, C_LocFrom_ID, C_LocTo_ID, C_SRegion_ID, 
 			C_Project_ID, C_Campaign_ID, C_Activity_ID, 
-			User1_ID, User2_ID, UserElement1_ID, UserElement2_ID,
-			get_TrxName());
+			User1_ID, User2_ID, UserElement1_ID, UserElement2_ID, get_TrxName());
 		if (revenue != null && revenue.get_ID() == 0)
 			revenue.saveEx();
 		if (revenue == null || revenue.get_ID() == 0)
@@ -1019,16 +1019,25 @@ public final class FactLine extends X_Fact_Acct
 			log.severe ("Revenue_Acct not found");
 			return Account_ID;
 		}
+		
+		int existing = DB.getSQLValue(get_TrxName(), "SELECT vc.Account_ID FROM C_RevenueRecognition_Plan rp" +
+				" JOIN C_ValidCombination vc ON rp.UnearnedRevenue_Acct=vc.C_ValidCombination_ID" + 
+				" WHERE rp.C_InvoiceLine_ID = ? AND rp.C_AcctSchema_ID=?"
+				, C_InvoiceLine_ID, getC_AcctSchema_ID());
+		if ( existing > 0 )
+			return existing;
+		
+		
 		int P_Revenue_Acct = revenue.get_ID();
 
 		//  get Unearned Revenue Acct from BPartner Group
 		int UnearnedRevenue_Acct = 0;
 		int new_Account_ID = 0;
 		String sql = "SELECT ga.UnearnedRevenue_Acct, vc.Account_ID "
-				+ "FROM C_BP_Group_Acct ga, C_BPartner p, C_ValidCombination vc "
-				+ "WHERE ga.C_BP_Group_ID=p.C_BP_Group_ID"
-				+ " AND ga.UnearnedRevenue_Acct=vc.C_ValidCombination_ID"
-				+ " AND ga.C_AcctSchema_ID=? AND p.C_BPartner_ID=?";
+			+ "FROM C_BP_Group_Acct ga, C_BPartner p, C_ValidCombination vc "
+			+ "WHERE ga.C_BP_Group_ID=p.C_BP_Group_ID"
+			+ " AND ga.UnearnedRevenue_Acct=vc.C_ValidCombination_ID"
+			+ " AND ga.C_AcctSchema_ID=? AND p.C_BPartner_ID=?";
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
@@ -1056,12 +1065,19 @@ public final class FactLine extends X_Fact_Acct
 			log.severe ("UnearnedRevenue_Acct not found");
 			return Account_ID;
 		}
+		
+		MAccount unearned = MAccount.get(getCtx(),
+				AD_Client_ID, AD_Org_ID, getC_AcctSchema_ID(), new_Account_ID, C_SubAcct_ID,
+				M_Product_ID, C_BPartner_ID, AD_OrgTrx_ID, C_LocFrom_ID, C_LocTo_ID, C_SRegion_ID, 
+				C_Project_ID, C_Campaign_ID, C_Activity_ID, 
+				User1_ID, User2_ID, UserElement1_ID, UserElement2_ID, get_TrxName());
 
-		MRevenueRecognitionPlan plan = new MRevenueRecognitionPlan(getCtx(), 0, null);
+		MRevenueRecognitionPlan plan = new MRevenueRecognitionPlan(getCtx(), 0, get_TrxName());
+		plan.setAD_Org_ID(AD_Org_ID);
 		plan.setC_RevenueRecognition_ID (C_RevenueRecognition_ID);
 		plan.setC_AcctSchema_ID (getC_AcctSchema_ID());
 		plan.setC_InvoiceLine_ID (C_InvoiceLine_ID);
-		plan.setUnEarnedRevenue_Acct (UnearnedRevenue_Acct);
+		plan.setUnEarnedRevenue_Acct (unearned.getC_ValidCombination_ID());
 		plan.setP_Revenue_Acct (P_Revenue_Acct);
 		plan.setC_Currency_ID (getC_Currency_ID());
 		plan.setTotalAmt (getAcctBalance());
@@ -1070,7 +1086,7 @@ public final class FactLine extends X_Fact_Acct
 			log.severe ("Plan NOT created");
 			return Account_ID;
 		}
-		if (log.isLoggable(Level.FINE)) log.fine("From Acctount_ID=" + Account_ID + " to " + new_Account_ID
+		if (log.isLoggable(Level.FINE)) log.fine("From Account_ID=" + Account_ID + " to " + new_Account_ID
 			+ " - Plan from UnearnedRevenue_Acct=" + UnearnedRevenue_Acct + " to Revenue_Acct=" + P_Revenue_Acct);
 		return new_Account_ID;
 	}   //  createRevenueRecognition

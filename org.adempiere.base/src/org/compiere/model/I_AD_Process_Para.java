@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Process_Para
  *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @version Release 6.2
  */
 public interface I_AD_Process_Para 
 {
@@ -367,6 +367,24 @@ public interface I_AD_Process_Para
 	  * Alphanumeric identifier of the entity
 	  */
 	public String getName();
+
+    /** Column name Placeholder */
+    public static final String COLUMNNAME_Placeholder = "Placeholder";
+
+	/** Set Placeholder	  */
+	public void setPlaceholder (String Placeholder);
+
+	/** Get Placeholder	  */
+	public String getPlaceholder();
+
+    /** Column name Placeholder2 */
+    public static final String COLUMNNAME_Placeholder2 = "Placeholder2";
+
+	/** Set Placeholder2	  */
+	public void setPlaceholder2 (String Placeholder2);
+
+	/** Get Placeholder2	  */
+	public String getPlaceholder2();
 
     /** Column name ReadOnlyLogic */
     public static final String COLUMNNAME_ReadOnlyLogic = "ReadOnlyLogic";

@@ -20,6 +20,8 @@ import java.sql.ResultSet;
 import java.util.List;
 import java.util.Properties;
 
+import org.adempiere.exceptions.AdempiereException;
+
 
 public class MViewComponent extends X_AD_ViewComponent {
 
@@ -76,6 +78,7 @@ public class MViewComponent extends X_AD_ViewComponent {
 		
 		Query query = new Query(getCtx(), MViewColumn.Table_Name, MViewColumn.COLUMNNAME_AD_ViewComponent_ID + "=?", get_TrxName());
 		query.setParameters(getAD_ViewComponent_ID());
+		query.setOnlyActiveRecords(true);
 		query.setOrderBy("SeqNo, AD_ViewColumn_ID");
 		List<MViewColumn> list = query.<MViewColumn>list();
 		
@@ -113,6 +116,9 @@ public class MViewComponent extends X_AD_ViewComponent {
 					vc = element;
 					break;
 				}
+			}
+			if (vc == null) {
+				throw new AdempiereException("Cannot find element for " + colName + ".  Tip: all components must have the same number and names of columns");
 			}
 			if (i>0)
 				sb.append(", ");

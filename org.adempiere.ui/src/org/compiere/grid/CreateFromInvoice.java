@@ -14,6 +14,7 @@
 package org.compiere.grid;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -30,6 +31,7 @@ import org.compiere.model.MInOutLine;
 import org.compiere.model.MInvoice;
 import org.compiere.model.MInvoiceLine;
 import org.compiere.model.MInvoicePaySchedule;
+import org.compiere.model.MMatchInv;
 import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
 import org.compiere.model.MOrderPaySchedule;
@@ -267,7 +269,7 @@ public abstract class CreateFromInvoice extends CreateFrom
 			while (rs.next())
 			{
 				Vector<Object> line = new Vector<Object>(7);
-				line.add(new Boolean(false));           //  0-Selection
+				line.add(Boolean.FALSE);           //  0-Selection
 				BigDecimal qtyMovement = rs.getBigDecimal(1);
 				BigDecimal multiplier = rs.getBigDecimal(2);
 				BigDecimal qtyEntered = qtyMovement.multiply(multiplier);
@@ -361,7 +363,7 @@ public abstract class CreateFromInvoice extends CreateFrom
 	        while (rs.next())
             {
 	            Vector<Object> line = new Vector<Object>(7);
-	            line.add(new Boolean(false));   // 0-Selection
+	            line.add(Boolean.FALSE);   // 0-Selection
 	            line.add(rs.getBigDecimal(3));  // 1-Qty
 	            KeyNamePair pp = new KeyNamePair(rs.getInt(6), rs.getString(7));
 	            line.add(pp); // 2-UOM
@@ -399,7 +401,7 @@ public abstract class CreateFromInvoice extends CreateFrom
 	protected void configureMiniTable (IMiniTable miniTable)
 	{
 		miniTable.setColumnClass(0, Boolean.class, false);      //  0-Selection
-		miniTable.setColumnClass(1, BigDecimal.class, true);        //  1-Qty
+		miniTable.setColumnClass(1, BigDecimal.class, false);        //  1-Qty
 		miniTable.setColumnClass(2, String.class, true);        //  2-UOM
 		miniTable.setColumnClass(3, String.class, true);        //  3-Product
 		miniTable.setColumnClass(4, String.class, true);        //  4-VendorProductNo
@@ -491,7 +493,7 @@ public abstract class CreateFromInvoice extends CreateFrom
 				MUOM uom = MUOM.get(Env.getCtx(), C_UOM_ID);
 				int precision = uom.getStdPrecision();
 				//End
-				QtyEntered = QtyEntered.setScale(precision, BigDecimal.ROUND_HALF_DOWN);
+				QtyEntered = QtyEntered.setScale(precision, RoundingMode.HALF_DOWN);
 				//
 				if (log.isLoggable(Level.FINE)) log.fine("Line QtyEntered=" + QtyEntered
 					+ ", Product_ID=" + M_Product_ID
@@ -547,7 +549,12 @@ public abstract class CreateFromInvoice extends CreateFrom
 						for (int j = 0; j < lines.length; j++)
 						{
 							MInOutLine line = lines[j];
-							if (line.getQtyEntered().compareTo(QtyEntered) == 0)
+							// qty matched
+							BigDecimal qtyMatched = Env.ZERO;
+							for (MMatchInv match : MMatchInv.getInOutLine(Env.getCtx(), line.getM_InOutLine_ID(), trxName)) {
+								qtyMatched = qtyMatched.add(match.getQty());
+							}
+							if (line.getQtyEntered().subtract(qtyMatched).compareTo(QtyEntered) == 0)
 							{
 								inoutLine = line;
 								M_InOutLine_ID = inoutLine.getM_InOutLine_ID();
@@ -640,7 +647,7 @@ public abstract class CreateFromInvoice extends CreateFrom
 				BigDecimal igt = invoice.getGrandTotal();
 				BigDecimal percent = Env.ONE;
 				if (ogt.compareTo(igt) != 0)
-					percent = igt.divide(ogt, 10, BigDecimal.ROUND_HALF_UP);
+					percent = igt.divide(ogt, 10, RoundingMode.HALF_UP);
 				MCurrency cur = MCurrency.get(p_order.getCtx(), p_order.getC_Currency_ID());
 				int scale = cur.getStdPrecision();
 			
@@ -650,7 +657,7 @@ public abstract class CreateFromInvoice extends CreateFrom
 					if (percent != Env.ONE) {
 						BigDecimal propDueAmt = ops.getDueAmt().multiply(percent);
 						if (propDueAmt.scale() > scale)
-							propDueAmt = propDueAmt.setScale(scale, BigDecimal.ROUND_HALF_UP);
+							propDueAmt = propDueAmt.setScale(scale, RoundingMode.HALF_UP);
 						ips.setDueAmt(propDueAmt);
 					}
 					ips.setC_Invoice_ID(invoice.getC_Invoice_ID());

@@ -40,8 +40,10 @@ import org.adempiere.pipo2.PackOut;
 import org.adempiere.pipo2.PackoutItem;
 import org.adempiere.pipo2.SQLElementParameters;
 import org.compiere.model.X_AD_Package_Imp_Detail;
+import org.compiere.util.CacheMgt;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
+import org.compiere.util.Util;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
@@ -59,16 +61,17 @@ public class SQLMandatoryElementHandler extends AbstractElementHandler {
 		if (sql.endsWith(";") && !(sql.toLowerCase().endsWith("end;")))
 			sql = sql.substring(0, sql.length() - 1);
 		sql = Env.parseContext(Env.getCtx(), 0, sql, false);
+		int count = 0;
 		PreparedStatement pstmt = null;
 		X_AD_Package_Imp_Detail impDetail = createImportDetail(ctx, element.qName, "", 0);
 		try {
 			pstmt = DB.prepareStatement(sql, getTrxName(ctx));
 			if (DBType.equals("ALL")) {
-				int n = pstmt.executeUpdate();
-				if (log.isLoggable(Level.INFO)) log.info("Executed SQL Mandatory: "+ getStringValue(element, "statement") + " ReturnValue="+n);
+				count = pstmt.executeUpdate();
+				if (log.isLoggable(Level.INFO)) log.info("Executed SQL Mandatory: "+ getStringValue(element, "statement") + " ReturnValue="+count);
 			} else if (DB.isOracle() && DBType.equals("Oracle")) {
-				int n = pstmt.executeUpdate();
-				if (log.isLoggable(Level.INFO)) log.info("Executed SQL Mandatory for Oracle: "+ getStringValue(element, "statement") + " ReturnValue="+n);
+				count = pstmt.executeUpdate();
+				if (log.isLoggable(Level.INFO)) log.info("Executed SQL Mandatory for Oracle: "+ getStringValue(element, "statement") + " ReturnValue="+count);
 			} else if (DB.isPostgreSQL()
 					 && (   DBType.equals("Postgres")
 						 || DBType.equals("PostgreSQL")  // backward compatibility with old packages developed by hand
@@ -82,13 +85,14 @@ public class SQLMandatoryElementHandler extends AbstractElementHandler {
 				Statement stmt = null;
 				try {
 					stmt = pstmt.getConnection().createStatement();
-					int n = stmt.executeUpdate (sql);
-					if (log.isLoggable(Level.INFO)) log.info("Executed SQL Mandatory for PostgreSQL: "+ getStringValue(element,"statement") + " ReturnValue="+n);
+					count = stmt.executeUpdate (sql);
+					if (log.isLoggable(Level.INFO)) log.info("Executed SQL Mandatory for PostgreSQL: "+ getStringValue(element,"statement") + " ReturnValue="+count);
 				} finally {
 					DB.close(stmt);
 					stmt = null;
 				}
 			}
+			logImportDetail (ctx, impDetail, 1, "SQLMandatory",count,"Execute");
 			//F3P advanced packin backup
 			if(STDSysConfig.isAdvancedPackinBackup())
 			{
@@ -96,11 +100,19 @@ public class SQLMandatoryElementHandler extends AbstractElementHandler {
 				LITMPackageImpDetail.setSQLStatement(impDetail, sql);
 			}
 			
-			logImportDetail (ctx, impDetail, 1, "SQLMandatory",1,"Execute");
 			ctx.packIn.getNotifier().addSuccessLine("-> " + sql);
+			// Cache Reset when deleting records via SQL
+			if (sql.toLowerCase().startsWith("delete from ")) {
+				String[] words = sql.split("[ \r\n]");
+				String table = words[2];
+				String tableName = DB.getSQLValueString(null, "SELECT TableName FROM AD_Table WHERE LOWER(TableName)=?", table.toLowerCase());
+				if (! Util.isEmpty(tableName)) {
+					CacheMgt.get().reset(tableName);
+				}
+			}
 		} catch (Exception e)	{
 			ctx.packIn.getNotifier().addFailureLine("SQL Mandatory failed, error (" + e.getLocalizedMessage() + "):");
-			logImportDetail (ctx, impDetail, 0, "SQLMandatory",1,"Execute");
+			logImportDetail (ctx, impDetail, 0, "SQLMandatory",-1,"Execute");
 			ctx.packIn.getNotifier().addFailureLine("-> " + sql);
 			log.log(Level.SEVERE,"SQLMandatory", e);
 			throw new AdempiereException(e);

@@ -31,6 +31,7 @@ import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.NamePair;
+import org.compiere.util.Util;
 
 /**
  *	Warehouse Locator Lookup Model.
@@ -228,7 +229,7 @@ public final class MLocatorLookup extends Lookup implements Serializable
 		//
 		int key = loc.getM_Locator_ID();
 		if (saveInCache)
-			m_lookup.put(new Integer(key), loc);
+			m_lookup.put(Integer.valueOf(key), loc);
 		NamePair retValue = new KeyNamePair(key, loc.toString());
 		return retValue;
 	}	//	getDirect
@@ -255,7 +256,7 @@ public final class MLocatorLookup extends Lookup implements Serializable
 			return null;
 		}
 		//
-		return new MLocator (m_ctx, M_Locator_ID, trxName);
+		return Util.isEmpty(trxName) ? MLocator.get(m_ctx, M_Locator_ID) : new MLocator (m_ctx, M_Locator_ID, trxName);
 	}	//	getMLocator
 
 	/**
@@ -328,7 +329,7 @@ public final class MLocatorLookup extends Lookup implements Serializable
 			int local_only_warehouse_id = getOnly_Warehouse_ID(); // [ 1674891 ] MLocatorLookup - weird error 
 			int local_only_product_id = getOnly_Product_ID();
 			
-			StringBuilder sql = new StringBuilder("SELECT M_Locator.* FROM M_Locator ")
+			StringBuilder sql = new StringBuilder("SELECT M_Locator.M_Locator_ID FROM M_Locator ")
 				.append(" INNER JOIN M_Warehouse wh ON (wh.M_Warehouse_ID=M_Locator.M_Warehouse_ID) ")
 				.append(" WHERE M_Locator.IsActive='Y' ")
 				.append(" AND wh.IsActive='Y'");
@@ -372,9 +373,9 @@ public final class MLocatorLookup extends Lookup implements Serializable
 				//
 				while (rs.next())
 				{
-					MLocator loc = new MLocator(m_ctx, rs, null);
-					int M_Locator_ID = loc.getM_Locator_ID();
-					m_lookup.put(new Integer(M_Locator_ID), loc);
+					int M_Locator_ID = rs.getInt(1);
+					MLocator loc = MLocator.get(m_ctx, M_Locator_ID);
+					m_lookup.put(Integer.valueOf(M_Locator_ID), loc);
 				}
 			}
 			catch (SQLException e)

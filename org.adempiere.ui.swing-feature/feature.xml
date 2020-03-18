@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
-      id="org.adempiere.ui.swing"
+      id="org.adempiere.ui.swing.feature"
       label="Swing Client-feature"
-      version="4.1.0.qualifier">
+      version="6.2.0.qualifier"
+      provider-name="iDempiere Community">
 
    <description url="http://www.example.com/description">
       [Enter Feature Description here.]
@@ -17,7 +18,7 @@
    </license>
 
    <requires>
-      <import feature="org.adempiere.base" version="0.0.0"/>
+      <import feature="org.adempiere.base.feature" version="0.0.0"/>
    </requires>
 
    <plugin
@@ -41,7 +42,7 @@
          unpack="false"/>
 
    <plugin
-         id="org.eclipse.jdt.core.compiler.batch"
+         id="org.eclipse.jdt.core"
          download-size="0"
          install-size="0"
          version="0.0.0"

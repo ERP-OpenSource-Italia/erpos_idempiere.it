@@ -33,6 +33,7 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
 import org.compiere.util.Util;
 
 /**
@@ -53,7 +54,7 @@ public class MInventory extends X_M_Inventory implements DocAction
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -2155186682727239214L;
+	private static final long serialVersionUID = 4395759120481570701L;
 	/** Reversal Indicator			*/
 	public static String	REVERSE_INDICATOR = "^";
 	
@@ -65,7 +66,7 @@ public class MInventory extends X_M_Inventory implements DocAction
 	 */
 	public static MInventory get (Properties ctx, int M_Inventory_ID)
 	{
-		Integer key = new Integer (M_Inventory_ID);
+		Integer key = Integer.valueOf(M_Inventory_ID);
 		MInventory retValue = (MInventory) s_cache.get (key);
 		if (retValue != null)
 			return retValue;
@@ -76,7 +77,7 @@ public class MInventory extends X_M_Inventory implements DocAction
 	} //	get
 
 	/**	Cache						*/
-	private static CCache<Integer,MInventory> s_cache = new CCache<Integer,MInventory>(Table_Name, 5, 5);
+	protected static CCache<Integer,MInventory> s_cache = new CCache<Integer,MInventory>(Table_Name, 5, 5);
 
 
 	/**
@@ -137,7 +138,7 @@ public class MInventory extends X_M_Inventory implements DocAction
 	
 	
 	/**	Lines						*/
-	private MInventoryLine[]	m_lines = null;
+	protected MInventoryLine[]	m_lines = null;
 	
 	/**
 	 * 	Get Lines
@@ -254,6 +255,14 @@ public class MInventory extends X_M_Inventory implements DocAction
 			log.saveError("FillMandatory", Msg.getElement(getCtx(), COLUMNNAME_C_DocType_ID));
 			return false;
 		}
+		// IDEMPIERE-1887 can make inconsistent data from physical inventory window
+		if (!newRecord && is_ValueChanged(COLUMNNAME_M_Warehouse_ID)) {
+			int cnt = DB.getSQLValueEx(get_TrxName(), "SELECT COUNT(*) FROM M_InventoryLine WHERE M_Inventory_ID=?", getM_Inventory_ID());
+			if (cnt > 0) {
+				log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeWarehouse"));
+				return false;
+			}
+		}
 		return true;
 	}	//	beforeSave
 	
@@ -289,9 +298,9 @@ public class MInventory extends X_M_Inventory implements DocAction
 	}	//	processIt
 	
 	/**	Process Message 			*/
-	private String		m_processMsg = null;
+	protected String		m_processMsg = null;
 	/**	Just Prepared Flag			*/
-	private boolean		m_justPrepared = false;
+	protected boolean		m_justPrepared = false;
 
 	/**
 	 * 	Unlock Document.
@@ -343,7 +352,7 @@ public class MInventory extends X_M_Inventory implements DocAction
 				MProduct product = MProduct.get(getCtx(), line.getM_Product_ID());
 				if (product != null && product.isASIMandatory(line.isSOTrx()))
 				{
-					if (! product.getAttributeSet().excludeTableEntry(MInventoryLine.Table_ID, line.isSOTrx())) {
+					if (product.getAttributeSet() != null && !product.getAttributeSet().excludeTableEntry(MInventoryLine.Table_ID, line.isSOTrx())) {
 						MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 						String docSubTypeInv = dt.getDocSubTypeInv();
 						BigDecimal qtyDiff = line.getQtyInternalUse();
@@ -574,7 +583,7 @@ public class MInventory extends X_M_Inventory implements DocAction
 						Timestamp dateMPolicy= qtyDiff.signum() > 0 ? getMovementDate() : null;
 						if (line.getM_AttributeSetInstance_ID() > 0)
 						{
-							Timestamp t = MStorageOnHand.getDateMaterialPolicy(line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(), line.get_TrxName());
+							Timestamp t = MStorageOnHand.getDateMaterialPolicy(line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(), line.getM_Locator_ID(), line.get_TrxName());
 							if (t != null)
 								dateMPolicy = t;
 						}
@@ -655,10 +664,10 @@ public class MInventory extends X_M_Inventory implements DocAction
 	/**
 	 * 	Set the definite document number after completed
 	 */
-	private void setDefiniteDocumentNo() {
+	protected void setDefiniteDocumentNo() {
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		if (dt.isOverwriteDateOnComplete()) {
-			setMovementDate(new Timestamp (System.currentTimeMillis()));
+			setMovementDate(TimeUtil.getDay(0));
 			MPeriod.testPeriodOpen(getCtx(), getMovementDate(), MDocType.DOCBASETYPE_MaterialPhysicalInventory, getAD_Org_ID());
 		}
 		if (dt.isOverwriteSeqOnComplete()) {
@@ -671,7 +680,7 @@ public class MInventory extends X_M_Inventory implements DocAction
 	/**
 	 * 	Check Material Policy.
 	 */
-	private void checkMaterialPolicy(MInventoryLine line, BigDecimal qtyDiff)
+	protected void checkMaterialPolicy(MInventoryLine line, BigDecimal qtyDiff)
 	{	
 		
 		int no = MInventoryLineMA.deleteInventoryLineMA(line.getM_InventoryLine_ID(), get_TrxName());
@@ -943,7 +952,7 @@ public class MInventory extends X_M_Inventory implements DocAction
 		return true;
 	}	//	reverseCorrectIt
 
-	private MInventory reverse(boolean accrual) {
+	protected MInventory reverse(boolean accrual) {
 		Timestamp reversalDate = accrual ? Env.getContextAsDate(getCtx(), "#Date") : getMovementDate();
 		if (reversalDate == null) {
 			reversalDate = new Timestamp(System.currentTimeMillis());
@@ -1112,13 +1121,13 @@ public class MInventory extends X_M_Inventory implements DocAction
 	
 	
 	/** Reversal Flag		*/
-	private boolean m_reversal = false;
+	protected boolean m_reversal = false;
 	
 	/**
 	 * 	Set Reversal
 	 *	@param reversal reversal
 	 */
-	private void setReversal(boolean reversal)
+	protected void setReversal(boolean reversal)
 	{
 		m_reversal = reversal;
 	}	//	setReversal
@@ -1126,7 +1135,7 @@ public class MInventory extends X_M_Inventory implements DocAction
 	 * 	Is Reversal
 	 *	@return reversal
 	 */
-	private boolean isReversal()
+	protected boolean isReversal()
 	{
 		return m_reversal;
 	}	//	isReversal

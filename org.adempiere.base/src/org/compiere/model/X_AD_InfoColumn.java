@@ -23,14 +23,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for AD_InfoColumn
  *  @author iDempiere (generated) 
- *  @version Release 4.1 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20180705L;
+	private static final long serialVersionUID = 20190106L;
 
     /** Standard Constructor */
     public X_AD_InfoColumn (Properties ctx, int AD_InfoColumn_ID, String trxName)
@@ -43,7 +43,7 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 			setAD_Reference_ID (0);
 			setColumnName (null);
 			setEntityType (null);
-// @F3PX_Default_EntityType:U@
+// @SQL=select get_sysconfig('DEFAULT_ENTITYTYPE','U',0,0) from dual
 			setIsCentrallyMaintained (true);
 // Y
 			setIsDefaultQueryCriteria (false);
@@ -580,6 +580,30 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 		return false;
 	}
 
+	/** Set Read Only.
+		@param IsReadOnly 
+		Field is read only
+	  */
+	public void setIsReadOnly (boolean IsReadOnly)
+	{
+		set_Value (COLUMNNAME_IsReadOnly, Boolean.valueOf(IsReadOnly));
+	}
+
+	/** Get Read Only.
+		@return Field is read only
+	  */
+	public boolean isReadOnly () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsReadOnly);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
 	/** Set Name.
 		@param Name 
 		Alphanumeric identifier of the entity
@@ -604,6 +628,20 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
     {
         return new KeyNamePair(get_ID(), getName());
     }
+
+	/** Set Placeholder.
+		@param Placeholder Placeholder	  */
+	public void setPlaceholder (String Placeholder)
+	{
+		set_Value (COLUMNNAME_Placeholder, Placeholder);
+	}
+
+	/** Get Placeholder.
+		@return Placeholder	  */
+	public String getPlaceholder () 
+	{
+		return (String)get_Value(COLUMNNAME_Placeholder);
+	}
 
 	/** Set Query Function.
 		@param QueryFunction 
@@ -638,6 +676,8 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 	public static final String QUERYOPERATOR_LeEq = "<=";
 	/** != = != */
 	public static final String QUERYOPERATOR_NotEq = "!=";
+	/** Full Like = LIKE */
+	public static final String QUERYOPERATOR_FullLike = "LIKE";
 	/** Set Query Operator.
 		@param QueryOperator 
 		Operator for database query

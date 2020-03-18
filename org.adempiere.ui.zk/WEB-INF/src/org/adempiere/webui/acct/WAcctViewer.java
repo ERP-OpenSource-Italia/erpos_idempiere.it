@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.logging.Level;
 
 import org.adempiere.util.Callback;
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.Checkbox;
@@ -227,6 +228,7 @@ public class WAcctViewer extends Window implements EventListener<Event>
 			init();
 			dynInit (AD_Table_ID, Record_ID);
 			setAttribute(MODE_KEY, MODE_EMBEDDED);
+			setAttribute(Window.INSERT_POSITION_KEY, Window.INSERT_NEXT);
 			AEnv.showWindow(this);
 		}
 		catch(Exception e)
@@ -536,6 +538,8 @@ public class WAcctViewer extends Window implements EventListener<Event>
 		ZKUpdateUtil.setHflex(table, "1");
 		//ZKUpdateUtil.setVflex(table, "1");
 		table.addEventListener(Events.ON_DOUBLE_CLICK, this);
+		if (ClientInfo.isMobile())
+			table.setSizedByContent(true);
 
 		pagingPanel = new South();
 		resultPanel.appendChild(pagingPanel);
@@ -611,6 +615,7 @@ public class WAcctViewer extends Window implements EventListener<Event>
 
 	private void dynInit (int AD_Table_ID, int Record_ID)
 	{
+		m_data.validateAcctSchemas(Record_ID);
 		m_data.fillAcctSchema(selAcctSchema );
 		selAcctSchema.addEventListener(Events.ON_SELECT, this);
 
@@ -1114,6 +1119,7 @@ public class WAcctViewer extends Window implements EventListener<Event>
 
 		table.setItemRenderer(new WListItemRenderer());
 		table.setModel(listmodeltable);
+		table.setSizedByContent(true);
 
 		resultPanel.invalidate();
 

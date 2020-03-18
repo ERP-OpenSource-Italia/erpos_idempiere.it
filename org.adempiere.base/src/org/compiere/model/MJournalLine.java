@@ -17,6 +17,7 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.Properties;
@@ -39,7 +40,7 @@ public class MJournalLine extends X_GL_JournalLine
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 7584093911055786835L;
+	private static final long serialVersionUID = 253571209449736797L;
 
 	/**
 	 * 	Standard Constructor
@@ -95,7 +96,7 @@ public class MJournalLine extends X_GL_JournalLine
 	}	//	MJournalLine
 
 	/** Parent					*/
-	private MJournal	m_parent = null;
+	protected MJournal	m_parent = null;
 	
 	/**
 	 * 	Get Parent
@@ -110,11 +111,11 @@ public class MJournalLine extends X_GL_JournalLine
 	
 
 	/**	Currency Precision		*/
-	private int					m_precision = 2;
+	protected int					m_precision = 2;
 	/**	Account Combination		*/
-	private MAccount		 	m_account = null;
+	protected MAccount		 	m_account = null;
 	/** Account Element			*/
-	private MElementValue		m_accountElement = null;
+	protected MElementValue		m_accountElement = null;
 	
 	/**
 	 * 	Set Currency Info
@@ -308,11 +309,11 @@ public class MJournalLine extends X_GL_JournalLine
 		BigDecimal rate = getCurrencyRate();
 		BigDecimal amt = rate.multiply(getAmtSourceDr());
 		if (amt.scale() > getPrecision())
-			amt = amt.setScale(getPrecision(), BigDecimal.ROUND_HALF_UP);
+			amt = amt.setScale(getPrecision(), RoundingMode.HALF_UP);
 		setAmtAcctDr(amt);
 		amt = rate.multiply(getAmtSourceCr());
 		if (amt.scale() > getPrecision())
-			amt = amt.setScale(getPrecision(), BigDecimal.ROUND_HALF_UP);
+			amt = amt.setScale(getPrecision(), RoundingMode.HALF_UP);
 		setAmtAcctCr(amt);
 		//	Set Line Org to Doc Org if still not set
 		if(getAD_Org_ID() <= 0) 
@@ -354,7 +355,7 @@ public class MJournalLine extends X_GL_JournalLine
 	 * 	Update Journal and Batch Total
 	 *	@return true if success
 	 */
-	private boolean updateJournalTotal()
+	protected boolean updateJournalTotal()
 	{
 		//	Update Journal Total
 		StringBuilder sql = new StringBuilder("UPDATE GL_Journal j")
@@ -382,7 +383,7 @@ public class MJournalLine extends X_GL_JournalLine
 	}	//	updateJournalTotal
 
 	/** Update combination and optionally **/
-	private boolean getOrCreateCombination()
+	protected boolean getOrCreateCombination()
 	{
 		if (getC_ValidCombination_ID() == 0
 				|| (!is_new() && (is_ValueChanged("Account_ID")
@@ -458,7 +459,7 @@ public class MJournalLine extends X_GL_JournalLine
 	}	//	getOrCreateCombination
 
 	/** Fill Accounting Dimensions from line combination **/
-	private void fillDimensionsFromCombination()
+	protected void fillDimensionsFromCombination()
 	{
 		if (getC_ValidCombination_ID() > 0)
 		{
@@ -468,7 +469,8 @@ public class MJournalLine extends X_GL_JournalLine
 			setM_Product_ID(combi.getM_Product_ID() > 0 ? combi.getM_Product_ID() : 0);
 			setC_BPartner_ID(combi.getC_BPartner_ID() > 0 ? combi.getC_BPartner_ID() : 0);
 			setAD_OrgTrx_ID(combi.getAD_OrgTrx_ID() > 0 ? combi.getAD_OrgTrx_ID() : 0);
-			setAD_Org_ID(combi.getAD_Org_ID() > 0 ? combi.getAD_Org_ID() : 0);
+			if (combi.getAD_Org_ID() > 0)
+				setAD_Org_ID(combi.getAD_Org_ID());
 			setC_LocFrom_ID(combi.getC_LocFrom_ID() > 0 ? combi.getC_LocFrom_ID() : 0);
 			setC_LocTo_ID(combi.getC_LocTo_ID() > 0 ? combi.getC_LocTo_ID() : 0);
 			setC_SalesRegion_ID(combi.getC_SalesRegion_ID() > 0 ? combi.getC_SalesRegion_ID() : 0);

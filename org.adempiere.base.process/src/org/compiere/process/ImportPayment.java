@@ -169,7 +169,7 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 			.append(" OR b.SwiftCode=i.RoutingNo ")
 			.append(") ")
 			.append("WHERE i.C_BankAccount_ID IS NULL ")
-			.append("AND i.I_IsImported<>'Y' ")
+			.append("AND (i.I_IsImported<>'Y' ")
 			.append("OR i.I_IsImported IS NULL").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
@@ -187,7 +187,7 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 			.append(" AND a.AD_Client_ID=i.AD_Client_ID ")
 			.append(") ")
 			.append("WHERE i.C_BankAccount_ID IS NULL ")
-			.append("AND i.I_isImported<>'Y' ")
+			.append("AND (i.I_isImported<>'Y' ")
 			.append("OR i.I_isImported IS NULL").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
@@ -198,7 +198,7 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 		sql.append(" and a.AD_Client_ID=i.AD_Client_ID) ")
 			.append("WHERE i.C_BankAccount_ID IS NULL ")
 			.append("AND i.BankAccountNo IS NULL ")
-			.append("AND i.I_isImported<>'Y' ")
+			.append("AND (i.I_isImported<>'Y' ")
 			.append("OR i.I_isImported IS NULL").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
@@ -207,7 +207,7 @@ public class ImportPayment extends SvrProcess implements ImportProcess
 		sql = new StringBuilder("UPDATE I_Payment ")
 			.append("SET I_isImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Bank Account, ' ")
 			.append("WHERE C_BankAccount_ID IS NULL ")
-			.append("AND I_isImported<>'Y' ")
+			.append("AND (I_isImported<>'Y' ")
 			.append("OR I_isImported IS NULL").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)

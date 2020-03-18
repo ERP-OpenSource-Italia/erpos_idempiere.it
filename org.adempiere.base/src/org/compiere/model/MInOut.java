@@ -18,7 +18,10 @@ package org.compiere.model;
 
 import java.io.File;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +29,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.exceptions.DBException;
 import org.adempiere.exceptions.NegativeInventoryDisallowedException;
 import org.adempiere.exceptions.PeriodClosedException;
 import org.adempiere.util.FeedbackContainer;
@@ -152,7 +156,7 @@ public class MInOut extends X_M_InOut implements DocAction
 				if (oLines[i].getQtyEntered().compareTo(oLines[i].getQtyOrdered()) != 0)
 					line.setQtyEntered(lineQty
 						.multiply(oLines[i].getQtyEntered())
-						.divide(oLines[i].getQtyOrdered(), 12, BigDecimal.ROUND_HALF_UP));
+						.divide(oLines[i].getQtyOrdered(), 12, RoundingMode.HALF_UP));
 				line.setC_Project_ID(oLines[i].getC_Project_ID());
 				line.saveEx(trxName);
 				//	Delivered everything ?
@@ -1232,13 +1236,17 @@ public class MInOut extends X_M_InOut implements DocAction
 						+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 					return DocAction.STATUS_Invalid;
 				}
-				BigDecimal notInvoicedAmt = MBPartner.getNotInvoicedAmt(getC_BPartner_ID());
-				if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus(notInvoicedAmt)))
+				if (!MBPartner.SOCREDITSTATUS_NoCreditCheck.equals(bp.getSOCreditStatus())
+						&& Env.ZERO.compareTo(bp.getSO_CreditLimit()) != 0)
 				{
-					m_processMsg = "@BPartnerOverSCreditHold@ - @TotalOpenBalance@="
-						+ bp.getTotalOpenBalance() + ", @NotInvoicedAmt@=" + notInvoicedAmt
-						+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
-					return DocAction.STATUS_Invalid;
+					BigDecimal notInvoicedAmt = MBPartner.getNotInvoicedAmt(getC_BPartner_ID());
+					if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus(notInvoicedAmt)))
+					{
+						m_processMsg = "@BPartnerOverSCreditHold@ - @TotalOpenBalance@="
+							+ bp.getTotalOpenBalance() + ", @NotInvoicedAmt@=" + notInvoicedAmt
+							+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
+						return DocAction.STATUS_Invalid;
+					}
 				}
 			}
 		}
@@ -1268,12 +1276,7 @@ public class MInOut extends X_M_InOut implements DocAction
 				continue;
 			if (product != null && product.isASIMandatory(isSOTrx()))
 			{
-				if(product.getAttributeSet()==null){
-					m_processMsg = "@NoAttributeSet@=" + product.getValue();
-					return DocAction.STATUS_Invalid;
-
-				}
-				if (! product.getAttributeSet().excludeTableEntry(MInOutLine.Table_ID, isSOTrx())) {
+				if (product.getAttributeSet() != null && !product.getAttributeSet().excludeTableEntry(MInOutLine.Table_ID, isSOTrx())) {
 					m_processMsg = "@M_AttributeSet_ID@ @IsMandatory@ (@Line@ #" + lines[i].getLine() +
 									", @M_Product_ID@=" + product.getValue() + ")";
 					return DocAction.STATUS_Invalid;
@@ -1813,6 +1816,8 @@ public class MInOut extends X_M_InOut implements DocAction
 		MInOut dropShipment = createDropShipment();
 		if (dropShipment != null)
 			info.append(" - @DropShipment@: @M_InOut_ID@=").append(dropShipment.getDocumentNo());
+		if (dropShipment != null)
+			addDocsPostProcess(dropShipment);
 		//	User Validation
 		String valid = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_AFTER_COMPLETE);
 		if (valid != null)
@@ -1915,7 +1920,7 @@ public class MInOut extends X_M_InOut implements DocAction
 		dropShipment.setDocAction(DocAction.ACTION_Complete);
 		// added AdempiereException by Zuhri
 		if (!dropShipment.processIt(DocAction.ACTION_Complete))
-			throw new AdempiereException("Failed when processing document - " + dropShipment.getProcessMsg());
+			throw new AdempiereException(Msg.getMsg(getCtx(), "FailedProcessingDocument") + " - " + dropShipment.getProcessMsg());
 		// end added
 		dropShipment.saveEx();
 
@@ -1928,8 +1933,7 @@ public class MInOut extends X_M_InOut implements DocAction
 	protected void setDefiniteDocumentNo() {
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		if (dt.isOverwriteDateOnComplete()) {
-			// F3P: movement date should not have the time component
-			setMovementDate(TimeUtil.getDay(System.currentTimeMillis()));
+			setMovementDate(TimeUtil.getDay(0));
 			if (getDateAcct().before(getMovementDate())) {
 				setDateAcct(getMovementDate());
 				MPeriod.testPeriodOpen(getCtx(), getDateAcct(), getC_DocType_ID(), getAD_Org_ID());
@@ -2199,7 +2203,7 @@ public class MInOut extends X_M_InOut implements DocAction
 				counter.setDocAction(counterDT.getDocAction());
 				// added AdempiereException by zuhri
 				if (!counter.processIt(counterDT.getDocAction()))
-					throw new AdempiereException("Failed when processing document - " + counter.getProcessMsg());
+					throw new AdempiereException(Msg.getMsg(getCtx(), "FailedProcessingDocument") + " - " + counter.getProcessMsg());
 				// end added
 				counter.saveEx(get_TrxName());
 			}
@@ -2405,6 +2409,34 @@ public class MInOut extends X_M_InOut implements DocAction
 				asset.setIsActive(false);
 				asset.setDescription(asset.getDescription() + " (" + reversal.getDocumentNo() + " #" + rLine.getLine() + "<-)");
 				asset.saveEx();
+			}
+			// Un-Link inoutline to Invoiceline
+			String sql = "SELECT C_InvoiceLine_ID FROM C_InvoiceLine WHERE M_InOutLine_ID=?";
+			PreparedStatement pstmt = null;
+			ResultSet rs = null;
+			try
+			{
+				pstmt = DB.prepareStatement(sql, get_TrxName());
+				pstmt.setInt(1, sLines[i].getM_InOutLine_ID());
+				rs = pstmt.executeQuery();
+				while (rs.next())
+				{
+					int invoiceLineId = rs.getInt(1);
+					if (invoiceLineId > 0 ){
+						MInvoiceLine iLine = new MInvoiceLine(getCtx(),invoiceLineId , get_TrxName());
+						iLine.setM_InOutLine_ID(0);
+						iLine.saveEx();
+					}
+				}
+			}
+			catch (SQLException e)
+			{
+				throw new DBException(e, sql);
+			}
+			finally
+			{
+				DB.close(rs, pstmt);
+				rs = null; pstmt = null;
 			}
 		}
 		reversal.setC_Order_ID(getC_Order_ID());

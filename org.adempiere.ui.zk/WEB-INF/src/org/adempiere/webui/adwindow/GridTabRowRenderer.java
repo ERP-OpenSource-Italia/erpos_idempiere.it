@@ -303,7 +303,28 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 				styleBuilder.append("; ");
 			styleBuilder.append(inlineStyle);
 		}
-		component.setStyle(styleBuilder.toString());
+		setComponentStyle(component, styleBuilder.toString());
+	}
+
+	protected  void setComponentStyle(HtmlBasedComponent component, String style) {
+		if (style != null && style.startsWith(MStyle.SCLASS_PREFIX)) {
+			String sclass = style.substring(MStyle.SCLASS_PREFIX.length());
+			if (component instanceof EditorBox)
+				((EditorBox)component).getTextbox().setSclass(sclass);
+			else
+				component.setSclass(sclass);
+		} else if (style != null && style.startsWith(MStyle.ZCLASS_PREFIX)) {
+			String zclass = style.substring(MStyle.ZCLASS_PREFIX.length());
+			if (component instanceof EditorBox)
+				((EditorBox)component).getTextbox().setZclass(zclass);
+			else
+				component.setZclass(zclass);
+		} else {
+			if (component instanceof EditorBox)
+				((EditorBox)component).getTextbox().setStyle(style);
+			else
+				component.setStyle(style);
+		}
 	}
 
 	/**
@@ -484,6 +505,13 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 		cell.addEventListener(Events.ON_CLICK, this);
 		cell.setStyle("border: none;");
 		cell.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "EditRecord")));
+		if (ThemeManager.isUseFontIconForImage()) {
+			Label indicatorLabel = new Label();
+			cell.appendChild(indicatorLabel);
+			final Cell finalCell = cell;
+			indicatorLabel.addEventListener(Events.ON_CLICK, evt->Events.postEvent(Events.ON_CLICK, finalCell, indicatorLabel.getSclass()));
+		}
+		cell.setValign("middle");
 		
 		row.appendChild(cell);
 		
@@ -550,7 +578,7 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 				}
 				
 				GridRowCtx ctx = new GridRowCtx(Env.getCtx(), gridTab, rowIndex);
-				if (!gridPanelFields[i].isDisplayed(ctx, true)){
+				if (! (gridPanelFields[i].isDisplayed(ctx, true) || gridPanelFields[i].isDisplayedGrid())){
 					// IDEMPIERE-2253 
 					component.setVisible(false);
 				}
@@ -570,7 +598,7 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 		row.setStyle("cursor:pointer");
 		row.addEventListener(Events.ON_CLICK, rowListener);
 		row.addEventListener(Events.ON_OK, rowListener);
-		row.setTooltiptext("Row " + (rowIndex+1));
+		row.setTooltiptext(Msg.getMsg(Env.getCtx(), "Row") + " " + (rowIndex+1));
 		
 		if (isActive == null) {
 			Object isActiveValue = gridTab.getValue(rowIndex, "IsActive");
@@ -596,12 +624,20 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 			Cell cell = (Cell) currentRow.getChildren().get(1);
 			if (cell != null) {
 				cell.setSclass("row-indicator");
+				if (cell.getFirstChild() != null)
+					((Label)cell.getFirstChild()).setSclass("");
 			}
 		}
 		currentRow = row;
 		Cell cell = (Cell) currentRow.getChildren().get(1);
 		if (cell != null) {
-			cell.setSclass("row-indicator-selected");
+			if (ThemeManager.isUseFontIconForImage()) 
+			{
+				Label indicatorLabel = (Label) cell.getFirstChild();
+				indicatorLabel.setSclass("row-indicator-selected z-icon-Edit");
+			}
+			else
+				cell.setSclass("row-indicator-selected");
 		}
 		currentRowIndex = gridTab.getCurrentRow();
 		
@@ -689,7 +725,7 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 		            }		            
 		            
 		            
-		            Properties ctx = isDetailPane() ? new GridRowCtx(Env.getCtx(), gridTab, gridTab.getCurrentRow()) 
+		            Properties ctx = isDetailPane() ? new GridRowCtx(Env.getCtx(), gridTab) 
 		            	: gridPanelFields[i].getVO().ctx;
 		            //check context
 					if (!gridPanelFields[i].isDisplayed(ctx, true)){
@@ -895,6 +931,8 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 		if (event.getTarget() instanceof Cell) {
 			Cell cell = (Cell) event.getTarget();
 			if (cell.getSclass() != null && cell.getSclass().indexOf("row-indicator-selected") >= 0)
+				Events.sendEvent(gridPanel, new Event(DetailPane.ON_EDIT_EVENT, gridPanel));
+			else if (event.getData() != null && event.getData().toString().indexOf("row-indicator-selected") >= 0)
 				Events.sendEvent(gridPanel, new Event(DetailPane.ON_EDIT_EVENT, gridPanel));
 			else
 				Events.sendEvent(event.getTarget().getParent(), event);

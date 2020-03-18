@@ -51,7 +51,7 @@ public class MPriceList extends X_M_PriceList
 	 */
 	public static MPriceList get (Properties ctx, int M_PriceList_ID, String trxName)
 	{
-		Integer key = new Integer (M_PriceList_ID);
+		Integer key = Integer.valueOf(M_PriceList_ID);
 		MPriceList retValue = (MPriceList)s_cache.get(key);
 		if (retValue == null)
 		{
@@ -173,7 +173,7 @@ public class MPriceList extends X_M_PriceList
 	}	//	getPricePrecision
 	
 	/** Cache of Price Lists			*/
-	private static CCache<Integer,MPriceList> s_cache = new CCache<Integer,MPriceList>(Table_Name, 5);
+	private static CCache<Integer,MPriceList> s_cache = new CCache<Integer,MPriceList>(Table_Name, 5, 5);
 	
 	
 	/**************************************************************************
@@ -249,7 +249,7 @@ public class MPriceList extends X_M_PriceList
 					.setOrderBy("ValidFrom DESC")
 					.first();
 		if (m_plv == null)
-			log.warning("None found M_PriceList_ID=" + getM_PriceList_ID() + " - " + valid);
+			if (log.isLoggable(Level.INFO)) log.info("None found M_PriceList_ID=" + getM_PriceList_ID() + " - " + valid);
 		else
 			if (log.isLoggable(Level.FINE)) log.fine(m_plv.toString());
 		return m_plv;
@@ -284,7 +284,7 @@ public class MPriceList extends X_M_PriceList
 		if (m_precision == null)
 		{
 			MCurrency c = MCurrency.get(getCtx(), getC_Currency_ID());
-			m_precision = new Integer (c.getStdPrecision());
+			m_precision = Integer.valueOf(c.getStdPrecision());
 		}
 		return m_precision.intValue();
 	}	//	getStandardPrecision

@@ -1,7 +1,6 @@
 @Echo off
 
-@if (%IDEMPIERE_HOME%) == () (@Set ENVIRONMENTS=utils\myEnvironment.bat) else (@Set ENVIRONMENTS=%IDEMPIERE_HOME%\utils\myEnvironment.bat)
-@call %ENVIRONMENTS% Server
+CALL utils\myEnvironment.bat Server
 
 @if not "%JAVA_HOME%" == "" goto JAVA_HOME_OK
 @Set JAVA=java
@@ -13,24 +12,15 @@ goto START
 :JAVA_HOME_OK
 @Set JAVA=%JAVA_HOME%\bin\java
 
-if ["%1"] == ["debug"] (
-  @Set DEBUG="-Xdebug -Xnoagent -Xrunjdwp:transport=dt_socket,address=4554,server=y,suspend=n"
-  @Echo Debug Enabled
-)
 
 :START
 @Echo =======================================
 @Echo Starting iDempiere Server ...
 @Echo =======================================
 
-@echo File: %ENVIRONMENTS%
-@echo Done.
-
 FOR %%c in (plugins\org.eclipse.equinox.launcher_1.*.jar) DO set JARFILE=%%c
 
-@Set VMOPTS=-Xbootclasspath/p:alpn-boot.jar
-@Set VMOPTS=%VMOPTS% -Xbootclasspath/p:alpn-boot.jar
-@Set VMOPTS=%VMOPTS% -Dorg.osgi.framework.bootdelegation=sun.security.ssl,org.eclipse.jetty.alpn
+@Set VMOPTS=%VMOPTS% -Dorg.osgi.framework.bootdelegation=sun.security.ssl
 @Set VMOPTS=%VMOPTS% -Dosgi.compatibility.bootdelegation=true
 @Set VMOPTS=%VMOPTS% -Djetty.home=jettyhome
 @Set VMOPTS=%VMOPTS% -Djetty.base=jettyhome

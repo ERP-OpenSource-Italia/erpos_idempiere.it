@@ -55,7 +55,7 @@ public class MSequence extends X_AD_Sequence
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 7331047665037991960L;
+	private static final long serialVersionUID = -2215317912000946608L;
 
 	/** Log Level for Next ID Call					*/
 	private static final Level LOGLEVEL = Level.ALL;
@@ -124,7 +124,7 @@ public class MSequence extends X_AD_Sequence
 			+ "FROM AD_Sequence "
 			+ "WHERE Name=?"
 			+ " AND IsActive='Y' AND IsTableID='Y' AND IsAutoSequence='Y' ";
-			//fin
+			
 			if(adempiereSys)
 				selectSQL += " FOR UPDATE OF CurrentNextSys";
 			else
@@ -389,10 +389,9 @@ public class MSequence extends X_AD_Sequence
 					+ "AND s.IsActive='Y' AND s.IsTableID='N' AND s.IsAutoSequence='Y' "
 					+ "ORDER BY s.AD_Client_ID DESC";
 		}
-		//fin
 		if (DB.isOracle() == false)
 		{
-			if ( ( isStartNewYear || isUseOrgLevel ) && !adempiereSys ) {
+			if ( isStartNewYear || isUseOrgLevel  ) {
 				selectSQL = selectSQL + " FOR UPDATE OF y";
 			} else {
 				selectSQL = selectSQL + " FOR UPDATE OF s";
@@ -400,7 +399,7 @@ public class MSequence extends X_AD_Sequence
 		}
 		else
 		{
-			if ( ( isStartNewYear || isUseOrgLevel ) && !adempiereSys ) {
+			if (isStartNewYear || isUseOrgLevel) {
 				selectSQL = selectSQL + " FOR UPDATE OF y.";
 			} else {
 				selectSQL = selectSQL + " FOR UPDATE OF s.";
@@ -410,8 +409,7 @@ public class MSequence extends X_AD_Sequence
 				selectSQL = selectSQL + "CurrentNextSys";
 			else
 				selectSQL = selectSQL + "CurrentNext";
-		}
-		//		
+		}		
 		if (!DB.isOracle() && !DB.isPostgreSQL())
 			selectSQL = DB.getDatabase().convertStatement(selectSQL);
 		Connection conn = null;
@@ -964,16 +962,22 @@ public class MSequence extends X_AD_Sequence
 		return retValue;
 	}	//	getNextNo
 
+	public String validateTableIDValue()
+	{
+		return validateTableIDValue(null);
+	}
+
 	/**
 	 * 	Validate Table Sequence Values
+	 *  trxName the Transaction
 	 *	@return true if updated
 	 */
-	public String validateTableIDValue()
+	public String validateTableIDValue(String trxName)
 	{
 		if (!isTableID())
 			return null;
 		String tableName = getName();
-		int AD_Column_ID = DB.getSQLValue(null, "SELECT MAX(c.AD_Column_ID) "
+		int AD_Column_ID = DB.getSQLValue(trxName, "SELECT MAX(c.AD_Column_ID) "
 			+ "FROM AD_Table t"
 			+ " INNER JOIN AD_Column c ON (t.AD_Table_ID=c.AD_Table_ID) "
 			+ "WHERE t.TableName='" + tableName + "'"
@@ -994,7 +998,7 @@ public class MSequence extends X_AD_Sequence
 		String sql = "SELECT MAX(" + tableName + "_ID) FROM " + tableName;
 		if (IDRangeEnd > 0)
 			sql += " WHERE " + tableName + "_ID < " + IDRangeEnd;
-		int maxTableID = DB.getSQLValue(null, sql);
+		int maxTableID = DB.getSQLValue(trxName, sql);
 		if (maxTableID < INIT_NO)
 			maxTableID = INIT_NO - 1;
 		maxTableID++;		//	Next
@@ -1010,7 +1014,7 @@ public class MSequence extends X_AD_Sequence
 		//	Get Max System_ID used in Table
 		sql = "SELECT MAX(" + tableName + "_ID) FROM " + tableName
 			+ " WHERE " + tableName + "_ID < " + INIT_NO;
-		int maxTableSysID = DB.getSQLValue(null, sql);
+		int maxTableSysID = DB.getSQLValue(trxName, sql);
 		if (maxTableSysID <= 0)
 			maxTableSysID = INIT_SYS_NO;
 		int currentNextSysValue = getCurrentNextSys();
@@ -1274,7 +1278,7 @@ public class MSequence extends X_AD_Sequence
 				try
 				{
 					int no = DB.getNextID(0, "Test", null);
-					s_list.add(new Integer(no));
+					s_list.add(Integer.valueOf(no));
 				//	System.out.println("#" + m_i + ": " + no);
 				}
 				catch (Exception e)

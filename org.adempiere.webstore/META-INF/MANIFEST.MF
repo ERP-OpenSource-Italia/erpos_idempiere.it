@@ -2,11 +2,12 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: iDempiere Web Store
 Bundle-SymbolicName: org.adempiere.webstore;singleton:=true
-Bundle-Version: 4.1.0.qualifier
+Bundle-Version: 6.2.0.qualifier
 Require-Bundle: org.adempiere.base;bundle-version="0.0.0",
  org.adempiere.report.jasper.webapp;bundle-version="0.0.0",
- org.eclipse.jdt.core.compiler.batch;bundle-version="0.0.0"
-Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+ org.eclipse.jdt.core;bundle-version="3.15.0"
+Comment: Bundle-RequiredExecutionEnvironment: JavaSE-11
+Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version>=1.11))"
 Web-ContextPath: wstore
 Import-Package: javax.servlet;version="3.0.0",
  javax.servlet.http;version="3.0.0",
@@ -78,12 +79,9 @@ Import-Package: javax.servlet;version="3.0.0",
  org.apache.xerces.xs;version="2.9.0",
  org.apache.xerces.xs.datatypes;version="2.9.0",
  org.apache.xml.serialize;version="2.9.0",
- org.compiere.wstore,
  org.osgi.framework;version="1.7.0",
  org.osgi.service.http;version="1.2.1"
 Bundle-Activator: org.adempiere.webstore.Activator
-
-
-
-
-
+Bundle-ClassPath: .
+Automatic-Module-Name: org.adempiere.webstore
+Bundle-Vendor: iDempiere Community

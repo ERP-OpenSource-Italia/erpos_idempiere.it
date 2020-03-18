@@ -341,7 +341,7 @@ public class InvoicePrint extends SvrProcess
 				{
 //					query
 					MQuery query = new MQuery("C_Invoice_Header_v");
-					query.addRestriction("C_Invoice_ID", MQuery.EQUAL, new Integer(C_Invoice_ID));
+				query.addRestriction("C_Invoice_ID", MQuery.EQUAL, Integer.valueOf(C_Invoice_ID));
 
 					//	Engine
 					PrintInfo info = new PrintInfo(

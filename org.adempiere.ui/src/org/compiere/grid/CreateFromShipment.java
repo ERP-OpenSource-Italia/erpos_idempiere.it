@@ -15,6 +15,7 @@
 package org.compiere.grid;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -59,9 +60,9 @@ import it.idempiere.base.util.STDSysConfig;
 public abstract class CreateFromShipment extends CreateFrom 
 {
 	/**  Loaded Invoice             */
-	private MInvoice		m_invoice = null;
+	protected MInvoice		m_invoice = null;
 	/**  Loaded RMA             */
-	private MRMA            m_rma = null;
+	protected MRMA            m_rma = null;
 	private int defaultLocator_ID=0;
 
 	/**
@@ -288,7 +289,7 @@ public abstract class CreateFromShipment extends CreateFrom
 			while (rs.next())
 			{
 				Vector<Object> line = new Vector<Object>();
-				line.add(new Boolean(false));           //  0-Selection
+				line.add(Boolean.FALSE);           //  0-Selection
 				BigDecimal qtyOrdered = rs.getBigDecimal(1);
 				BigDecimal multiplier = rs.getBigDecimal(2);
 				BigDecimal qtyEntered = qtyOrdered.multiply(multiplier);
@@ -407,7 +408,7 @@ public abstract class CreateFromShipment extends CreateFrom
 	        while (rs.next())
             {
 	            Vector<Object> line = new Vector<Object>(7);
-	            line.add(new Boolean(false));   // 0-Selection
+	            line.add(Boolean.FALSE);   // 0-Selection
 	            line.add(rs.getBigDecimal(3));  // 1-Qty
 	            KeyNamePair pp = new KeyNamePair(rs.getInt(6), rs.getString(7));
 	            line.add(pp); // 2-UOM
@@ -490,7 +491,7 @@ public abstract class CreateFromShipment extends CreateFrom
 			while (rs.next())
 			{
 				Vector<Object> line = new Vector<Object>(7);
-				line.add(new Boolean(false)); // 0-Selection
+				line.add(Boolean.FALSE); // 0-Selection
 				BigDecimal qtyInvoiced = rs.getBigDecimal(1);
 				BigDecimal multiplier = rs.getBigDecimal(2);
 				BigDecimal qtyEntered = qtyInvoiced.multiply(multiplier);
@@ -683,8 +684,7 @@ public abstract class CreateFromShipment extends CreateFrom
 				{
 					precision = MUOM.getPrecision(Env.getCtx(), C_UOM_ID);
 				}
-				
-				QtyEntered = QtyEntered.setScale(precision, BigDecimal.ROUND_HALF_DOWN);
+				QtyEntered = QtyEntered.setScale(precision, RoundingMode.HALF_DOWN);
 				//
 				if (log.isLoggable(Level.FINE)) log.fine("Line QtyEntered=" + QtyEntered
 						+ ", Product=" + M_Product_ID 
@@ -709,7 +709,7 @@ public abstract class CreateFromShipment extends CreateFrom
 					{
 						iol.setMovementQty(QtyEntered
 								.multiply(ol.getQtyOrdered())
-								.divide(ol.getQtyEntered(), 12, BigDecimal.ROUND_HALF_UP));
+								.divide(ol.getQtyEntered(), 12, RoundingMode.HALF_UP));
 						iol.setC_UOM_ID(ol.getC_UOM_ID());
 					}
 					iol.setM_AttributeSetInstance_ID(ol.getM_AttributeSetInstance_ID());
@@ -730,7 +730,7 @@ public abstract class CreateFromShipment extends CreateFrom
 					{
 						iol.setQtyEntered(QtyEntered
 								.multiply(il.getQtyInvoiced())
-								.divide(il.getQtyEntered(), 12, BigDecimal.ROUND_HALF_UP));
+								.divide(il.getQtyEntered(), 12, RoundingMode.HALF_UP));
 						iol.setC_UOM_ID(il.getC_UOM_ID());
 					}
 					iol.setDescription(il.getDescription());

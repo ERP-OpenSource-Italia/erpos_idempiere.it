@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
-      id="org.idempiere.hazelcast.service"
+      id="org.idempiere.hazelcast.service.feature"
       label="Hazelcast Service Feature"
-      version="4.1.0.qualifier">
+      version="6.2.0.qualifier"
+      provider-name="iDempiere Community">
 
    <description url="http://www.example.com/description">
       [Enter Feature Description here.]
@@ -22,26 +23,5 @@
          install-size="0"
          version="0.0.0"
          unpack="false"/>
-
-   <plugin
-         id="org.slf4j.api"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="org.slf4j.jcl"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="org.idempiere.hazelcast.service.config"
-         download-size="0"
-         install-size="0"
-         version="4.1.0"
-         fragment="true"/>
 
 </feature>

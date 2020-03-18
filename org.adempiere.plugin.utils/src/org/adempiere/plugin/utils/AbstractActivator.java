@@ -14,13 +14,19 @@
 package org.adempiere.plugin.utils;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 
 import org.adempiere.base.IDictionaryService;
+import org.adempiere.base.Service;
+import org.adempiere.util.IProcessUI;
+import org.compiere.model.MClient;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.PO;
 import org.compiere.model.Query;
 import org.compiere.model.X_AD_Package_Imp;
+import org.compiere.process.ProcessInfo;
 import org.compiere.util.AdempiereSystemError;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
@@ -37,7 +43,9 @@ public abstract class AbstractActivator implements BundleActivator, ServiceTrack
 	protected BundleContext context;
 	protected ServiceTracker<IDictionaryService, IDictionaryService> serviceTracker;
 	protected IDictionaryService service;
-	private   String trxName = "";
+	private String trxName = null;
+	private ProcessInfo m_processInfo = null;
+	private IProcessUI m_processUI = null;
 
 	protected boolean merge(File zipfile, String version) throws Exception {
 		boolean success = false;
@@ -46,25 +54,57 @@ public abstract class AbstractActivator implements BundleActivator, ServiceTrack
 			service.merge(context, zipfile);
 			success = true;
 		} else {
-			logger.log(Level.SEVERE, "The file was already installed: " + zipfile.getName());
+			logger.log(Level.WARNING, "The file was previously installed: " + zipfile.getName());
+		}
+
+		return success;
+	}
+
+	protected boolean directMerge(File zipfile, String version) throws Exception {
+		boolean success = false;
+
+		if (!installedPackage(version)) {
+			List<IDictionaryService> list = Service.locator().list(IDictionaryService.class).getServices();
+			if (list != null) {
+				IDictionaryService ids = list.get(0);
+				ids.merge(null, zipfile);
+				success = true;
+				if (ids.getAD_Package_Imp_Proc() != null) {
+					MClient client = MClient.get(Env.getCtx());
+					addLog(Level.INFO, getName() + " in " + client.getValue() + " -> "+ ids.getAD_Package_Imp_Proc().getP_Msg());
+				}
+			} else {
+				addLog(Level.SEVERE, "Could not find an IDictionaryService to process the zip files");
+			}
+		} else {
+			addLog(Level.WARNING, "The file was previously installed: " + zipfile.getName());
+			success = true;
 		}
 
 		return success;
 	}
 
 	protected boolean installedPackage(String version) {
-		StringBuilder where = new StringBuilder("Name=? AND PK_Status = 'Completed successfully'");
-		Object[] params;
+		StringBuilder where = new StringBuilder("AD_Client_ID=? AND Name=? AND PK_Status='Completed successfully'");
+		List<Object> params = new ArrayList<Object>();
+		String fileName = getName();
+		int clientId = Env.getAD_Client_ID(Env.getCtx());
+		if (version == null) {
+			String [] parts = fileName.split("_");
+			String clientValue = parts[1];
+			clientId = DB.getSQLValueEx(null, "SELECT AD_Client_ID FROM AD_Client WHERE Value=?", clientValue);
+			if (clientId < 0)
+				clientId = 0;
+		}
+		params.add(clientId);
+		params.add(fileName);
 		if (version != null) {
 			where.append(" AND PK_Version LIKE ?");
-			params = new Object[] { getName(), version +  "%" };
-		} else {
-			params = new Object[] {getName()};
+			params.add(version +  "%");
 		}
-		Query q = new Query(Env.getCtx(), X_AD_Package_Imp.Table_Name,
-				where.toString(), null);
-		q.setParameters(params);
-		return q.first() != null;
+		Query q = new Query(Env.getCtx(), X_AD_Package_Imp.Table_Name, where.toString(), null)
+				.setParameters(params);
+		return q.match();
 	}
 
 	public abstract String getName();
@@ -76,15 +116,24 @@ public abstract class AbstractActivator implements BundleActivator, ServiceTrack
 
 		while(maxAttempts > 0 && !lockAcquired) {
 			maxAttempts --;
-			if (getDBLock(timeout))
-				lockAcquired = true;
+			if (logger.isLoggable(Level.INFO)) logger.log(Level.INFO, "Acquiring lock with timeout " + timeout + " for " + getName() + " / remaining attempts " + maxAttempts);
+			try {
+				if (getDBLock(timeout))
+					lockAcquired = true;
+			} catch (Exception e) {
+				// Timeout throws DBException, ignore and try again
+				releaseLock();
+			}
 		}
 
 		return lockAcquired;
 	}
 
 	public void releaseLock() {
-		Trx.get(trxName, false).close();
+		if (trxName != null) {
+			Trx.get(trxName, false).close();
+			trxName = null;
+		}
 	}
 
 	private boolean getDBLock(int timeout) throws AdempiereSystemError {
@@ -105,4 +154,35 @@ public abstract class AbstractActivator implements BundleActivator, ServiceTrack
 		sysconfig.set_TrxName(trxName);
 		return sysconfig;
 	}
+
+	public void setProcessInfo(ProcessInfo processInfo) {
+		m_processInfo  = processInfo;
+	}
+
+	public ProcessInfo getProcessInfo() {
+		return m_processInfo;
+	}
+
+	public void setProcessUI(IProcessUI processUI) {
+		m_processUI  = processUI;
+	};
+
+	protected void statusUpdate(String message) {
+		logger.warning(message);
+		if (m_processUI != null)
+			m_processUI.statusUpdate(message);
+	}
+
+	public void addLog(Level level, String msg) {
+		logger.log(level, msg);
+		if (m_processInfo != null)
+			m_processInfo.addLog(0, null, null, msg.replaceAll("\\n", "<br>"));
+	}
+
+	public void setSummary(Level level, String msg) {
+		logger.log(level, msg);
+		if (m_processInfo != null)
+			m_processInfo.setSummary(msg);
+	}
+
 }

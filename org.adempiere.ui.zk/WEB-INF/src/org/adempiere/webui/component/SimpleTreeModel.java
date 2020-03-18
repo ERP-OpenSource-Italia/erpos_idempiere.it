@@ -18,6 +18,8 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.logging.Level;
 
+import org.adempiere.webui.ClientInfo;
+import org.adempiere.webui.panel.TreeSearchPanel;
 import org.compiere.model.MTree;
 import org.compiere.model.MTreeNode;
 import org.compiere.util.CLogger;
@@ -46,7 +48,7 @@ public class SimpleTreeModel extends org.zkoss.zul.DefaultTreeModel<Object> impl
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -2689107390272278321L;
+	private static final long serialVersionUID = 4945968834244672653L;
 
 	private static final CLogger logger = CLogger.getCLogger(SimpleTreeModel.class);
 	
@@ -66,6 +68,10 @@ public class SimpleTreeModel extends org.zkoss.zul.DefaultTreeModel<Object> impl
 	public static SimpleTreeModel initADTree(Tree tree, int AD_Tree_ID, int windowNo) {
 		return initADTree(tree, AD_Tree_ID, windowNo, true, null);
 	}
+
+	public static SimpleTreeModel initADTree(Tree tree, int AD_Tree_ID, int windowNo, String linkColName, int linkID) {
+		return initADTree(tree, AD_Tree_ID, windowNo, true, null, linkColName, linkID);
+	}
 	
 	/**
 	 * @param tree
@@ -75,12 +81,17 @@ public class SimpleTreeModel extends org.zkoss.zul.DefaultTreeModel<Object> impl
 	 * @param trxName
 	 * @return SimpleTreeModel
 	 */
-	public static SimpleTreeModel initADTree(Tree tree, int AD_Tree_ID, int windowNo, boolean editable, String trxName) { 
-		MTree vTree = new MTree (Env.getCtx(), AD_Tree_ID, editable, true, trxName);
+	public static SimpleTreeModel initADTree(Tree tree, int AD_Tree_ID, int windowNo, boolean editable, String trxName) {
+		return initADTree(tree, AD_Tree_ID, windowNo, editable, trxName, null, 0);
+	}
+
+	public static SimpleTreeModel initADTree(Tree tree, int AD_Tree_ID, int windowNo, boolean editable, String trxName, String linkColName, int linkID) {
+		MTree vTree = new MTree (Env.getCtx(), AD_Tree_ID, editable, true, trxName, linkColName, linkID);
 		MTreeNode root = vTree.getRoot();
 		SimpleTreeModel treeModel = SimpleTreeModel.createFrom(root);
 		treeModel.setItemDraggable(true);
 		treeModel.setTreeDrivenByValue(vTree.isTreeDrivenByValue());
+		treeModel.setIsValueDisplayed(vTree.isValueDisplayed());
 		treeModel.addOnDropEventListener(new ADTreeOnDropListener(tree, treeModel, vTree, windowNo));
 
 		if (tree.getTreecols() == null)
@@ -111,6 +122,16 @@ public class SimpleTreeModel extends org.zkoss.zul.DefaultTreeModel<Object> impl
 
 	public void setTreeDrivenByValue(boolean isTreeDrivenByValue) {
 		this.isTreeDrivenByValue = isTreeDrivenByValue;
+	}
+
+	private boolean isValueDisplayed = false;
+
+	public boolean isValueDisplayed() {
+		return isValueDisplayed;
+	}
+
+	public void setIsValueDisplayed(boolean isValueDisplayed) {
+		this.isValueDisplayed = isValueDisplayed;
 	}
 
 	/**
@@ -161,7 +182,12 @@ public class SimpleTreeModel extends org.zkoss.zul.DefaultTreeModel<Object> impl
 			tr = new Treerow();			
 			tr.setParent(ti);
 			if (isItemDraggable()) {
-				tr.setDraggable("true");
+				//use different approach on mobile, dnd not working well
+				if (ClientInfo.isMobile()) {
+					tr.setAttribute(TreeSearchPanel.TREE_ROW_MOVABLE, Boolean.TRUE);
+				} else {
+					tr.setDraggable("true");
+				}
 			}
 			if (!onDropListners.isEmpty()) {
 				tr.setDroppable("true");

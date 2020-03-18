@@ -17,6 +17,7 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
@@ -49,10 +50,6 @@ import it.idempiere.base.util.STDSysConfig;
  * @author Teo Sarca, www.arhipac.ro
  * 			<li>BF [ 2804142 ] MInvoice.setRMALine should work only for CreditMemo invoices
  * 				https://sourceforge.net/tracker/?func=detail&aid=2804142&group_id=176962&atid=879332
- * @author Michael Judd, www.akunagroup.com
- * 			<li>BF [ 1733602 ] Price List including Tax Error - when a user changes the orderline or
- * 				invoice line for a product on a price list that includes tax, the net amount is
- * 				incorrectly calculated.
  * @author red1 FR: [ 2214883 ] Remove SQL code and Replace for Query
  */
 public class MInvoiceLine extends X_C_InvoiceLine
@@ -60,7 +57,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -6174490999732876285L;
+	private static final long serialVersionUID = -1590896898028805978L;
 
 	/**
 	 * 	Get Invoice Line referencing InOut Line
@@ -110,10 +107,10 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	}
 
 	/**	Static Logger	*/
-	private static CLogger	s_log	= CLogger.getCLogger (MInvoiceLine.class);
+	protected static CLogger	s_log	= CLogger.getCLogger (MInvoiceLine.class);
 
 	/** Tax							*/
-	private MTax 		m_tax = null;
+	protected MTax 		m_tax = null;
 	
 	
 	/**************************************************************************
@@ -168,24 +165,24 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		super(ctx, rs, trxName);
 	}	//	MInvoiceLine
 
-	private int			m_M_PriceList_ID = 0;
-	private Timestamp	m_DateInvoiced = null;
-	private int			m_C_BPartner_ID = 0;
-	private int			m_C_BPartner_Location_ID = 0;
-	private boolean		m_IsSOTrx = true;
-	private boolean		m_priceSet = false;
-	private MProduct	m_product = null;
+	protected int			m_M_PriceList_ID = 0;
+	protected Timestamp	m_DateInvoiced = null;
+	protected int			m_C_BPartner_ID = 0;
+	protected int			m_C_BPartner_Location_ID = 0;
+	protected boolean		m_IsSOTrx = true;
+	protected boolean		m_priceSet = false;
+	protected MProduct	m_product = null;
 	/**	Charge					*/
-	private MCharge 		m_charge = null;
+	protected MCharge 		m_charge = null;
 	
 	/**	Cached Name of the line		*/
-	private String		m_name = null;
+	protected String		m_name = null;
 	/** Cached Precision			*/
-	private Integer		m_precision = null;
+	protected Integer		m_precision = null;
 	/** Product Pricing				*/
-	private IProductPricing	m_productPricing = null;
+	protected IProductPricing	m_productPricing = null;
 	/** Parent						*/
-	private MInvoice	m_parent = null;
+	protected MInvoice	m_parent = null;
 	
 	// F3P: added to keep cache, like parent
 	
@@ -206,7 +203,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		m_C_BPartner_ID = invoice.getC_BPartner_ID();
 		m_C_BPartner_Location_ID = invoice.getC_BPartner_Location_ID();
 		m_IsSOTrx = invoice.isSOTrx();
-		m_precision = new Integer(invoice.getPrecision());
+		m_precision = Integer.valueOf(invoice.getPrecision());
 	}	//	setOrder
 
 	/**
@@ -384,7 +381,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	public void setM_AttributeSetInstance_ID (int M_AttributeSetInstance_ID)
 	{
 		if (M_AttributeSetInstance_ID == 0)		//	 0 is valid ID
-			set_Value("M_AttributeSetInstance_ID", new Integer(0));
+			set_Value("M_AttributeSetInstance_ID", Integer.valueOf(0));
 		else
 			super.setM_AttributeSetInstance_ID (M_AttributeSetInstance_ID);
 	}	//	setM_AttributeSetInstance_ID
@@ -419,7 +416,6 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		m_productPricing = Core.getProductPricing();
 		m_productPricing.setInvoiceLine(this, get_TrxName());
 		m_productPricing.setM_PriceList_ID(M_PriceList_ID);
-		
 		m_productPricing.calculatePrice();
 		setPriceList (m_productPricing.getPriceList());
 		setPriceLimit (m_productPricing.getPriceLimit());
@@ -521,7 +517,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		BigDecimal TaxAmt = Env.ZERO;
 		if (getC_Tax_ID() == 0)
 			return;
-	//	setLineNetAmt();
+		setLineNetAmt();
 		MTax tax = MTax.get (getCtx(), getC_Tax_ID());
 		if (tax.isDocumentLevel() && m_IsSOTrx)		//	AR Inv Tax
 			return;
@@ -542,50 +538,9 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	{
 		//	Calculations & Rounding
 		BigDecimal bd = getPriceActual().multiply(getQtyInvoiced());
-		
-		boolean documentLevel = getTax().isDocumentLevel();
-
-		//	juddm: Tax Exempt & Tax Included in Price List & not Document Level - Adjust Line Amount
-		//  http://sourceforge.net/tracker/index.php?func=detail&aid=1733602&group_id=176962&atid=879332
-		if (isTaxIncluded() && !documentLevel)	{
-			BigDecimal taxStdAmt = Env.ZERO, taxThisAmt = Env.ZERO;
-			
-			MTax invoiceTax = getTax();
-			MTax stdTax = null;
-			
-			if (getProduct() == null)
-			{
-				if (getCharge() != null)	// Charge 
-				{
-					stdTax = new MTax (getCtx(), 
-							((MTaxCategory) getCharge().getC_TaxCategory()).getDefaultTax().getC_Tax_ID(),
-							get_TrxName());
-				}
-					
-			}
-			else	// Product
-				stdTax = new MTax (getCtx(), 
-							((MTaxCategory) getProduct().getC_TaxCategory()).getDefaultTax().getC_Tax_ID(), 
-							get_TrxName());
-
-			if (stdTax != null)
-			{
-				
-				if (log.isLoggable(Level.FINE)) log.fine("stdTax rate is " + stdTax.getRate());
-				if (log.isLoggable(Level.FINE)) log.fine("invoiceTax rate is " + invoiceTax.getRate());
-				
-				taxThisAmt = taxThisAmt.add(invoiceTax.calculateTax(bd, isTaxIncluded(), getPrecision()));
-				taxStdAmt = taxStdAmt.add(stdTax.calculateTax(bd, isTaxIncluded(), getPrecision()));
-				
-				bd = bd.subtract(taxStdAmt).add(taxThisAmt);
-				
-				if (log.isLoggable(Level.FINE)) log.fine("Price List includes Tax and Tax Changed on Invoice Line: New Tax Amt: " 
-						+ taxThisAmt + " Standard Tax Amt: " + taxStdAmt + " Line Net Amt: " + bd);	
-			}
-		}
 		int precision = getPrecision();
 		if (bd.scale() > precision)
-			bd = bd.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			bd = bd.setScale(precision, RoundingMode.HALF_UP);
 		
 		// F3P: doc discount
 		
@@ -647,7 +602,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		if (QtyEntered != null && getC_UOM_ID() != 0)
 		{
 			int precision = MUOM.getPrecision(getCtx(), getC_UOM_ID());
-			QtyEntered = QtyEntered.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			QtyEntered = QtyEntered.setScale(precision, RoundingMode.HALF_UP);
 		}
 		super.setQtyEntered (QtyEntered);
 	}	//	setQtyEntered
@@ -662,7 +617,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		if (QtyInvoiced != null && product != null)
 		{
 			int precision = product.getUOMPrecision();
-			QtyInvoiced = QtyInvoiced.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			QtyInvoiced = QtyInvoiced.setScale(precision, RoundingMode.HALF_UP);
 		}
 		super.setQtyInvoiced(QtyInvoiced);
 	}	//	setQtyInvoiced
@@ -887,7 +842,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 			log.warning("getPrecision = " + i + " - set to 2");
 			i = 2;
 		}
-		m_precision = new Integer(i);
+		m_precision = Integer.valueOf(i);
 		return m_precision.intValue();
 	}	//	getPrecision
 
@@ -916,12 +871,16 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	protected boolean beforeSave (boolean newRecord)
 	{
 		if (log.isLoggable(Level.FINE)) log.fine("New=" + newRecord);
-		if (newRecord && getParent().isComplete()) {
+		boolean parentComplete = getParent().isComplete();
+		boolean isReversal = getParent().isReversal();
+		if (newRecord && parentComplete) {
 			log.saveError("ParentComplete", Msg.translate(getCtx(), "C_InvoiceLine"));
 			return false;
 		}
 		// Re-set invoice header (need to update m_IsSOTrx flag) - phib [ 1686773 ]
 		setInvoice(getParent());
+
+	  if (!parentComplete && !isReversal) {  // do not change things when parent is complete
 		//	Charge
 		if (getC_Charge_ID() != 0)
 		{
@@ -996,6 +955,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 				return false;
 			}
 		}
+	  }
 		
 		return true;
 	}	//	beforeSave
@@ -1166,7 +1126,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 					{
 						double result = getLineNetAmt().multiply(base).doubleValue();
 						result /= total.doubleValue();
-						lca.setAmt(result, getParent().getC_Currency().getCostingPrecision());
+						lca.setAmt(result, getParent().getC_Currency().getStdPrecision());
 					}
 					if (!lca.save()){
 						msgreturn = new StringBuilder("Cannot save line Allocation = ").append(lca);
@@ -1301,7 +1261,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 			{
 				double result = getLineNetAmt().multiply(base).doubleValue();
 				result /= total.doubleValue();
-				lca.setAmt(result, getParent().getC_Currency().getCostingPrecision());
+				lca.setAmt(result, getParent().getC_Currency().getStdPrecision());
 			}
 			if (!lca.save()){
 				msgreturn = new StringBuilder("Cannot save line Allocation = ").append(lca);
@@ -1318,7 +1278,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	/**
 	 * 	Allocate Landed Cost - Enforce Rounding
 	 */
-	private void allocateLandedCostRounding()
+	protected void allocateLandedCostRounding()
 	{
 		MLandedCostAllocation[] allocations = MLandedCostAllocation.getOfInvoiceLine(
 			getCtx(), getC_InvoiceLine_ID(), get_TrxName());

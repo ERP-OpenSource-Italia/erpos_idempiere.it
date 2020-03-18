@@ -46,8 +46,6 @@ public class ConfigVM extends Config
 		//	Java Home, e.g. D:\j2sdk1.4.1\jre
 		String javaHome = System.getProperty("java.home");
 		log.fine(javaHome);
-		if (javaHome.endsWith("jre"))
-			javaHome = javaHome.substring(0, javaHome.length()-4);
 		p_data.setJavaHome(javaHome);
 	}	//	init
 
@@ -75,7 +73,7 @@ public class ConfigVM extends Config
 		System.setProperty(ConfigurationData.JAVA_HOME, javaHome.getAbsolutePath());
 
 		//	Java Version
-		final String[] versions = new String[]{"1.7.0", "1.8.0"};
+		final String[] versions = new String[]{"1.7.0", "1.8.0", "9", "9.", "10", "10.", "11", "11.", "12", "12."};
 		pass = false;
 		String thisJV = System.getProperty("java.version");
 		for(String version : versions) 

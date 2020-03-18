@@ -20,6 +20,7 @@ import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.net.URL;
 
 import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
@@ -33,6 +34,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JToggleButton;
 import javax.swing.KeyStroke;
 
+import org.compiere.install.ConfigurationPanel;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
@@ -96,11 +98,11 @@ public final class AppsAction extends AbstractAction
 		int pos = toolTipText.indexOf('&');
 		if (pos != -1  && toolTipText.length() > pos)	//	We have a nemonic - creates ALT-_
 		{
-			Character ch = new Character(toolTipText.toUpperCase().charAt(pos+1));
+			Character ch = Character.valueOf(toolTipText.toUpperCase().charAt(pos+1));
 			if (ch != ' ')
 			{
 				toolTipText = toolTipText.substring(0, pos) + toolTipText.substring(pos+1);
-				putValue(Action.MNEMONIC_KEY, new Integer(ch.hashCode()));
+				putValue(Action.MNEMONIC_KEY, Integer.valueOf(ch.hashCode()));
 			}
 		}
 		//
@@ -125,7 +127,7 @@ public final class AppsAction extends AbstractAction
 		putValue(Action.SHORT_DESCRIPTION, toolTipText);	//	Tooltip
 		putValue(Action.ACTION_COMMAND_KEY, m_action);      //  ActionCammand
 		putValue(Action.ACCELERATOR_KEY, accelerator);      //  KeyStroke
-	//	putValue(Action.MNEMONIC_KEY, new Integer(0));      //  Mnemonic
+	//	putValue(Action.MNEMONIC_KEY, Integer.valueOf(0));      //  Mnemonic
 	//	putValue(Action.DEFAULT, text);						//	Not Used
 
 		//	Create Button
@@ -178,8 +180,11 @@ public final class AppsAction extends AbstractAction
 	 */
 	private ImageIcon getIcon(String name, boolean small)
 	{
-		String fullName = name + (small ? "16" : "24");
-		return Env.getImageIcon2(fullName);
+		String fullName = name + (small ? "16" : "24") + ".gif";
+		URL imageURL = ConfigurationPanel.class.getResource("images/"+fullName);
+		if (imageURL == null)
+			return null;
+		return new ImageIcon(imageURL);
 	}	//	getIcon
 
 	/**

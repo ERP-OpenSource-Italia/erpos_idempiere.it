@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Element
  *  @author iDempiere (generated) 
- *  @version Release 4.1
+ *  @version Release 6.2
  */
 public interface I_AD_Element 
 {
@@ -179,6 +179,15 @@ public interface I_AD_Element
 	  * Alphanumeric identifier of the entity
 	  */
 	public String getName();
+
+    /** Column name Placeholder */
+    public static final String COLUMNNAME_Placeholder = "Placeholder";
+
+	/** Set Placeholder	  */
+	public void setPlaceholder (String Placeholder);
+
+	/** Get Placeholder	  */
+	public String getPlaceholder();
 
     /** Column name PO_Description */
     public static final String COLUMNNAME_PO_Description = "PO_Description";

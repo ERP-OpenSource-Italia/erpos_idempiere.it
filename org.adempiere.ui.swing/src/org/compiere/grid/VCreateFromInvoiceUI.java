@@ -21,6 +21,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.VetoableChangeListener;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -94,6 +95,8 @@ public class VCreateFromInvoiceUI extends CreateFromInvoice implements ActionLis
     /** Combo box for selecting RMA document */
 	private JComboBox<Object> rmaField = new JComboBox<Object>();
 	
+	private boolean isCreditMemo = false;
+	
 	/**
 	 *  Dynamic Init
 	 *  @throws Exception if Lookups cannot be initialized
@@ -115,6 +118,9 @@ public class VCreateFromInvoiceUI extends CreateFromInvoice implements ActionLis
 			rmaLabel.setVisible(false);
 		    rmaField.setVisible(false);
 		}
+		
+		isCreditMemo = MDocType.DOCBASETYPE_APCreditMemo.equals(docType.getDocBaseType()) 
+				|| MDocType.DOCBASETYPE_ARCreditMemo.equals(docType.getDocBaseType());
 		
 		initBPartner(true);
 		bPartnerField.addVetoableChangeListener(this);
@@ -256,7 +262,7 @@ public class VCreateFromInvoiceUI extends CreateFromInvoice implements ActionLis
 		bPartnerField = new VLookup ("C_BPartner_ID", true, false, true, lookup);
 		//
 		int C_BPartner_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "C_BPartner_ID");
-		bPartnerField.setValue(new Integer(C_BPartner_ID));
+		bPartnerField.setValue(Integer.valueOf(C_BPartner_ID));
 
 		//  initial loading
 		initBPOrderDetails(C_BPartner_ID, forInvoice);
@@ -276,7 +282,7 @@ public class VCreateFromInvoiceUI extends CreateFromInvoice implements ActionLis
 		orderField.removeAllItems();
 		orderField.addItem(pp);
 		
-		ArrayList<KeyNamePair> list = loadOrderData(C_BPartner_ID, forInvoice, false);
+		ArrayList<KeyNamePair> list = loadOrderData(C_BPartner_ID, forInvoice, false, isCreditMemo);
 		for(KeyNamePair knp : list)
 			orderField.addItem(knp);
 		
@@ -343,7 +349,7 @@ public class VCreateFromInvoiceUI extends CreateFromInvoice implements ActionLis
 	 */
 	protected void loadOrder (int C_Order_ID, boolean forInvoice)
 	{
-		loadTableOIS(getOrderData(C_Order_ID, forInvoice));
+		loadTableOIS(getOrderData(C_Order_ID, forInvoice, isCreditMemo));
 	}   //  LoadOrder
 	
 	protected void loadRMA (int M_RMA_ID)
@@ -360,7 +366,7 @@ public class VCreateFromInvoiceUI extends CreateFromInvoice implements ActionLis
 	 *  Load Order/Invoice/Shipment data into Table
 	 *  @param data data
 	 */
-	protected void loadTableOIS (Vector<?> data)
+	protected void loadTableOIS (Vector<? extends Vector> data)
 	{
 		//  Remove previous listeners
 		dialog.getMiniTable().getModel().removeTableModelListener(dialog);
