@@ -281,15 +281,6 @@ public interface I_C_CommissionLine
 
 	public org.compiere.model.I_M_Product getM_Product() throws RuntimeException;
 
-    /** Column name OnlyProduct */
-    public static final String COLUMNNAME_OnlyProduct = "OnlyProduct";
-
-	/** Set Commision only on Product	  */
-	public void setOnlyProduct (boolean OnlyProduct);
-
-	/** Get Commision only on Product	  */
-	public boolean isOnlyProduct();
-
     /** Column name Org_ID */
     public static final String COLUMNNAME_Org_ID = "Org_ID";
 

@@ -37,6 +37,7 @@ import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Language;
 
+import it.idempiere.base.model.LITMCommissionCalc;
 import it.idempiere.base.util.STDSysConfig;
 
 /**
@@ -127,7 +128,7 @@ public class CommissionCalc extends SvrProcess
 						.append(" INNER JOIN C_InvoiceLine l ON (h.C_Invoice_ID = l.C_Invoice_ID) ")
 						.append(" INNER JOIN C_DocType dt ON (h.C_DocType_ID = dt.C_DocType_ID)")
 						.append(" LEFT OUTER JOIN C_Payment p ON (p.C_Payment_ID=al.C_Payment_ID)")
-						.append(isOnlyProductWhere(lines[i].isOnlyProduct())) //F3P		  				
+						.append(isOnlyProductWhere(LITMCommissionCalc.isOnlyProduct(lines[i]))) //F3P		  				
 						//.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
 						.append("WHERE hdr.DocStatus IN ('CL','CO','RE')")
 						.append(" AND h.IsSOTrx='Y' AND l.IsDescription = 'N'")
@@ -163,7 +164,7 @@ public class CommissionCalc extends SvrProcess
 						.append(" COALESCE(prd.Value,l.Description),h.DateOrdered ")
 						.append("FROM C_Order h")
 						.append(" INNER JOIN C_OrderLine l ON (h.C_Order_ID = l.C_Order_ID)")
-						.append(isOnlyProductWhere(lines[i].isOnlyProduct())) //F3P
+						.append(isOnlyProductWhere(LITMCommissionCalc.isOnlyProduct(lines[i]))) //F3P
 						//.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
 						.append("WHERE h.DocStatus IN ('CL','CO')")
 						.append(" AND h.IsSOTrx='Y'")
@@ -196,7 +197,7 @@ public class CommissionCalc extends SvrProcess
 						.append(" LEFT OUTER JOIN M_InOutLine il ON (il.M_InOutLine_ID = l.M_InOutLine_ID )")
 						.append(" LEFT OUTER JOIN M_InOut i ON (il.M_InOut_ID = i.M_InOut_ID )")
 						.append(" LEFT OUTER JOIN C_OrderLine ol ON (ol.C_OrderLine_ID = l.C_OrderLine_ID )")
-						.append(isOnlyProductWhere(lines[i].isOnlyProduct())) //F3P
+						.append(isOnlyProductWhere(LITMCommissionCalc.isOnlyProduct(lines[i]))) //F3P
 						//.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
 						.append("WHERE h.DocStatus IN ('CL','CO','RE')")
 						.append(" AND h.IsSOTrx='Y'")

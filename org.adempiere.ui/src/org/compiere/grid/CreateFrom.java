@@ -118,8 +118,6 @@ public abstract class CreateFrom implements ICreateFrom
 			colBP = "o.Bill_BPartner_ID";
 		}
 		
-		StringBuffer sql = new StringBuffer(display);
-		
 		// F3P: integrated display based on selection columns		
 		String display = MLookupFactory.getDisplayBaseQuery(Env.getLanguage(Env.getCtx()), "C_Order_ID", "C_Order","o","o.C_Order_ID", null);		
 		
@@ -129,7 +127,7 @@ public abstract class CreateFrom implements ICreateFrom
 		
 		if(docTypeIDs == null)
 		{ 
-			sql.append(end(" WHERE ")
+			sql.append(" WHERE ")
 			.append(colBP)
 			.append("=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO') AND o.C_Order_ID IN (SELECT ol.C_Order_ID FROM C_OrderLine ol ")
 			.append(" LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID") //F3P: added product link
@@ -252,7 +250,7 @@ public abstract class CreateFrom implements ICreateFrom
 		Vector<Vector<Object>> data = new Vector<Vector<Object>>();
 		StringBuilder sql = new StringBuilder("SELECT ");
 		sql.append(forCreditMemo ? "SUM(COALESCE(m.Qty,0))," : "l.QtyOrdered-coalesce(SUM(CASE WHEN l.M_Product_ID IS NOT NULL THEN COALESCE(m.Qty,0) WHEN l.C_Charge_ID IS NOT NULL THEN " //F3P: calcolo qta rimanente anche per i charge
-			+	"(SELECT SUM(cil.QtyInvoiced) FROM C_InvoiceLine cil INNER JOIN C_Invoice ci ON (ci.C_Invoice_ID = cil.C_Invoice_ID) WHERE ci.C_Order_ID = l.C_Order_ID AND ci.DocStatus IN ('CO','CL'))ELSE 0 END),0), " //F3P
+			+	"(SELECT SUM(cil.QtyInvoiced) FROM C_InvoiceLine cil INNER JOIN C_Invoice ci ON (ci.C_Invoice_ID = cil.C_Invoice_ID) WHERE ci.C_Order_ID = l.C_Order_ID AND ci.DocStatus IN ('CO','CL'))ELSE 0 END),0), "); //F3P
 		sql.append("CASE WHEN l.QtyOrdered=0 THEN 0 ELSE l.QtyEntered/l.QtyOrdered END,"	//	2
 			+ " l.C_UOM_ID,COALESCE(uom.UOMSymbol,uom.Name),"			//	3..4
 			+ " COALESCE(l.M_Product_ID,0),COALESCE(p.Name,c.Name),COALESCE(po.VendorProductNo,l.Description),"	//	5..7  F3P: changed po.VendorProductNo in COALESCE(po.VendorProductNo,l.Description) to improve readability on charge lines

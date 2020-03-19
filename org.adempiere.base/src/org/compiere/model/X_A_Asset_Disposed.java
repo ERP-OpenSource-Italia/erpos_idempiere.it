@@ -1,6 +1,6 @@
 /******************************************************************************
- * Product: Adempiere ERP & CRM Smart Business Solution                       *
- * Copyright (C) 1999-2007 ComPiere, Inc. All Rights Reserved.                *
+ * Product: iDempiere ERP & CRM Smart Business Solution                       *
+ * Copyright (C) 1999-2012 ComPiere, Inc. All Rights Reserved.                *
  * This program is free software, you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
  * by the Free Software Foundation. This program is distributed in the hope   *
@@ -25,7 +25,7 @@ import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 
 /** Generated Model for A_Asset_Disposed
- *  @author Adempiere (generated) 
+ *  @author iDempiere (generated) 
  *  @version Release 6.2 - $Id$ */
 public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Persistent 
 {
@@ -61,7 +61,7 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 			setExpense (Env.ZERO);
 // 0
 			setIsApproved (false);
-// @#IsCanApproveOwnDoc@
+// N
 			setPosted (false);
 // N
 			setPostingType (null);
@@ -78,7 +78,7 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
     }
 
     /** AccessLevel
-      * @return 7 - System - Client - Org 
+      * @return 3 - Client - Org 
       */
     protected int get_AccessLevel()
     {
@@ -133,8 +133,8 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 		return bd;
 	}
 
-	/** A_Activation_Method AD_Reference_ID=1000018 */
-	public static final int A_ACTIVATION_METHOD_AD_Reference_ID=1000018;
+	/** A_Activation_Method AD_Reference_ID=53364 */
+	public static final int A_ACTIVATION_METHOD_AD_Reference_ID=53364;
 	/** Activation = AA */
 	public static final String A_ACTIVATION_METHOD_Activation = "AA";
 	/** Set Activation Method.
@@ -169,8 +169,8 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 		return bd;
 	}
 
-	/** Set Disposed Asset.
-		@param A_Asset_Disposed_ID Disposed Asset	  */
+	/** Set Asset Disposed.
+		@param A_Asset_Disposed_ID Asset Disposed	  */
 	public void setA_Asset_Disposed_ID (int A_Asset_Disposed_ID)
 	{
 		if (A_Asset_Disposed_ID < 1) 
@@ -179,8 +179,8 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 			set_ValueNoCheck (COLUMNNAME_A_Asset_Disposed_ID, Integer.valueOf(A_Asset_Disposed_ID));
 	}
 
-	/** Get Disposed Asset.
-		@return Disposed Asset	  */
+	/** Get Asset Disposed.
+		@return Asset Disposed	  */
 	public int getA_Asset_Disposed_ID () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_A_Asset_Disposed_ID);
@@ -197,9 +197,23 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
         return new KeyNamePair(get_ID(), String.valueOf(getA_Asset_Disposed_ID()));
     }
 
-	public I_A_Asset getA_Asset() throws RuntimeException
+	/** Set A_Asset_Disposed_UU.
+		@param A_Asset_Disposed_UU A_Asset_Disposed_UU	  */
+	public void setA_Asset_Disposed_UU (String A_Asset_Disposed_UU)
+	{
+		set_Value (COLUMNNAME_A_Asset_Disposed_UU, A_Asset_Disposed_UU);
+	}
+
+	/** Get A_Asset_Disposed_UU.
+		@return A_Asset_Disposed_UU	  */
+	public String getA_Asset_Disposed_UU () 
+	{
+		return (String)get_Value(COLUMNNAME_A_Asset_Disposed_UU);
+	}
+
+	public org.compiere.model.I_A_Asset getA_Asset() throws RuntimeException
     {
-		return (I_A_Asset)MTable.get(getCtx(), I_A_Asset.Table_Name)
+		return (org.compiere.model.I_A_Asset)MTable.get(getCtx(), org.compiere.model.I_A_Asset.Table_Name)
 			.getPO(getA_Asset_ID(), get_TrxName());	}
 
 	/** Set Asset.
@@ -225,8 +239,8 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 		return ii.intValue();
 	}
 
-	/** A_Asset_Status AD_Reference_ID=1000014 */
-	public static final int A_ASSET_STATUS_AD_Reference_ID=1000014;
+	/** A_Asset_Status AD_Reference_ID=53359 */
+	public static final int A_ASSET_STATUS_AD_Reference_ID=53359;
 	/** Activated = AC */
 	public static final String A_ASSET_STATUS_Activated = "AC";
 	/** Disposed = DI */
@@ -256,9 +270,9 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 		return (String)get_Value(COLUMNNAME_A_Asset_Status);
 	}
 
-	public I_A_Asset getA_Asset_Trade() throws RuntimeException
+	public org.compiere.model.I_A_Asset getA_Asset_Trade() throws RuntimeException
     {
-		return (I_A_Asset)MTable.get(getCtx(), I_A_Asset.Table_Name)
+		return (org.compiere.model.I_A_Asset)MTable.get(getCtx(), org.compiere.model.I_A_Asset.Table_Name)
 			.getPO(getA_Asset_Trade_ID(), get_TrxName());	}
 
 	/** Set Asset Trade.
@@ -298,15 +312,15 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 		return bd;
 	}
 
-	/** Set A_Disposed_Date.
-		@param A_Disposed_Date A_Disposed_Date	  */
+	/** Set Disposed Date.
+		@param A_Disposed_Date Disposed Date	  */
 	public void setA_Disposed_Date (Timestamp A_Disposed_Date)
 	{
 		set_Value (COLUMNNAME_A_Disposed_Date, A_Disposed_Date);
 	}
 
-	/** Get A_Disposed_Date.
-		@return A_Disposed_Date	  */
+	/** Get Disposed Date.
+		@return Disposed Date	  */
 	public Timestamp getA_Disposed_Date () 
 	{
 		return (Timestamp)get_Value(COLUMNNAME_A_Disposed_Date);
@@ -316,26 +330,30 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 	public static final int A_DISPOSED_METHOD_AD_Reference_ID=53270;
 	/** Cash = C */
 	public static final String A_DISPOSED_METHOD_Cash = "C";
+	/** Simple = S */
+	public static final String A_DISPOSED_METHOD_Simple = "S";
 	/** Trade = T1 */
 	public static final String A_DISPOSED_METHOD_Trade = "T1";
+	/** Trade w/cash = T2 */
+	public static final String A_DISPOSED_METHOD_TradeWCash = "T2";
+	/** Cash_ = C_ */
+	public static final String A_DISPOSED_METHOD_Cash_ = "C_";
 	/** Partial Retirement = PD */
 	public static final String A_DISPOSED_METHOD_PartialRetirement = "PD";
 	/** Preservation = PR */
 	public static final String A_DISPOSED_METHOD_Preservation = "PR";
-	/** Simple = S_ */
-	public static final String A_DISPOSED_METHOD_Simple = "S_";
-	/** Sale = SL */
-	public static final String A_DISPOSED_METHOD_Sale = "SL";
-	/** Set A_Disposed_Method.
-		@param A_Disposed_Method A_Disposed_Method	  */
+	/** Simple_ = S_ */
+	public static final String A_DISPOSED_METHOD_Simple_ = "S_";
+	/** Set Disposed Method.
+		@param A_Disposed_Method Disposed Method	  */
 	public void setA_Disposed_Method (String A_Disposed_Method)
 	{
 
 		set_Value (COLUMNNAME_A_Disposed_Method, A_Disposed_Method);
 	}
 
-	/** Get A_Disposed_Method.
-		@return A_Disposed_Method	  */
+	/** Get Disposed Method.
+		@return Disposed Method	  */
 	public String getA_Disposed_Method () 
 	{
 		return (String)get_Value(COLUMNNAME_A_Disposed_Method);
@@ -355,30 +373,30 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 	public static final String A_DISPOSED_REASON_SoldWTrade = "S2";
 	/** Theft = T */
 	public static final String A_DISPOSED_REASON_Theft = "T";
-	/** Set A_Disposed_Reason.
-		@param A_Disposed_Reason A_Disposed_Reason	  */
+	/** Set Disposed Reason.
+		@param A_Disposed_Reason Disposed Reason	  */
 	public void setA_Disposed_Reason (String A_Disposed_Reason)
 	{
 
 		set_Value (COLUMNNAME_A_Disposed_Reason, A_Disposed_Reason);
 	}
 
-	/** Get A_Disposed_Reason.
-		@return A_Disposed_Reason	  */
+	/** Get Disposed Reason.
+		@return Disposed Reason	  */
 	public String getA_Disposed_Reason () 
 	{
 		return (String)get_Value(COLUMNNAME_A_Disposed_Reason);
 	}
 
-	/** Set Proceeds.
-		@param A_Proceeds Proceeds	  */
+	/** Set Asset Proceeds.
+		@param A_Proceeds Asset Proceeds	  */
 	public void setA_Proceeds (BigDecimal A_Proceeds)
 	{
 		set_Value (COLUMNNAME_A_Proceeds, A_Proceeds);
 	}
 
-	/** Get Proceeds.
-		@return Proceeds	  */
+	/** Get Asset Proceeds.
+		@return Asset Proceeds	  */
 	public BigDecimal getA_Proceeds () 
 	{
 		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_A_Proceeds);
@@ -387,9 +405,65 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 		return bd;
 	}
 
-	public I_C_InvoiceLine getC_InvoiceLine() throws RuntimeException
+	public org.compiere.model.I_C_DocType getC_DocType() throws RuntimeException
     {
-		return (I_C_InvoiceLine)MTable.get(getCtx(), I_C_InvoiceLine.Table_Name)
+		return (org.compiere.model.I_C_DocType)MTable.get(getCtx(), org.compiere.model.I_C_DocType.Table_Name)
+			.getPO(getC_DocType_ID(), get_TrxName());	}
+
+	/** Set Document Type.
+		@param C_DocType_ID 
+		Document type or rules
+	  */
+	public void setC_DocType_ID (int C_DocType_ID)
+	{
+		if (C_DocType_ID < 0) 
+			set_Value (COLUMNNAME_C_DocType_ID, null);
+		else 
+			set_Value (COLUMNNAME_C_DocType_ID, Integer.valueOf(C_DocType_ID));
+	}
+
+	/** Get Document Type.
+		@return Document type or rules
+	  */
+	public int getC_DocType_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_C_DocType_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_C_Invoice getC_Invoice() throws RuntimeException
+    {
+		return (org.compiere.model.I_C_Invoice)MTable.get(getCtx(), org.compiere.model.I_C_Invoice.Table_Name)
+			.getPO(getC_Invoice_ID(), get_TrxName());	}
+
+	/** Set Invoice.
+		@param C_Invoice_ID 
+		Invoice Identifier
+	  */
+	public void setC_Invoice_ID (int C_Invoice_ID)
+	{
+		if (C_Invoice_ID < 1) 
+			set_Value (COLUMNNAME_C_Invoice_ID, null);
+		else 
+			set_Value (COLUMNNAME_C_Invoice_ID, Integer.valueOf(C_Invoice_ID));
+	}
+
+	/** Get Invoice.
+		@return Invoice Identifier
+	  */
+	public int getC_Invoice_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_C_Invoice_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_C_InvoiceLine getC_InvoiceLine() throws RuntimeException
+    {
+		return (org.compiere.model.I_C_InvoiceLine)MTable.get(getCtx(), org.compiere.model.I_C_InvoiceLine.Table_Name)
 			.getPO(getC_InvoiceLine_ID(), get_TrxName());	}
 
 	/** Set Invoice Line.
@@ -399,9 +473,9 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 	public void setC_InvoiceLine_ID (int C_InvoiceLine_ID)
 	{
 		if (C_InvoiceLine_ID < 1) 
-			set_ValueNoCheck (COLUMNNAME_C_InvoiceLine_ID, null);
+			set_Value (COLUMNNAME_C_InvoiceLine_ID, null);
 		else 
-			set_ValueNoCheck (COLUMNNAME_C_InvoiceLine_ID, Integer.valueOf(C_InvoiceLine_ID));
+			set_Value (COLUMNNAME_C_InvoiceLine_ID, Integer.valueOf(C_InvoiceLine_ID));
 	}
 
 	/** Get Invoice Line.
@@ -415,9 +489,9 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 		return ii.intValue();
 	}
 
-	public I_C_Period getC_Period() throws RuntimeException
+	public org.compiere.model.I_C_Period getC_Period() throws RuntimeException
     {
-		return (I_C_Period)MTable.get(getCtx(), I_C_Period.Table_Name)
+		return (org.compiere.model.I_C_Period)MTable.get(getCtx(), org.compiere.model.I_C_Period.Table_Name)
 			.getPO(getC_Period_ID(), get_TrxName());	}
 
 	/** Set Period.
@@ -615,22 +689,6 @@ public class X_A_Asset_Disposed extends PO implements I_A_Asset_Disposed, I_Pers
 	public BigDecimal getExpense () 
 	{
 		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_Expense);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
-	/** Set Sale Value.
-		@param F3P_SaleValue Sale Value	  */
-	public void setF3P_SaleValue (BigDecimal F3P_SaleValue)
-	{
-		throw new IllegalArgumentException ("F3P_SaleValue is virtual column");	}
-
-	/** Get Sale Value.
-		@return Sale Value	  */
-	public BigDecimal getF3P_SaleValue () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_F3P_SaleValue);
 		if (bd == null)
 			 return Env.ZERO;
 		return bd;

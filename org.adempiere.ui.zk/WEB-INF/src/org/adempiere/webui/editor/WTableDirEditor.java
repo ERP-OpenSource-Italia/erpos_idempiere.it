@@ -39,6 +39,7 @@ import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.WFieldRecordInfo;
 import org.adempiere.webui.window.WLocationDialog;
 import org.compiere.model.GridField;
+import org.compiere.model.GridTab;
 import org.compiere.model.GridTable;
 import org.compiere.model.Lookup;
 import org.compiere.model.MBPartnerLocation;
@@ -652,7 +653,7 @@ ContextMenuListener, IZoomableEditor
 			zoomWindowId = quExt.getAD_Window_ID();
 		
 		int tabNo = gridField != null && gridField.getGridTab() != null ? gridField.getGridTab().getTabNo() : 0;
-		final WQuickEntry vqe = new WQuickEntry(lookup.getWindowNo(), tabNo, lookup.getZoom(), zoomWindowId);
+		final WQuickEntry vqe = new WQuickEntry(lookup.getWindowNo(), tabNo, zoomWindowId);
 
 		int Record_ID = 0;
 

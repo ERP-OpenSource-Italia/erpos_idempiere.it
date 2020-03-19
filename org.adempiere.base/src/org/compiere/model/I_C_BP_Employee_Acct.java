@@ -117,36 +117,6 @@ public interface I_C_BP_Employee_Acct
 	  */
 	public int getCreatedBy();
 
-    /** Column name E_Expense_Acct */
-    public static final String COLUMNNAME_E_Expense_Acct = "E_Expense_Acct";
-
-	/** Set Employee Expense.
-	  * Account for Employee Expenses
-	  */
-	public void setE_Expense_Acct (int E_Expense_Acct);
-
-	/** Get Employee Expense.
-	  * Account for Employee Expenses
-	  */
-	public int getE_Expense_Acct();
-
-	public I_C_ValidCombination getE_Expense_A() throws RuntimeException;
-
-    /** Column name E_Prepayment_Acct */
-    public static final String COLUMNNAME_E_Prepayment_Acct = "E_Prepayment_Acct";
-
-	/** Set Employee Prepayment.
-	  * Account for Employee Expense Prepayments
-	  */
-	public void setE_Prepayment_Acct (int E_Prepayment_Acct);
-
-	/** Get Employee Prepayment.
-	  * Account for Employee Expense Prepayments
-	  */
-	public int getE_Prepayment_Acct();
-
-	public I_C_ValidCombination getE_Prepayment_A() throws RuntimeException;
-
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";
 

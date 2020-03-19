@@ -10,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Checkbox;
 import org.adempiere.webui.component.Datebox;
@@ -137,6 +138,8 @@ public class DefaultCellComponentFactory implements ICellComponentFactory
 										+ listcell.getStyle());
 						numberbox.addEventListener(Events.ON_CHANGE, wliRenderer);
 						listcell.appendChild(numberbox);
+						if (ClientInfo.isMobile())
+							numberbox.getButton().setVisible(false);
 					}
 					else
 					{
@@ -148,8 +151,17 @@ public class DefaultCellComponentFactory implements ICellComponentFactory
 			else if (field instanceof Timestamp)
 			{
 
-				SimpleDateFormat dateFormat = DisplayType.getDateFormat(DisplayType.Date, AEnv.getLanguage(Env.getCtx()));
+				int refId = 0;
+				List<WTableColumn> columns = wliRenderer.getTableColumns();
+				if (columns != null && columnIndex < columns.size()) {
+					refId = columns.get(columnIndex).getAD_Reference_ID();
+				}
+
+				if (refId == 0)
+					refId = DisplayType.Date;
+				SimpleDateFormat dateFormat = DisplayType.getDateFormat(refId, AEnv.getLanguage(Env.getCtx()));
 				listcell.setValue(dateFormat.format((Timestamp)field));
+				
 				if (isCellEditable)
 				{
 					Datebox datebox = new Datebox();

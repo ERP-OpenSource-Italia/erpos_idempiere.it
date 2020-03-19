@@ -409,7 +409,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
     //F3P end
     
     //F3P add reportFile and params
-    private boolean startProcess0(Properties ctx, ProcessInfo pi, Trx trx, File reportFile, Map<String, Object> params)
+    private boolean startProcess0(Properties ctx, ProcessInfo pi, Trx trx, File forceReportFile, Map<String, Object> externalParams)
     {
     	//F3P
     	int AD_Client_ID = Env.getAD_Client_ID(ctx),
@@ -438,7 +438,14 @@ public class ReportStarter implements ProcessCall, ClientProcess
         }
 
       List<JasperPrint> jasperPrintList = new ArrayList<JasperPrint>();
-      String reportFilePath = reportData.getReportFilePath();
+      
+      String reportFilePath = null;
+      
+      if(forceReportFile == null)
+    	  reportFilePath = reportData.getReportFilePath();
+      else
+    	  reportFilePath = forceReportFile.getName();
+      
       String[]  reportPathList = reportFilePath.split(";");
       for (int idx = 0; idx < reportPathList.length; idx++) {
 
@@ -463,6 +470,9 @@ public class ReportStarter implements ProcessCall, ClientProcess
 		File reportFile = null;
 		String fileExtension = "";
 		HashMap<String, Object> params = new HashMap<String, Object>();
+		
+		if(externalParams != null && externalParams.size() > 0)
+			params.putAll(externalParams);
 
 		addProcessParameters(AD_PInstance_ID, params, trxName);
 		addProcessInfoParameters(params, pi.getParameter());
@@ -1242,8 +1252,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
 			throw e;
 		} finally {
 			if (out != null)
-				out.close();
-			}
+				out.close();			
 			if (inputStream != null)
 				inputStream.close();
 		}

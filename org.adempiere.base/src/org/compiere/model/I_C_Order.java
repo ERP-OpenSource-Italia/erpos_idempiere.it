@@ -153,32 +153,6 @@ public interface I_C_Order
 
 	public org.compiere.model.I_AD_User getBill_User() throws RuntimeException;
 
-    /** Column name BP_Order_notes */
-    public static final String COLUMNNAME_BP_Order_notes = "BP_Order_notes";
-
-	/** Set Order  Notes.
-	  * Order Notes
-	  */
-	public void setBP_Order_notes (String BP_Order_notes);
-
-	/** Get Order  Notes.
-	  * Order Notes
-	  */
-	public String getBP_Order_notes();
-
-    /** Column name BP_porto */
-    public static final String COLUMNNAME_BP_porto = "BP_porto";
-
-	/** Set Porto.
-	  * Porto
-	  */
-	public void setBP_porto (String BP_porto);
-
-	/** Get Porto.
-	  * Porto
-	  */
-	public String getBP_porto();
-
     /** Column name C_Activity_ID */
     public static final String COLUMNNAME_C_Activity_ID = "C_Activity_ID";
 
@@ -193,21 +167,6 @@ public interface I_C_Order
 	public int getC_Activity_ID();
 
 	public org.compiere.model.I_C_Activity getC_Activity() throws RuntimeException;
-
-    /** Column name C_BankAccount_ID */
-    public static final String COLUMNNAME_C_BankAccount_ID = "C_BankAccount_ID";
-
-	/** Set Bank Account.
-	  * Account at the Bank
-	  */
-	public void setC_BankAccount_ID (int C_BankAccount_ID);
-
-	/** Get Bank Account.
-	  * Account at the Bank
-	  */
-	public int getC_BankAccount_ID();
-
-	public org.compiere.model.I_C_BankAccount getC_BankAccount() throws RuntimeException;
 
     /** Column name C_BPartner_ID */
     public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
@@ -238,21 +197,6 @@ public interface I_C_Order
 	public int getC_BPartner_Location_ID();
 
 	public org.compiere.model.I_C_BPartner_Location getC_BPartner_Location() throws RuntimeException;
-
-    /** Column name C_BP_BankAccount_ID */
-    public static final String COLUMNNAME_C_BP_BankAccount_ID = "C_BP_BankAccount_ID";
-
-	/** Set Partner Bank Account.
-	  * Bank Account of the Business Partner
-	  */
-	public void setC_BP_BankAccount_ID (int C_BP_BankAccount_ID);
-
-	/** Get Partner Bank Account.
-	  * Bank Account of the Business Partner
-	  */
-	public int getC_BP_BankAccount_ID();
-
-	public org.compiere.model.I_C_BP_BankAccount getC_BP_BankAccount() throws RuntimeException;
 
     /** Column name C_Campaign_ID */
     public static final String COLUMNNAME_C_Campaign_ID = "C_Campaign_ID";
@@ -382,28 +326,6 @@ public interface I_C_Order
 	  * Charge Amount
 	  */
 	public BigDecimal getChargeAmt();
-
-    /** Column name CIG */
-    public static final String COLUMNNAME_CIG = "CIG";
-
-	/** Set Codice Identificativo di Gara.
-	  * CIG from public aministration office
-	  */
-	public void setCIG (String CIG);
-
-	/** Get Codice Identificativo di Gara.
-	  * CIG from public aministration office
-	  */
-	public String getCIG();
-
-    /** Column name CollectionType */
-    public static final String COLUMNNAME_CollectionType = "CollectionType";
-
-	/** Set Collection Type	  */
-	public void setCollectionType (String CollectionType);
-
-	/** Get Collection Type	  */
-	public String getCollectionType();
 
     /** Column name C_Opportunity_ID */
     public static final String COLUMNNAME_C_Opportunity_ID = "C_Opportunity_ID";
@@ -537,15 +459,6 @@ public interface I_C_Order
 	  * User who created this records
 	  */
 	public int getCreatedBy();
-
-    /** Column name CreateDelPackage */
-    public static final String COLUMNNAME_CreateDelPackage = "CreateDelPackage";
-
-	/** Set Create Delivery Package	  */
-	public void setCreateDelPackage (String CreateDelPackage);
-
-	/** Get Create Delivery Package	  */
-	public String getCreateDelPackage();
 
     /** Column name DateAcct */
     public static final String COLUMNNAME_DateAcct = "DateAcct";
@@ -761,28 +674,6 @@ public interface I_C_Order
 	  */
 	public BigDecimal getGrandTotal();
 
-    /** Column name GuaranteeDaysOv */
-    public static final String COLUMNNAME_GuaranteeDaysOv = "GuaranteeDaysOv";
-
-	/** Set Order Guarantee Days.
-	  * Guarantee Days for the order/quotation
-	  */
-	public void setGuaranteeDaysOv (int GuaranteeDaysOv);
-
-	/** Get Order Guarantee Days.
-	  * Guarantee Days for the order/quotation
-	  */
-	public int getGuaranteeDaysOv();
-
-    /** Column name Incoterms */
-    public static final String COLUMNNAME_Incoterms = "Incoterms";
-
-	/** Set Terms of Delivery	  */
-	public void setIncoterms (String Incoterms);
-
-	/** Get Terms of Delivery	  */
-	public String getIncoterms();
-
     /** Column name InvoiceRule */
     public static final String COLUMNNAME_InvoiceRule = "InvoiceRule";
 
@@ -870,15 +761,6 @@ public interface I_C_Order
 	  */
 	public boolean isDropShip();
 
-    /** Column name IsIntraVAT */
-    public static final String COLUMNNAME_IsIntraVAT = "IsIntraVAT";
-
-	/** Set Is Intra VAT	  */
-	public void setIsIntraVAT (boolean IsIntraVAT);
-
-	/** Get Is Intra VAT	  */
-	public boolean isIntraVAT();
-
     /** Column name IsInvoiced */
     public static final String COLUMNNAME_IsInvoiced = "IsInvoiced";
 
@@ -892,28 +774,6 @@ public interface I_C_Order
 	  */
 	public boolean isInvoiced();
 
-    /** Column name IsMntOrder */
-    public static final String COLUMNNAME_IsMntOrder = "IsMntOrder";
-
-	/** Set Maintenance Order.
-	  * If enabled, this is a sales order with maintenance lines
-	  */
-	public void setIsMntOrder (boolean IsMntOrder);
-
-	/** Get Maintenance Order.
-	  * If enabled, this is a sales order with maintenance lines
-	  */
-	public boolean isMntOrder();
-
-    /** Column name IsOrderNotePrint */
-    public static final String COLUMNNAME_IsOrderNotePrint = "IsOrderNotePrint";
-
-	/** Set IsOrderNotePrint	  */
-	public void setIsOrderNotePrint (boolean IsOrderNotePrint);
-
-	/** Get IsOrderNotePrint	  */
-	public boolean isOrderNotePrint();
-
     /** Column name IsPayScheduleValid */
     public static final String COLUMNNAME_IsPayScheduleValid = "IsPayScheduleValid";
 
@@ -926,15 +786,6 @@ public interface I_C_Order
 	  * Is the Payment Schedule is valid
 	  */
 	public boolean isPayScheduleValid();
-
-    /** Column name IsPortalOrder */
-    public static final String COLUMNNAME_IsPortalOrder = "IsPortalOrder";
-
-	/** Set Is Portal Order	  */
-	public void setIsPortalOrder (boolean IsPortalOrder);
-
-	/** Get Is Portal Order	  */
-	public boolean isPortalOrder();
 
     /** Column name IsPrinted */
     public static final String COLUMNNAME_IsPrinted = "IsPrinted";
@@ -957,15 +808,6 @@ public interface I_C_Order
 
 	/** Get Priviledged Rate	  */
 	public boolean isPriviledgedRate();
-
-    /** Column name IsReverseCharge */
-    public static final String COLUMNNAME_IsReverseCharge = "IsReverseCharge";
-
-	/** Set Is Reverse Charge	  */
-	public void setIsReverseCharge (boolean IsReverseCharge);
-
-	/** Get Is Reverse Charge	  */
-	public boolean isReverseCharge();
 
     /** Column name IsSelected */
     public static final String COLUMNNAME_IsSelected = "IsSelected";
@@ -1002,15 +844,6 @@ public interface I_C_Order
 	  */
 	public boolean isSOTrx();
 
-    /** Column name IsSuspendedVAT */
-    public static final String COLUMNNAME_IsSuspendedVAT = "IsSuspendedVAT";
-
-	/** Set Is Suspended VAT	  */
-	public void setIsSuspendedVAT (boolean IsSuspendedVAT);
-
-	/** Get Is Suspended VAT	  */
-	public boolean isSuspendedVAT();
-
     /** Column name IsTaxIncluded */
     public static final String COLUMNNAME_IsTaxIncluded = "IsTaxIncluded";
 
@@ -1037,15 +870,6 @@ public interface I_C_Order
 	  */
 	public boolean isTransferred();
 
-    /** Column name IsUpdateDocNo */
-    public static final String COLUMNNAME_IsUpdateDocNo = "IsUpdateDocNo";
-
-	/** Set IsUpdateDocNo	  */
-	public void setIsUpdateDocNo (boolean IsUpdateDocNo);
-
-	/** Get IsUpdateDocNo	  */
-	public boolean isUpdateDocNo();
-
     /** Column name Link_Order_ID */
     public static final String COLUMNNAME_Link_Order_ID = "Link_Order_ID";
 
@@ -1059,79 +883,7 @@ public interface I_C_Order
 	  */
 	public int getLink_Order_ID();
 
-    /** Column name LIT_AdvPerc */
-    public static final String COLUMNNAME_LIT_AdvPerc = "LIT_AdvPerc";
-
-	/** Set Adv. Percentage	  */
-	public void setLIT_AdvPerc (BigDecimal LIT_AdvPerc);
-
-	/** Get Adv. Percentage	  */
-	public BigDecimal getLIT_AdvPerc();
-
-    /** Column name LIT_AmtBeforeDisc */
-    public static final String COLUMNNAME_LIT_AmtBeforeDisc = "LIT_AmtBeforeDisc";
-
-	/** Set Total Lines Before Doc. Disc..
-	  * Total Lines value Before Document Discount
-	  */
-	public void setLIT_AmtBeforeDisc (BigDecimal LIT_AmtBeforeDisc);
-
-	/** Get Total Lines Before Doc. Disc..
-	  * Total Lines value Before Document Discount
-	  */
-	public BigDecimal getLIT_AmtBeforeDisc();
-
-    /** Column name LIT_DocDiscPerc */
-    public static final String COLUMNNAME_LIT_DocDiscPerc = "LIT_DocDiscPerc";
-
-	/** Set Document Discount Perc..
-	  * Discount appllied for all Document
-	  */
-	public void setLIT_DocDiscPerc (BigDecimal LIT_DocDiscPerc);
-
-	/** Get Document Discount Perc..
-	  * Discount appllied for all Document
-	  */
-	public BigDecimal getLIT_DocDiscPerc();
-
-    /** Column name LIT_DocDiscVal */
-    public static final String COLUMNNAME_LIT_DocDiscVal = "LIT_DocDiscVal";
-
-	/** Set Document Discount Amt.
-	  * Document Dicount Amount
-	  */
-	public void setLIT_DocDiscVal (BigDecimal LIT_DocDiscVal);
-
-	/** Get Document Discount Amt.
-	  * Document Dicount Amount
-	  */
-	public BigDecimal getLIT_DocDiscVal();
-
-    /** Column name LIT_IsCashOrdAdv */
-    public static final String COLUMNNAME_LIT_IsCashOrdAdv = "LIT_IsCashOrdAdv";
-
-	/** Set Advance on exposure.
-	  * Advance on maximum exposure
-	  */
-	public void setLIT_IsCashOrdAdv (String LIT_IsCashOrdAdv);
-
-	/** Get Advance on exposure.
-	  * Advance on maximum exposure
-	  */
-	public String getLIT_IsCashOrdAdv();
-
-    /** Column name LIT_IsDiscOnlyProd */
-    public static final String COLUMNNAME_LIT_IsDiscOnlyProd = "LIT_IsDiscOnlyProd";
-
-	/** Set Disc. only on products.
-	  * Document discount will be applied only on product lines
-	  */
-	public void setLIT_IsDiscOnlyProd (boolean LIT_IsDiscOnlyProd);
-
-	/** Get Disc. only on products.
-	  * Document discount will be applied only on product lines
-	  */
-	public boolean isLIT_IsDiscOnlyProd();
+	public org.compiere.model.I_C_Order getLink_Order() throws RuntimeException;
 
     /** Column name M_FreightCategory_ID */
     public static final String COLUMNNAME_M_FreightCategory_ID = "M_FreightCategory_ID";
@@ -1148,15 +900,6 @@ public interface I_C_Order
 
 	public org.compiere.model.I_M_FreightCategory getM_FreightCategory() throws RuntimeException;
 
-    /** Column name ModeOfTransport */
-    public static final String COLUMNNAME_ModeOfTransport = "ModeOfTransport";
-
-	/** Set Mode Of Transport	  */
-	public void setModeOfTransport (String ModeOfTransport);
-
-	/** Get Mode Of Transport	  */
-	public String getModeOfTransport();
-
     /** Column name M_PriceList_ID */
     public static final String COLUMNNAME_M_PriceList_ID = "M_PriceList_ID";
 
@@ -1171,21 +914,6 @@ public interface I_C_Order
 	public int getM_PriceList_ID();
 
 	public org.compiere.model.I_M_PriceList getM_PriceList() throws RuntimeException;
-
-    /** Column name M_Shipper2_ID */
-    public static final String COLUMNNAME_M_Shipper2_ID = "M_Shipper2_ID";
-
-	/** Set Shipper 2.
-	  * Method or manner of product delivery
-	  */
-	public void setM_Shipper2_ID (int M_Shipper2_ID);
-
-	/** Get Shipper 2.
-	  * Method or manner of product delivery
-	  */
-	public int getM_Shipper2_ID();
-
-	public org.compiere.model.I_M_Shipper getM_Shipper2() throws RuntimeException;
 
     /** Column name M_Shipper_ID */
     public static final String COLUMNNAME_M_Shipper_ID = "M_Shipper_ID";
@@ -1216,41 +944,6 @@ public interface I_C_Order
 	public int getM_Warehouse_ID();
 
 	public org.compiere.model.I_M_Warehouse getM_Warehouse() throws RuntimeException;
-
-    /** Column name NatureOfTransaction */
-    public static final String COLUMNNAME_NatureOfTransaction = "NatureOfTransaction";
-
-	/** Set Nature Of Transaction	  */
-	public void setNatureOfTransaction (String NatureOfTransaction);
-
-	/** Get Nature Of Transaction	  */
-	public String getNatureOfTransaction();
-
-    /** Column name NoPackages */
-    public static final String COLUMNNAME_NoPackages = "NoPackages";
-
-	/** Set No Packages.
-	  * Number of packages shipped
-	  */
-	public void setNoPackages (int NoPackages);
-
-	/** Get No Packages.
-	  * Number of packages shipped
-	  */
-	public int getNoPackages();
-
-    /** Column name OrderType */
-    public static final String COLUMNNAME_OrderType = "OrderType";
-
-	/** Set Order Type.
-	  * Type of Order: MRP records grouped by source (Sales Order, Purchase Order, Distribution Order, Requisition)
-	  */
-	public void setOrderType (String OrderType);
-
-	/** Get Order Type.
-	  * Type of Order: MRP records grouped by source (Sales Order, Purchase Order, Distribution Order, Requisition)
-	  */
-	public String getOrderType();
 
     /** Column name Pay_BPartner_ID */
     public static final String COLUMNNAME_Pay_BPartner_ID = "Pay_BPartner_ID";
@@ -1303,15 +996,6 @@ public interface I_C_Order
 	  * Transaction Reference Number (Sales Order, Purchase Order) of your Business Partner
 	  */
 	public String getPOReference();
-
-    /** Column name POReferenceDate */
-    public static final String COLUMNNAME_POReferenceDate = "POReferenceDate";
-
-	/** Set Order Reference Date	  */
-	public void setPOReferenceDate (Timestamp POReferenceDate);
-
-	/** Get Order Reference Date	  */
-	public Timestamp getPOReferenceDate();
 
     /** Column name Posted */
     public static final String COLUMNNAME_Posted = "Posted";
@@ -1387,15 +1071,6 @@ public interface I_C_Order
 	  */
 	public String getPromotionCode();
 
-    /** Column name ProvisionType */
-    public static final String COLUMNNAME_ProvisionType = "ProvisionType";
-
-	/** Set Provision Type	  */
-	public void setProvisionType (String ProvisionType);
-
-	/** Get Provision Type	  */
-	public String getProvisionType();
-
     /** Column name QuotationOrder_ID */
     public static final String COLUMNNAME_QuotationOrder_ID = "QuotationOrder_ID";
 
@@ -1409,6 +1084,8 @@ public interface I_C_Order
 	  */
 	public int getQuotationOrder_ID();
 
+	public org.compiere.model.I_C_Order getQuotationOrder() throws RuntimeException;
+
     /** Column name Ref_Order_ID */
     public static final String COLUMNNAME_Ref_Order_ID = "Ref_Order_ID";
 
@@ -1421,6 +1098,8 @@ public interface I_C_Order
 	  * Reference to corresponding Sales/Purchase Order
 	  */
 	public int getRef_Order_ID();
+
+	public org.compiere.model.I_C_Order getRef_Order() throws RuntimeException;
 
     /** Column name SalesRep_ID */
     public static final String COLUMNNAME_SalesRep_ID = "SalesRep_ID";
@@ -1458,19 +1137,6 @@ public interface I_C_Order
 
 	/** Get Rate Inquiry	  */
 	public String getShippingRateInquiry();
-
-    /** Column name SO_CreditUsed */
-    public static final String COLUMNNAME_SO_CreditUsed = "SO_CreditUsed";
-
-	/** Set Credit Used.
-	  * Current open balance
-	  */
-	public void setSO_CreditUsed (BigDecimal SO_CreditUsed);
-
-	/** Get Credit Used.
-	  * Current open balance
-	  */
-	public BigDecimal getSO_CreditUsed();
 
     /** Column name TotalLines */
     public static final String COLUMNNAME_TotalLines = "TotalLines";
@@ -1531,32 +1197,6 @@ public interface I_C_Order
 
 	public org.compiere.model.I_C_ElementValue getUser2() throws RuntimeException;
 
-    /** Column name ValidFrom */
-    public static final String COLUMNNAME_ValidFrom = "ValidFrom";
-
-	/** Set Valid from.
-	  * Valid from including this date (first day)
-	  */
-	public void setValidFrom (Timestamp ValidFrom);
-
-	/** Get Valid from.
-	  * Valid from including this date (first day)
-	  */
-	public Timestamp getValidFrom();
-
-    /** Column name ValidTo */
-    public static final String COLUMNNAME_ValidTo = "ValidTo";
-
-	/** Set Valid to.
-	  * Valid to including this date (last day)
-	  */
-	public void setValidTo (Timestamp ValidTo);
-
-	/** Get Valid to.
-	  * Valid to including this date (last day)
-	  */
-	public Timestamp getValidTo();
-
     /** Column name Volume */
     public static final String COLUMNNAME_Volume = "Volume";
 
@@ -1582,40 +1222,4 @@ public interface I_C_Order
 	  * Weight of a product
 	  */
 	public BigDecimal getWeight();
-
-    /** Column name WSC_Aspetto_Beni */
-    public static final String COLUMNNAME_WSC_Aspetto_Beni = "WSC_Aspetto_Beni";
-
-	/** Set WSC_Aspetto_Beni	  */
-	public void setWSC_Aspetto_Beni (String WSC_Aspetto_Beni);
-
-	/** Get WSC_Aspetto_Beni	  */
-	public String getWSC_Aspetto_Beni();
-
-    /** Column name WSC_causale_trasporto */
-    public static final String COLUMNNAME_WSC_causale_trasporto = "WSC_causale_trasporto";
-
-	/** Set WSC_causale_trasporto	  */
-	public void setWSC_causale_trasporto (String WSC_causale_trasporto);
-
-	/** Get WSC_causale_trasporto	  */
-	public String getWSC_causale_trasporto();
-
-    /** Column name WSC_Peso_lordo */
-    public static final String COLUMNNAME_WSC_Peso_lordo = "WSC_Peso_lordo";
-
-	/** Set WSC_Peso_lordo	  */
-	public void setWSC_Peso_lordo (BigDecimal WSC_Peso_lordo);
-
-	/** Get WSC_Peso_lordo	  */
-	public BigDecimal getWSC_Peso_lordo();
-
-    /** Column name WSC_Peso_netto */
-    public static final String COLUMNNAME_WSC_Peso_netto = "WSC_Peso_netto";
-
-	/** Set WSC_Peso_netto	  */
-	public void setWSC_Peso_netto (BigDecimal WSC_Peso_netto);
-
-	/** Get WSC_Peso_netto	  */
-	public BigDecimal getWSC_Peso_netto();
 }

@@ -771,8 +771,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 		
 		MInvoice invoice = null; //F3P: moved here to be able to delete it if import fails
 		X_I_Invoice imp = null,  //F3P: moved definition outside of while cycle
-								previousImp = null, //F3P: needed to keep track of last impoirt line of current invoice when there is a break
-								potentialErrorImp = null; // F3P: needed to keep track of wich imp may be causing errors
+					previousImp = null, //F3P: needed to keep track of last impoirt line of current invoice when there is a break
+					potentialErrorImp = null; // F3P: needed to keep track of wich imp may be causing errors
 		LinkedList<X_I_Invoice> lstImportedIInvoice = new LinkedList<X_I_Invoice>(); //F3P
 
 		try
@@ -790,8 +790,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 			int lineNo = 0;
 			while (rs.next ())
 			{
-				X_I_Invoice imp = new X_I_Invoice (getCtx (), rs, get_TrxName());
-					potentialErrorImp = imp; // F3P: mark processing imp
+				imp = new X_I_Invoice (getCtx (), rs, get_TrxName());
+				potentialErrorImp = imp; // F3P: mark processing imp
 				String cmpDocumentNo = imp.getDocumentNo();
 				if (cmpDocumentNo == null)
 					cmpDocumentNo = "";

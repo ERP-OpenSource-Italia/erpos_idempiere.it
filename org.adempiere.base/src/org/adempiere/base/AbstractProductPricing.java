@@ -90,8 +90,9 @@ public abstract class AbstractProductPricing implements IProductPricing {
 	@Override
 	public void setOrderLine(I_C_OrderLine orderLine, String trxName) {
 		m_M_Product_ID = orderLine.getM_Product_ID();
+		I_C_Order order = null;
 		if (orderLine.getC_Order_ID() > 0) {
-			I_C_Order order = orderLine.getC_Order();
+			order = orderLine.getC_Order();
 			m_isSOTrx = order.isSOTrx();
 		}
 		m_C_BPartner_ID = orderLine.getC_BPartner_ID();

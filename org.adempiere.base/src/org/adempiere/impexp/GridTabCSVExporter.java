@@ -65,8 +65,6 @@ import org.supercsv.io.ICsvMapWriter;
 import org.supercsv.prefs.CsvPreference;
 import org.supercsv.prefs.CsvPreference.Builder;
 
-import groovy.json.StringEscapeUtils;
-
 /**
  * CSV Exporter for GridTab
  * @author Carlos Ruiz

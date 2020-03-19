@@ -59,6 +59,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.TrxRunnable;
 
+import it.idempiere.base.model.LITMInvoice;
 import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
 
@@ -489,7 +490,7 @@ public class InvoiceGenerate extends SvrProcess
 				throw new AdempiereException(e);
 			}
 			m_invoice = new MInvoice (order, 0, p_DateInvoiced);
-			m_invoice.setVATLedgerDate(p_DateInvoiced);
+			LITMInvoice.setVATLedgerDate(m_invoice, p_DateInvoiced); // LIT
 			if (!m_invoice.save())
 				throw new IllegalStateException("Could not create Invoice (o)");
 		}
@@ -559,7 +560,7 @@ public class InvoiceGenerate extends SvrProcess
 				throw new AdempiereException(e);
 			}
 			m_invoice = new MInvoice (order, 0, p_DateInvoiced);
-			m_invoice.setVATLedgerDate(p_DateInvoiced);
+			LITMInvoice.setVATLedgerDate(m_invoice, p_DateInvoiced); // LIT
 			if (!m_invoice.save())
 				throw new IllegalStateException("Could not create Invoice (s)");
 		}

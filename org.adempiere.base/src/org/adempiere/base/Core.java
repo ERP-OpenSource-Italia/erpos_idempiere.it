@@ -69,7 +69,7 @@ public class Core {
 	private final static CLogger s_log = CLogger.getCLogger(Core.class);
 	
 	// F3P: for performance reasons we need to cache the engine manager.
-	private static OSGiScriptEngineManager s_scriptEngineManager = null;  
+	// private static OSGiScriptEngineManager s_scriptEngineManager = null;  
 
 	/**
 	 * @return list of active resource finder

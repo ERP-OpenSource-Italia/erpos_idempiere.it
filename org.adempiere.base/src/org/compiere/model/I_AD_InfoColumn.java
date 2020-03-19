@@ -296,15 +296,6 @@ public interface I_AD_InfoColumn
 	  */
 	public boolean isCentrallyMaintained();
 
-    /** Column name IsDefaultQueryCriteria */
-    public static final String COLUMNNAME_IsDefaultQueryCriteria = "IsDefaultQueryCriteria";
-
-	/** Set Default Query Criteria	  */
-	public void setIsDefaultQueryCriteria (boolean IsDefaultQueryCriteria);
-
-	/** Get Default Query Criteria	  */
-	public boolean isDefaultQueryCriteria();
-
     /** Column name IsDisplayed */
     public static final String COLUMNNAME_IsDisplayed = "IsDisplayed";
 

@@ -50,6 +50,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 
 import it.idempiere.base.model.FreeOfCharge;
+import it.idempiere.base.model.LITMInvoice;
 import it.idempiere.base.util.GenericPOAdvancedComparator;
 import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
@@ -157,7 +158,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		PO.copyValues (from, to, from.getAD_Client_ID(), from.getAD_Org_ID());
 		to.set_ValueNoCheck ("C_Invoice_ID", I_ZERO);
 		to.set_ValueNoCheck ("DocumentNo", documentNo);
-		to.set_ValueNoCheck (COLUMNNAME_VATLedgerNo, vatLedgerNo); //F3P
+		LITMInvoice.setVATLedgerNo(to, vatLedgerNo); //F3P
 		//
 		to.setDocStatus (DOCSTATUS_Drafted);		//	Draft
 		to.setDocAction(DOCACTION_Complete);
@@ -1837,7 +1838,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 
 		// Set the definite document number after completed (if needed)
-		if (isUpdateDocNo()) // F3P: Check if we want to update docNo. This is not good in reopen invoice process
+		if (LITMInvoice.isUpdateDocNo(this)) // F3P: Check if we want to update docNo. This is not good in reopen invoice process
 			setDefiniteDocumentNo();
 
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_BEFORE_COMPLETE);
@@ -2323,7 +2324,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			}
 			
 			// F3P: need to change vatLedgerDate and dateAcct			
-			setVATLedgerDate(getDateInvoiced());
+			LITMInvoice.setVATLedgerDate(this,getDateInvoiced());
 
 		}
 		if (dt.isOverwriteSeqOnComplete()) {
@@ -2635,7 +2636,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			docNo = getDocumentNo()+"^";
 		
 		if(STDSysConfig.isReversedInvoiceUseNewVATLedgerNo(getAD_Client_ID(), getAD_Org_ID()) == false)
-			vatLedgerNo = getVATLedgerNo(); //F3P vatLedgerNo must be isAllowCopy=N, if reversed doesn't use new vatLedgerNo set original no
+			vatLedgerNo = LITMInvoice.getVATLedgerNo(this); //F3P vatLedgerNo must be isAllowCopy=N, if reversed doesn't use new vatLedgerNo set original no
 			
 		reversal = copyFrom (this, reversalDateInvoiced, reversalDate, getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true, docNo, vatLedgerNo);
 

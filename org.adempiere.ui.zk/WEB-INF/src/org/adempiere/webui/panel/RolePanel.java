@@ -457,7 +457,7 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
             MRole.getDefault(m_ctx, true);
 
     		// If we have only one role, we can make readonly the combobox
-    		if (lstRole.getItemCount() == 1 || m_isSso)) // FIN: (st) 20/09/2017 make sure if we have only one ro
+    		if (lstRole.getItemCount() == 1 || m_isSso) // FIN: (st) 20/09/2017 make sure if we have only one ro
     		{
     			lstRole.setSelectedIndex(0);
     			lstRole.setEnabled(false);

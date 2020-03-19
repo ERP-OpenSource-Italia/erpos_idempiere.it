@@ -46,8 +46,6 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 // @SQL=select get_sysconfig('DEFAULT_ENTITYTYPE','U',0,0) from dual
 			setIsCentrallyMaintained (true);
 // Y
-			setIsDefaultQueryCriteria (false);
-// N
 			setIsDisplayed (true);
 // Y
 			setIsIdentifier (false);
@@ -415,27 +413,6 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 		return false;
 	}
 
-	/** Set Default Query Criteria.
-		@param IsDefaultQueryCriteria Default Query Criteria	  */
-	public void setIsDefaultQueryCriteria (boolean IsDefaultQueryCriteria)
-	{
-		set_Value (COLUMNNAME_IsDefaultQueryCriteria, Boolean.valueOf(IsDefaultQueryCriteria));
-	}
-
-	/** Get Default Query Criteria.
-		@return Default Query Criteria	  */
-	public boolean isDefaultQueryCriteria () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsDefaultQueryCriteria);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
 	/** Set Displayed.
 		@param IsDisplayed 
 		Determines, if this field is displayed
@@ -547,30 +524,6 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 	public boolean isQueryCriteria () 
 	{
 		Object oo = get_Value(COLUMNNAME_IsQueryCriteria);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
-	}
-
-	/** Set Read Only.
-		@param IsReadOnly 
-		Field is read only
-	  */
-	public void setIsReadOnly (boolean IsReadOnly)
-	{
-		set_Value (COLUMNNAME_IsReadOnly, Boolean.valueOf(IsReadOnly));
-	}
-
-	/** Get Read Only.
-		@return Field is read only
-	  */
-	public boolean isReadOnly () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsReadOnly);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 

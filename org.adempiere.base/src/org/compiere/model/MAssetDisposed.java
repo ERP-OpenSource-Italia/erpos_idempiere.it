@@ -17,6 +17,8 @@ import org.idempiere.fa.exceptions.AssetNotSupportedException;
 import org.idempiere.fa.exceptions.AssetStatusChangedException;
 import org.idempiere.fa.util.POCacheLocal;
 
+import it.idempiere.base.model.LITMAssetDisposed;
+
 
 
 /**
@@ -237,7 +239,7 @@ implements DocAction
 				createDisposal();
 			}
 			// F3P: added 'sale' as a disposal method
-			else if(A_DISPOSED_METHOD_Sale.equals(method))
+			else if(LITMAssetDisposed.A_DISPOSED_METHOD_Sale.equals(method))
 			{
 //				if(getA_Disposal_Amt().compareTo(getA_Asset_Cost().subtract(getA_Accumulated_Depr()))==0)
 //				{

@@ -478,9 +478,10 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
 	private void actionQuickEntry (boolean newRecord)
 	{
 		if(!getComponent().isEnabled())
-			return;
+			return;		
 		
-			
+		int zoomWindowId = -1;
+		
 		int Record_ID = 0;
 		
 		//  if update, get current value
@@ -503,12 +504,12 @@ public class WSearchEditor extends WEditor implements ContextMenuListener, Value
     		zoomWindowId = gridField != null ? lookup.getZoom(Env.isSOTrx(Env.getCtx(), gridField.getWindowNo())) : lookup.getZoom(Env.isSOTrx(Env.getCtx()));
     	}
     			
-	// F3P: extended info
-	final QuickEntryExtendedInfo quExt = QuickEntryExtendedInfo.get(this, lookup);
+    	// F3P: extended info
+    	final QuickEntryExtendedInfo quExt = QuickEntryExtendedInfo.get(this, lookup);
 		
-	// F3P: override window		
-	if(quExt.hasExtendedInfo() && quExt.getAD_Window_ID() > 0)
-		zoomWindowId = quExt.getAD_Window_ID();    	
+    	// F3P: override window		
+    	if(quExt.hasExtendedInfo() && quExt.getAD_Window_ID() > 0)
+    		zoomWindowId = quExt.getAD_Window_ID();    	
 
     	int tabNo = gridField != null && gridField.getGridTab() != null ? gridField.getGridTab().getTabNo() : 0;
     	final WQuickEntry vqe = new WQuickEntry(lookup.getWindowNo(), tabNo, zoomWindowId);

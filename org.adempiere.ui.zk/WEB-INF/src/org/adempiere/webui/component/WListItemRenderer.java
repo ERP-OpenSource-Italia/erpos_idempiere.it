@@ -238,17 +238,12 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 			
 			if (factories != null) {
 				for(ICellComponentFactory factory : factories) 
-						if (ClientInfo.isMobile())
-							numberbox.getButton().setVisible(false);
 				{
 					boolean managed = factory.createCellComponent(this, listcell, table, field, rowIndex, columnIndex, 
 							isCellEditable, cellFactoryIdentifier);
-					refId = m_tableColumns.get(columnIndex).getAD_Reference_ID();
-				}
 					
 					if(managed)
-						break;	
-				SimpleDateFormat dateFormat = DisplayType.getDateFormat(refId, AEnv.getLanguage(Env.getCtx()));
+						break;
 				}
 			}
 		}
@@ -497,7 +492,7 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	
 	
 	/**
-	 * FIN possibilità di indicare il width
+	 * FIN possibilitï¿½ di indicare il width
 	 * 
 	 * Render the ListHead for the table with headers for the table columns.
 	 *
@@ -773,11 +768,6 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 		}
 	}
 	
-	public List<WTableColumn> getTableColumns() {
-		return Collections.unmodifiableList(m_tableColumns);
-	}
-
-	//F3P: IDEMPIERE-3318 - Factory for generating cell renderers
 	public List<WTableColumn> getTableColumns() {
 		return Collections.unmodifiableList(m_tableColumns);
 	}

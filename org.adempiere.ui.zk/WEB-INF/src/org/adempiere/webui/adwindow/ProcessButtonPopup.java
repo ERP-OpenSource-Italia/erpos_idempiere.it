@@ -99,7 +99,7 @@ public class ProcessButtonPopup extends Menupopup implements EventListener<Event
 						GridTab gridTab = pb.getADTabpanel().getGridTab();
 						ADWindow adwindow = ADWindow.get(gridTab.getWindowNo());
 						ADWindowContent windowContent = adwindow.getADWindowContent();
-						windowContent.executeButtonProcess(pb, true, gridTab.getAD_Table_ID(), gridTab.getRecord_ID(), true);
+						windowContent.executeButtonProcess(pb, true, gridTab.getAD_Table_ID(), gridTab.getRecord_ID(), true, null);
 					}
 				}
 			});

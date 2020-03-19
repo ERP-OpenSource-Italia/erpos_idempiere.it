@@ -9,6 +9,8 @@ public class LITMInfoColumn {
 	public static final String COLUMNNAME_IsSaveEditImmediate = "IsSaveEditImmediate";
 	public static final String COLUMNNAME_RunningValueSQL = "RunningValueSQL";
     public static final String COLUMNNAME_AD_FieldStyle_ID = "AD_FieldStyle_ID";
+    /** Column name IsDefaultQueryCriteria */
+    public static final String COLUMNNAME_IsDefaultQueryCriteria = "IsDefaultQueryCriteria";
 
 
 	/** Set ColumnWidth.
@@ -117,5 +119,30 @@ public class LITMInfoColumn {
 			return "Y".equals(oo);
 		}
 		return false;
-	}	
+	}
+	
+	/** Set Query Criteria.
+	 @param IsQueryCriteria 
+	 The column is also used as a query criteria
+	 */
+	/** Set Default Query Criteria.
+		@param IsDefaultQueryCriteria Default Query Criteria	  */
+	public static void setIsDefaultQueryCriteria (X_AD_InfoColumn infoColumn,boolean IsDefaultQueryCriteria)
+	{
+		infoColumn.set_ValueOfColumn (COLUMNNAME_IsDefaultQueryCriteria, Boolean.valueOf(IsDefaultQueryCriteria));
+	}
+
+	/** Get Default Query Criteria.
+		@return Default Query Criteria	  */
+	public static boolean isDefaultQueryCriteria (X_AD_InfoColumn infoColumn) 
+	{
+		Object oo = infoColumn.get_Value(COLUMNNAME_IsDefaultQueryCriteria);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
 }

@@ -2827,6 +2827,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 
 	public int getPageSize() {
 		return pageSize;
+	}
 	
 	// F3P: run via process info
 	

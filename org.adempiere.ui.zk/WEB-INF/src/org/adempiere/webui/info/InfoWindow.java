@@ -4,6 +4,7 @@
 package org.adempiere.webui.info;
 
 import java.io.File;
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -1007,7 +1008,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					
 					s_sqlWhere += " AND " + whereClause;
 				}
-								
+				
+				String s_sqlCount = "SELECT COUNT(*) FROM " + s_sqlFrom + " WHERE " + s_sqlWhere;
 				m_sqlEmbedded = embeddedTbl.prepareTable(s_layoutEmbedded, s_sqlFrom, s_sqlWhere, false, tableName);
 				
 				String otherClause = embedInfo.getOtherClause();
@@ -1501,7 +1503,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			StringBuilder valueStr = new StringBuilder(value.toString());
 			if (queryOperator.equals(X_AD_InfoColumn.QUERYOPERATOR_Like)) {
 					//F3P filter special char	
-					StringBuilder valueStr = new StringBuilder();
+					valueStr = new StringBuilder();
 					if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())) && 
 							(Util.isEmpty(queryFunction, true)) || queryFunction.equalsIgnoreCase("upper"))
 					{
@@ -1514,7 +1516,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					valueStr.append("%");
 			} else if (queryOperator.equals(X_AD_InfoColumn.QUERYOPERATOR_FullLike)) {
 				//F3P filter special char	
-					StringBuilder valueStr = new StringBuilder();
+					valueStr = new StringBuilder();
 					if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())) && 
 							(Util.isEmpty(queryFunction, true)) || queryFunction.equalsIgnoreCase("upper"))
 					{
@@ -1954,7 +1956,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
         }
 
         //F3P default query criteria
-        if(infoColumn.isDefaultQueryCriteria())
+        if(LITMInfoColumn.isDefaultQueryCriteria(infoColumn))
         	defaultQueryCriteria = editor;
         
         fieldEditor.addEventListener(Events.ON_OK, this);		
@@ -2886,6 +2888,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				}
 			}
 		}
+	}
+	
 	// Edit Callback method and original values management
 	
 	/** Get row and params ctx. IF row is < 0, only params are used
@@ -3429,14 +3433,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		    confirmPanel.addComponentsLeft(zoomDetailButton);
 		}	
 	}
-	
-		@Override
-		public boolean isPageBreak(int row, int col)
-		{
-			return false;
-		}		
-	
-	
+			
 	protected void enableZoomDetail()
 	{
 		if(zoomDetailButton == null)

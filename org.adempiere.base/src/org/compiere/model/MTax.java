@@ -261,7 +261,7 @@ public class MTax extends X_C_Tax
 		if (isZeroTax())
 			return Env.ZERO;
 		
-		BigDecimal multiplier = getRate().divide(Env.ONEHUNDRED, 12, RoundingMode.ROUND_HALF_UP);		
+		BigDecimal multiplier = getRate().divide(Env.ONEHUNDRED, 12, RoundingMode.HALF_UP);		
 
 		BigDecimal tax = null;		
 		if (!taxIncluded)	//	$100 * 6 / 100 == $6 == $100 * 0.06
@@ -271,10 +271,10 @@ public class MTax extends X_C_Tax
 		else			//	$106 - ($106 / (100+6)/100) == $6 == $106 - ($106/1.06)
 		{
 			multiplier = multiplier.add(Env.ONE);
-			BigDecimal base = amount.divide(multiplier, 12, RoundingMode.ROUND_HALF_UP); 
+			BigDecimal base = amount.divide(multiplier, 12, RoundingMode.HALF_UP); 
 			tax = amount.subtract(base);
 		}
-		BigDecimal finalTax = tax.setScale(scale, RoundingMode.ROUND_HALF_UP);
+		BigDecimal finalTax = tax.setScale(scale, RoundingMode.HALF_UP);
 		if (log.isLoggable(Level.FINE)) log.fine("calculateTax " + amount 
 			+ " (incl=" + taxIncluded + ",mult=" + multiplier + ",scale=" + scale 
 			+ ") = " + finalTax + " [" + tax + "]");

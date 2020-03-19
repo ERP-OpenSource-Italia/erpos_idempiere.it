@@ -105,21 +105,6 @@ public interface I_C_Invoice
 
 	public org.compiere.model.I_C_Activity getC_Activity() throws RuntimeException;
 
-    /** Column name C_BankAccount_ID */
-    public static final String COLUMNNAME_C_BankAccount_ID = "C_BankAccount_ID";
-
-	/** Set Bank Account.
-	  * Account at the Bank
-	  */
-	public void setC_BankAccount_ID (int C_BankAccount_ID);
-
-	/** Get Bank Account.
-	  * Account at the Bank
-	  */
-	public int getC_BankAccount_ID();
-
-	public org.compiere.model.I_C_BankAccount getC_BankAccount() throws RuntimeException;
-
     /** Column name C_BPartner_ID */
     public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
 
@@ -149,21 +134,6 @@ public interface I_C_Invoice
 	public int getC_BPartner_Location_ID();
 
 	public org.compiere.model.I_C_BPartner_Location getC_BPartner_Location() throws RuntimeException;
-
-    /** Column name C_BP_BankAccount_ID */
-    public static final String COLUMNNAME_C_BP_BankAccount_ID = "C_BP_BankAccount_ID";
-
-	/** Set Partner Bank Account.
-	  * Bank Account of the Business Partner
-	  */
-	public void setC_BP_BankAccount_ID (int C_BP_BankAccount_ID);
-
-	/** Get Partner Bank Account.
-	  * Bank Account of the Business Partner
-	  */
-	public int getC_BP_BankAccount_ID();
-
-	public org.compiere.model.I_C_BP_BankAccount getC_BP_BankAccount() throws RuntimeException;
 
     /** Column name C_Campaign_ID */
     public static final String COLUMNNAME_C_Campaign_ID = "C_Campaign_ID";
@@ -305,19 +275,6 @@ public interface I_C_Invoice
 	  */
 	public BigDecimal getChargeAmt();
 
-    /** Column name CIG */
-    public static final String COLUMNNAME_CIG = "CIG";
-
-	/** Set Codice Identificativo di Gara.
-	  * CIG from public aministration office
-	  */
-	public void setCIG (String CIG);
-
-	/** Get Codice Identificativo di Gara.
-	  * CIG from public aministration office
-	  */
-	public String getCIG();
-
     /** Column name C_Invoice_ID */
     public static final String COLUMNNAME_C_Invoice_ID = "C_Invoice_ID";
 
@@ -339,15 +296,6 @@ public interface I_C_Invoice
 
 	/** Get C_Invoice_UU	  */
 	public String getC_Invoice_UU();
-
-    /** Column name CollectionType */
-    public static final String COLUMNNAME_CollectionType = "CollectionType";
-
-	/** Set Collection Type	  */
-	public void setCollectionType (String CollectionType);
-
-	/** Get Collection Type	  */
-	public String getCollectionType();
 
     /** Column name CopyFrom */
     public static final String COLUMNNAME_CopyFrom = "CopyFrom";
@@ -529,19 +477,6 @@ public interface I_C_Invoice
 	  */
 	public String getDocAction();
 
-    /** Column name DocBaseType */
-    public static final String COLUMNNAME_DocBaseType = "DocBaseType";
-
-	/** Set Document BaseType.
-	  * Logical type of document
-	  */
-	public void setDocBaseType (String DocBaseType);
-
-	/** Get Document BaseType.
-	  * Logical type of document
-	  */
-	public String getDocBaseType();
-
     /** Column name DocStatus */
     public static final String COLUMNNAME_DocStatus = "DocStatus";
 
@@ -577,24 +512,6 @@ public interface I_C_Invoice
 	/** Get Dunning Grace Date	  */
 	public Timestamp getDunningGrace();
 
-    /** Column name F3P_DateEmailed */
-    public static final String COLUMNNAME_F3P_DateEmailed = "F3P_DateEmailed";
-
-	/** Set Date Emailed	  */
-	public void setF3P_DateEmailed (Timestamp F3P_DateEmailed);
-
-	/** Get Date Emailed	  */
-	public Timestamp getF3P_DateEmailed();
-
-    /** Column name F3P_IsEmailed */
-    public static final String COLUMNNAME_F3P_IsEmailed = "F3P_IsEmailed";
-
-	/** Set Is Emailed	  */
-	public void setF3P_IsEmailed (boolean F3P_IsEmailed);
-
-	/** Get Is Emailed	  */
-	public boolean isF3P_IsEmailed();
-
     /** Column name GenerateTo */
     public static final String COLUMNNAME_GenerateTo = "GenerateTo";
 
@@ -607,15 +524,6 @@ public interface I_C_Invoice
 	  * Generate To
 	  */
 	public String getGenerateTo();
-
-    /** Column name GenerateWithholding */
-    public static final String COLUMNNAME_GenerateWithholding = "GenerateWithholding";
-
-	/** Set Generate Withholding	  */
-	public void setGenerateWithholding (String GenerateWithholding);
-
-	/** Get Generate Withholding	  */
-	public String getGenerateWithholding();
 
     /** Column name GrandTotal */
     public static final String COLUMNNAME_GrandTotal = "GrandTotal";
@@ -685,10 +593,10 @@ public interface I_C_Invoice
     /** Column name IsFixedAssetInvoice */
     public static final String COLUMNNAME_IsFixedAssetInvoice = "IsFixedAssetInvoice";
 
-	/** Set Fixed Assets Invoice	  */
+	/** Set IsFixedAssetInvoice	  */
 	public void setIsFixedAssetInvoice (boolean IsFixedAssetInvoice);
 
-	/** Get Fixed Assets Invoice	  */
+	/** Get IsFixedAssetInvoice	  */
 	public boolean isFixedAssetInvoice();
 
     /** Column name IsInDispute */
@@ -703,15 +611,6 @@ public interface I_C_Invoice
 	  * Document is in dispute
 	  */
 	public boolean isInDispute();
-
-    /** Column name IsIntraVAT */
-    public static final String COLUMNNAME_IsIntraVAT = "IsIntraVAT";
-
-	/** Set Is Intra VAT	  */
-	public void setIsIntraVAT (boolean IsIntraVAT);
-
-	/** Get Is Intra VAT	  */
-	public boolean isIntraVAT();
 
     /** Column name IsPaid */
     public static final String COLUMNNAME_IsPaid = "IsPaid";
@@ -752,15 +651,6 @@ public interface I_C_Invoice
 	  */
 	public boolean isPrinted();
 
-    /** Column name IsReverseCharge */
-    public static final String COLUMNNAME_IsReverseCharge = "IsReverseCharge";
-
-	/** Set Is Reverse Charge	  */
-	public void setIsReverseCharge (boolean IsReverseCharge);
-
-	/** Get Is Reverse Charge	  */
-	public boolean isReverseCharge();
-
     /** Column name IsSelfService */
     public static final String COLUMNNAME_IsSelfService = "IsSelfService";
 
@@ -787,24 +677,6 @@ public interface I_C_Invoice
 	  */
 	public boolean isSOTrx();
 
-    /** Column name IsSplitPayment */
-    public static final String COLUMNNAME_IsSplitPayment = "IsSplitPayment";
-
-	/** Set Split Payment	  */
-	public void setIsSplitPayment (boolean IsSplitPayment);
-
-	/** Get Split Payment	  */
-	public boolean isSplitPayment();
-
-    /** Column name IsSuspendedVAT */
-    public static final String COLUMNNAME_IsSuspendedVAT = "IsSuspendedVAT";
-
-	/** Set Is Suspended VAT	  */
-	public void setIsSuspendedVAT (boolean IsSuspendedVAT);
-
-	/** Get Is Suspended VAT	  */
-	public boolean isSuspendedVAT();
-
     /** Column name IsTaxIncluded */
     public static final String COLUMNNAME_IsTaxIncluded = "IsTaxIncluded";
 
@@ -830,175 +702,6 @@ public interface I_C_Invoice
 	  * Transferred to General Ledger (i.e. accounted)
 	  */
 	public boolean isTransferred();
-
-    /** Column name IsUpdateDocNo */
-    public static final String COLUMNNAME_IsUpdateDocNo = "IsUpdateDocNo";
-
-	/** Set IsUpdateDocNo	  */
-	public void setIsUpdateDocNo (boolean IsUpdateDocNo);
-
-	/** Get IsUpdateDocNo	  */
-	public boolean isUpdateDocNo();
-
-    /** Column name LIT_AdvDoc_ID */
-    public static final String COLUMNNAME_LIT_AdvDoc_ID = "LIT_AdvDoc_ID";
-
-	/** Set Advance Inv. Document.
-	  * Advance Invoice Document
-	  */
-	public void setLIT_AdvDoc_ID (int LIT_AdvDoc_ID);
-
-	/** Get Advance Inv. Document.
-	  * Advance Invoice Document
-	  */
-	public int getLIT_AdvDoc_ID();
-
-	public org.compiere.model.I_C_Invoice getLIT_AdvDoc() throws RuntimeException;
-
-    /** Column name LIT_AdvDocVal */
-    public static final String COLUMNNAME_LIT_AdvDocVal = "LIT_AdvDocVal";
-
-	/** Set Advance Value.
-	  * Advance Valule reported in Advance Document
-	  */
-	public void setLIT_AdvDocVal (BigDecimal LIT_AdvDocVal);
-
-	/** Get Advance Value.
-	  * Advance Valule reported in Advance Document
-	  */
-	public BigDecimal getLIT_AdvDocVal();
-
-    /** Column name LIT_AdvPerc */
-    public static final String COLUMNNAME_LIT_AdvPerc = "LIT_AdvPerc";
-
-	/** Set Adv. Percentage	  */
-	public void setLIT_AdvPerc (BigDecimal LIT_AdvPerc);
-
-	/** Get Adv. Percentage	  */
-	public BigDecimal getLIT_AdvPerc();
-
-    /** Column name LIT_AdvValue */
-    public static final String COLUMNNAME_LIT_AdvValue = "LIT_AdvValue";
-
-	/** Set Adv. Value	  */
-	public void setLIT_AdvValue (BigDecimal LIT_AdvValue);
-
-	/** Get Adv. Value	  */
-	public BigDecimal getLIT_AdvValue();
-
-    /** Column name LIT_AmtBeforeDisc */
-    public static final String COLUMNNAME_LIT_AmtBeforeDisc = "LIT_AmtBeforeDisc";
-
-	/** Set Total Lines Before Doc. Disc..
-	  * Total Lines value Before Document Discount
-	  */
-	public void setLIT_AmtBeforeDisc (BigDecimal LIT_AmtBeforeDisc);
-
-	/** Get Total Lines Before Doc. Disc..
-	  * Total Lines value Before Document Discount
-	  */
-	public BigDecimal getLIT_AmtBeforeDisc();
-
-    /** Column name LIT_ControlAmt */
-    public static final String COLUMNNAME_LIT_ControlAmt = "LIT_ControlAmt";
-
-	/** Set Control Amount.
-	  * If not zero, the Grand Total amount of the document must be equal this amount
-	  */
-	public void setLIT_ControlAmt (BigDecimal LIT_ControlAmt);
-
-	/** Get Control Amount.
-	  * If not zero, the Grand Total amount of the document must be equal this amount
-	  */
-	public BigDecimal getLIT_ControlAmt();
-
-    /** Column name LIT_DocDiscPerc */
-    public static final String COLUMNNAME_LIT_DocDiscPerc = "LIT_DocDiscPerc";
-
-	/** Set Document Discount Perc..
-	  * Discount appllied for all Document
-	  */
-	public void setLIT_DocDiscPerc (BigDecimal LIT_DocDiscPerc);
-
-	/** Get Document Discount Perc..
-	  * Discount appllied for all Document
-	  */
-	public BigDecimal getLIT_DocDiscPerc();
-
-    /** Column name LIT_DocDiscVal */
-    public static final String COLUMNNAME_LIT_DocDiscVal = "LIT_DocDiscVal";
-
-	/** Set Document Discount Amt.
-	  * Document Dicount Amount
-	  */
-	public void setLIT_DocDiscVal (BigDecimal LIT_DocDiscVal);
-
-	/** Get Document Discount Amt.
-	  * Document Dicount Amount
-	  */
-	public BigDecimal getLIT_DocDiscVal();
-
-    /** Column name LIT_InvTemplate_ID */
-    public static final String COLUMNNAME_LIT_InvTemplate_ID = "LIT_InvTemplate_ID";
-
-	/** Set Invoice Template	  */
-	public void setLIT_InvTemplate_ID (int LIT_InvTemplate_ID);
-
-	/** Get Invoice Template	  */
-	public int getLIT_InvTemplate_ID();
-
-    /** Column name LIT_IsCashOrdAdv */
-    public static final String COLUMNNAME_LIT_IsCashOrdAdv = "LIT_IsCashOrdAdv";
-
-	/** Set Advance on exposure.
-	  * Advance on maximum exposure
-	  */
-	public void setLIT_IsCashOrdAdv (boolean LIT_IsCashOrdAdv);
-
-	/** Get Advance on exposure.
-	  * Advance on maximum exposure
-	  */
-	public boolean isLIT_IsCashOrdAdv();
-
-    /** Column name LIT_IsDiscOnlyProd */
-    public static final String COLUMNNAME_LIT_IsDiscOnlyProd = "LIT_IsDiscOnlyProd";
-
-	/** Set Disc. only on products.
-	  * Document discount will be applied only on product lines
-	  */
-	public void setLIT_IsDiscOnlyProd (boolean LIT_IsDiscOnlyProd);
-
-	/** Get Disc. only on products.
-	  * Document discount will be applied only on product lines
-	  */
-	public boolean isLIT_IsDiscOnlyProd();
-
-    /** Column name LS_DateComp_From */
-    public static final String COLUMNNAME_LS_DateComp_From = "LS_DateComp_From";
-
-	/** Set Accrual Date From	  */
-	public void setLS_DateComp_From (Timestamp LS_DateComp_From);
-
-	/** Get Accrual Date From	  */
-	public Timestamp getLS_DateComp_From();
-
-    /** Column name LS_DateComp_To */
-    public static final String COLUMNNAME_LS_DateComp_To = "LS_DateComp_To";
-
-	/** Set Accrual Date To	  */
-	public void setLS_DateComp_To (Timestamp LS_DateComp_To);
-
-	/** Get Accrual Date To	  */
-	public Timestamp getLS_DateComp_To();
-
-    /** Column name LS_IsCompetenza */
-    public static final String COLUMNNAME_LS_IsCompetenza = "LS_IsCompetenza";
-
-	/** Set Accrual Period Management	  */
-	public void setLS_IsCompetenza (boolean LS_IsCompetenza);
-
-	/** Get Accrual Period Management	  */
-	public boolean isLS_IsCompetenza();
 
     /** Column name M_PriceList_ID */
     public static final String COLUMNNAME_M_PriceList_ID = "M_PriceList_ID";
@@ -1029,15 +732,6 @@ public interface I_C_Invoice
 	public int getM_RMA_ID();
 
 	public org.compiere.model.I_M_RMA getM_RMA() throws RuntimeException;
-
-    /** Column name NatureOfTransaction */
-    public static final String COLUMNNAME_NatureOfTransaction = "NatureOfTransaction";
-
-	/** Set Nature Of Transaction	  */
-	public void setNatureOfTransaction (String NatureOfTransaction);
-
-	/** Get Nature Of Transaction	  */
-	public String getNatureOfTransaction();
 
     /** Column name PaymentRule */
     public static final String COLUMNNAME_PaymentRule = "PaymentRule";
@@ -1113,24 +807,6 @@ public interface I_C_Invoice
 	/** Get Process Now	  */
 	public boolean isProcessing();
 
-    /** Column name ProvisionType */
-    public static final String COLUMNNAME_ProvisionType = "ProvisionType";
-
-	/** Set Provision Type	  */
-	public void setProvisionType (String ProvisionType);
-
-	/** Get Provision Type	  */
-	public String getProvisionType();
-
-    /** Column name RB_Effects_ID */
-    public static final String COLUMNNAME_RB_Effects_ID = "RB_Effects_ID";
-
-	/** Set Effects	  */
-	public void setRB_Effects_ID (int RB_Effects_ID);
-
-	/** Get Effects	  */
-	public int getRB_Effects_ID();
-
     /** Column name Ref_Invoice_ID */
     public static final String COLUMNNAME_Ref_Invoice_ID = "Ref_Invoice_ID";
 
@@ -1194,21 +870,6 @@ public interface I_C_Invoice
 	  */
 	public boolean isSendEMail();
 
-    /** Column name S_TimeExpense_ID */
-    public static final String COLUMNNAME_S_TimeExpense_ID = "S_TimeExpense_ID";
-
-	/** Set Expense Report.
-	  * Time and Expense Report
-	  */
-	public void setS_TimeExpense_ID (int S_TimeExpense_ID);
-
-	/** Get Expense Report.
-	  * Time and Expense Report
-	  */
-	public int getS_TimeExpense_ID();
-
-	public org.compiere.model.I_S_TimeExpense getS_TimeExpense() throws RuntimeException;
-
     /** Column name TotalLines */
     public static final String COLUMNNAME_TotalLines = "TotalLines";
 
@@ -1267,31 +928,4 @@ public interface I_C_Invoice
 	public int getUser2_ID();
 
 	public org.compiere.model.I_C_ElementValue getUser2() throws RuntimeException;
-
-    /** Column name VATLedgerDate */
-    public static final String COLUMNNAME_VATLedgerDate = "VATLedgerDate";
-
-	/** Set VAT Ledger Date	  */
-	public void setVATLedgerDate (Timestamp VATLedgerDate);
-
-	/** Get VAT Ledger Date	  */
-	public Timestamp getVATLedgerDate();
-
-    /** Column name VATLedgerNo */
-    public static final String COLUMNNAME_VATLedgerNo = "VATLedgerNo";
-
-	/** Set VAT Ledger No	  */
-	public void setVATLedgerNo (String VATLedgerNo);
-
-	/** Get VAT Ledger No	  */
-	public String getVATLedgerNo();
-
-    /** Column name WithholdingAmt */
-    public static final String COLUMNNAME_WithholdingAmt = "WithholdingAmt";
-
-	/** Set Withholding Amount	  */
-	public void setWithholdingAmt (BigDecimal WithholdingAmt);
-
-	/** Get Withholding Amount	  */
-	public BigDecimal getWithholdingAmt();
 }
