@@ -429,7 +429,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 				setPriceEntered(getPriceActual());
 			else
 				setPriceEntered(getPriceActual().multiply(getQtyInvoiced()
-					.divide(getQtyEntered(), 20, BigDecimal.ROUND_HALF_UP)));	//	precision	
+					.divide(getQtyEntered(), 20,RoundingMode.HALF_UP)));	//	precision	
 		}
 		else // F3P: new behaviour triggered by selection of price in same uom then line
 		{
@@ -443,7 +443,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 				if(getQtyInvoiced().signum() != 0)
 				{
 					setPriceActual(getPriceEntered().multiply(getQtyEntered()
-							.divide(getQtyInvoiced(), 20, BigDecimal.ROUND_HALF_UP)));	//	precision
+							.divide(getQtyInvoiced(), 20,RoundingMode.HALF_UP)));	//	precision
 				}
 				else
 				{

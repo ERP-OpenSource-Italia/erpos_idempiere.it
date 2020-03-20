@@ -2009,7 +2009,7 @@ public class MOrder extends X_C_Order implements DocAction
 				
 				BigDecimal discount = orderLineToModifyPrice.getPriceList().subtract(priceForAllParts)
 						.multiply(Env.ONEHUNDRED)
-						.divide(orderLineToModifyPrice.getPriceList(), precision, BigDecimal.ROUND_HALF_UP);
+						.divide(orderLineToModifyPrice.getPriceList(), precision, RoundingMode.HALF_UP);
 				
 				orderLineToModifyPrice.setDiscount(discount);
 				
@@ -2044,7 +2044,7 @@ public class MOrder extends X_C_Order implements DocAction
 				
 				BigDecimal discount = lOrderLinesToAddPrice.getPriceList().subtract(priceEnteredWithDiff)
 						.multiply(Env.ONEHUNDRED)
-						.divide(lOrderLinesToAddPrice.getPriceList(), precision, BigDecimal.ROUND_HALF_UP);
+						.divide(lOrderLinesToAddPrice.getPriceList(), precision,RoundingMode.HALF_UP);
 				
 				lOrderLinesToAddPrice.setDiscount(discount);
 				
@@ -3489,12 +3489,12 @@ public class MOrder extends X_C_Order implements DocAction
 		for(MTax tax:taxes)
 		{
 			// Need one invoice line for every tax to use the tax provider
-			
+			/*
 			Query qOrderLine = new Query(getCtx(), MOrderLine.Table_Name, "C_Tax_ID = ? and C_Order_ID = ?",get_TrxName());
 			qOrderLine.setParameters(tax.getC_Tax_ID(), getC_Order_ID());
 			
 			MOrderLine line = qOrderLine.first();
-			
+			*/
 			MTaxProvider provider = new MTaxProvider(tax.getCtx(), tax.getC_TaxProvider_ID(), tax.get_TrxName());
 			ITaxProvider calculator = Core.getTaxProvider(provider);
 			if (calculator == null)

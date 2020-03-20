@@ -318,7 +318,7 @@ public class MOrderLine extends X_C_OrderLine
 				setPriceEntered(getPriceActual());
 			else
 				setPriceEntered(getPriceActual().multiply(getQtyOrdered()
-					.divide(getQtyEntered(), 20, BigDecimal.ROUND_HALF_UP)));	//	precision	
+					.divide(getQtyEntered(), 20,RoundingMode.HALF_UP)));	//	precision	
 		}
 		else // F3P: new behaviour triggered by selection of price in same uom then line
 		{
@@ -332,7 +332,7 @@ public class MOrderLine extends X_C_OrderLine
 				if(getQtyOrdered().signum() != 0)
 				{
 					setPriceActual(getPriceEntered().multiply(getQtyEntered()
-							.divide(getQtyOrdered(), 20, BigDecimal.ROUND_HALF_UP)));	//	precision
+							.divide(getQtyOrdered(), 20,RoundingMode.HALF_UP)));	//	precision
 				}
 				else
 				{
@@ -782,7 +782,7 @@ public class MOrderLine extends X_C_OrderLine
 		
 		BigDecimal discount = list.subtract(bdPrice)
 			.multiply(Env.ONEHUNDRED)
-			.divide(list, iPriceScale, BigDecimal.ROUND_HALF_UP);
+			.divide(list, iPriceScale,RoundingMode.HALF_UP);
 		
 		// F3P: due to rounding, calculated discount may be different from the current one
 		//	but producing the same result:

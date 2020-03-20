@@ -140,7 +140,7 @@ public class DocumentDiscount
 			if(orderModel.hasColumn(COLUMNNAME_LIT_DocDiscPerc))
 				docDiscPerc = SetGetUtil.get_AttrValueAsBigDecimal(orderModel, COLUMNNAME_LIT_DocDiscPerc);
 			
-			// F£P: Non supportiamo la propagazione del valore dello, sconto verra aggiornato man mano
+			// Fï¿½P: Non supportiamo la propagazione del valore dello, sconto verra aggiornato man mano
 			// Il valore assoluto e' quindi gestito solo nel caso di import di fatture
 			
 			// if(orderModel.hasColumn(COLUMNNAME_LIT_DocDiscVal))
@@ -223,7 +223,7 @@ public class DocumentDiscount
 		}
 
 		if (amount.scale() > precision)
-			amount = amount.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			amount = amount.setScale(precision,RoundingMode.HALF_UP);
 
 		return amount;
 	}

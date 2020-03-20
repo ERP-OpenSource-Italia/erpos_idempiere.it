@@ -1,6 +1,7 @@
 package org.compiere.acct;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -114,7 +115,7 @@ public class Doc_AssetAddition extends Doc
 		FactLine[] fls = FactUtil.createSimpleOperation(fact, null,
 				getA_Asset_Acct(), getP_Asset_Acct(as),
 				as.getC_Currency_ID(),
-				bdEnteredAmt.setScale(iPrecision, BigDecimal.ROUND_HALF_UP),
+				bdEnteredAmt.setScale(iPrecision,RoundingMode.HALF_UP),
 				false);
 		
 		AssetFactUtil.setFactLinesDimensions(fls, assetAdd,true);
@@ -149,7 +150,7 @@ public class Doc_AssetAddition extends Doc
 					FactLine[] taxFls =  FactUtil.createSimpleOperation(fact, null,
 													getA_Asset_Acct(), accountTax,
 													as.getC_Currency_ID(),
-													bdValue.setScale(iPrecision, BigDecimal.ROUND_HALF_UP),
+													bdValue.setScale(iPrecision,RoundingMode.HALF_UP),
 													false);
 
 					AssetFactUtil.setFactLinesDimensions(taxFls, assetAdd, false);

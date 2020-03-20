@@ -18,6 +18,7 @@
 package org.compiere.util;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.BitSet;
 import java.util.Calendar;
@@ -1065,7 +1066,7 @@ public class TimeUtil
 			if(diffHours > 0)
 				workedTime=workedTime.add(new BigDecimal(diffHours));
 			
-			int nDays = diffDateInHours(dateFrom, dateTo).divide(new BigDecimal(24),0,BigDecimal.ROUND_DOWN).intValue();
+			int nDays = diffDateInHours(dateFrom, dateTo).divide(new BigDecimal(24),0,RoundingMode.DOWN).intValue();
 			if(nDays > 1)
 			{
 				int slotHours = mResourceType.getTimeSlotHours();
@@ -1079,13 +1080,13 @@ public class TimeUtil
 	static public BigDecimal diffDateInHours(Timestamp dateFrom, Timestamp dateTo)
 	{
 		long diff= dateTo.getTime()-dateFrom.getTime();
-		return new BigDecimal(diff).divide(new BigDecimal(1000*60*60),0,BigDecimal.ROUND_UP);
+		return new BigDecimal(diff).divide(new BigDecimal(1000*60*60),0,RoundingMode.UP);
 	}
 	
 	static public BigDecimal diffDateInDays(Timestamp dateFrom, Timestamp dateTo)
 	{
 		long diff= dateTo.getTime()-dateFrom.getTime();
-		return new BigDecimal(diff).divide(new BigDecimal(86400000),0,BigDecimal.ROUND_UP);
+		return new BigDecimal(diff).divide(new BigDecimal(86400000),0,RoundingMode.UP);
 	}
 	
 	static public int diffDateInYears(Timestamp dateFrom, Timestamp dateTo)

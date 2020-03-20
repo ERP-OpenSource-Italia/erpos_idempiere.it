@@ -152,7 +152,7 @@ public class CompositeDiscount
 
 		if(bdDiscount.scale() > CompositeDiscount.DISCOUNT_PRECISION)
 		{
-			bdDiscount = bdDiscount.setScale(CompositeDiscount.DISCOUNT_PRECISION, BigDecimal.ROUND_HALF_UP);
+			bdDiscount = bdDiscount.setScale(CompositeDiscount.DISCOUNT_PRECISION,RoundingMode.HALF_UP);
 		}
 
 		return bdDiscount;
@@ -334,7 +334,7 @@ public class CompositeDiscount
 		BigDecimal discountMult = Env.ONEHUNDRED.subtract(stdDiscount).divide(Env.ONEHUNDRED);
 		BigDecimal discountedVal = priceList.multiply(discountMult);		
 				
-		discountedVal=discountedVal.setScale(pricePrecision, BigDecimal.ROUND_HALF_UP);
+		discountedVal=discountedVal.setScale(pricePrecision,RoundingMode.HALF_UP);
 		
 		if(discountedVal.compareTo(CompositeDiscount.getPriceStd(model))!=0)
 		{
@@ -350,7 +350,7 @@ public class CompositeDiscount
 			}
 			
 			// if (stdDiscount.scale () > CompositeDiscount.DISCOUNT_PRECISION)
-			//	stdDiscount = stdDiscount.setScale (CompositeDiscount.DISCOUNT_PRECISION, BigDecimal.ROUND_HALF_UP);
+			//	stdDiscount = stdDiscount.setScale (CompositeDiscount.DISCOUNT_PRECISION,RoundingMode.HALF_UP);
 
 			CompositeDiscount.setLIT_StdDiscount(model,stdDiscount);
 		}
@@ -360,7 +360,7 @@ public class CompositeDiscount
 		if(stdCompositeDiscount.compareTo(stdDiscount)!=0)
 		{
 			if (stdDiscount.scale () > CompositeDiscount.DISCOUNT_PRECISION)
-				stdDiscount = stdDiscount.setScale (CompositeDiscount.DISCOUNT_PRECISION, BigDecimal.ROUND_HALF_UP);
+				stdDiscount = stdDiscount.setScale (CompositeDiscount.DISCOUNT_PRECISION,RoundingMode.HALF_UP);
 			
 			CompositeDiscount.setLIT_StdCompositeDisc(model, COMPOSITE_DSC_FORMAT.format(stdDiscount));
 		}
@@ -380,7 +380,7 @@ public class CompositeDiscount
 		discountMult = Env.ONEHUNDRED.subtract(limitDiscount).divide(Env.ONEHUNDRED);
 		discountedVal = priceList.multiply(discountMult);
 		
-		discountedVal=discountedVal.setScale(pricePrecision, BigDecimal.ROUND_HALF_UP);
+		discountedVal=discountedVal.setScale(pricePrecision,RoundingMode.HALF_UP);
 		
 		if(discountedVal.compareTo(CompositeDiscount.getPriceLimit(model))!=0)
 		{
@@ -396,7 +396,7 @@ public class CompositeDiscount
 			}
 			
 			// if (limitDiscount.scale () > CompositeDiscount.DISCOUNT_PRECISION)
-			//	limitDiscount = limitDiscount.setScale (CompositeDiscount.DISCOUNT_PRECISION, BigDecimal.ROUND_HALF_UP);
+			//	limitDiscount = limitDiscount.setScale (CompositeDiscount.DISCOUNT_PRECISION,RoundingMode.HALF_UP);
 			
 			CompositeDiscount.setLIT_LimitDiscount(model,limitDiscount);
 		}
@@ -406,7 +406,7 @@ public class CompositeDiscount
 		if(limitCompositeDiscount.compareTo(limitDiscount)!=0)
 		{
 			if (limitDiscount.scale () > CompositeDiscount.DISCOUNT_PRECISION)
-				limitDiscount = limitDiscount.setScale (CompositeDiscount.DISCOUNT_PRECISION, BigDecimal.ROUND_HALF_UP);
+				limitDiscount = limitDiscount.setScale (CompositeDiscount.DISCOUNT_PRECISION,RoundingMode.HALF_UP);
 			
 			CompositeDiscount.setLIT_LimitCompositeDisc(model, COMPOSITE_DSC_FORMAT.format(limitDiscount));
 		}

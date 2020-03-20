@@ -606,7 +606,7 @@ public class MUOMConversion extends X_C_UOM_Conversion
 		
 		if (retValue != null)
 		{
-			retValue = retValue.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			retValue = retValue.setScale(precision,RoundingMode.HALF_UP);
 		}
 		
 		return retValue;
@@ -751,7 +751,7 @@ public class MUOMConversion extends X_C_UOM_Conversion
 
 		if (retValue != null)
 		{
-			retValue = retValue.setScale(precision, BigDecimal.ROUND_HALF_UP);
+			retValue = retValue.setScale(precision,RoundingMode.HALF_UP);
 		}
 		
 		return retValue;

@@ -7,7 +7,7 @@ import org.compiere.model.X_C_CommissionLine;
  * @author strinchero
  *
  */
-public class LITMCommissionCalc {
+public class LITMCommissionLine {
 	
     /** Column name OnlyProduct */
     public static final String COLUMNNAME_OnlyProduct = "OnlyProduct";

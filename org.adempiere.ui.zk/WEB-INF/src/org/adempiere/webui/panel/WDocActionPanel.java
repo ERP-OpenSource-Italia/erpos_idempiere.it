@@ -62,8 +62,6 @@ import org.zkoss.zul.Listitem;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Vlayout;
 
-import it.idempiere.base.util.StartedFromUI;
-
 
 
 public class WDocActionPanel extends Window implements EventListener<Event>, DialogEvents
