@@ -30,5 +30,6 @@ FOR %%c in (plugins\org.eclipse.equinox.launcher_1.*.jar) DO set JARFILE=%%c
 @Set VMOPTS=%VMOPTS% -Dmail.mime.decodefilename=true
 @Set VMOPTS=%VMOPTS% -Dmail.mime.encodeparameters=true
 @Set VMOPTS=%VMOPTS% -Dmail.mime.decodeparameters=true
+@Set VMOPTS=%VMOPTS% -Djava.util.logging.config.file=java.util.logging.config.properties
 
 @"%JAVA%" %IDEMPIERE_JAVA_OPTIONS% %VMOPTS% -jar %JARFILE% -application org.adempiere.server.application
