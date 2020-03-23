@@ -1,6 +1,7 @@
 package it.idempiere.base.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MInvoice;
