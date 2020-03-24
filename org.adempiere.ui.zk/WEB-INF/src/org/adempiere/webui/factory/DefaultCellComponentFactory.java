@@ -24,6 +24,7 @@ import org.compiere.model.MImage;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Language;
+import org.compiere.util.Util;
 import org.zkoss.image.AImage;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Decimalbox;
@@ -107,6 +108,15 @@ public class DefaultCellComponentFactory implements ICellComponentFactory
 							throw new RuntimeException(e);
 						}
 					}
+					else if (!Util.isEmpty(mImage.getImageURL())) // LS: added loading from filesystem (path, not properly an url)
+					{
+						try {
+							img = new AImage(mImage.getImageURL());
+						} catch (IOException e) {
+							throw new RuntimeException(e);
+						}			
+					}
+
 					Image image = new Image();
 					image.setContent(img);
 					image.setStyle("width: 48px; height: 48px;");
