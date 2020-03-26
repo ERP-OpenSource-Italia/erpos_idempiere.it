@@ -73,6 +73,7 @@ import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.model.GridField;
+import org.compiere.model.MImage;
 import org.compiere.model.MInfoColumn;
 import org.compiere.model.MInfoWindow;
 import org.compiere.model.MPInstance;
@@ -693,6 +694,10 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 				{
 					value = new ValueNamePair(key, key);
 				}
+			}
+			else if( c == MImage.class)
+			{
+				value = rs.getInt(colIndex);
 			}
 			else
 			{

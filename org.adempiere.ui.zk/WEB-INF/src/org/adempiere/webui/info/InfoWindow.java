@@ -77,6 +77,7 @@ import org.compiere.model.GridField;
 import org.compiere.model.GridFieldVO;
 import org.compiere.model.GridWindow;
 import org.compiere.model.Lookup;
+import org.compiere.model.MImage;
 import org.compiere.model.MInfoColumn;
 import org.compiere.model.MInfoWindow;
 import org.compiere.model.MLookupFactory;
@@ -1146,6 +1147,10 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					{
 						columnInfo = createLookupColumnInfo(tableInfos, gridFields.get(i), infoColumn);
 					}					
+				}
+				else if (infoColumn.getAD_Reference_ID() == DisplayType.Image) // F3P: support images (read only)
+				{
+					columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, MImage.class, false);
 				}
 				else  
 				{
@@ -2461,6 +2466,10 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 								columnInfo = createLookupColumnInfo(tableInfos, field, infoColumn);
 							}
 						}
+						else if(infoColumn.getAD_Reference_ID() == DisplayType.Image)
+						{
+							columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, MImage.class);
+						}
 						else
 						{
 							columnInfo = new ColumnInfo(infoColumn.get_Translation("Name"), colSQL, DisplayType.getClass(infoColumn.getAD_Reference_ID(), true));
@@ -2765,6 +2774,10 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				{
 					value = new ValueNamePair(key, key);
 				}
+			}
+			else if( c == MImage.class)
+			{
+				value = rs.getInt(colIndex);
 			}
 			else
 			{
