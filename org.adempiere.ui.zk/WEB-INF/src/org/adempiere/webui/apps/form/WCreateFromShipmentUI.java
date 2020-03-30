@@ -62,7 +62,7 @@ import org.zkoss.zul.Vlayout;
 public class WCreateFromShipmentUI extends CreateFromShipment implements EventListener<Event>, ValueChangeListener
 {
 
-	private WCreateFromWindow window;
+	protected WCreateFromWindow window;
 	
 	public WCreateFromShipmentUI(GridTab tab) 
 	{
