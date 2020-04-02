@@ -133,9 +133,9 @@ public abstract class CreateFrom implements ICreateFrom
 			.append(" LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID") //F3P: added product link
 			.append(" WHERE ");
 			if (forCreditMemo)
-				sql.append(column).append(">0 AND (CASE WHEN ol.QtyDelivered>=ol.QtyOrdered THEN ol.QtyDelivered-ol.QtyInvoiced!=0 ELSE 1=1 END)) ");
+				sql.append(column).append(">0 AND (CASE WHEN ol.QtyDelivered>=ol.QtyOrdered THEN ol.QtyDelivered-ol.QtyInvoiced!=0 ELSE 1=1 END) ");
 			else
-				sql.append("ol.QtyOrdered-").append(column).append("!=0) ");
+				sql.append("ol.QtyOrdered-").append(column).append("!=0");
 
 		}
 		else
@@ -155,16 +155,16 @@ public abstract class CreateFrom implements ICreateFrom
 			
 			sql.append(" WHERE ")
 			.append(colBP)
-			.append("=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO')"
+			.append("=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO') "
 					+ "AND (o.C_DocType_ID in (").append(sqlDocType.toString()).append(")").append(
 					" OR o.C_Order_ID IN "
 						  + "(SELECT ol.C_Order_ID FROM C_OrderLine ol"
 						  + " LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID"); //F3P: added product link
 			sql.append(" WHERE ");
 			if (forCreditMemo)
-				sql.append(column).append(">0 AND (CASE WHEN ol.QtyDelivered>=ol.QtyOrdered THEN ol.QtyDelivered-ol.QtyInvoiced!=0 ELSE 1=1 END)) ");
+				sql.append(column).append(">0 AND (CASE WHEN ol.QtyDelivered>=ol.QtyOrdered THEN ol.QtyDelivered-ol.QtyInvoiced!=0 ELSE 1=1 END) ");
 			else
-				sql.append("ol.QtyOrdered-").append(column).append("!=0) ");
+				sql.append("ol.QtyOrdered-").append(column).append("!=0 ");
 
 		}			
 		
