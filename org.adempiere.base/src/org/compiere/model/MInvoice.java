@@ -1101,9 +1101,13 @@ public class MInvoice extends X_C_Invoice implements DocAction
 					MPriceList pList =  MPriceList.get(getCtx(), getM_PriceList_ID(), null);
 					MPriceListVersion plOld = pList.getPriceListVersion((Timestamp)get_ValueOld(COLUMNNAME_DateInvoiced));
 					MPriceListVersion plNew = pList.getPriceListVersion((Timestamp)get_Value(COLUMNNAME_DateInvoiced));
-					if (plNew == null || !plNew.equals(plOld)) {
-						log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeDateInvoiced"));
-						return false;
+					if (plNew == null || !plNew.equals(plOld)) 
+					{
+						if(STDSysConfig.isChangeDateAndPriceList(getAD_Client_ID(), getAD_Org_ID()) == false)
+						{
+							log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeDateInvoiced"));
+							return false;
+						}
 					}
 				}
 			}
