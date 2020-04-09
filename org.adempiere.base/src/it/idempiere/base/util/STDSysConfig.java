@@ -686,4 +686,10 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LIT_FILTER_CREATE_FROM_INVOICE_MOVEMENT_TYPE, false, AD_Client_ID,AD_Org_ID); 
 	}
 
+	public static final String LGS_AUTOGENERATE_ASI_ON_DOC_PREPARE = "LGS_AUTOGENERATE_ASI_ON_DOC_PREPARE";
+
+	public static boolean isAutoGenerateASIOnDocPrepare(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getBooleanValue(LGS_AUTOGENERATE_ASI_ON_DOC_PREPARE, false, AD_Client_ID,AD_Org_ID); 
+	}
 }

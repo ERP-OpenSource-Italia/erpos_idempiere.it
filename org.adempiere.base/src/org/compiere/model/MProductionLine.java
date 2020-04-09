@@ -109,7 +109,7 @@ public class MProductionLine extends X_M_ProductionLine {
 		if ( getM_Product_ID() == getEndProduct_ID()) {
 			if (reversalId <= 0  && isAutoGenerateLot && getM_AttributeSetInstance_ID() == 0)
 			{
-				asi = MAttributeSetInstance.generateLot(getCtx(), (MProduct)getM_Product(), get_TrxName());
+				asi = MAttributeSetInstance.generateLot(getCtx(), (MProduct)getM_Product(), this, get_TrxName());
 				setM_AttributeSetInstance_ID(asi.getM_AttributeSetInstance_ID());
 			} 
 			Timestamp dateMPolicy = date;

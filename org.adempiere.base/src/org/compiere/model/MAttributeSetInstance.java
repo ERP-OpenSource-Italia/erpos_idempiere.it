@@ -31,6 +31,9 @@ import org.compiere.util.KeyNamePair;
 import org.compiere.util.TimeUtil;
 import org.compiere.util.Util;
 
+import it.idempiere.base.model.LGSMAttributeSet;
+import it.idempiere.base.model.LGSMAttributeSetInstance;
+
 /**
  *  Product Attribute Set Instance
  *
@@ -332,7 +335,7 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 			createLot(M_Product_ID, trxName);
 		return getLot();
 	}	//	getLot
-
+	
 	//F3P: add trx
 	/**
 	 * 	Create Lot
@@ -511,13 +514,32 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 	 */
 	public static MAttributeSetInstance generateLot(Properties ctx, MProduct product, String trxName)
 	{
+		return generateLot(ctx, product, null, trxName);
+	}
+	
+	/**
+	 * AutoGerate & save a new ASI for given product.
+	 * Automatically creates Lot#
+	 * @param ctx
+	 * @param product
+	 * @param po
+	 * @param trxName
+	 * @return newly created ASI
+	 */
+	public static MAttributeSetInstance generateLot(Properties ctx, MProduct product, PO po, String trxName)
+	{
+		if (LGSMAttributeSet.getAD_Rule_ID((X_M_AttributeSet) product.getM_AttributeSet()) > 0)
+		{
+			return LGSMAttributeSetInstance.generateLot(ctx, product, po, trxName);			
+		}
+		
 		MAttributeSetInstance asi = new MAttributeSetInstance(ctx, 0, trxName);
 		asi.setClientOrg(product.getAD_Client_ID(), 0);
 		asi.setM_AttributeSet_ID(product.getM_AttributeSet_ID());
 		// Create new Lot
 		if (asi.getM_AttributeSet_ID() > 0)
 		{
-			asi.getLot(true, product.get_ID());
+			asi.getLot(true, product.get_ID(), trxName);  //F3P: use trx
 		}
 		//
 		asi.setDescription();
