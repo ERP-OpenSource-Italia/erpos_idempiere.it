@@ -1675,6 +1675,16 @@ public final class Env
 			}
 
 			token = inStr.substring(0, j);
+			
+			//LS handle default values also on parseVariable() as well as parseContext()
+			// IDEMPIERE-194 Handling null context variable
+			String defaultV = null;
+			int idx = token.indexOf(":"); // or clause
+			if (idx >= 0) {
+				defaultV = token.substring(idx + 1, token.length());
+				token = token.substring(0, idx);
+			}
+			//LS end
 
 			//format string
 			String format = "";
@@ -1770,9 +1780,14 @@ public final class Env
 							
 							if(v == null && Util.isEmpty(format))
 							{
-								v = " ";
+								//LS handle default values also on parseVariable() as well as parseContext()
+								if (defaultV == null)
+									v = " ";
+								else
+									v = defaultV;
+								//LS end
 							}
-						}					
+						}
 					}
 					
 					MColumn colToken = MColumn.get(ctx, po.get_TableName(), token);
@@ -1832,6 +1847,12 @@ public final class Env
 							outStr.append(escapeAtSign(v.toString(), sEscapeAt)); // F3P: at-sign escaping
 						}
 					}
+					//LS handle default values also on parseVariable() as well as parseContext()
+					else if (defaultV != null)
+					{
+						outStr.append(escapeAtSign(defaultV, sEscapeAt));
+					}
+					//LS end
 					else if (keepUnparseable) {
 						outStr.append("@").append(sFullToken); //F3P fulltoken
 						if (!Util.isEmpty(format))
