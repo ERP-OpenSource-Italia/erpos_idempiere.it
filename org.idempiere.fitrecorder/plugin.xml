@@ -10,7 +10,8 @@
             priority="0">
       </listener>
    </extension>
-      <extension
+   <!-- Soppresso temporaneamente
+   <extension
          id="org.idempiere.fitrecorder.FitFileExporter"
          name="FitFileExporter"
          point="org.adempiere.base.IGridTabExporter">
@@ -19,13 +20,5 @@
             priority="0">
       </exporter>
    </extension>
-      <extension
-         id="org.idempiere.fitrecorder.FitFileExporter"
-         name="FitFileExporter"
-         point="org.adempiere.base.IGridTabExporter">
-      <exporter
-            class="org.idempiere.fitrecorder.FitFileExporter"
-            priority="0">
-      </exporter>
-      </extension>
+   -->
 </plugin>
