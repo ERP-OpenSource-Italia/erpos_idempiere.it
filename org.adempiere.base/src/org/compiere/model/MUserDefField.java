@@ -161,6 +161,11 @@ public class MUserDefField extends X_AD_UserDef_Field
 	 */
 	public static MUserDefField getAggregatedMatch(Properties ctx,int AD_Window_ID, int AD_Field_ID)
 	{
+		// AD_Window_ID may be zero, if so we need to get it from ad_field or the caching of fields will fail
+		
+		if(AD_Window_ID < 1)
+			AD_Window_ID = DB.getSQLValueEx(null, "SELECT AD_Tab.AD_Window_ID FROM AD_Tab join AD_Field on (AD_Field.AD_Tab_ID = AD_Tab.AD_Tab_ID) WHERE AD_Field.AD_Field_ID = ?", AD_Field_ID);
+		
 		// parameters
 		final int AD_Client_ID = Env.getAD_Client_ID(ctx);
 		final int AD_Org_ID = Env.getAD_Org_ID(ctx);
