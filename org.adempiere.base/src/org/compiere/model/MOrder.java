@@ -1287,8 +1287,9 @@ public class MOrder extends X_C_Order implements DocAction
 			}
 			if (is_ValueChanged(COLUMNNAME_DateOrdered)) {
 				if (previousdt.isOverwriteDateOnComplete()) {
-					log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeProcessedDate"));
-					return false; 
+					
+						log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeProcessedDate"));
+						return false;
 				}
 			}
 		}
@@ -1305,9 +1306,13 @@ public class MOrder extends X_C_Order implements DocAction
 					MPriceList pList =  MPriceList.get(getCtx(), getM_PriceList_ID(), null);
 					MPriceListVersion plOld = pList.getPriceListVersion((Timestamp)get_ValueOld(COLUMNNAME_DateOrdered));
 					MPriceListVersion plNew = pList.getPriceListVersion((Timestamp)get_Value(COLUMNNAME_DateOrdered));
-					if (plNew == null || !plNew.equals(plOld)) {
-						log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeDateOrdered"));
-						return false;
+					if (plNew == null || !plNew.equals(plOld)) 
+					{
+						if(STDSysConfig.isChangeDateAndPriceList(getAD_Client_ID(),getAD_Org_ID()) == false)
+						{
+							log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeDateOrdered"));
+							return false;
+						}
 					}
 				}
 			}
