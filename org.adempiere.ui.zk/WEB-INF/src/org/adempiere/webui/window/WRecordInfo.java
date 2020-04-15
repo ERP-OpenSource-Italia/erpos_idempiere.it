@@ -212,8 +212,10 @@ public class WRecordInfo extends Window implements EventListener<Event>
 		hbox.appendChild(m_permalink);
 		ZKUpdateUtil.setHflex(confirmPanel, "true");
 		hbox.appendChild(confirmPanel);
+		hbox.appendChild(confirmPanel);
 		
 		confirmPanel.addActionListener(Events.ON_CLICK, this);
+
 	}	//	jbInit
 	
 	
@@ -493,7 +495,6 @@ public class WRecordInfo extends Window implements EventListener<Event>
 	
 	
 	public void onEvent(Event event) throws Exception {
-		this.detach();
+			this.detach();
 	}
-
 }	// WRecordInfo
