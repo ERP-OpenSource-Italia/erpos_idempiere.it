@@ -80,7 +80,8 @@ public class CalloutUser extends CalloutEngine
 		String sql = "SELECT p.AD_Language,p.C_PaymentTerm_ID,"
 				+ " COALESCE(p.M_PriceList_ID,g.M_PriceList_ID) AS M_PriceList_ID, p.PaymentRule,p.POReference,"
 				+ " p.SO_Description,p.IsDiscountPrinted,"
-				+ " p.SO_CreditLimit, p.SO_CreditLimit-p.SO_CreditUsed AS CreditAvailable,"
+//				+ " p.SO_CreditLimit, p.SO_CreditLimit-p.SO_CreditUsed AS CreditAvailable,"
+				+ " p.SO_CreditLimit, p.SO_CreditLimit-LS_calcSOCreditUsed(p.C_BPartner_ID, p.AD_Client_ID, p.AD_Org_ID) AS CreditAvailable,"//DONE
 				+ " l.C_BPartner_Location_ID,c.AD_User_ID,"
 				+ " COALESCE(p.PO_PriceList_ID,g.PO_PriceList_ID) AS PO_PriceList_ID, p.PaymentRulePO,p.PO_PaymentTerm_ID " 
 				+ "FROM C_BPartner p"
