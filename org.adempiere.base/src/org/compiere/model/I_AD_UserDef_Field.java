@@ -152,6 +152,28 @@ public interface I_AD_UserDef_Field
 
 	public org.compiere.model.I_AD_Reference getAD_Reference_Value() throws RuntimeException;
 
+    /** Column name AD_SearchReference_ID */
+    public static final String COLUMNNAME_AD_SearchReference_ID = "AD_SearchReference_ID";
+
+	/** Set Riferimento Ricerca	  */
+	public void setAD_SearchReference_ID (int AD_SearchReference_ID);
+
+	/** Get Riferimento Ricerca	  */
+	public int getAD_SearchReference_ID();
+
+	public org.compiere.model.I_AD_Reference getAD_SearchReference() throws RuntimeException;
+
+    /** Column name AD_SearchVal_Rule_ID */
+    public static final String COLUMNNAME_AD_SearchVal_Rule_ID = "AD_SearchVal_Rule_ID";
+
+	/** Set Validazione Dinamica Ricerca	  */
+	public void setAD_SearchVal_Rule_ID (int AD_SearchVal_Rule_ID);
+
+	/** Get Validazione Dinamica Ricerca	  */
+	public int getAD_SearchVal_Rule_ID();
+
+	public org.compiere.model.I_AD_Val_Rule getAD_SearchVal_Rule() throws RuntimeException;
+
     /** Column name AD_UserDef_Field_ID */
     public static final String COLUMNNAME_AD_UserDef_Field_ID = "AD_UserDef_Field_ID";
 
@@ -400,6 +422,19 @@ public interface I_AD_UserDef_Field
 	  * If selected fields used for elaboration are overwritten
 	  */
 	public boolean isElaborationEnable();
+
+    /** Column name IsHtml */
+    public static final String COLUMNNAME_IsHtml = "IsHtml";
+
+	/** Set HTML.
+	  * Text has HTML tags
+	  */
+	public void setIsHtml (String IsHtml);
+
+	/** Get HTML.
+	  * Text has HTML tags
+	  */
+	public String getIsHtml();
 
     /** Column name IsMandatory */
     public static final String COLUMNNAME_IsMandatory = "IsMandatory";

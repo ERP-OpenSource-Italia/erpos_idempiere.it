@@ -30,7 +30,7 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20190106L;
+	private static final long serialVersionUID = 20200415L;
 
     /** Standard Constructor */
     public X_AD_UserDef_Field (Properties ctx, int AD_UserDef_Field_ID, String trxName)
@@ -248,6 +248,56 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 	public int getAD_Reference_Value_ID () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_AD_Reference_Value_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_AD_Reference getAD_SearchReference() throws RuntimeException
+    {
+		return (org.compiere.model.I_AD_Reference)MTable.get(getCtx(), org.compiere.model.I_AD_Reference.Table_Name)
+			.getPO(getAD_SearchReference_ID(), get_TrxName());	}
+
+	/** Set Riferimento Ricerca.
+		@param AD_SearchReference_ID Riferimento Ricerca	  */
+	public void setAD_SearchReference_ID (int AD_SearchReference_ID)
+	{
+		if (AD_SearchReference_ID < 1) 
+			set_Value (COLUMNNAME_AD_SearchReference_ID, null);
+		else 
+			set_Value (COLUMNNAME_AD_SearchReference_ID, Integer.valueOf(AD_SearchReference_ID));
+	}
+
+	/** Get Riferimento Ricerca.
+		@return Riferimento Ricerca	  */
+	public int getAD_SearchReference_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_AD_SearchReference_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_AD_Val_Rule getAD_SearchVal_Rule() throws RuntimeException
+    {
+		return (org.compiere.model.I_AD_Val_Rule)MTable.get(getCtx(), org.compiere.model.I_AD_Val_Rule.Table_Name)
+			.getPO(getAD_SearchVal_Rule_ID(), get_TrxName());	}
+
+	/** Set Validazione Dinamica Ricerca.
+		@param AD_SearchVal_Rule_ID Validazione Dinamica Ricerca	  */
+	public void setAD_SearchVal_Rule_ID (int AD_SearchVal_Rule_ID)
+	{
+		if (AD_SearchVal_Rule_ID < 1) 
+			set_Value (COLUMNNAME_AD_SearchVal_Rule_ID, null);
+		else 
+			set_Value (COLUMNNAME_AD_SearchVal_Rule_ID, Integer.valueOf(AD_SearchVal_Rule_ID));
+	}
+
+	/** Get Validazione Dinamica Ricerca.
+		@return Validazione Dinamica Ricerca	  */
+	public int getAD_SearchVal_Rule_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_AD_SearchVal_Rule_ID);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
@@ -625,6 +675,30 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 			return "Y".equals(oo);
 		}
 		return false;
+	}
+
+	/** IsHtml AD_Reference_ID=319 */
+	public static final int ISHTML_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISHTML_Yes = "Y";
+	/** No = N */
+	public static final String ISHTML_No = "N";
+	/** Set HTML.
+		@param IsHtml 
+		Text has HTML tags
+	  */
+	public void setIsHtml (String IsHtml)
+	{
+
+		set_Value (COLUMNNAME_IsHtml, IsHtml);
+	}
+
+	/** Get HTML.
+		@return Text has HTML tags
+	  */
+	public String getIsHtml () 
+	{
+		return (String)get_Value(COLUMNNAME_IsHtml);
 	}
 
 	/** IsMandatory AD_Reference_ID=319 */

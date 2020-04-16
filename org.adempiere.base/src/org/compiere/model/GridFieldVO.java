@@ -387,6 +387,12 @@ public class GridFieldVO implements Serializable
 
 			if(userDef.getCallout() != null)
 				vo.Callout = userDef.getCallout();
+			
+			if(userDef.getIsHtml() != null)
+				vo.IsHtml = Util.asBoolean(userDef.getIsHtml());
+			
+			if(userDef.getPlaceholder() != null)
+				vo.Placeholder = userDef.getPlaceholder();
 		}
 		//
 		vo.initFinish();
