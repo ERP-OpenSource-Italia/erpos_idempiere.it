@@ -1010,8 +1010,8 @@ public class MBPartner extends X_C_BPartner
 		return success;
 	}	//	afterDelete
 
-	@Override
-	public BigDecimal getTotalOpenBalance()
+	
+	public BigDecimal getTotalOpenBalanceDB()
 	{
 		BigDecimal totalOpenBalance = DB.getSQLValueBD(get_TrxName(), "SELECT ls_calcSOCreditUsed(?,?,?) FROM DUAL", getC_BPartner_ID(), getAD_Client_ID(), getAD_Org_ID());
 		return totalOpenBalance;

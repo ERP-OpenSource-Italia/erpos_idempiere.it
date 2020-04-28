@@ -1643,14 +1643,14 @@ public class MOrder extends X_C_Order implements DocAction
 					if (MBPartner.SOCREDITSTATUS_CreditStop.equals(bp.getSOCreditStatus()))
 					{
 						m_processMsg = "@BPartnerCreditStop@ - @TotalOpenBalance@=" 
-								+ bp.getTotalOpenBalance()
+								+ bp.getTotalOpenBalanceDB()
 								+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 						return DocAction.STATUS_Invalid;
 					}
 					if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus()))
 					{
 						m_processMsg = "@BPartnerCreditHold@ - @TotalOpenBalance@=" 
-								+ bp.getTotalOpenBalance() 
+								+ bp.getTotalOpenBalanceDB() 
 								+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 						return DocAction.STATUS_Invalid;
 					}
@@ -1660,7 +1660,7 @@ public class MOrder extends X_C_Order implements DocAction
 					if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus(grandTotal)))
 					{
 						m_processMsg = "@BPartnerOverOCreditHold@ - @TotalOpenBalance@=" 
-								+ bp.getTotalOpenBalance() + ", @GrandTotal@=" + grandTotal
+								+ bp.getTotalOpenBalanceDB() + ", @GrandTotal@=" + grandTotal
 								+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 						return DocAction.STATUS_Invalid;
 					}

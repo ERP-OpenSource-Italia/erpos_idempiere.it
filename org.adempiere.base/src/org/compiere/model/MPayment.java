@@ -1912,14 +1912,14 @@ public class MPayment extends X_C_Payment
 			if (X_C_BPartner.SOCREDITSTATUS_CreditStop.equals(bp.getSOCreditStatus()))
 			{
 				m_processMsg = "@BPartnerCreditStop@ - @TotalOpenBalance@=" 
-					+ bp.getTotalOpenBalance()
+					+ bp.getTotalOpenBalanceDB()
 					+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 				return DocAction.STATUS_Invalid;
 			}
 			if (X_C_BPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus()))
 			{
 				m_processMsg = "@BPartnerCreditHold@ - @TotalOpenBalance@=" 
-					+ bp.getTotalOpenBalance()
+					+ bp.getTotalOpenBalanceDB()
 					+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 				return DocAction.STATUS_Invalid;
 			}
