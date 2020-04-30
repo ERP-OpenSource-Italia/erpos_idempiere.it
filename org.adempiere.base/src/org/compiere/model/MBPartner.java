@@ -828,12 +828,12 @@ public class MBPartner extends X_C_BPartner
 
 		//	Above (reduced) Credit Limit
 		creditLimit = creditLimit.subtract(additionalAmt);
-		if (creditLimit.compareTo(getTotalOpenBalance()) < 0)
+		if (creditLimit.compareTo(getTotalOpenBalanceDB()) < 0)
 			return SOCREDITSTATUS_CreditHold;
 		
 		//	Above Watch Limit
 		BigDecimal watchAmt = creditLimit.multiply(getCreditWatchRatio());
-		if (watchAmt.compareTo(getTotalOpenBalance()) < 0)
+		if (watchAmt.compareTo(getTotalOpenBalanceDB()) < 0)
 			return SOCREDITSTATUS_CreditWatch;
 		
 		//	is OK
