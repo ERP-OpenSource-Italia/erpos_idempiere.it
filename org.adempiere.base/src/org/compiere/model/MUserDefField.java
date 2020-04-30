@@ -44,11 +44,12 @@ public class MUserDefField extends X_AD_UserDef_Field
 	private static final String COLUMN_NAME_T = "name_t",
 								COLUMN_DESCRIPTION_T = "description_t",
 								COLUMN_HELP_T = "help_t",
+								COLUMN_PLACEHOLDER_T = "placeholder_t",
 								CALLOUT_REPLACE_PREFIX = "#rep:",
 								CALLOUT_SEP = ";";
 
 	private static final String Q_USERDEFFIELD = 
-		" select u.*, COALESCE(t.name,u.name) name_t, COALESCE(t.description,u.description) description_t, COALESCE(t.help,u.help) help_t" +
+		" select u.*, COALESCE(t.name,u.name) name_t, COALESCE(t.description,u.description) description_t, COALESCE(t.help,u.help) help_t, COALESCE(t.placeholder,u.placeholder) placeholder_t" +
 		" from AD_UserDef_Win w inner join AD_UserDef_Tab tb on (w.AD_UserDef_Win_ID = tb.AD_UserDef_Win_ID)" +
 		"   inner join AD_UserDef_Field u on (u.AD_UserDef_Tab_ID = tb.AD_UserDef_Tab_ID) " +
 		"	left outer join AD_UserDef_Field_Trl t on (u.AD_UserDef_Field_ID = t.AD_UserDef_Field_ID)" +
@@ -161,6 +162,11 @@ public class MUserDefField extends X_AD_UserDef_Field
 	 */
 	public static MUserDefField getAggregatedMatch(Properties ctx,int AD_Window_ID, int AD_Field_ID)
 	{
+		// AD_Window_ID may be zero, if so we need to get it from ad_field or the caching of fields will fail
+		
+		if(AD_Window_ID < 1)
+			AD_Window_ID = DB.getSQLValueEx(null, "SELECT AD_Tab.AD_Window_ID FROM AD_Tab join AD_Field on (AD_Field.AD_Tab_ID = AD_Tab.AD_Tab_ID) WHERE AD_Field.AD_Field_ID = ?", AD_Field_ID);
+		
 		// parameters
 		final int AD_Client_ID = Env.getAD_Client_ID(ctx);
 		final int AD_Org_ID = Env.getAD_Org_ID(ctx);
@@ -237,7 +243,8 @@ public class MUserDefField extends X_AD_UserDef_Field
 				{
 					String	name = rs.getString(COLUMN_NAME_T),
 							description = rs.getString(COLUMN_DESCRIPTION_T),
-							help = rs.getString(COLUMN_HELP_T);
+							help = rs.getString(COLUMN_HELP_T),
+							placeholder = rs.getString(COLUMN_PLACEHOLDER_T);
 					
 					if(name != null)
 						fakeField.setName(name);
@@ -247,7 +254,15 @@ public class MUserDefField extends X_AD_UserDef_Field
 					
 					if(help != null)
 						fakeField.setHelp(help);
+					
+					if(placeholder != null)
+						fakeField.setPlaceholder(placeholder);
 				}
+				
+				String isHtml = rs.getString(COLUMNNAME_IsHtml);
+				
+				if(isHtml != null)
+					fakeField.setIsHtml(isHtml);
 				
 				if(Util.asBoolean(isViewEnable))
 				{
@@ -335,7 +350,7 @@ public class MUserDefField extends X_AD_UserDef_Field
 					
 					if(isToolbarButton != null)
 						fakeField.setIsToolbarButton(isToolbarButton);
-				}
+				}				
 				
 				if(Util.asBoolean(isElaborationEnable))
 				{
@@ -354,7 +369,7 @@ public class MUserDefField extends X_AD_UserDef_Field
 						   mandatoryLogc = rs.getString(COLUMNNAME_MandatoryLogic),
 						   isAutocomplete = rs.getString(COLUMNNAME_IsAutocomplete),
 						   isSelectionColumn = rs.getString(COLUMNNAME_IsSelectionColumn),
-						   callout = rs.getString(COLUMNNAME_Callout);
+						   callout = rs.getString(COLUMNNAME_Callout);						   
 					
 					if(AD_Reference_ID > 0)
 						fakeField.setAD_Reference_ID(AD_Reference_ID);
@@ -401,7 +416,7 @@ public class MUserDefField extends X_AD_UserDef_Field
 						fakeField.setIsAutocomplete(isAutocomplete);
 					
 					if(isSelectionColumn != null)
-						fakeField.setIsSelectionColumn(isSelectionColumn);
+						fakeField.setIsSelectionColumn(isSelectionColumn);				
 					
 					// Callouts are in append
 					

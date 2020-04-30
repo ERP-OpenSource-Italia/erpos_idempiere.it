@@ -835,5 +835,10 @@ public final class AEnv
 	{
 		return getApplicationUrl() + "?Action=Zoom&TableName" + po.get_TableName() + "&Record_ID=" + po.get_ID();
 	}
-
+	
+	/** Return the link for direct access to the record using tableID */
+	public static String getZoomUrlTableID(int AD_Table_ID, int ID)
+	{
+		return getApplicationUrl() + "?Action=Zoom&AD_Table_ID=" + AD_Table_ID + "&Record_ID=" + ID;
+	}
 }	//	AEnv
