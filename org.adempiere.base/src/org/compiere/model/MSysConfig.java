@@ -89,6 +89,7 @@ public class MSysConfig extends X_AD_SysConfig
 	public static final String HTML_REPORT_THEME = "HTML_REPORT_THEME";
     public static final String IBAN_VALIDATION = "IBAN_VALIDATION" ;
     public static final String IDENTIFIER_SEPARATOR = "IDENTIFIER_SEPARATOR" ;
+    public static final String INGNORE_INOUTCONFIRM_GENERATE = "INGNORE_INOUTCONFIRM_GENERATE";
     public static final String Invoice_ReverseUseNewNumber = "Invoice_ReverseUseNewNumber";
     public static final String JASPER_SWAP_MAX_PAGES = "JASPER_SWAP_MAX_PAGES";
     public static final String LASTRUN_RECORD_COUNT = "LASTRUN_RECORD_COUNT";
