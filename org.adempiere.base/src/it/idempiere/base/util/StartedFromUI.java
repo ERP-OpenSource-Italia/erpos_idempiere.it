@@ -19,9 +19,9 @@ public class StartedFromUI
 	 * 
 	 * @param po
 	 */
-	public static void add(PO po)
+	public static PO add(PO po)
 	{
-		startedFromUI.addPO(po);
+		return startedFromUI.addPO(po);
 	}
 	
 	/**
@@ -31,18 +31,18 @@ public class StartedFromUI
 	 * @param Record_ID
 	 * @param trxName
 	 */
-	public static void add(Properties ctx, int AD_Table_ID, int Record_ID, String trxName)
+	public static PO add(Properties ctx, int AD_Table_ID, int Record_ID, String trxName)
 	{
-		add(getPO(ctx, AD_Table_ID, Record_ID, trxName));
+		return add(getPO(ctx, AD_Table_ID, Record_ID, trxName));
 	}
 	
 	/**
 	 * Remove po from list of object involved in an action started from UI. Compare is performed by ==
 	 * @param po
 	 */
-	public static void remove(PO po)
+	public static PO remove(PO po)
 	{
-		startedFromUI.removePO(po);
+		return startedFromUI.removePO(po);
 	}
 	
 	/**
@@ -52,9 +52,9 @@ public class StartedFromUI
 	 * @param Record_ID
 	 * @param trxName
 	 */
-	public static void remove(Properties ctx, int AD_Table_ID, int Record_ID, String trxName)
+	public static PO remove(Properties ctx, int AD_Table_ID, int Record_ID, String trxName)
 	{
-		remove(getPO(ctx, AD_Table_ID, Record_ID, trxName));
+		return remove(getPO(ctx, AD_Table_ID, Record_ID, trxName));
 	}
 	
 	/**
