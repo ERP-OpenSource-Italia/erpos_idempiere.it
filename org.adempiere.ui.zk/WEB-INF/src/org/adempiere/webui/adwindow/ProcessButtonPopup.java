@@ -6,11 +6,14 @@ package org.adempiere.webui.adwindow;
 import java.util.List;
 
 import org.adempiere.util.Callback;
+import org.adempiere.util.FeedbackContainer;
 import org.adempiere.webui.component.Menupopup;
 import org.adempiere.webui.editor.IProcessButton;
 import org.adempiere.webui.editor.WButtonEditor;
 import org.adempiere.webui.panel.WDocActionPanel;
+import org.adempiere.webui.util.UIFeedbackNotifier;
 import org.compiere.model.GridTab;
+import org.compiere.model.PO;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.zkoss.zk.ui.event.Event;
@@ -99,7 +102,42 @@ public class ProcessButtonPopup extends Menupopup implements EventListener<Event
 						GridTab gridTab = pb.getADTabpanel().getGridTab();
 						ADWindow adwindow = ADWindow.get(gridTab.getWindowNo());
 						ADWindowContent windowContent = adwindow.getADWindowContent();
-						windowContent.executeButtonProcess(pb, true, gridTab.getAD_Table_ID(), gridTab.getRecord_ID(), true, null);
+						
+						// F3P: add feedback management
+						
+						PO po = null;						
+						boolean isFeedbackManaged = false;
+						
+			  			try
+			  			{
+				  			po = PO.get(Env.getCtx(), gridTab.getTableName(), gridTab.getRecord_ID(), null);
+			  			}
+			  			catch(Throwable t)
+			  			{			  				
+			  				po = null;
+			  			}
+		  			
+			  			if(po != null)
+			  			{
+							String docAction = (String)gridTab.getValue("DocAction");
+							String gatherFor = FeedbackContainer.getEventTopicForDocEent(docAction);
+														
+							if(gatherFor != null)
+							{
+								final FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);									
+									final UIFeedbackNotifier notifier = new UIFeedbackNotifier(gridTab.getWindowNo(), windowContent.getComponent(), container,false, new Callback<UIFeedbackNotifier>()
+									{
+										public void onCallback(UIFeedbackNotifier notifier) {
+										windowContent.executeButtonProcess(pb, true, gridTab.getAD_Table_ID(), gridTab.getRecord_ID(), true, container);							  				
+						  			};
+								});
+								notifier.processFeedback();
+								isFeedbackManaged = true;
+							}
+			  			}
+						
+			  			if(isFeedbackManaged == false)
+			  				windowContent.executeButtonProcess(pb, true, gridTab.getAD_Table_ID(), gridTab.getRecord_ID(), true, null);
 					}
 				}
 			});

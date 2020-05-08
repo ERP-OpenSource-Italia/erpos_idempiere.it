@@ -1180,13 +1180,16 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 		
 		protected void doRun() 
 		{
+			PO startedFromUIPO = null;
 			ProcessInfo m_pi = getProcessInfo();
+			
 			try {
 				//F3P UI action flag
+				
 				if(m_pi.getTable_ID() > 0 && m_pi.getRecord_ID() > 0)
 				{
 					String trxName = (m_trx != null)?m_trx.getTrxName():null;
-					StartedFromUI.add(Env.getCtx(),  m_pi.getTable_ID(), m_pi.getRecord_ID(), trxName);
+					startedFromUIPO = StartedFromUI.add(Env.getCtx(),  m_pi.getTable_ID(), m_pi.getRecord_ID(), trxName);
 				}
 				
 				if (log.isLoggable(Level.INFO))
@@ -1202,11 +1205,8 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 				Executions.schedule(getDesktop(), AbstractProcessDialog.this, new Event(ON_COMPLETE, AbstractProcessDialog.this, null));
 				
 				// F3P: clear action flag
-				if(m_pi.getTable_ID() > 0 && m_pi.getRecord_ID() > 0)
-				{
-					String trxName = (m_trx != null)?m_trx.getTrxName():null;
-					StartedFromUI.remove(Env.getCtx(), m_pi.getTable_ID(), m_pi.getRecord_ID(), trxName);	
-				}
+				if(startedFromUIPO != null)
+					StartedFromUI.remove(startedFromUIPO);	
 			}		
 		}
 	}
