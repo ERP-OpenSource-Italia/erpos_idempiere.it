@@ -1224,14 +1224,14 @@ public class MInOut extends X_M_InOut implements DocAction
 				if (MBPartner.SOCREDITSTATUS_CreditStop.equals(bp.getSOCreditStatus()))
 				{
 					m_processMsg = "@BPartnerCreditStop@ - @TotalOpenBalance@="
-						+ bp.getTotalOpenBalanceDB()
+						+ bp.getTotalOpenBalanceDB(true)
 						+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 					return DocAction.STATUS_Invalid;
 				}
 				if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus()))
 				{
 					m_processMsg = "@BPartnerCreditHold@ - @TotalOpenBalance@="
-						+ bp.getTotalOpenBalanceDB()
+						+ bp.getTotalOpenBalanceDB(true)
 						+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 					return DocAction.STATUS_Invalid;
 				}
@@ -1239,7 +1239,7 @@ public class MInOut extends X_M_InOut implements DocAction
 				if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus(notInvoicedAmt)))
 				{
 					m_processMsg = "@BPartnerOverSCreditHold@ - @TotalOpenBalance@="
-						+ bp.getTotalOpenBalanceDB() + ", @NotInvoicedAmt@=" + notInvoicedAmt
+						+ bp.getTotalOpenBalanceDB(true) + ", @NotInvoicedAmt@=" + notInvoicedAmt
 						+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 					return DocAction.STATUS_Invalid;
 				}
