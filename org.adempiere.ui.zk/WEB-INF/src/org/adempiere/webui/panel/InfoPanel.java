@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Vector;
@@ -58,6 +59,7 @@ import org.adempiere.webui.component.ProcessInfoDialog;
 import org.adempiere.webui.component.WListItemRenderer;
 import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.desktop.IDesktop;
 import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.event.ValueChangeEvent;
@@ -71,6 +73,7 @@ import org.adempiere.webui.part.WindowContainer;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.minigrid.ColumnInfo;
+import org.compiere.minigrid.EmbedWinInfo;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.model.GridField;
 import org.compiere.model.MImage;
@@ -79,6 +82,7 @@ import org.compiere.model.MInfoWindow;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MProcess;
 import org.compiere.model.MRole;
+import org.compiere.model.MStatusLine;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
 import org.compiere.model.X_AD_CtxHelp;
@@ -92,6 +96,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.NamePair;
 import org.compiere.util.Trx;
 import org.compiere.util.TrxRunnable;
+import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 import org.zkoss.zk.au.out.AuEcho;
 import org.zkoss.zk.ui.Page;
@@ -169,6 +174,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	
 	// F3P: persistent edit support
 	protected int	editAD_Pinstance_ID = -1;
+	public static final String CTX_EDIT_AD_PINSTANCE_ID = "Edit_AD_Pinstance_ID";
 	
 	/**
 	 * store selected record info
@@ -196,6 +202,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	protected int mainContentRowUsedInSubcontent = -1;
 	
+	// LS: status bar and info
+	public static final String CTX_AD_PINSTANCE_ID = "AD_Pinstance_ID";
+	
+	protected MStatusLine m_statusLine = null;
+	protected MStatusLine[] m_quickInfoLines = null;
+	protected int m_WindownNoStatusLine = -1;
+	protected String m_lastRenderedQuickInfo = null;
 	
     public static InfoPanel create (int WindowNo,
             String tableName, String keyColumn, String value,
@@ -306,6 +319,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 
 	private void init()
 	{
+		initStatusBarAndInfo();
+		
 		if (isLookup())
 		{
 			setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
@@ -536,6 +551,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	public void setStatusLine (String text, boolean error)
 	{
+		if(error == false && m_statusLine != null)
+		{
+			String statusLine = m_statusLine.parseLine(m_WindownNoStatusLine);
+			if(Util.isEmpty(statusLine,true) == false)
+					text = statusLine;
+		}
+		
 		statusBar.setStatusLine(text, error);
 	}	//	setStatusLine
 
@@ -2112,7 +2134,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
             else if (event.getName().equals(WindowContainer.ON_WINDOW_CONTAINER_SELECTION_CHANGED_EVENT))
         	{
         		if (infoWindow != null)
+        		{
     				SessionManager.getAppDesktop().updateHelpContext(X_AD_CtxHelp.CTXTYPE_Info, infoWindow.getAD_InfoWindow_ID());
+    				
+    				if(m_quickInfoLines != null)
+    					SessionManager.getAppDesktop().updateHelpQuickInfo(m_lastRenderedQuickInfo);
+        		}
     			else
     				SessionManager.getAppDesktop().updateHelpContext(X_AD_CtxHelp.CTXTYPE_Home, 0);
         	}
@@ -2711,6 +2738,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         	SessionManager.getAppDesktop().closeActiveWindow();
         else
 	        this.detach();
+        
+        SessionManager.getAppDesktop().updateHelpQuickInfo((String)null);
     }   //  dispose
 
 	public void sort(Comparator<Object> cmpr, boolean ascending) {
@@ -2841,6 +2870,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		runViaProcessInfo = pi;
 	}
 	
+	public ProcessInfo getRunViaProcessInfo()
+	{
+		return runViaProcessInfo;
+	}
+	
 	public Collection<KeyNamePair> getAdditionalDBSelectedKeys(Collection<KeyNamePair> selectedKeys)
 	{
 		return null; // Void default impl		
@@ -2899,6 +2933,208 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			}
 		});
 	}
+	
+	protected void initStatusBarAndInfo()
+	{
+		if(m_infoWindowID > 0)
+		{
+			m_statusLine = MStatusLine.getSL(m_infoWindowID);
+			m_quickInfoLines = MStatusLine.getStatusLinesWidget(m_infoWindowID);
+			
+			if(m_quickInfoLines != null && m_quickInfoLines.length == 0)
+				m_quickInfoLines = null;
+			
+			if(m_statusLine != null || m_quickInfoLines != null)
+			{
+				m_WindownNoStatusLine = SessionManager.getAppDesktop().registerWindow(this);
+			}
+		}
+	}
+	
+	// F3P: fill context before running process 
+	
+	/** Get full ctx from selected rows, including parameters, selected main row, selected row of active embedded tab.
+	 *   This is the order applied, in case of conflicting columns with different values, they are overridden by later ones:
+	 *   
+	 *   1. parameters
+	 *   2. main content row (for mutliselection, the last clicked, if selected, is used. If its not selected, the first selected is used)
+	 *   3. selected embedded row
+	 *
+	 * @param WindowNo
+	 * @param ctx
+	 * @return
+	 */
+	public Properties getFullCtxFromSelectedRows(int WindowNo, Properties ctx)
+	{
+		// 1 & 2: Parameters and selected active row
+		
+		int selectedRow = -1;
+		
+		// *** Context from main content		
+		
+		
+		if(mainContentRowUsedInSubcontent >= 0)
+			selectedRow = mainContentRowUsedInSubcontent;
+		
+		if(selectedRow < 0)
+			selectedRow = contentPanel.getSelectedIndex();
+						
+		if(selectedRow >= 0)			
+			getRowAndParamsAsCtx(selectedRow, -1, null, WindowNo, Env.getCtx());
+		else
+		{
+			resetTableCtx(contentPanel, WindowNo, Env.getCtx());
+			getRowAndParamsAsCtx(-1, -1, null, WindowNo, Env.getCtx()); // Only parameters
+		}		
+			
+		return ctx;
+	}
+	
+	/** Get row and params ctx. IF row is < 0, only params are used
+	 * 
+	 * @param row current row, ignored if < 0
+	 * @param editingColumn
+	 * @param editingValue
+	 * @return
+	 */
+	public Properties getRowAndParamsAsCtx(int row, int editingColumn, Object editingValue)
+	{
+		Properties ctx = new Properties(Env.getCtx()); // Allow session values
+		return getRowAndParamsAsCtx(row, editingColumn, editingValue, 0, ctx);
+	}
+	
+	/** Get row and params ctx. IF row is < 0, only params are used
+	 * 
+	 * @param row
+	 * @param editingColumn
+	 * @param editingValue
+	 * @param WindowNo
+	 * @param ctx
+	 * @return
+	 */
+	public Properties getRowAndParamsAsCtx(int row, int editingColumn, Object editingValue, int WindowNo, Properties ctx)
+	{		
+		if (row >= 0)
+			getTableRowAsCtx(contentPanel, row, editingColumn, editingValue, WindowNo, ctx);
+		return ctx;
+	}
+	
+	public Properties getTableRowAsCtx(WListbox table, int row, int editingColumn, Object editingValue, int WindowNo, Properties ctx)
+	{
+		ListModelTable model = table.getModel();
+		ColumnInfo[] layout = table.getLayout(); 
+		
+		for(int i=0; i < layout.length; i++)			
+		{			
+			String column = layout[i].getColumnName();
+			
+			if(column == null)
+				column = layout[i].getGridField().getColumnName();
+					
+			Object val = null;
+			
+			if(i != editingColumn)
+				val = model.getValueAt(row, i);
+			else
+				val = editingValue;
+			
+			// Get id from 'complex' types
+			
+			if(val != null)
+			{				
+				if(val instanceof IDColumn)
+				{
+					IDColumn idc = (IDColumn)val;
+					val = idc.getRecord_ID();
+				}
+				else if(val instanceof KeyNamePair)
+				{
+					KeyNamePair knp = (KeyNamePair)val;
+					val = knp.getKey();
+				}
+								
+				if(val instanceof Integer)
+					Env.setContext(ctx, WindowNo, column, (Integer)val);
+				else if(val instanceof Timestamp)
+					Env.setContext(ctx, WindowNo, column, (Timestamp)val);
+				else if(val instanceof Boolean)
+					Env.setContext(ctx, WindowNo, column, (Boolean)val);
+				else
+					Env.setContext(ctx, WindowNo, column, val.toString());
+			}
+			else
+			{
+				Env.setContext(ctx, WindowNo, column, (String)null);
+			}
+		}
+		
+		return ctx;		
+	}
+	
+	public void resetTableCtx(WListbox table, int WindowNo, Properties ctx)
+	{
+		ColumnInfo[] layout = table.getLayout(); 
+		
+		for(int i=0; i < layout.length; i++)			
+		{			
+			String column = layout[i].getColumnName();
+			
+			if(column == null)
+				column = layout[i].getGridField().getColumnName();
+			
+			Env.setContext(ctx, WindowNo, column, (String)null);
+		}
+	}
+	
+	protected void updateStatusBarAndInfo()
+	{
+		if(m_WindownNoStatusLine > 0)
+		{	
+			Properties ctx = Env.getCtx();
+			Env.clearWinContext(m_WindownNoStatusLine);
+			getFullCtxFromSelectedRows(m_WindownNoStatusLine,ctx);
+			
+			if(getRunViaProcessInfo() != null)
+			{
+				Env.setContext(ctx, m_WindownNoStatusLine, CTX_AD_PINSTANCE_ID, getRunViaProcessInfo().getAD_PInstance_ID());
+			}
+			else
+				Env.setContext(ctx, m_WindownNoStatusLine, CTX_AD_PINSTANCE_ID, 0);
+			
+			if(editAD_Pinstance_ID > 0)
+				Env.setContext(ctx, m_WindownNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID, editAD_Pinstance_ID);
+			else
+				Env.setContext(ctx, m_WindownNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID, 0);
+				
+			if(m_statusLine != null)
+			{
+				setStatusLine(null, false);
+			}
+			
+			if(m_quickInfoLines != null)
+				renderQuickInfo();
+		}
+	}
+	
+	public void renderQuickInfo() 
+	{
+		StringBuilder lines = new StringBuilder();
+		for (MStatusLine wl : m_quickInfoLines)
+		{
+			String line = wl.parseLine(m_WindownNoStatusLine);
+			if (line != null) {
+				lines.append(line).append("<br>");
+			}
+		}
+		
+		m_lastRenderedQuickInfo = null;
+		
+		if (lines.length() > 0)
+			m_lastRenderedQuickInfo = lines.toString();
+		
+		IDesktop desktop = SessionManager.getAppDesktop();
+		desktop.updateHelpQuickInfo(m_lastRenderedQuickInfo);			
+	}	
 	
 }	//	Info
 
