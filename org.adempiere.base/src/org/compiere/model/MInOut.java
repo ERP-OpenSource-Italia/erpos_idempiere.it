@@ -1293,7 +1293,7 @@ public class MInOut extends X_M_InOut implements DocAction
 		*/
 		
 		if (!isReversal() && //	don't change reversal
-			!MSysConfig.getBooleanValue(MSysConfig.INGNORE_INOUTCONFIRM_GENERATE, false, getAD_Client_ID(), getAD_Org_ID()))//For customized creation
+			!MSysConfig.getBooleanValue(MSysConfig.IGNORE_INOUTCONFIRM_GENERATE, false, getAD_Client_ID(), getAD_Org_ID()))//For customized creation
 		{
 			createConfirmation();
 		}
