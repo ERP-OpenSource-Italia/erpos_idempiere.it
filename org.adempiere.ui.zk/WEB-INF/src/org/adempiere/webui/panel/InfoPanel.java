@@ -34,8 +34,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -47,6 +47,7 @@ import org.adempiere.model.MInfoRelated;
 import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.LayoutUtils;
+import org.adempiere.webui.adwindow.ADWindow;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.apps.BusyDialog;
 import org.adempiere.webui.apps.ProcessModalDialog;
@@ -73,7 +74,6 @@ import org.adempiere.webui.part.WindowContainer;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.minigrid.ColumnInfo;
-import org.compiere.minigrid.EmbedWinInfo;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.model.GridField;
 import org.compiere.model.MImage;
@@ -209,6 +209,10 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected MStatusLine[] m_quickInfoLines = null;
 	protected int m_WindownNoStatusLine = -1;
 	protected String m_lastRenderedQuickInfo = null;
+	
+	// LS: refresh opening window on close
+	
+	protected boolean m_refreshParentOnClose = false;
 	
     public static InfoPanel create (int WindowNo,
             String tableName, String keyColumn, String value,
@@ -533,7 +537,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected boolean hasPreSelectionColumn = false;
 	
 	// F3P: run via process info	
-	private ProcessInfo runViaProcessInfo = null;
+	private ProcessInfo m_runViaProcessInfo = null;
 	
 	/**
 	 *  Loaded correctly
@@ -2256,17 +2260,19 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		
 		// F3P: pass record and table from starter process to this process
 		
-		if(runViaProcessInfo != null)
+		if(m_runViaProcessInfo != null)
 		{
-			m_pi.setRecord_ID(runViaProcessInfo.getRecord_ID());
-			m_pi.setTable_ID(runViaProcessInfo.getTable_ID());			
-			instance.setRecord_ID(runViaProcessInfo.getRecord_ID());
+			m_pi.setRecord_ID(m_runViaProcessInfo.getRecord_ID());
+			m_pi.setTable_ID(m_runViaProcessInfo.getTable_ID());			
+			instance.setRecord_ID(m_runViaProcessInfo.getRecord_ID());
 		}
 		
 		// F3P: refresh mode
 		
 		MInfoProcess infoProcess = infoProcessByProcess.get(processIdObj);
 		String refreshMode = LITMInfoProcess.getRefreshAfterProcess(infoProcess);
+		if(m_refreshParentOnClose == false)
+			m_refreshParentOnClose = LITMInfoProcess.isRefreshCallerRecord(infoProcess);
 		
 		instance.saveEx();
 		final int pInstanceID = instance.getAD_PInstance_ID();
@@ -2304,8 +2310,22 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	                    public void onEvent(Event event) throws Exception {
 	                        updateListSelected();
 	                        recordSelectedData.clear();
-	                        Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", null));
-	                        onUserQuery();
+	                        
+	                        boolean shouldExecuteQuery = !LITMInfoProcess.REFRESHAFTERPROCESS_DoNotRefresh.equals(refreshMode);
+							isRequeryByRunSuccessProcess = true;
+							
+							if(LITMInfoProcess.REFRESHAFTERPROCESS_FullRefresh.equals(refreshMode))
+							{
+								recordSelectedData.clear();
+								isRequeryByRunSuccessProcess = false;
+								mainContentRowUsedInSubcontent = -1;
+							}
+							
+							if(shouldExecuteQuery)
+							{
+								Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", null));
+								onUserQuery();
+							}
 	                    }
 	                });
 
@@ -2734,6 +2754,22 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         {
         	saveSelection();
         }
+        
+        if(m_refreshParentOnClose)
+        {
+        	if(m_runViaProcessInfo != null && m_runViaProcessInfo.getWindowNo() > 0)
+    		{
+    			IDesktop desktop = SessionManager.getAppDesktop();
+    			Object oWin = desktop.findWindow(m_runViaProcessInfo.getWindowNo());
+    			
+    			if(oWin != null && oWin instanceof ADWindow)
+    			{
+    				ADWindow window = (ADWindow)oWin;
+    				window.getADWindowContent().onRefresh();
+    			}
+    		}
+        }
+        
         if (Window.MODE_EMBEDDED.equals(getAttribute(Window.MODE_KEY)))
         	SessionManager.getAppDesktop().closeActiveWindow();
         else
@@ -2867,12 +2903,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	
 	public void setRunViaProcessInfo(ProcessInfo pi)
 	{
-		runViaProcessInfo = pi;
+		m_runViaProcessInfo = pi;
 	}
 	
 	public ProcessInfo getRunViaProcessInfo()
 	{
-		return runViaProcessInfo;
+		return m_runViaProcessInfo;
 	}
 	
 	public Collection<KeyNamePair> getAdditionalDBSelectedKeys(Collection<KeyNamePair> selectedKeys)
