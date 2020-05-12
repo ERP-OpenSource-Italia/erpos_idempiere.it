@@ -200,6 +200,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	// F3P: persistent edit	
 	protected boolean hasImmediatePersistEdit = false;
 	
+	protected QuickInfoSLEmbedWinListener quickInfoSLEmbedWinListener;
+	
 	/**
 	 * Menu contail process menu item
 	 */
@@ -444,10 +446,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					refresh(embed);
 				}
 			}
+			
+			updateStatusBarAndInfo();
 		}
 		
 		enableZoomDetail();
-		updateStatusBarAndInfo();
 	}
 
 	/**
@@ -2590,10 +2593,17 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		model = new ListModelTable(lines);
 		
 		WListbox content = (WListbox) info.getInfoTbl();
-				
+							
 		ArrayList<Integer> fixedWidths = applyFixedColumnWidths(content, displayedInfoColumns, true); // F3P: fix width of cols
 		
+		if(quickInfoSLEmbedWinListener != null)
+			content.removeEventListener(Events.ON_SELECT, quickInfoSLEmbedWinListener);
+		
 		content.setData(model, null, null, fixedWidths);
+		
+		if(quickInfoSLEmbedWinListener != null)
+			content.addEventListener(Events.ON_SELECT, quickInfoSLEmbedWinListener);
+		
 		info.setDataNeedsUpdate(false);
 	}
 
@@ -3019,17 +3029,16 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			
 			Clients.resize(contentPanel);
 			
-			if(editAD_Pinstance_ID > 0)
+			if(editAD_Pinstance_ID > 0 && LITMInfoColumn.isSaveEditImmediate(infoColumn))
 			{
-				if( LITMInfoColumn.isSaveEditImmediate(infoColumn))
-				{
-					int recordID = contentPanel.getRowKeyAt(rowIndex);
-					String columnName = infoColumn.getColumnName();
-				
-					createOrUpdateImmediateEditDB(recordID, columnName, val);
-					Clients.response(new AuEcho(this, "onRefreshSubcontentCallback", Integer.toString(rowIndex)));
-				}
+				int recordID = contentPanel.getRowKeyAt(rowIndex);
+				String columnName = infoColumn.getColumnName();
+			
+				createOrUpdateImmediateEditDB(recordID, columnName, val);
+				Clients.response(new AuEcho(this, "onRefreshSubcontentCallback", Integer.toString(rowIndex)));
 			}
+			else
+				updateStatusBarAndInfo();
 		}
 		else
 		{
@@ -3433,7 +3442,6 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		
 		mainContentRowUsedInSubcontent = -1;
 		updateSubcontent(row);
-		updateStatusBarAndInfo();
 	}
 	
 	private class XlsExportAction implements EventListener<Event>
@@ -3670,6 +3678,30 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		}
         
         return additionalSelected;
+	}
+	
+	@Override
+	protected void initStatusBarAndInfo() 
+	{
+		super.initStatusBarAndInfo();
+		
+		if(m_WindowNoStatusLine > 0)
+			quickInfoSLEmbedWinListener = new QuickInfoSLEmbedWinListener();
+		else
+			quickInfoSLEmbedWinListener = null;
+	}
+
+	private class QuickInfoSLEmbedWinListener implements EventListener<Event>
+	{
+		@Override
+		public void onEvent(Event event) throws Exception {
+			
+			if(event instanceof SelectEvent<?, ?>)
+			{
+				updateStatusBarAndInfo();
+			}
+		}
+		
 	}
 	
 	public static class InfoColumnLayout

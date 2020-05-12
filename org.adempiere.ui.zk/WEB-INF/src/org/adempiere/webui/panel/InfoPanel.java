@@ -207,7 +207,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	
 	protected MStatusLine m_statusLine = null;
 	protected MStatusLine[] m_quickInfoLines = null;
-	protected int m_WindownNoStatusLine = -1;
+	protected int m_WindowNoStatusLine = -1;
 	protected String m_lastRenderedQuickInfo = null;
 	
 	// LS: refresh opening window on close
@@ -557,7 +557,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	{
 		if(error == false && m_statusLine != null)
 		{
-			String statusLine = m_statusLine.parseLine(m_WindownNoStatusLine);
+			String statusLine = m_statusLine.parseLine(m_WindowNoStatusLine);
 			if(Util.isEmpty(statusLine,true) == false)
 					text = statusLine;
 		}
@@ -2982,7 +2982,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			
 			if(m_statusLine != null || m_quickInfoLines != null)
 			{
-				m_WindownNoStatusLine = SessionManager.getAppDesktop().registerWindow(this);
+				m_WindowNoStatusLine = SessionManager.getAppDesktop().registerWindow(this);
 			}
 		}
 	}
@@ -3124,23 +3124,23 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	
 	protected void updateStatusBarAndInfo()
 	{
-		if(m_WindownNoStatusLine > 0)
+		if(m_WindowNoStatusLine > 0)
 		{	
 			Properties ctx = Env.getCtx();
-			Env.clearWinContext(m_WindownNoStatusLine);
-			getFullCtxFromSelectedRows(m_WindownNoStatusLine,ctx);
+			Env.clearWinContext(m_WindowNoStatusLine);
+			getFullCtxFromSelectedRows(m_WindowNoStatusLine,ctx);
 			
 			if(getRunViaProcessInfo() != null)
 			{
-				Env.setContext(ctx, m_WindownNoStatusLine, CTX_AD_PINSTANCE_ID, getRunViaProcessInfo().getAD_PInstance_ID());
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_AD_PINSTANCE_ID, getRunViaProcessInfo().getAD_PInstance_ID());
 			}
 			else
-				Env.setContext(ctx, m_WindownNoStatusLine, CTX_AD_PINSTANCE_ID, 0);
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_AD_PINSTANCE_ID, 0);
 			
 			if(editAD_Pinstance_ID > 0)
-				Env.setContext(ctx, m_WindownNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID, editAD_Pinstance_ID);
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID, editAD_Pinstance_ID);
 			else
-				Env.setContext(ctx, m_WindownNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID, 0);
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID, 0);
 				
 			if(m_statusLine != null)
 			{
@@ -3157,7 +3157,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		StringBuilder lines = new StringBuilder();
 		for (MStatusLine wl : m_quickInfoLines)
 		{
-			String line = wl.parseLine(m_WindownNoStatusLine);
+			String line = wl.parseLine(m_WindowNoStatusLine);
 			if (line != null) {
 				lines.append(line).append("<br>");
 			}
