@@ -2068,7 +2068,8 @@ public class MOrder extends X_C_Order implements DocAction
 	 * 	@param lines order lines (ordered by M_Product_ID for deadlock prevention)
 	 * 	@return true if (un) reserved
 	 */
-	protected boolean reserveStock (MDocType dt, MOrderLine[] lines)
+	
+	protected boolean reserveStock (MDocType dt, MOrderLine[] lines, boolean bSaveLines) // F3P: added flag and compatibility function to check wether to save line
 	{
 		if (dt == null)
 			dt = MDocType.get(getCtx(), getC_DocType_ID());
@@ -2158,8 +2159,12 @@ public class MOrder extends X_C_Order implements DocAction
 				}	//	stocked
 				//	update line
 				line.setQtyReserved(line.getQtyReserved().add(difference));
-				if (!line.save(get_TrxName()))
-					return false;
+				
+				if(bSaveLines)
+				{
+					if (!line.save(get_TrxName()))
+						return false;
+				}
 				//
 				Volume = Volume.add(product.getVolume().multiply(line.getQtyOrdered()));
 				Weight = Weight.add(product.getWeight().multiply(line.getQtyOrdered()));
@@ -2170,7 +2175,13 @@ public class MOrder extends X_C_Order implements DocAction
 		setWeight(Weight);
 		return true;
 	}	//	reserveStock
+	
+	protected boolean reserveStock (MDocType dt, MOrderLine[] lines) // F3P: added flag and compatibility function to check wether to save line
+	{
+		return reserveStock (dt, lines, true);
+	}
 
+	
 	/**
 	 * 	Calculate Tax and Total
 	 * 	@return true if tax total calculated
@@ -3510,6 +3521,23 @@ public class MOrder extends X_C_Order implements DocAction
 		}
 	}
 	
-	// F3P: oper
+	// F3P: operation in progress flag
+	
+	public boolean tryUpdateLineReservation(MOrderLine line)
+	{
+		boolean updated = false;
+		
+		if(getDocStatus().equals(DOCSTATUS_InProgress) || getDocStatus().equals(DOCSTATUS_Completed))
+		{
+			MDocType 		dt = MDocType.get(getCtx(), getC_DocTypeTarget_ID());
+			MOrderLine	mLines[] = {line};
+			updated = reserveStock(dt, mLines, false);
+		}
+		else
+			log.warning("Wrong state for reservation update");
+		
+		return updated;
+	}
+	
 
 }	//	MOrder

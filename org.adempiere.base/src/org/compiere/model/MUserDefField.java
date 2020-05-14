@@ -257,18 +257,13 @@ public class MUserDefField extends X_AD_UserDef_Field
 					
 					if(placeholder != null)
 						fakeField.setPlaceholder(placeholder);
-				}
-				
-				String isHtml = rs.getString(COLUMNNAME_IsHtml);
-				
-				if(isHtml != null)
-					fakeField.setIsHtml(isHtml);
+				}			
 				
 				if(Util.asBoolean(isViewEnable))
 				{
 					int AD_FieldGroup_ID = rs.getInt(COLUMNNAME_AD_FieldGroup_ID),
 						AD_LabelStyle_ID = rs.getInt(COLUMNNAME_AD_LabelStyle_ID),
-						AD_FieldStyle_ID = rs.getInt(COLUMNNAME_AD_FieldStyle_ID);
+						AD_FieldStyle_ID = rs.getInt(COLUMNNAME_AD_FieldStyle_ID);				
 
 					int seqNo = rs.getInt(COLUMNNAME_SeqNo);					
 					if(rs.wasNull())
@@ -304,7 +299,8 @@ public class MUserDefField extends X_AD_UserDef_Field
 						   displayLogic = rs.getString(COLUMNNAME_DisplayLogic),
 						   isDefaultFocus = rs.getString(COLUMNNAME_IsDefaultFocus),
 						   isSameLine = rs.getString(COLUMNNAME_IsSameLine),
-						   isToolbarButton = rs.getString(COLUMNNAME_IsToolbarButton);
+						   isToolbarButton = rs.getString(COLUMNNAME_IsToolbarButton),
+						   isHtml = rs.getString(COLUMNNAME_IsHtml);
 						   
 					
 					if(AD_FieldGroup_ID > 0)
@@ -350,6 +346,9 @@ public class MUserDefField extends X_AD_UserDef_Field
 					
 					if(isToolbarButton != null)
 						fakeField.setIsToolbarButton(isToolbarButton);
+					
+					if(isHtml != null)
+						fakeField.setIsHtml(isHtml);					
 				}				
 				
 				if(Util.asBoolean(isElaborationEnable))

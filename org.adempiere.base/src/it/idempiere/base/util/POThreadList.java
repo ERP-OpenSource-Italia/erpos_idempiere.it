@@ -20,9 +20,10 @@ public class POThreadList
 	 * @param po
 	 */
 	
-	public void addPO(PO po)
+	public PO addPO(PO po)
 	{
 			poList.get().add(po);
+			return po;
 	}
 	
 	/**
@@ -47,19 +48,23 @@ public class POThreadList
 	 * @param po
 	 */
 	
-	public void removePO(PO po)
+	public PO removePO(PO po)
 	{
-			ListIterator<PO> it = poList.get().listIterator();
+		ListIterator<PO> it = poList.get().listIterator();
+		PO removed = null;
+		
+		while(it.hasNext())
+		{
+			PO o = it.next();
 			
-			while(it.hasNext())
+			if(o == po)
 			{
-				PO o = it.next();
-				
-				if(o == po)
-				{
-					it.remove();
-					break;
-				}			
-			}
+				it.remove();
+				removed = po;
+				break;
+			}			
+		}
+		
+		return removed;
 	}
 }
