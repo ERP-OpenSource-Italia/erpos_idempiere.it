@@ -156,7 +156,7 @@ public class HelpController
         
         renderToolTip(null);
         renderCtxHelp(X_AD_CtxHelp.CTXTYPE_Home, 0);
-        renderQuickInfo(null);
+        renderQuickInfo((String)null);
     }
 
 	public void setupFieldTooltip() {
@@ -662,6 +662,19 @@ public class HelpController
             	sb.append("</div>\n</body>\n</html>");
             	htmlQuickInfo.setContent(sb.toString());
     		}
+    	}
+	}
+    
+    public void renderQuickInfo(String quickInfo) {
+    	if (Util.isEmpty(quickInfo,true)) {
+        	pnlQuickInfo.setVisible(false);
+    	} else {
+            	pnlQuickInfo.setVisible(true);
+            	StringBuilder sb = new StringBuilder();
+            	sb.append("<html>\n<body>\n<div class=\"help-content\">\n");
+       			sb.append(quickInfo);
+            	sb.append("</div>\n</body>\n</html>");
+            	htmlQuickInfo.setContent(sb.toString());
     	}
 	}
 

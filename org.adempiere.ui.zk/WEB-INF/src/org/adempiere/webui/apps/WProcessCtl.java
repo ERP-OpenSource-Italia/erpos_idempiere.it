@@ -205,6 +205,7 @@ public class WProcessCtl extends AbstractProcessCtl {
 		if(AD_InfoWindow_ID > 0)
 		{
 			IDesktop desktop = SessionManager.getAppDesktop();
+			pi.setWindowNo(WindowNo);
 			
 			if(desktop instanceof TabbedDesktop)
 			{				
