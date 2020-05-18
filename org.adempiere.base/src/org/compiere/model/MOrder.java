@@ -47,6 +47,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
 
+import it.idempiere.base.model.LITMBPartner;
 import it.idempiere.base.model.LITMBPartnerLocation;
 import it.idempiere.base.model.LITMOrderLine;
 import it.idempiere.base.util.BaseMessages;
@@ -1643,14 +1644,14 @@ public class MOrder extends X_C_Order implements DocAction
 					if (MBPartner.SOCREDITSTATUS_CreditStop.equals(bp.getSOCreditStatus()))
 					{
 						m_processMsg = "@BPartnerCreditStop@ - @TotalOpenBalance@=" 
-								+ bp.getTotalOpenBalanceDB(true)
+								+ LITMBPartner.getTotalOpenBalanceDB(bp,true)
 								+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 						return DocAction.STATUS_Invalid;
 					}
 					if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus()))
 					{
 						m_processMsg = "@BPartnerCreditHold@ - @TotalOpenBalance@=" 
-								+ bp.getTotalOpenBalanceDB(true) 
+								+ LITMBPartner.getTotalOpenBalanceDB(bp,true)
 								+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 						return DocAction.STATUS_Invalid;
 					}
@@ -1660,7 +1661,7 @@ public class MOrder extends X_C_Order implements DocAction
 					if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus(grandTotal)))
 					{
 						m_processMsg = "@BPartnerOverOCreditHold@ - @TotalOpenBalance@=" 
-								+ bp.getTotalOpenBalanceDB(true) + ", @GrandTotal@=" + grandTotal
+								+ LITMBPartner.getTotalOpenBalanceDB(bp,true) + ", @GrandTotal@=" + grandTotal
 								+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 						return DocAction.STATUS_Invalid;
 					}

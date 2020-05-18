@@ -41,6 +41,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 
+import it.idempiere.base.model.LITMBPartner;
 import it.idempiere.base.model.LITMInOut;
 import it.idempiere.base.util.STDSysConfig;
 
@@ -1224,14 +1225,14 @@ public class MInOut extends X_M_InOut implements DocAction
 				if (MBPartner.SOCREDITSTATUS_CreditStop.equals(bp.getSOCreditStatus()))
 				{
 					m_processMsg = "@BPartnerCreditStop@ - @TotalOpenBalance@="
-						+ bp.getTotalOpenBalanceDB(true)
+						+ LITMBPartner.getTotalOpenBalanceDB(bp,true)
 						+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 					return DocAction.STATUS_Invalid;
 				}
 				if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus()))
 				{
 					m_processMsg = "@BPartnerCreditHold@ - @TotalOpenBalance@="
-						+ bp.getTotalOpenBalanceDB(true)
+						+ LITMBPartner.getTotalOpenBalanceDB(bp,true)
 						+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 					return DocAction.STATUS_Invalid;
 				}
@@ -1239,7 +1240,7 @@ public class MInOut extends X_M_InOut implements DocAction
 				if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus(notInvoicedAmt)))
 				{
 					m_processMsg = "@BPartnerOverSCreditHold@ - @TotalOpenBalance@="
-						+ bp.getTotalOpenBalanceDB(true) + ", @NotInvoicedAmt@=" + notInvoicedAmt
+						+ LITMBPartner.getTotalOpenBalanceDB(bp,true) + ", @NotInvoicedAmt@=" + notInvoicedAmt
 						+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 					return DocAction.STATUS_Invalid;
 				}
