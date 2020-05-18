@@ -30,6 +30,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.LITMBPartner;
+
 /**
  *	Business Partner Model
  *
@@ -833,12 +835,12 @@ public class MBPartner extends X_C_BPartner
 
 		//	Above (reduced) Credit Limit
 		creditLimit = creditLimit.subtract(additionalAmt);
-		if (creditLimit.compareTo(getTotalOpenBalanceDB(true)) < 0)
+		if (creditLimit.compareTo(LITMBPartner.getTotalOpenBalanceDB(this,true)) < 0)
 			return SOCREDITSTATUS_CreditHold;
 		
 		//	Above Watch Limit
 		BigDecimal watchAmt = creditLimit.multiply(getCreditWatchRatio());
-		if (watchAmt.compareTo(getTotalOpenBalanceDB(true)) < 0)
+		if (watchAmt.compareTo(LITMBPartner.getTotalOpenBalanceDB(this,true)) < 0)
 			return SOCREDITSTATUS_CreditWatch;
 		
 		//	is OK
@@ -1014,12 +1016,4 @@ public class MBPartner extends X_C_BPartner
 			delete_Tree(MTree_Base.TREETYPE_BPartner);
 		return success;
 	}	//	afterDelete
-
-	
-	public BigDecimal getTotalOpenBalanceDB(boolean isUsePaymentsAvailable)
-	{
-		BigDecimal totalOpenBalance = DB.getSQLValueBD(get_TrxName(), "SELECT ls_calcSOCreditUsed(?,?,?,?) FROM DUAL",
-				getC_BPartner_ID(), getAD_Client_ID(), getAD_Org_ID(), isUsePaymentsAvailable?"Y":"N");
-		return totalOpenBalance;
-	}
 }	//	MBPartner

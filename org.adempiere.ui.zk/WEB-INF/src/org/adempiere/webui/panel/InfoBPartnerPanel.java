@@ -109,10 +109,8 @@ public class InfoBPartnerPanel extends InfoPanel implements EventListener<Event>
 		new ColumnInfo(Msg.translate(Env.getCtx(), "Value"), "C_BPartner.Value", String.class),
 		new ColumnInfo(Msg.translate(Env.getCtx(), "Name"), "C_BPartner.Name", String.class),
 		new ColumnInfo(Msg.translate(Env.getCtx(), "Contact"), "c.Name AS Contact", KeyNamePair.class, "c.AD_User_ID"),
-//		new ColumnInfo(Msg.translate(Env.getCtx(), "SO_CreditAvailable"), "C_BPartner.SO_CreditLimit-C_BPartner.SO_CreditUsed AS SO_CreditAvailable", BigDecimal.class, true, true, null),
-//		new ColumnInfo(Msg.translate(Env.getCtx(), "SO_CreditUsed"), "C_BPartner.SO_CreditUsed", BigDecimal.class),
-		new ColumnInfo(Msg.translate(Env.getCtx(), "SO_CreditAvailable"), "C_BPartner.SO_CreditLimit-LS_calcSOCreditUsed(C_BPartner.C_BPartner_ID, C_BPartner.AD_Client_ID, C_BPartner.AD_Org_ID) AS SO_CreditAvailable", BigDecimal.class, true, true, null),//DONE
-		new ColumnInfo(Msg.translate(Env.getCtx(), "SO_CreditUsed"), "LS_calcSOCreditUsed(C_BPartner.C_BPartner_ID, C_BPartner.AD_Client_ID, C_BPartner.AD_Org_ID) AS SO_CreditUsed", BigDecimal.class),//DONE
+		new ColumnInfo(Msg.translate(Env.getCtx(), "SO_CreditAvailable"), "C_BPartner.SO_CreditLimit-C_BPartner.SO_CreditUsed AS SO_CreditAvailable", BigDecimal.class, true, true, null),
+		new ColumnInfo(Msg.translate(Env.getCtx(), "SO_CreditUsed"), "C_BPartner.SO_CreditUsed", BigDecimal.class),
 		new ColumnInfo(Msg.translate(Env.getCtx(), "Phone"), "c.Phone", String.class),
 		new ColumnInfo(Msg.translate(Env.getCtx(), "Postal"), "a.Postal", KeyNamePair.class, "l.C_BPartner_Location_ID"),
 		new ColumnInfo(Msg.translate(Env.getCtx(), "City"), "a.City", String.class),
