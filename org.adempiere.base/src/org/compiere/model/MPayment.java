@@ -46,6 +46,8 @@ import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 
+import it.idempiere.base.model.LITMBPartner;
+
 /**
  *  Payment Model.
  *  - retrieve and create payments for invoice
@@ -1912,14 +1914,14 @@ public class MPayment extends X_C_Payment
 			if (X_C_BPartner.SOCREDITSTATUS_CreditStop.equals(bp.getSOCreditStatus()))
 			{
 				m_processMsg = "@BPartnerCreditStop@ - @TotalOpenBalance@=" 
-					+ bp.getTotalOpenBalanceDB(true)
+					+ LITMBPartner.getTotalOpenBalanceDB(bp,true)
 					+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 				return DocAction.STATUS_Invalid;
 			}
 			if (X_C_BPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus()))
 			{
 				m_processMsg = "@BPartnerCreditHold@ - @TotalOpenBalance@=" 
-					+ bp.getTotalOpenBalanceDB(true)
+					+ LITMBPartner.getTotalOpenBalanceDB(bp,true)
 					+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 				return DocAction.STATUS_Invalid;
 			}
