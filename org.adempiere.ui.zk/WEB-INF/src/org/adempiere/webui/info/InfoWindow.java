@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -197,9 +198,6 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	
 	private Button zoomDetailButton = null;
 	
-	// F3P: persistent edit	
-	protected boolean hasImmediatePersistEdit = false;
-	
 	protected QuickInfoSLEmbedWinListener quickInfoSLEmbedWinListener;
 	
 	/**
@@ -286,7 +284,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					final Set<List<Object>> selectedItems = selEvent.getSelectedObjects();
 					final Set<List<Object>> unselectedItems = selEvent.getUnselectedObjects();
 	   				
-	   				if(tableSelectionColumnUpdate != null && 
+	   				if((tableSelectionColumnUpdate != null || isImmediateSaveSelection) && 
 	   						(selectedItems.size() > 0 || unselectedItems.size() >0 ))
 	   				{
 	   					Trx.run(new TrxRunnable() {
@@ -309,14 +307,14 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 								}
 							}
 						});
-					}   					
+					}   
+	   				
+	   				// Selecion has changed, force refresh if the subcontent may depend on persisted selection
+	   				if(tableSelectionColumnUpdate != null)
+	   					mainContentRowUsedInSubcontent = -1;   				
+
+	   				updateSubcontent(row, true); 				
    				}
-   				
-   				// Selecion has changed, force refresh if the subcontent may depend on persisted selection
-   				if(tableSelectionColumnUpdate != null)
-   					mainContentRowUsedInSubcontent = -1;   				
-   				   				   				
-   				updateSubcontent(row);
    			}
    		}); //xolali --end-
 
@@ -353,7 +351,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 							int row = itm.getIndex();
 							
 							m_lastSelectedIndex = row;
-							updateSubcontent(row);
+							updateSubcontent(row, false);
 						}
 					}
 				}
@@ -397,9 +395,31 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		if(potentialIDC instanceof IDColumn)
 		{
 			IDColumn idc = (IDColumn)potentialIDC;
-			Object[] params = {isSelected?"Y":"N", idc.getRecord_ID()};
 			
-			DB.executeUpdate(tableSelectionColumnUpdate, params, false, trxName);
+			if(tableSelectionColumnUpdate != null)
+			{
+				Object[] params = {isSelected?"Y":"N", idc.getRecord_ID()};			
+				DB.executeUpdate(tableSelectionColumnUpdate, params, false, trxName);
+			}
+			
+			if(isImmediateSaveSelection && editAD_Pinstance_ID > 0)
+			{
+				if(isSelected)
+				{
+					String existsSQL = "SELECT T_Selection_ID FROM T_Selection WHERE AD_PInstance_ID = ? AND T_Selection_ID = ?";
+					if(DB.getSQLValueEx(null, existsSQL, editAD_Pinstance_ID, idc.getRecord_ID()) <=0 )
+					{
+						List<Integer> selection = new LinkedList<Integer>();
+						selection.add( idc.getRecord_ID());
+						DB.createT_Selection(editAD_Pinstance_ID, selection, null);
+					}
+				}
+				else
+				{
+					Object params[] = {editAD_Pinstance_ID, idc.getRecord_ID()};
+					DB.executeUpdateEx("DELETE FROM T_Selection WHERE AD_Pinstance_ID = ? AND T_Selection_ID = ?", params, null);
+				}
+			}
 		}		
 	}
 	
@@ -408,7 +428,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	* {@inheritDoc}
 	*/
 	@Override
-	protected void updateSubcontent (int row){ // F3P: For multi-selection info, using selected row blocks the dislay to the first selected
+	protected void updateSubcontent (int row, boolean forceStatusUpdate){ // F3P: For multi-selection info, using selected row blocks the dislay to the first selected
 		
 		if(row < 0)
 			row = contentPanel.getSelectedRow();
@@ -445,10 +465,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				for (EmbedWinInfo embed : embeddedWinList) {
 					refresh(embed);
 				}
-			}
-			
-			updateStatusBarAndInfo();
+			}						
 		}
+		
+		if(row != mainContentRowUsedInSubcontent || forceStatusUpdate)
+			updateStatusBarAndInfo();
 		
 		enableZoomDetail();
 	}
@@ -862,10 +883,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				}
 			}
 			
-			if(hasImmediatePersistEdit)
+			if(hasImmediatePersistEdit || isImmediateSaveSelection)
 			{
 				editAD_Pinstance_ID = DB.getNextID(Env.getCtx(), MPInstance.Table_Name, null);
 				Env.setContext(Env.getCtx(), p_WindowNo, CTX_EDIT_AD_PINSTANCE_ID, editAD_Pinstance_ID);
+				Env.setContext(Env.getCtx(), p_WindowNo, CTX_EDIT_AD_PINSTANCE_ID_Compat, editAD_Pinstance_ID);
 			}
 						
 			infoWindowListItemRenderer = new WInfoWindowListItemRenderer(this);
@@ -3029,7 +3051,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			
 			Clients.resize(contentPanel);
 			
-			if(editAD_Pinstance_ID > 0 && LITMInfoColumn.isSaveEditImmediate(infoColumn))
+			if(hasImmediatePersistEdit && LITMInfoColumn.isSaveEditImmediate(infoColumn))
 			{
 				int recordID = contentPanel.getRowKeyAt(rowIndex);
 				String columnName = infoColumn.getColumnName();
@@ -3104,7 +3126,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					else
 					{
 						restoreOriginalValues(row);
-						clearImmediateEditDB(contentPanel.getRowKeyAt(row));
+						clearImmediateSaveEditDB(contentPanel.getRowKeyAt(row));
 					}
 				}
 			}
@@ -3118,11 +3140,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	@Override
 	public void onQueryCallback(Event event)
 	{
-		if(isQueryByUser)
-			clearImmediateEditDB(-1);
-		
-		super.onQueryCallback(event);
-		
+		super.onQueryCallback(event);		
 		enableExportButton();
 	}
 	
@@ -3441,7 +3459,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			row = Integer.parseInt((String)event.getData());
 		
 		mainContentRowUsedInSubcontent = -1;
-		updateSubcontent(row);
+		updateSubcontent(row, false);
 	}
 	
 	private class XlsExportAction implements EventListener<Event>

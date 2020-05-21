@@ -117,6 +117,7 @@ import org.zkoss.zul.event.ZulEvents;
 import org.zkoss.zul.ext.Sortable;
 
 import it.idempiere.base.model.LITMInfoProcess;
+import it.idempiere.base.model.LITMInfoWindow;
 import it.idempiere.base.util.STDUtils;
 
 /**
@@ -172,9 +173,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected boolean hasRightQuickEntry = true;
 	protected boolean isHasNextPage = false;
 	
-	// F3P: persistent edit support
+	// F3P: persistent selection and edit support
 	protected int	editAD_Pinstance_ID = -1;
-	public static final String CTX_EDIT_AD_PINSTANCE_ID = "Edit_AD_Pinstance_ID";
+	public static final String CTX_EDIT_AD_PINSTANCE_ID = "Edit_AD_PInstance_ID";
+	public static final String CTX_EDIT_AD_PINSTANCE_ID_Compat = "Edit_AD_Pinstance_ID"; // Old value with typo for compatibility
+	protected boolean isImmediateSaveSelection;
+	protected boolean hasImmediatePersistEdit = false;
 	
 	/**
 	 * store selected record info
@@ -304,6 +308,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		}
 		
 		pageSize = MSysConfig.getIntValue(MSysConfig.ZK_PAGING_SIZE, DEFAULT_PAGE_SIZE, Env.getAD_Client_ID(Env.getCtx()));
+		
+		if(infoWindow != null)
+			isImmediateSaveSelection = LITMInfoWindow.isSaveSelectionImmediate(infoWindow);
+		else
+			isImmediateSaveSelection = false;
 		
 		init();
 
@@ -2219,12 +2228,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	/**
 	 * Update relate info when selection in main info change
 	 */
-	protected void updateSubcontent (){ updateSubcontent(-1);};
+	protected void updateSubcontent (){ updateSubcontent(-1, true);};
 	
 	/**
 	 * Update relate info for a specific row, if targetRow < 0 update using selected row
 	 */
-	protected void updateSubcontent (int targetRow){};
+	protected void updateSubcontent (int targetRow, boolean forceStatusUpdate){};
 
 
 	/**
@@ -2386,7 +2395,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 																		
 						if(shouldExecuteQuery)
 						{
-							clearImmediateEditDB(-1);
+							clearImmediateSaveEditDB(-1);
 							Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", null));
 						}
 						else
@@ -2601,6 +2610,23 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     {
     	try
     	{
+    		if(isQueryByUser)
+    		{
+    			clearImmediateSaveEditDB(-1);
+    			
+    			if(isImmediateSaveSelection && hasPreSelectionColumn) // Pre-load db-selected keys 
+                {
+                	Collection<KeyNamePair> additionalKeys = getAdditionalDBSelectedKeys(Collections.emptyList());
+                	if(additionalKeys != null && additionalKeys.size() > 0)
+                	{
+                		DB.createT_SelectionNew(editAD_Pinstance_ID, additionalKeys,
+    						null);
+                	}
+                	
+                	updateStatusBarAndInfo();
+                }
+    		}
+    		
 //    		m_sqlUserOrder="";
     		// event == null mean direct call from reset button
     		if (event == null)
@@ -2630,7 +2656,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         	m_lastSelectedIndex = contentPanel.getSelectedIndex();
         	
         	if(mainContentRowUsedInSubcontent < 0)        	
-        		updateSubcontent (m_lastSelectedIndex);
+        		updateSubcontent (m_lastSelectedIndex, true);
         }
     	finally
     	{
@@ -2920,22 +2946,29 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 * 
 	 * @param recordID -1 to clear all rows
 	 */
-	protected void clearImmediateEditDB(int recordID)
+	protected void clearImmediateSaveEditDB(int recordID)
 	{
 		if(editAD_Pinstance_ID > 0)
 		{
 			if(recordID >= 0)
 			{
 				Object params[] = {editAD_Pinstance_ID, recordID};
-				DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ? AND T_Selection_ID = ?", params, null);				
+				
+				if(hasImmediatePersistEdit)
+					DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ? AND T_Selection_ID = ?", params, null);
 			}
 			else
 			{
 				Object params[] = {editAD_Pinstance_ID};
-				DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ?", params, null);
+				
+				if(hasImmediatePersistEdit)
+					DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ?", params, null);
+				
+				if(isImmediateSaveSelection)
+					DB.executeUpdateEx("DELETE FROM T_Selection WHERE AD_Pinstance_ID = ?", params, null);
 			}
 		}
-	}
+	}	
 	
 	protected void createOrUpdateImmediateEditDB(final int recordID, final String columnName, final Object value)
 	{
@@ -3138,9 +3171,15 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 				Env.setContext(ctx, m_WindowNoStatusLine, CTX_AD_PINSTANCE_ID, 0);
 			
 			if(editAD_Pinstance_ID > 0)
+			{
 				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID, editAD_Pinstance_ID);
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID_Compat, editAD_Pinstance_ID);
+			}
 			else
+			{
 				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID, 0);
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID_Compat, 0);
+			}
 				
 			if(m_statusLine != null)
 			{
