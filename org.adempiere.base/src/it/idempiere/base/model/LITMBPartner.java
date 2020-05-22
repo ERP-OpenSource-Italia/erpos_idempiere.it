@@ -8,6 +8,7 @@ import java.util.logging.Level;
 import org.compiere.model.MBPartner;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.Env;
 
 public class LITMBPartner
 {
@@ -21,8 +22,14 @@ public class LITMBPartner
 		return totalOpenBalance;
 	}
 	
-	public static void setTotalOpenBalanceDB(MBPartner bPartner)
+	public static void setTotalOpenBalanceDB(MBPartner bPartner, boolean saveData, String trxName)
 	{
+		if (bPartner == null || bPartner.getC_BPartner_ID() == 0)
+			return;
+		
+		if(bPartner.isCustomer() == false)
+			return;
+		
 		BigDecimal SO_CreditUsed = null;
 		BigDecimal TotalOpenBalance = null;
 		String sql = "SELECT ls_calcSOCreditUsed(bp.C_BPArtner_ID,bp.AD_Client_ID,bp.AD_Org_ID, 'N') , ls_calcSOCreditUsed(bp.C_BPArtner_ID,bp.AD_Client_ID,bp.AD_Org_ID, 'Y') "
@@ -57,5 +64,50 @@ public class LITMBPartner
 		if (TotalOpenBalance != null)
 			bPartner.setTotalOpenBalance(TotalOpenBalance);
 		bPartner.setSOCreditStatus();
+		
+		if (saveData){
+			if (trxName == null){
+				trxName = bPartner.get_TrxName();
+			}
+			bPartner.saveEx(trxName);
+		}
 	}
+	
+	public static final BigDecimal getNotInvoicedAmt (int C_BPartner_ID, boolean withVAT)
+	{
+		if (withVAT)
+			return MBPartner.getNotInvoicedAmt(C_BPartner_ID);
+		
+		//LS should be added VAT as on MOrder.prepareIt() that checks getGrandTotal()
+		BigDecimal retValue = null;
+		String sql = "SELECT currencyRound(COALESCE(SUM(COALESCE("
+			+ "currencyBase(((ol.QtyDelivered-ol.QtyInvoiced)*ol.PriceActual)*(1+t.rate/100),o.C_Currency_ID,o.DateOrdered, o.AD_Client_ID,o.AD_Org_ID) ,0)),0),?,null) "
+			+ "FROM C_OrderLine ol"
+			+ " INNER JOIN C_Order o ON (ol.C_Order_ID=o.C_Order_ID) "
+			+ " INNER JOIN C_tax t on (ol.C_Tax_ID = t.C_Tax_ID) "
+			+ "WHERE o.IsSOTrx='Y' AND Bill_BPartner_ID=?";			
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		try
+		{
+			pstmt = DB.prepareStatement (sql, null);
+			pstmt.setInt(1, Env.getContextAsInt(Env.getCtx(), "$C_Currency_ID"));
+			pstmt.setInt (2, C_BPartner_ID);
+			rs = pstmt.executeQuery ();
+			if (rs.next ())
+				retValue = rs.getBigDecimal(1);
+		}
+		catch (Exception e)
+		{
+			s_log.log(Level.SEVERE, sql, e);
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null;
+			pstmt = null;
+		}
+		
+		return retValue;
+	}	//	getNotInvoicedAmt
 }

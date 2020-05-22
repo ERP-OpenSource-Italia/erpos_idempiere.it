@@ -702,6 +702,13 @@ public class MBPartner extends X_C_BPartner
 	 */
 	public void setTotalOpenBalance ()
 	{
+		// LS use new function is customer
+		if (isCustomer()) {
+			LITMBPartner.setTotalOpenBalanceDB(this, false, get_TrxName());
+			return;
+		}
+		// LS end
+				
 		BigDecimal SO_CreditUsed = null;
 		BigDecimal TotalOpenBalance = null;
 		//AZ Goodwill -> BF2041226 : only count completed/closed docs.
