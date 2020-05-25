@@ -153,7 +153,7 @@ public class BreadCrumb extends Div implements EventListener<Event> {
 		teCopyHtml.setValue("");
 		toolbar.appendChild(teCopyHtml);
 
-		btnCopyHtml = createButton("Copy", "Setup", "Copy link Html");
+		btnCopyHtml = createButton("Copy", "Setup", "Copy Link Html");
 		toolbar.appendChild(btnCopyHtml);
 		//LS End
 		btnFirst = createButton("First", "First", "First");
