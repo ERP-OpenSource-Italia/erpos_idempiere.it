@@ -430,11 +430,14 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	@Override
 	protected void updateSubcontent (int row, boolean forceStatusUpdate){ // F3P: For multi-selection info, using selected row blocks the dislay to the first selected
 		
+		boolean shouldUpdateStatus = false;
+		
 		if(row < 0)
 			row = contentPanel.getSelectedRow();
 		
 		if(row != mainContentRowUsedInSubcontent) // Persisting selection means the content panel may be dependant on it, force a refresh even if the row is the same
 		{
+			shouldUpdateStatus = true;
 			mainContentRowUsedInSubcontent = row; // F3P: Keep track of last row used for subcontent (row click on or initial after query)
 			
 			if(log.isLoggable(Level.INFO))
@@ -468,7 +471,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			}						
 		}
 		
-		if(row != mainContentRowUsedInSubcontent || forceStatusUpdate)
+		if(shouldUpdateStatus || forceStatusUpdate)
 			updateStatusBarAndInfo();
 		
 		enableZoomDetail();
