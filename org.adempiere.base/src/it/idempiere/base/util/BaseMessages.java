@@ -9,4 +9,6 @@ public interface BaseMessages
 	public static final String MSG_ERR_INVALID_COMPOSITE_DISCOUNT = "LIT_ERR_InvalidCompositeDiscount";
 	
 	public static final String MSG_ERR_EXISTING_REL_DOCS = "LIT_ErrorExistingRelatedDocuments";
+	
+	public static final String MSG_ERR_AUTOLOT_NO_RESULTS = "LGS_ERR_AUTOLOT_NO_RESULTS";
 }
