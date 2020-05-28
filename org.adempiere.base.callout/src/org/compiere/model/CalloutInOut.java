@@ -356,8 +356,8 @@ public class CalloutInOut extends CalloutEngine
 		String sql = "SELECT p.AD_Language,p.C_PaymentTerm_ID,"
 			+ "p.M_PriceList_ID,p.PaymentRule,p.POReference,"
 			+ "p.SO_Description,p.IsDiscountPrinted,"
-//			+ "p.SO_CreditLimit-p.SO_CreditUsed AS CreditAvailable,"
-			+ "p.SO_CreditLimit-LS_calcSOCreditUsed(p.C_BPartner_ID, p.AD_Client_ID, p.AD_Org_ID) AS CreditAvailable,"//DONE
+			+ "p.SO_CreditLimit-p.SO_CreditUsed AS CreditAvailable,"
+			+ "p.SO_CreditLimit,"
 			+ "l.C_BPartner_Location_ID,c.AD_User_ID "
 			+ "FROM C_BPartner p, C_BPartner_Location l, AD_User c "
 			+ "WHERE l.IsActive='Y' AND p.C_BPartner_ID=l.C_BPartner_ID(+)"
@@ -395,12 +395,16 @@ public class CalloutInOut extends CalloutEngine
 				if (IsSOTrx)
 				{
 					//	CreditAvailable
-					double CreditAvailable = rs.getDouble("CreditAvailable");
-					if (!rs.wasNull() && CreditAvailable < 0)
-						mTab.fireDataStatusEEvent("CreditLimitOver",
-								DisplayType.getNumberFormat(DisplayType.Amount).format(CreditAvailable),
-								false);
-				}//
+					double CreditLimit = rs.getDouble("SO_CreditLimit");
+					if (CreditLimit != 0)
+					{
+						double CreditAvailable = CreditLimit - it.idempiere.base.model.LITMBPartner.getTotalOpenBalanceDB(C_BPartner_ID, true, null).doubleValue();
+						if (!rs.wasNull() && CreditAvailable < 0)
+							mTab.fireDataStatusEEvent("CreditLimitOver",
+									DisplayType.getNumberFormat(DisplayType.Amount).format(CreditAvailable),
+									false);
+					}//
+				}
 			}
 		}
 		catch (SQLException e)

@@ -22,6 +22,14 @@ public class LITMBPartner
 		return totalOpenBalance;
 	}
 	
+	public static BigDecimal getTotalOpenBalanceDB(int C_BPartner_ID, boolean isUsePaymentsAvailable, String trxName)
+	{
+		BigDecimal totalOpenBalance = DB.getSQLValueBD(trxName, 
+				"SELECT ls_calcSOCreditUsed(C_BPartner_ID,AD_Client_ID,AD_Org_ID,?) FROM C_BPartner WHERE C_BPartner_ID = ? ",
+				isUsePaymentsAvailable?"Y":"N", C_BPartner_ID);
+		return totalOpenBalance;
+	}
+	
 	public static void setTotalOpenBalanceDB(MBPartner bPartner, boolean saveData, String trxName)
 	{
 		if (bPartner == null || bPartner.getC_BPartner_ID() == 0)

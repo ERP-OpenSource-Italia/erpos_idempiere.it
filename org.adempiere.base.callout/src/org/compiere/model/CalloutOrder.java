@@ -255,8 +255,7 @@ public class CalloutOrder extends CalloutEngine
 			+ " COALESCE(p.M_PriceList_ID,g.M_PriceList_ID) AS M_PriceList_ID, p.PaymentRule,p.POReference,"
 			+ " p.SO_Description,p.IsDiscountPrinted,"
 			+ " p.InvoiceRule,p.DeliveryRule,p.FreightCostRule,DeliveryViaRule,"
-//			+ " p.SO_CreditLimit, p.SO_CreditLimit-p.SO_CreditUsed AS CreditAvailable,"
-			+ " p.SO_CreditLimit, p.SO_CreditLimit-LS_calcSOCreditUsed(p.C_BPartner_ID, p.AD_Client_ID, p.AD_Org_ID) AS CreditAvailable,"//DONE
+			+ " p.SO_CreditLimit, p.SO_CreditLimit-p.SO_CreditUsed AS CreditAvailable,"
 			+ " lship.C_BPartner_Location_ID,c.AD_User_ID,"
 			+ " COALESCE(p.PO_PriceList_ID,g.PO_PriceList_ID) AS PO_PriceList_ID, p.PaymentRulePO,p.PO_PaymentTerm_ID,"
 			+ " lbill.C_BPartner_Location_ID AS Bill_Location_ID, p.SOCreditStatus, "
@@ -365,7 +364,7 @@ public class CalloutOrder extends CalloutEngine
 					double CreditLimit = rs.getDouble("SO_CreditLimit");
 					if (CreditLimit != 0)
 					{
-						double CreditAvailable = rs.getDouble("CreditAvailable");
+						double CreditAvailable = CreditLimit - it.idempiere.base.model.LITMBPartner.getTotalOpenBalanceDB(C_BPartner_ID.intValue(), true, null).doubleValue();
 						if (!rs.wasNull() && CreditAvailable < 0)
 							mTab.fireDataStatusEEvent("CreditLimitOver",
 								DisplayType.getNumberFormat(DisplayType.Amount).format(CreditAvailable),
@@ -477,8 +476,7 @@ public class CalloutOrder extends CalloutEngine
 			+ "p.M_PriceList_ID,p.PaymentRule,p.POReference,"
 			+ "p.SO_Description,p.IsDiscountPrinted,"
 			+ "p.InvoiceRule,p.DeliveryRule,p.FreightCostRule,DeliveryViaRule,"
-//			+ "p.SO_CreditLimit, p.SO_CreditLimit-p.SO_CreditUsed AS CreditAvailable,"
-			+ "p.SO_CreditLimit, p.SO_CreditLimit-LS_calcSOCreditUsed(p.C_BPartner_ID, p.AD_Client_ID, p.AD_Org_ID) AS CreditAvailable,"//DONE
+			+ "p.SO_CreditLimit, p.SO_CreditLimit-p.SO_CreditUsed AS CreditAvailable,"
 			+ "c.AD_User_ID,"
 			+ "p.PO_PriceList_ID, p.PaymentRulePO, p.PO_PaymentTerm_ID,"
 			+ "lbill.C_BPartner_Location_ID AS Bill_Location_ID "
@@ -558,7 +556,7 @@ public class CalloutOrder extends CalloutEngine
 					double CreditLimit = rs.getDouble("SO_CreditLimit");
 					if (CreditLimit != 0)
 					{
-						double CreditAvailable = rs.getDouble("CreditAvailable");
+						double CreditAvailable = CreditLimit - it.idempiere.base.model.LITMBPartner.getTotalOpenBalanceDB(bill_BPartner_ID.intValue(), true, null).doubleValue();
 						if (!rs.wasNull() && CreditAvailable < 0)
 							mTab.fireDataStatusEEvent("CreditLimitOver",
 								DisplayType.getNumberFormat(DisplayType.Amount).format(CreditAvailable),
