@@ -35,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -46,6 +47,7 @@ import org.adempiere.model.MInfoRelated;
 import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.LayoutUtils;
+import org.adempiere.webui.adwindow.ADWindow;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.apps.BusyDialog;
 import org.adempiere.webui.apps.ProcessModalDialog;
@@ -58,6 +60,7 @@ import org.adempiere.webui.component.ProcessInfoDialog;
 import org.adempiere.webui.component.WListItemRenderer;
 import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.desktop.IDesktop;
 import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.event.ValueChangeEvent;
@@ -79,6 +82,7 @@ import org.compiere.model.MInfoWindow;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MProcess;
 import org.compiere.model.MRole;
+import org.compiere.model.MStatusLine;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
 import org.compiere.model.X_AD_CtxHelp;
@@ -92,6 +96,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.NamePair;
 import org.compiere.util.Trx;
 import org.compiere.util.TrxRunnable;
+import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 import org.zkoss.zk.au.out.AuEcho;
 import org.zkoss.zk.ui.Page;
@@ -112,6 +117,7 @@ import org.zkoss.zul.event.ZulEvents;
 import org.zkoss.zul.ext.Sortable;
 
 import it.idempiere.base.model.LITMInfoProcess;
+import it.idempiere.base.model.LITMInfoWindow;
 import it.idempiere.base.util.STDUtils;
 
 /**
@@ -167,8 +173,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected boolean hasRightQuickEntry = true;
 	protected boolean isHasNextPage = false;
 	
-	// F3P: persistent edit support
+	// F3P: persistent selection and edit support
 	protected int	editAD_Pinstance_ID = -1;
+	public static final String CTX_EDIT_AD_PINSTANCE_ID = "Edit_AD_PInstance_ID";
+	public static final String CTX_EDIT_AD_PINSTANCE_ID_Compat = "Edit_AD_Pinstance_ID"; // Old value with typo for compatibility
+	protected boolean isImmediateSaveSelection;
+	protected boolean hasImmediatePersistEdit = false;
 	
 	/**
 	 * store selected record info
@@ -196,6 +206,17 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	protected int mainContentRowUsedInSubcontent = -1;
 	
+	// LS: status bar and info
+	public static final String CTX_AD_PINSTANCE_ID = "AD_Pinstance_ID";
+	
+	protected MStatusLine m_statusLine = null;
+	protected MStatusLine[] m_quickInfoLines = null;
+	protected int m_WindowNoStatusLine = -1;
+	protected String m_lastRenderedQuickInfo = null;
+	
+	// LS: refresh opening window on close
+	
+	protected boolean m_refreshParentOnClose = false;
 	
     public static InfoPanel create (int WindowNo,
             String tableName, String keyColumn, String value,
@@ -288,6 +309,11 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		
 		pageSize = MSysConfig.getIntValue(MSysConfig.ZK_PAGING_SIZE, DEFAULT_PAGE_SIZE, Env.getAD_Client_ID(Env.getCtx()));
 		
+		if(infoWindow != null)
+			isImmediateSaveSelection = LITMInfoWindow.isSaveSelectionImmediate(infoWindow);
+		else
+			isImmediateSaveSelection = false;
+		
 		init();
 
 		this.setAttribute(ITabOnSelectHandler.ATTRIBUTE_KEY, new ITabOnSelectHandler() {
@@ -306,6 +332,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 
 	private void init()
 	{
+		initStatusBarAndInfo();
+		
 		if (isLookup())
 		{
 			setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
@@ -518,7 +546,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected boolean hasPreSelectionColumn = false;
 	
 	// F3P: run via process info	
-	private ProcessInfo runViaProcessInfo = null;
+	private ProcessInfo m_runViaProcessInfo = null;
 	
 	/**
 	 *  Loaded correctly
@@ -536,6 +564,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 */
 	public void setStatusLine (String text, boolean error)
 	{
+		if(error == false && m_statusLine != null)
+		{
+			String statusLine = m_statusLine.parseLine(m_WindowNoStatusLine);
+			if(Util.isEmpty(statusLine,true) == false)
+					text = statusLine;
+		}
+		
 		statusBar.setStatusLine(text, error);
 	}	//	setStatusLine
 
@@ -2112,7 +2147,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
             else if (event.getName().equals(WindowContainer.ON_WINDOW_CONTAINER_SELECTION_CHANGED_EVENT))
         	{
         		if (infoWindow != null)
+        		{
     				SessionManager.getAppDesktop().updateHelpContext(X_AD_CtxHelp.CTXTYPE_Info, infoWindow.getAD_InfoWindow_ID());
+    				
+    				if(m_quickInfoLines != null)
+    					SessionManager.getAppDesktop().updateHelpQuickInfo(m_lastRenderedQuickInfo);
+        		}
     			else
     				SessionManager.getAppDesktop().updateHelpContext(X_AD_CtxHelp.CTXTYPE_Home, 0);
         	}
@@ -2188,12 +2228,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	/**
 	 * Update relate info when selection in main info change
 	 */
-	protected void updateSubcontent (){ updateSubcontent(-1);};
+	protected void updateSubcontent (){ updateSubcontent(-1, true);};
 	
 	/**
 	 * Update relate info for a specific row, if targetRow < 0 update using selected row
 	 */
-	protected void updateSubcontent (int targetRow){};
+	protected void updateSubcontent (int targetRow, boolean forceStatusUpdate){};
 
 
 	/**
@@ -2229,17 +2269,19 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		
 		// F3P: pass record and table from starter process to this process
 		
-		if(runViaProcessInfo != null)
+		if(m_runViaProcessInfo != null)
 		{
-			m_pi.setRecord_ID(runViaProcessInfo.getRecord_ID());
-			m_pi.setTable_ID(runViaProcessInfo.getTable_ID());			
-			instance.setRecord_ID(runViaProcessInfo.getRecord_ID());
+			m_pi.setRecord_ID(m_runViaProcessInfo.getRecord_ID());
+			m_pi.setTable_ID(m_runViaProcessInfo.getTable_ID());			
+			instance.setRecord_ID(m_runViaProcessInfo.getRecord_ID());
 		}
 		
 		// F3P: refresh mode
 		
 		MInfoProcess infoProcess = infoProcessByProcess.get(processIdObj);
 		String refreshMode = LITMInfoProcess.getRefreshAfterProcess(infoProcess);
+		if(m_refreshParentOnClose == false)
+			m_refreshParentOnClose = LITMInfoProcess.isRefreshCallerRecord(infoProcess);
 		
 		instance.saveEx();
 		final int pInstanceID = instance.getAD_PInstance_ID();
@@ -2277,8 +2319,22 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	                    public void onEvent(Event event) throws Exception {
 	                        updateListSelected();
 	                        recordSelectedData.clear();
-	                        Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", null));
-	                        onUserQuery();
+	                        
+	                        boolean shouldExecuteQuery = !LITMInfoProcess.REFRESHAFTERPROCESS_DoNotRefresh.equals(refreshMode);
+							isRequeryByRunSuccessProcess = true;
+							
+							if(LITMInfoProcess.REFRESHAFTERPROCESS_FullRefresh.equals(refreshMode))
+							{
+								recordSelectedData.clear();
+								isRequeryByRunSuccessProcess = false;
+								mainContentRowUsedInSubcontent = -1;
+							}
+							
+							if(shouldExecuteQuery)
+							{
+								Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", null));
+								onUserQuery();
+							}
 	                    }
 	                });
 
@@ -2339,7 +2395,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 																		
 						if(shouldExecuteQuery)
 						{
-							clearImmediateEditDB(-1);
+							clearImmediateSaveEditDB(-1);
 							Clients.response(new AuEcho(InfoPanel.this, "onQueryCallback", null));
 						}
 						else
@@ -2554,6 +2610,23 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     {
     	try
     	{
+    		if(isQueryByUser)
+    		{
+    			clearImmediateSaveEditDB(-1);
+    			
+    			if(isImmediateSaveSelection && hasPreSelectionColumn) // Pre-load db-selected keys 
+                {
+                	Collection<KeyNamePair> additionalKeys = getAdditionalDBSelectedKeys(Collections.emptyList());
+                	if(additionalKeys != null && additionalKeys.size() > 0)
+                	{
+                		DB.createT_SelectionNew(editAD_Pinstance_ID, additionalKeys,
+    						null);
+                	}
+                	
+                	updateStatusBarAndInfo();
+                }
+    		}
+    		
 //    		m_sqlUserOrder="";
     		// event == null mean direct call from reset button
     		if (event == null)
@@ -2583,7 +2656,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         	m_lastSelectedIndex = contentPanel.getSelectedIndex();
         	
         	if(mainContentRowUsedInSubcontent < 0)        	
-        		updateSubcontent (m_lastSelectedIndex);
+        		updateSubcontent (m_lastSelectedIndex, true);
         }
     	finally
     	{
@@ -2707,10 +2780,28 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
         {
         	saveSelection();
         }
+        
+        if(m_refreshParentOnClose)
+        {
+        	if(m_runViaProcessInfo != null && m_runViaProcessInfo.getWindowNo() > 0)
+    		{
+    			IDesktop desktop = SessionManager.getAppDesktop();
+    			Object oWin = desktop.findWindow(m_runViaProcessInfo.getWindowNo());
+    			
+    			if(oWin != null && oWin instanceof ADWindow)
+    			{
+    				ADWindow window = (ADWindow)oWin;
+    				window.getADWindowContent().onRefresh();
+    			}
+    		}
+        }
+        
         if (Window.MODE_EMBEDDED.equals(getAttribute(Window.MODE_KEY)))
         	SessionManager.getAppDesktop().closeActiveWindow();
         else
 	        this.detach();
+        
+        SessionManager.getAppDesktop().updateHelpQuickInfo((String)null);
     }   //  dispose
 
 	public void sort(Comparator<Object> cmpr, boolean ascending) {
@@ -2838,7 +2929,12 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	
 	public void setRunViaProcessInfo(ProcessInfo pi)
 	{
-		runViaProcessInfo = pi;
+		m_runViaProcessInfo = pi;
+	}
+	
+	public ProcessInfo getRunViaProcessInfo()
+	{
+		return m_runViaProcessInfo;
 	}
 	
 	public Collection<KeyNamePair> getAdditionalDBSelectedKeys(Collection<KeyNamePair> selectedKeys)
@@ -2850,22 +2946,29 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 * 
 	 * @param recordID -1 to clear all rows
 	 */
-	protected void clearImmediateEditDB(int recordID)
+	protected void clearImmediateSaveEditDB(int recordID)
 	{
 		if(editAD_Pinstance_ID > 0)
 		{
 			if(recordID >= 0)
 			{
 				Object params[] = {editAD_Pinstance_ID, recordID};
-				DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ? AND T_Selection_ID = ?", params, null);				
+				
+				if(hasImmediatePersistEdit)
+					DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ? AND T_Selection_ID = ?", params, null);
 			}
 			else
 			{
 				Object params[] = {editAD_Pinstance_ID};
-				DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ?", params, null);
+				
+				if(hasImmediatePersistEdit)
+					DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ?", params, null);
+				
+				if(isImmediateSaveSelection)
+					DB.executeUpdateEx("DELETE FROM T_Selection WHERE AD_Pinstance_ID = ?", params, null);
 			}
 		}
-	}
+	}	
 	
 	protected void createOrUpdateImmediateEditDB(final int recordID, final String columnName, final Object value)
 	{
@@ -2899,6 +3002,214 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			}
 		});
 	}
+	
+	protected void initStatusBarAndInfo()
+	{
+		if(m_infoWindowID > 0)
+		{
+			m_statusLine = MStatusLine.getSL(m_infoWindowID);
+			m_quickInfoLines = MStatusLine.getStatusLinesWidget(m_infoWindowID);
+			
+			if(m_quickInfoLines != null && m_quickInfoLines.length == 0)
+				m_quickInfoLines = null;
+			
+			if(m_statusLine != null || m_quickInfoLines != null)
+			{
+				m_WindowNoStatusLine = SessionManager.getAppDesktop().registerWindow(this);
+			}
+		}
+	}
+	
+	// F3P: fill context before running process 
+	
+	/** Get full ctx from selected rows, including parameters, selected main row, selected row of active embedded tab.
+	 *   This is the order applied, in case of conflicting columns with different values, they are overridden by later ones:
+	 *   
+	 *   1. parameters
+	 *   2. main content row (for mutliselection, the last clicked, if selected, is used. If its not selected, the first selected is used)
+	 *   3. selected embedded row
+	 *
+	 * @param WindowNo
+	 * @param ctx
+	 * @return
+	 */
+	public Properties getFullCtxFromSelectedRows(int WindowNo, Properties ctx)
+	{
+		// 1 & 2: Parameters and selected active row
+		
+		int selectedRow = -1;
+		
+		// *** Context from main content		
+		
+		
+		if(mainContentRowUsedInSubcontent >= 0)
+			selectedRow = mainContentRowUsedInSubcontent;
+		
+		if(selectedRow < 0)
+			selectedRow = contentPanel.getSelectedIndex();
+						
+		if(selectedRow >= 0)			
+			getRowAndParamsAsCtx(selectedRow, -1, null, WindowNo, Env.getCtx());
+		else
+		{
+			resetTableCtx(contentPanel, WindowNo, Env.getCtx());
+			getRowAndParamsAsCtx(-1, -1, null, WindowNo, Env.getCtx()); // Only parameters
+		}		
+			
+		return ctx;
+	}
+	
+	/** Get row and params ctx. IF row is < 0, only params are used
+	 * 
+	 * @param row current row, ignored if < 0
+	 * @param editingColumn
+	 * @param editingValue
+	 * @return
+	 */
+	public Properties getRowAndParamsAsCtx(int row, int editingColumn, Object editingValue)
+	{
+		Properties ctx = new Properties(Env.getCtx()); // Allow session values
+		return getRowAndParamsAsCtx(row, editingColumn, editingValue, 0, ctx);
+	}
+	
+	/** Get row and params ctx. IF row is < 0, only params are used
+	 * 
+	 * @param row
+	 * @param editingColumn
+	 * @param editingValue
+	 * @param WindowNo
+	 * @param ctx
+	 * @return
+	 */
+	public Properties getRowAndParamsAsCtx(int row, int editingColumn, Object editingValue, int WindowNo, Properties ctx)
+	{		
+		if (row >= 0)
+			getTableRowAsCtx(contentPanel, row, editingColumn, editingValue, WindowNo, ctx);
+		return ctx;
+	}
+	
+	public Properties getTableRowAsCtx(WListbox table, int row, int editingColumn, Object editingValue, int WindowNo, Properties ctx)
+	{
+		ListModelTable model = table.getModel();
+		ColumnInfo[] layout = table.getLayout(); 
+		
+		for(int i=0; i < layout.length; i++)			
+		{			
+			String column = layout[i].getColumnName();
+			
+			if(column == null)
+				column = layout[i].getGridField().getColumnName();
+					
+			Object val = null;
+			
+			if(i != editingColumn)
+				val = model.getValueAt(row, i);
+			else
+				val = editingValue;
+			
+			// Get id from 'complex' types
+			
+			if(val != null)
+			{				
+				if(val instanceof IDColumn)
+				{
+					IDColumn idc = (IDColumn)val;
+					val = idc.getRecord_ID();
+				}
+				else if(val instanceof KeyNamePair)
+				{
+					KeyNamePair knp = (KeyNamePair)val;
+					val = knp.getKey();
+				}
+								
+				if(val instanceof Integer)
+					Env.setContext(ctx, WindowNo, column, (Integer)val);
+				else if(val instanceof Timestamp)
+					Env.setContext(ctx, WindowNo, column, (Timestamp)val);
+				else if(val instanceof Boolean)
+					Env.setContext(ctx, WindowNo, column, (Boolean)val);
+				else
+					Env.setContext(ctx, WindowNo, column, val.toString());
+			}
+			else
+			{
+				Env.setContext(ctx, WindowNo, column, (String)null);
+			}
+		}
+		
+		return ctx;		
+	}
+	
+	public void resetTableCtx(WListbox table, int WindowNo, Properties ctx)
+	{
+		ColumnInfo[] layout = table.getLayout(); 
+		
+		for(int i=0; i < layout.length; i++)			
+		{			
+			String column = layout[i].getColumnName();
+			
+			if(column == null)
+				column = layout[i].getGridField().getColumnName();
+			
+			Env.setContext(ctx, WindowNo, column, (String)null);
+		}
+	}
+	
+	protected void updateStatusBarAndInfo()
+	{
+		if(m_WindowNoStatusLine > 0)
+		{	
+			Properties ctx = Env.getCtx();
+			Env.clearWinContext(m_WindowNoStatusLine);
+			getFullCtxFromSelectedRows(m_WindowNoStatusLine,ctx);
+			
+			if(getRunViaProcessInfo() != null)
+			{
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_AD_PINSTANCE_ID, getRunViaProcessInfo().getAD_PInstance_ID());
+			}
+			else
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_AD_PINSTANCE_ID, 0);
+			
+			if(editAD_Pinstance_ID > 0)
+			{
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID, editAD_Pinstance_ID);
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID_Compat, editAD_Pinstance_ID);
+			}
+			else
+			{
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID, 0);
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID_Compat, 0);
+			}
+				
+			if(m_statusLine != null)
+			{
+				setStatusLine(null, false);
+			}
+			
+			if(m_quickInfoLines != null)
+				renderQuickInfo();
+		}
+	}
+	
+	public void renderQuickInfo() 
+	{
+		StringBuilder lines = new StringBuilder();
+		for (MStatusLine wl : m_quickInfoLines)
+		{
+			String line = wl.parseLine(m_WindowNoStatusLine);
+			if (line != null) {
+				lines.append(line).append("<br>");
+			}
+		}
+		
+		m_lastRenderedQuickInfo = null;
+		
+		if (lines.length() > 0)
+			m_lastRenderedQuickInfo = lines.toString();
+		
+		IDesktop desktop = SessionManager.getAppDesktop();
+		desktop.updateHelpQuickInfo(m_lastRenderedQuickInfo);			
+	}	
 	
 }	//	Info
 

@@ -997,6 +997,11 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	public void updateHelpQuickInfo(GridTab gridTab) {
 		helpController.renderQuickInfo(gridTab);
 	}
+	
+	@Override
+	public void updateHelpQuickInfo(String quickInfo) {
+		helpController.renderQuickInfo(quickInfo);
+	}
 
 	@Override
 	public ProcessDialog openProcessDialog(int processId, boolean soTrx) {

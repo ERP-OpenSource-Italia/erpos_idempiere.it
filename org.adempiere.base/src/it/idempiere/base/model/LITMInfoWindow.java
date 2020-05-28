@@ -8,6 +8,9 @@ public class LITMInfoWindow {
 	
 	/** Column name IsAutoSpan */
 	public static final String COLUMNNAME_IsAutoSpan = "IsAutoSpan";
+	
+	/** Column name IsSaveSelectionImmediate */
+	public static final String COLUMNNAME_IsSaveSelectionImmediate = "IsSaveSelectionImmediate";
 
 	/** Set SelectionColumn.
 	@param Selection column
@@ -51,5 +54,28 @@ public class LITMInfoWindow {
 		return false;
 	}
 
-	
+	/** Set Is Auto Span
+	@param info window 
+	@param IsSaveSelectionImmediate  */
+	public static void setIsSaveSelectionImmediate (X_AD_InfoWindow infoWindow,boolean isSaveSelectionImmediate)
+	{
+		infoWindow.set_ValueOfColumn(COLUMNNAME_IsSaveSelectionImmediate, Boolean.valueOf(isSaveSelectionImmediate));
+	}
+
+	/** Is Save Selection immediate
+	@param info window
+	@return IsSaveSelectionImmediate
+	 */
+	public static boolean isSaveSelectionImmediate (X_AD_InfoWindow infoWindow) 
+	{
+		Object oo = infoWindow.get_Value(COLUMNNAME_IsSaveSelectionImmediate);
+
+		if (oo != null) 
+		{
+			if (oo instanceof Boolean) 
+				return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
 }

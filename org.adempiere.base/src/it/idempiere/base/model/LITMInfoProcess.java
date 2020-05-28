@@ -1,6 +1,7 @@
 package it.idempiere.base.model;
 
 import org.adempiere.model.MInfoProcess;
+import org.compiere.model.X_AD_InfoProcess;
 
 public class LITMInfoProcess {
 	
@@ -13,6 +14,9 @@ public class LITMInfoProcess {
 	public static final String REFRESHAFTERPROCESS_RefreshAndKeepSelection = "K";
 	/** Full refresh = F */
 	public static final String REFRESHAFTERPROCESS_FullRefresh = "F";
+	
+	/** Column name IsRefreshCallerRecord */
+	public static final String COLUMNNAME_IsRefreshCallerRecord = "IsRefreshCallerRecord";
 	
 	/** Set Refresh after process execution.
 	@param RefreshAfterProcess 
@@ -37,4 +41,28 @@ public class LITMInfoProcess {
 		return rap; 
 	}
 
+	/** Set Is Refresh Caller Record
+	@param info process
+	@param IsRefreshCallerRecord  */
+	public static void setIsRefreshCallerRecord (X_AD_InfoProcess infoWindow,boolean IsRefreshCallerRecord)
+	{
+		infoWindow.set_ValueOfColumn(COLUMNNAME_IsRefreshCallerRecord, Boolean.valueOf(IsRefreshCallerRecord));
+	}
+
+	/** Is Refresh Caller Record
+	@param info window
+	@return IsAutoSpan
+	 */
+	public static boolean isRefreshCallerRecord (X_AD_InfoProcess infoWindow) 
+	{
+		Object oo = infoWindow.get_Value(COLUMNNAME_IsRefreshCallerRecord);
+
+		if (oo != null) 
+		{
+			if (oo instanceof Boolean) 
+				return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
 }
