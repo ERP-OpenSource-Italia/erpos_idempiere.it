@@ -1515,15 +1515,14 @@ public class ReportStarter implements ProcessCall, ClientProcess
     {
     	log.info("");
         String sql = "SELECT pr.JasperReport, pr.IsDirectPrint "
-        		   + "FROM AD_Process pr, AD_PInstance pi "
-                   + "WHERE pr.AD_Process_ID = pi.AD_Process_ID "
-                   + " AND pi.AD_PInstance_ID=?";
+     		   + "FROM AD_Process pr "
+                + "WHERE pr.AD_Process_ID = ?"; //F3P: set directly AD_Process_ID (changed from using ad_pinstance_id)
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try
         {
             pstmt = DB.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, trxName);
-            pstmt.setInt(1, pi.getAD_PInstance_ID());
+            pstmt.setInt(1, pi.getAD_Process_ID()); // F3P: use AD_Process_ID instead of AD_Pinstance_ID
             rs = pstmt.executeQuery();
             String path = null;
             boolean	directPrint = false;
