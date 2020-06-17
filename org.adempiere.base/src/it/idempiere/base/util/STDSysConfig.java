@@ -685,5 +685,12 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LIT_FILTER_CREATE_FROM_INVOICE_MOVEMENT_TYPE, false, AD_Client_ID,AD_Org_ID); 
 	}
+	
+	public static final String LIT_FINDWINDOW_FULLLIKE = "LIT_FINDWINDOW_FULLLIKE";
+
+	public static boolean isFindWindowFullLike(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getBooleanValue(LIT_FINDWINDOW_FULLLIKE, false, AD_Client_ID,AD_Org_ID); 
+	}
 
 }
