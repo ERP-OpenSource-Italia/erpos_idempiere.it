@@ -1623,7 +1623,8 @@ public class MOrder extends X_C_Order implements DocAction
 		}
 		
 		//	Credit Check
-		if (isSOTrx())
+		if (isSOTrx()
+				&& MSysConfig.getBooleanValue(MSysConfig.LIT_ORDER_CHECK_CREDIT_AS_WARNING, false, getAD_Client_ID(), getAD_Org_ID()) == false)
 		{
 			if (   MDocType.DOCSUBTYPESO_POSOrder.equals(dt.getDocSubTypeSO())
 					&& PAYMENTRULE_Cash.equals(getPaymentRule())
