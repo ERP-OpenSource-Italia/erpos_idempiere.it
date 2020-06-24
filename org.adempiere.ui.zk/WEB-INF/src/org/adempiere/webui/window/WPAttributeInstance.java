@@ -265,6 +265,10 @@ public class WPAttributeInstance extends Window implements EventListener<Event>
 				sql += m_sqlMinLife;
 			sql += m_sql.substring(pos);
 		}
+		else
+		{
+			sql = sql.replace(s_sqlWhere, s_sqlWhereWithoutWarehouse);
+		}
 		//
 		log.finest(sql);
 		PreparedStatement pstmt = null;
@@ -273,7 +277,7 @@ public class WPAttributeInstance extends Window implements EventListener<Event>
 		{
 			pstmt = DB.prepareStatement(sql, null);
 			pstmt.setInt(1, m_M_Product_ID);
-			if (m_M_Warehouse_ID != 0)
+			if (m_M_Warehouse_ID != 0 && !showAll.isChecked())
 				pstmt.setInt(2, m_M_Warehouse_ID);
 			rs = pstmt.executeQuery();
 			m_table.loadTable(rs);

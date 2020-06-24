@@ -125,6 +125,8 @@ import org.zkoss.zul.Menuitem;
 import org.zkoss.zul.Menupopup;
 import org.zkoss.zul.Window.Mode;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *
  * This class is based on org.compiere.apps.APanel written by Jorg Janke.
@@ -760,7 +762,13 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		findWindow.setBorder("none");	
 		findWindow.setStyle("position: absolute; border-bottom: 2px solid #484848; padding: 2px; background-color: #fff;");
 		ZKUpdateUtil.setWidth(findWindow, "100%");
-		ZKUpdateUtil.setHeight(findWindow, "60%");
+		
+		// F3P: full height search
+		if(STDSysConfig.isFindWindowFullHeight(Env.getAD_Client_ID(ctx), Env.getAD_Client_ID(ctx)))
+			ZKUpdateUtil.setHeight(findWindow, "100%");
+		else
+			ZKUpdateUtil.setHeight(findWindow, "60%");
+		
 		findWindow.setZindex(1000);
 		findWindow.setSizable(false);
 		findWindow.setContentStyle("background-color: #fff; width: 99%; margin: auto;");
