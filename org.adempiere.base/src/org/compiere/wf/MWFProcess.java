@@ -365,7 +365,8 @@ public class MWFProcess extends X_AD_WF_Process
 				continue;
 			
 			//	Start new Activity...
-			MWFActivity activity = new MWFActivity (this, transitions[i].getAD_WF_Next_ID(), lastPO);
+//			MWFActivity activity = new MWFActivity (this, transitions[i].getAD_WF_Next_ID(), lastPO);
+			MWFActivity activity = MWFActivity.newActivity(this, transitions[i].getAD_WF_Next_ID(), lastPO);
 			/**
 			 * IDEMPIERE-3942
 			 * Implement JoinElement AND Status
@@ -554,7 +555,9 @@ public class MWFProcess extends X_AD_WF_Process
 		try
 		{
 			//	Start first Activity with first Node
-			MWFActivity activity = new MWFActivity (this, AD_WF_Node_ID);
+//			MWFActivity activity = new MWFActivity (this, AD_WF_Node_ID);
+			MWFActivity activity = PO.get(getCtx(), MWFActivity.Table_Name, -1, get_TrxName()); // '-1' > fake to be able to use constructor
+			activity.setupByNode(this, AD_WF_Node_ID);
 			//
 			// Thread workerWF = new Thread(activity);
 			// workerWF.setName(activity.getAD_Workflow().getName() + " "

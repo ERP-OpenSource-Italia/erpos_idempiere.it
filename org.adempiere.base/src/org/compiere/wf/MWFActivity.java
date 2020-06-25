@@ -178,9 +178,17 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 	 *	@param process process
 	 *	@param AD_WF_Node_ID start node
 	 */
+	@Deprecated
 	public MWFActivity (MWFProcess process, int AD_WF_Node_ID)
 	{
 		super (process.getCtx(), 0, process.get_TrxName());
+		setupByNode(process, AD_WF_Node_ID);
+	}	//	MWFActivity
+	
+	public void setupByNode (MWFProcess process, int AD_WF_Node_ID)
+	{
+//		super (process.getCtx(), 0, process.get_TrxName());
+		setAD_WF_Activity_ID(0);
 		setAD_WF_Process_ID (process.getAD_WF_Process_ID());
 		setPriority(process.getPriority());
 		//	Document Link
@@ -233,18 +241,32 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 	 *	@param AD_WF_Node_ID start node
 	 *	@param lastPO PO from the previously executed node
 	 */
-	public MWFActivity(MWFProcess process, int next_ID, PO lastPO) {
-		this(process, next_ID);
+//	public MWFActivity(MWFProcess process, int next_ID, PO lastPO) {
+//		this(process, next_ID);
+//		if (lastPO != null) {
+//			// Compare if the last PO is the same type and record needed here, if yes, use it
+//			if (lastPO.get_Table_ID() == getAD_Table_ID() && lastPO.get_ID() == getRecord_ID()) {
+//				m_po = lastPO;
+//			}
+//		}
+//	}
+	
+	public static MWFActivity newActivity(MWFProcess process, int next_ID, PO lastPO) {
+//		this(process, next_ID);
+		MWFActivity a = PO.get(process.getCtx(), MWFActivity.Table_Name, -1, process.get_TrxName());
+		a.setupByNode(process, next_ID);
 		if (lastPO != null) {
 			// Compare if the last PO is the same type and record needed here, if yes, use it
-			if (lastPO.get_Table_ID() == getAD_Table_ID() && lastPO.get_ID() == getRecord_ID()) {
-				m_po = lastPO;
+			if (lastPO.get_Table_ID() == a.getAD_Table_ID() && lastPO.get_ID() == a.getRecord_ID()) {
+				a.m_po = lastPO;
 			}
 		}
+		
+		return a;
 	}
 
 	/**	State Machine				*/
-	private StateEngine			m_state = null;
+	protected StateEngine			m_state = null;
 	/**	Workflow Node				*/
 	private MWFNode				m_node = null;
 	/** Transaction					*/
@@ -252,13 +274,13 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 	/**	Audit						*/
 	private MWFEventAudit		m_audit = null;
 	/** Persistent Object			*/
-	private PO					m_po = null;
+	protected PO					m_po = null;
 	/** Document Status				*/
-	private String				m_docStatus = null;
+	protected String				m_docStatus = null;
 	/**	New Value to save in audit	*/
-	private String				m_newValue = null;
+	protected String				m_newValue = null;
 	/** Process						*/
-	private MWFProcess 			m_process = null;
+	protected MWFProcess 			m_process = null;
 	/** List of email recipients	*/
 	private ArrayList<String> 	m_emails = new ArrayList<String>();
 
@@ -1023,7 +1045,7 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 	 *	@return true if completed, false otherwise
 	 *	@throws Exception if error
 	 */
-	private boolean performWork (Trx trx) throws Exception
+	protected boolean performWork (Trx trx) throws Exception
 	{
 		if (log.isLoggable(Level.INFO)) log.info (m_node + " [" + (trx!=null ? trx.getTrxName() : "") + "]");
 		m_docStatus = null;
