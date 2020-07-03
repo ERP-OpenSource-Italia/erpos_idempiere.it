@@ -474,7 +474,7 @@ implements DocAction
 		{
 			asset.setA_Asset_Status(A_ASSET_STATUS_Sold);
 			asset.setIsFullyDepreciated(true);
-			asset.saveEx();
+			asset.saveEx(get_TrxName());
 			
 			for (MDepreciationExp ex : list)
 			{
@@ -487,6 +487,6 @@ implements DocAction
 		}
 		
 		if(wasAssetNull == true && asset != null)
-			asset.saveEx();
+			asset.saveEx(get_TrxName());
 	}
 }
