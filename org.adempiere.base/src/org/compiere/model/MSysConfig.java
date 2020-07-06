@@ -182,6 +182,7 @@ public class MSysConfig extends X_AD_SysConfig
 
 	public static final String CHECK_CREDIT_ON_PROPOSAL_ORDER = "CHECK_CREDIT_ON_PROPOSAL_ORDER";
 	public static final String LIT_ORDER_CHECK_CREDIT_AS_WARNING ="LIT_ORDER_CHECK_CREDIT_AS_WARNING";
+	public static final String LIT_INOUT_CHECK_CREDIT_AS_WARNING = "LIT_INOUT_CHECK_CREDIT_AS_WARNING";
 
 	/**
 	 * 	Standard Constructor

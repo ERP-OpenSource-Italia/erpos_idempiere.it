@@ -1214,7 +1214,8 @@ public class MInOut extends X_M_InOut implements DocAction
 		}
 
 		//	Credit Check
-		if (isSOTrx() && !isReversal())
+		if (isSOTrx() && !isReversal()
+				&& MSysConfig.getBooleanValue(MSysConfig.LIT_INOUT_CHECK_CREDIT_AS_WARNING, false, getAD_Client_ID(), getAD_Org_ID()) == false)
 		{
 			I_C_Order order = getC_Order();
 			if (order != null && MDocType.DOCSUBTYPESO_PrepayOrder.equals(order.getC_DocType().getDocSubTypeSO())
