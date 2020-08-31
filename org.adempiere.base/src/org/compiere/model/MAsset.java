@@ -470,10 +470,12 @@ public class MAsset extends X_A_Asset
 		}
 		//F3P:end
 		// Set parent asset:
+		/* F£P: nonsense, turned off
 		if (getA_Parent_Asset_ID() <= 0)
 		{
 			setA_Parent_Asset_ID(getA_Asset_ID());
 		}	
+		*/
 		// Fix inventory number:
 		String invNo = getInventoryNo();
 		if(invNo != null)
