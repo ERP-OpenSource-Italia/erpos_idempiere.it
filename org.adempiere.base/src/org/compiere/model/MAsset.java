@@ -550,6 +550,7 @@ public class MAsset extends X_A_Asset
 		
 		//
 		// Set parent
+		/* F3P:  Nonsense
 		if(getA_Parent_Asset_ID() <= 0)
 		{
 			int A_Asset_ID = getA_Asset_ID();
@@ -557,6 +558,7 @@ public class MAsset extends X_A_Asset
 			DB.executeUpdateEx("UPDATE A_Asset SET A_Parent_Asset_ID=A_Asset_ID WHERE A_Asset_ID=" + A_Asset_ID, get_TrxName());
 			if (log.isLoggable(Level.FINE)) log.fine("A_Parent_Asset_ID=" + getA_Parent_Asset_ID());
 		}
+		*/
 		
 		//
 		// Set inventory number:
