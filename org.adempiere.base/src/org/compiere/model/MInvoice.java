@@ -51,6 +51,7 @@ import org.compiere.util.TimeUtil;
 
 import it.idempiere.base.model.FreeOfCharge;
 import it.idempiere.base.model.LITMInvoice;
+import it.idempiere.base.model.LITMBPartner;
 import it.idempiere.base.util.GenericPOAdvancedComparator;
 import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
@@ -1609,7 +1610,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 				if ( MBPartner.SOCREDITSTATUS_CreditStop.equals(bp.getSOCreditStatus()) )
 				{
 					m_processMsg = "@BPartnerCreditStop@ - @TotalOpenBalance@="
-							+ bp.getTotalOpenBalance()
+							+ LITMBPartner.getTotalOpenBalanceDB(bp,true)
 							+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 					return DocAction.STATUS_Invalid;
 				}
