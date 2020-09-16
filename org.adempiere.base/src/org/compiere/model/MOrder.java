@@ -1492,6 +1492,12 @@ public class MOrder extends X_C_Order implements DocAction
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_BEFORE_PREPARE);
 		if (m_processMsg != null)
 			return DocAction.STATUS_Invalid;
+		/**
+		 * LS: get modified lines
+		 * Needed if at least one validator has added/deleted/changed lines and had recreated the cache
+		 */
+		lines = getLines();
+		
 		MDocType dt = MDocType.get(getCtx(), getC_DocTypeTarget_ID());
 
 		//	Std Period open?
