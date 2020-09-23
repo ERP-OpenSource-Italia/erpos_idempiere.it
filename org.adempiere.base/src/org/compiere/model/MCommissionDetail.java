@@ -42,11 +42,9 @@ public class MCommissionDetail extends X_C_CommissionDetail
 	 *	@param ignored ignored
 	 *	@param trxName transaction
 	 */
-	public MCommissionDetail (Properties ctx, int ignored, String trxName)
+	public MCommissionDetail (Properties ctx, int C_CommissionDetail_ID, String trxName)
 	{
-		super(ctx, 0, trxName);
-		if (ignored != 0)
-			throw new IllegalArgumentException("Multi-Key");
+		super(ctx, C_CommissionDetail_ID, trxName);
 	}	//	MCommissionDetail
 
 	/**
