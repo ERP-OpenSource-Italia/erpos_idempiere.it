@@ -91,7 +91,7 @@ public class RequisitionPOCreate extends SvrProcess
 	private int 		p_M_Requisition_ID = 0;
 	//F3P: gestione fornitori
 	/** BP			*/
-	private int 		p_C_BPartner_ID = 0;
+	protected int 		p_C_BPartner_ID = 0;
 	
 	/** BP Filtro			*/
 	private int 		p_Vendor_ID = 0;
@@ -110,7 +110,7 @@ public class RequisitionPOCreate extends SvrProcess
 	/** Orders Cache : (C_BPartner_ID, DateRequired, M_PriceList_ID) -> MOrder */
 	private HashMap<MultiKey, MOrder> m_cacheOrders = new HashMap<MultiKey, MOrder>();
 	
-	private int m_M_Warehouse_ID = 0; //F3P: Gestione rottura per magazzino
+	protected int m_M_Warehouse_ID = 0; //F3P: Gestione rottura per magazzino
 	
 	/** DR Aggiunto parametro per il completamento pre-generazione ordine **/
 	private boolean		p_CompleteBeforeGenerateOrder = false;
@@ -406,7 +406,7 @@ public class RequisitionPOCreate extends SvrProcess
 	 *	@param rLine request line
 	 * 	@throws Exception
 	 */
-	private void process (MRequisitionLine rLine) throws Exception
+	protected void process (MRequisitionLine rLine) throws Exception
 	{
 		if (rLine.getM_Product_ID() == 0 && rLine.getC_Charge_ID() == 0)
 		{

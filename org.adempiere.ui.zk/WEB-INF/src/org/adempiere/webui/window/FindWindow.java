@@ -1906,6 +1906,11 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
                     	
                         if (!valueStr.toString().endsWith("%"))
                             valueStr.append("%");
+                        
+                		if(STDSysConfig.isFindWindowFullLike(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())) && valueStr.toString().startsWith("%") == false)
+                		{
+                			valueStr.insert(0, "%");
+                		}
                         //
                         value = valueStr.toString().replaceAll("@", "%");//F3P escape @
                     }

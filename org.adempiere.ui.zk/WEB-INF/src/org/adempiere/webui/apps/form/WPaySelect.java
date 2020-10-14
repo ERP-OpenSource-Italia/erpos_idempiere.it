@@ -639,5 +639,25 @@ public class WPaySelect extends PaySelect
 	@Override
 	public void previewReport(ReportEngine re) {
 		ReportCtl.preview(re);		
+	}
+
+	@Override
+	public void showURL(String html) {
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				SessionManager.getAppDesktop().showURL(html, true);
+			}
+		});
 	}	
+	
+	@Override
+	public void sendRedirect(String html) {
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				Executions.getCurrent().sendRedirect(html, "_blank");
+			}
+		});
+	}
 }   //  VPaySelect

@@ -30,6 +30,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.LITMBPartner;
+
 /**
  *	Business Partner Model
  *
@@ -719,6 +721,13 @@ public class MBPartner extends X_C_BPartner
 	 */
 	public void setTotalOpenBalance ()
 	{
+		// LS use new function is customer
+		if (isCustomer()) {
+			LITMBPartner.setTotalOpenBalanceDB(this, false, get_TrxName());
+			return;
+		}
+		// LS end
+				
 		BigDecimal SO_CreditUsed = null;
 		BigDecimal TotalOpenBalance = null;
 		//AZ Goodwill -> BF2041226 : only count completed/closed docs.
@@ -733,7 +742,8 @@ public class MBPartner extends X_C_BPartner
 				+ "WHERE p.C_BPartner_ID=bp.C_BPartner_ID AND p.IsAllocated='N'"
 				+ " AND p.C_Charge_ID IS NULL AND p.DocStatus IN ('CO','CL')),0) "
 			+ "FROM C_BPartner bp "
-			+ "WHERE C_BPartner_ID=?";		
+			+ "WHERE C_BPartner_ID=?";	
+		
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
@@ -847,12 +857,12 @@ public class MBPartner extends X_C_BPartner
 
 		//	Above (reduced) Credit Limit
 		creditLimit = creditLimit.subtract(additionalAmt);
-		if (creditLimit.compareTo(getTotalOpenBalance()) < 0)
+		if (creditLimit.compareTo(LITMBPartner.getTotalOpenBalanceDB(this,true)) < 0)
 			return SOCREDITSTATUS_CreditHold;
 		
 		//	Above Watch Limit
 		BigDecimal watchAmt = creditLimit.multiply(getCreditWatchRatio());
-		if (watchAmt.compareTo(getTotalOpenBalance()) < 0)
+		if (watchAmt.compareTo(LITMBPartner.getTotalOpenBalanceDB(this,true)) < 0)
 			return SOCREDITSTATUS_CreditWatch;
 		
 		//	is OK
@@ -1028,5 +1038,4 @@ public class MBPartner extends X_C_BPartner
 			delete_Tree(MTree_Base.TREETYPE_BPartner);
 		return success;
 	}	//	afterDelete
-
 }	//	MBPartner

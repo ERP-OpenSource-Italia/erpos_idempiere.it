@@ -43,6 +43,9 @@ import org.compiere.util.NamePair;
 import org.compiere.util.Util;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.HtmlBasedComponent;
+import org.zkoss.zk.ui.event.Event;
+import org.zkoss.zk.ui.event.EventListener;
+import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Listcell;
 import org.zkoss.zul.Listitem;
 
@@ -50,10 +53,20 @@ import it.idempiere.base.model.LITMInfoColumn;
 
 public class WInfoWindowListItemRenderer extends WListItemRenderer
 {
+	private static final EventListener<Event> s_stopPropagationListener = new EventListener<Event>() {
+
+		@Override
+		public void onEvent(Event event) throws Exception {
+			event.stopPropagation();						
+		}
+		
+	};
+	
 	private MInfoColumn[]	gridDisplayedInfoColumns = null;
 	private ColumnInfo[]	gridDisplayedColumnInfos = null;
 	private InfoWindow infoWindow = null;	
 	private RowEvaluetee rowEvaluatee = new RowEvaluetee();
+	
 
 	public WInfoWindowListItemRenderer(InfoWindow infoWindow)
 	{
@@ -133,6 +146,7 @@ public class WInfoWindowListItemRenderer extends WListItemRenderer
 					value = knp.getID();
 				}
 				
+				editor.getComponent().addEventListener(Events.ON_DOUBLE_CLICK, s_stopPropagationListener);
 				editor.setValue(value);
 				
 				if(infoWindow != null)

@@ -45,6 +45,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 
+import it.idempiere.base.model.LITMBPartner;
 import it.idempiere.base.model.LITMInOut;
 import it.idempiere.base.util.STDSysConfig;
 
@@ -1217,7 +1218,8 @@ public class MInOut extends X_M_InOut implements DocAction
 		}
 
 		//	Credit Check
-		if (isSOTrx() && !isReversal())
+		if (isSOTrx() && !isReversal()
+				&& MSysConfig.getBooleanValue(MSysConfig.LIT_INOUT_CHECK_CREDIT_AS_WARNING, false, getAD_Client_ID(), getAD_Org_ID()) == false)
 		{
 			I_C_Order order = getC_Order();
 			if (order != null && MDocType.DOCSUBTYPESO_PrepayOrder.equals(order.getC_DocType().getDocSubTypeSO())
@@ -1228,26 +1230,26 @@ public class MInOut extends X_M_InOut implements DocAction
 				if (MBPartner.SOCREDITSTATUS_CreditStop.equals(bp.getSOCreditStatus()))
 				{
 					m_processMsg = "@BPartnerCreditStop@ - @TotalOpenBalance@="
-						+ bp.getTotalOpenBalance()
+						+ LITMBPartner.getTotalOpenBalanceDB(bp,true)
 						+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 					return DocAction.STATUS_Invalid;
 				}
 				if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus()))
 				{
 					m_processMsg = "@BPartnerCreditHold@ - @TotalOpenBalance@="
-						+ bp.getTotalOpenBalance()
+						+ LITMBPartner.getTotalOpenBalanceDB(bp,true)
 						+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 					return DocAction.STATUS_Invalid;
 				}
 				if (!MBPartner.SOCREDITSTATUS_NoCreditCheck.equals(bp.getSOCreditStatus())
 						&& Env.ZERO.compareTo(bp.getSO_CreditLimit()) != 0)
 				{
-					BigDecimal notInvoicedAmt = MBPartner.getNotInvoicedAmt(getC_BPartner_ID());
+					BigDecimal notInvoicedAmt = LITMBPartner.getNotInvoicedAmt(getC_BPartner_ID(), true);
 					if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus(notInvoicedAmt)))
 					{
 						m_processMsg = "@BPartnerOverSCreditHold@ - @TotalOpenBalance@="
-							+ bp.getTotalOpenBalance() + ", @NotInvoicedAmt@=" + notInvoicedAmt
-							+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
+								+ LITMBPartner.getTotalOpenBalanceDB(bp,true) + ", @NotInvoicedAmt@=" + notInvoicedAmt
+								+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 						return DocAction.STATUS_Invalid;
 					}
 				}
