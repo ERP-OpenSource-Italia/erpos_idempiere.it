@@ -714,4 +714,18 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LGS_AUTOGENERATE_ASI_ON_DOC_PREPARE, false, AD_Client_ID,AD_Org_ID); 
 	}
+	
+	public static final String COPY_DOCNO_FROM_ORDER_TO_INOUT = "LIT_COPY_DOCNO_FROM_ORDER_TO_INOUT"; 
+
+	public static boolean isCopyDocNoFromOrderToInout(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(COPY_DOCNO_FROM_ORDER_TO_INOUT, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static final String COPY_DOCNO_FROM_ORDER_TO_INVOICE = "LIT_COPY_DOCNO_FROM_ORDER_TO_INVOICE"; 
+
+	public static boolean isCopyDocNoFromOrderToInvoice(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(COPY_DOCNO_FROM_ORDER_TO_INVOICE, false, AD_Client_ID, AD_Org_ID);
+	}
 }
