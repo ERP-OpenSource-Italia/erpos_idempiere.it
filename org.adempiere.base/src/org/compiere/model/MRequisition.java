@@ -217,7 +217,7 @@ public class MRequisition extends X_M_Requisition implements DocAction, DocOptio
 	}	//	process
 	
 	/**	Process Message 			*/
-	private String			m_processMsg = null;
+	protected String			m_processMsg = null;
 	/**	Just Prepared Flag			*/
 	private boolean 		m_justPrepared = false;
 
