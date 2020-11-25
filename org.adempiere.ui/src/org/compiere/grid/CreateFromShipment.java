@@ -220,10 +220,11 @@ public abstract class CreateFromShipment extends CreateFrom
 				.append("CASE WHEN l.QtyOrdered=0 THEN 0 ELSE l.QtyEntered/l.QtyOrdered END,")	//	2
 				.append(" l.C_UOM_ID,COALESCE(uom.UOMSymbol,uom.Name),")			//	3..4
 				.append(" p.M_Locator_ID, loc.Value, ") // 5..6
-				.append(" COALESCE(l.M_Product_ID,0),COALESCE(p.Name,c.Name), ") //	7..8
+				.append(" COALESCE(l.M_Product_ID,0),COALESCE(p.Name,c.Name)||( case when m_product.m_product_id is not null THEN " + 
+						"' ('||m_product.name||' - '||pp_order_node.name||')' else '' end), ") //	7..8
 				.append(" po.VendorProductNo, " )// 9
 				.append(" l.C_OrderLine_ID,l.Line "	)//	10..11
-				.append(" ,COALESCE(p.Value,l.Description) ") //F3P: note 2, added value, and changed sequence to product value, line description to improve readability on charge lines
+				.append(" , COALESCE(p.Value,l.Description)||( case when m_product.m_product_id is not null THEN ' ('||m_product.value||')' else '' end) ") //F3P: note 2, added value, and changed sequence to product value, line description to improve readability on charge lines
 				.append("FROM C_OrderLine l")
 				.append(" LEFT OUTER JOIN M_Product_PO po ON (l.M_Product_ID = po.M_Product_ID AND l.C_BPartner_ID = po.C_BPartner_ID) ")
 				.append(" LEFT OUTER JOIN M_MatchPO m ON (l.C_OrderLine_ID=m.C_OrderLine_ID AND ");
@@ -231,7 +232,10 @@ public abstract class CreateFromShipment extends CreateFrom
 		sql.append(" IS NOT NULL)")
 		.append(" LEFT OUTER JOIN M_Product p ON (l.M_Product_ID=p.M_Product_ID)")
 				.append( " LEFT OUTER JOIN M_Locator loc on (p.M_Locator_ID=loc.M_Locator_ID)")
-				.append( " LEFT OUTER JOIN C_Charge c ON (l.C_Charge_ID=c.C_Charge_ID)");
+				.append( " LEFT OUTER JOIN C_Charge c ON (l.C_Charge_ID=c.C_Charge_ID)")
+				.append( " LEFT OUTER JOIN pp_cost_collector ON l.pp_cost_collector_ID = pp_cost_collector.pp_cost_collector_ID ")
+				.append( " LEFT OUTER JOIN pp_order_node ON pp_order_node.pp_order_node_id = pp_cost_collector.pp_order_node_id ")
+				.append( " LEFT OUTER JOIN m_product ON m_product.m_product_id = pp_cost_collector.m_product_id ");
 		if (Env.isBaseLanguage(Env.getCtx(), "C_UOM"))
 			sql.append(" LEFT OUTER JOIN C_UOM uom ON (l.C_UOM_ID=uom.C_UOM_ID)");
 		else
@@ -273,9 +277,11 @@ public abstract class CreateFromShipment extends CreateFrom
 		
 		sql.append( "GROUP BY l.QtyOrdered,CASE WHEN l.QtyOrdered=0 THEN 0 ELSE l.QtyEntered/l.QtyOrdered END, ")
 		.append( "l.C_UOM_ID,COALESCE(uom.UOMSymbol,uom.Name), p.M_Locator_ID, loc.Value, po.VendorProductNo, ")
-		.append( "l.M_Product_ID,")
-		.append( "p.Value,l.Description," )//F3P: see above note 2
-		.append( "COALESCE(p.Name,c.Name), l.Line,l.C_OrderLine_ID ")
+		.append( "l.M_Product_ID")
+		.append( ",COALESCE(p.Value,l.Description)||( case when m_product.m_product_id is not null THEN ' ('||m_product.value||')' else '' end),"
+				+ " l.Description," )//F3P: see above note 2
+		.append( "COALESCE(p.Name,c.Name)||( case when m_product.m_product_id is not null THEN " + 
+				" ' ('||m_product.name||' - '||pp_order_node.name||')' else '' end), l.Line,l.C_OrderLine_ID,m_product.m_product_id ")
 		.append( "ORDER BY l.Line");
 		
 		// F3P: apply filter
