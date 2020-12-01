@@ -729,4 +729,11 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LS_CALLOUT_WHEN_COPY_RECORD, true); 
 	}
 	
+	public static final String COPY_DOCNO_FROM_ORDER_TO_INOUT = "LIT_COPY_DOCNO_FROM_ORDER_TO_INOUT"; 
+	
+	public static boolean isCopyDocNoFromOrderToInout(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(COPY_DOCNO_FROM_ORDER_TO_INOUT, false, AD_Client_ID, AD_Org_ID);
+	}
+	
 }
