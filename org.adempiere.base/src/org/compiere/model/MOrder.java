@@ -2597,8 +2597,9 @@ public class MOrder extends X_C_Order implements DocAction
 		
 		String DocSubTypeSO = dt.getDocSubTypeSO();
 		
-		if(MDocType.DOCSUBTYPESO_WarehouseOrder.equals(DocSubTypeSO) && 
-				STDSysConfig.isCopyDocNoFromWhOrderToInout(getAD_Client_ID(),getAD_Org_ID())) // F3P: align document no of inout
+		if((MDocType.DOCSUBTYPESO_WarehouseOrder.equals(DocSubTypeSO) 
+				&& STDSysConfig.isCopyDocNoFromWhOrderToInout(getAD_Client_ID(),getAD_Org_ID()))// F3P: align document no of inout
+			|| STDSysConfig.isCopyDocNoFromOrderToInout(getAD_Client_ID(),getAD_Org_ID())) //LS: align document no of inout also for other order subtypes
 		{
 			shipment.setDocumentNo(getDocumentNo());
 		}		
@@ -2664,6 +2665,12 @@ public class MOrder extends X_C_Order implements DocAction
 	{
 		if (log.isLoggable(Level.INFO)) log.info(dt.toString());
 		MInvoice invoice = new MInvoice (this, dt.getC_DocTypeInvoice_ID(), invoiceDate);
+		
+		if(STDSysConfig.isCopyDocNoFromOrderToInvoice(getAD_Client_ID(),getAD_Org_ID())) // F3P: align document no of inout
+		{
+			invoice.setDocumentNo(getDocumentNo());
+		}	
+		
 		if (!invoice.save(get_TrxName()))
 		{
 			m_processMsg = "Could not create Invoice";

@@ -57,6 +57,8 @@ import org.compiere.util.Evaluator;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
+
+import it.idempiere.base.model.LITMGridTab;
 import it.idempiere.base.util.BaseEnvHelper;
 import it.idempiere.base.util.STDSysConfig;
 
@@ -122,6 +124,9 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	
 	// F3P: added to support sql callouts
 	public static final String SQL_PREFIX = "@sql:";
+	
+	//F3P 
+	boolean m_bIsCopiedFromUI = false;
 
 	/**
 	 *	Create Tab (Model) from Value Object.
@@ -1187,11 +1192,23 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		if (!retValue)
 			return retValue;
 		setCurrentRow(m_currentRow + 1, true);
+		
+		//LS Callout when copy
+		m_bIsCopiedFromUI = copy;
+		
 		m_mTable.setChanged(false);	
-		//  process all Callouts (no dependency check - assumed that settings are valid)
-		for (int i = 0; i < getFieldCount(); i++)
-			processCallout(getField(i));
-		//m_mTable.setChanged(false);		
+		
+		try
+		{
+			//  process all Callouts (no dependency check - assumed that settings are valid)
+			for (int i = 0; i < getFieldCount(); i++)
+				processCallout(getField(i));
+			//m_mTable.setChanged(false);		
+		}
+		finally
+		{
+			m_bIsCopiedFromUI = false;
+		}
 
 		fireStateChangeEvent(new StateChangeEvent(this, StateChangeEvent.DATA_NEW));
 		return retValue;
@@ -2923,6 +2940,12 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		//
 		if (isProcessed() && !field.isAlwaysUpdateable() && !field.isKey())		//	only active records
 			return "";			//	"DocProcessed";
+		
+		//LS stop callout when copy
+		if(m_bIsCopiedFromUI && LITMGridTab.isLS_OverwriteCallout(field.getGridTab()) == false)
+		{
+			return "";
+		}
 
 		Object value = field.getValue();
 		Object oldValue = field.getOldValue();
