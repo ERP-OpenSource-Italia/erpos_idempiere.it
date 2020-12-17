@@ -204,48 +204,60 @@ public class PackInApplicationActivator extends AbstractActivator {
 		if (packinFile != null) {
 			String fileName = packinFile.getName();
 			logger.warning("Installing " + fileName + " ...");
-
-			// The convention for package names is: yyyymmddHHMM_ClientValue_InformationalDescription.zip
-			String [] parts = fileName.split("_");
-			String clientValue = parts[1];
-			
-			boolean allClients = clientValue.startsWith("ALL-CLIENTS");
-			
 			int[] clientIDs;
-			if (allClients) {
-				int[] seedClientIDs = new int[0];
-				String seedClientValue = "";
-				if (clientValue.startsWith("ALL-CLIENTS-")) {
-					seedClientValue = clientValue.split("-")[2];
-					seedClientIDs = getClientIDs(seedClientValue);				
-					if (seedClientIDs.length == 0) {
-						logger.log(Level.WARNING, "Seed client does not exist: " + seedClientValue);
+			boolean allClients;
+			//LS SysConfig per tornare al comportamento precedente
+			if(MSysConfig.getBooleanValue(MSysConfig.PAKIN_PROCESS_ALLCLIENT, false))
+			{
+				// The convention for package names is: yyyymmddHHMM_ClientValue_InformationalDescription.zip
+				String [] parts = fileName.split("_");
+				String clientValue = parts[1];
+
+				allClients = clientValue.startsWith("ALL-CLIENTS");
+
+
+				if (allClients) {
+					int[] seedClientIDs = new int[0];
+					String seedClientValue = "";
+					if (clientValue.startsWith("ALL-CLIENTS-")) {
+						seedClientValue = clientValue.split("-")[2];
+						seedClientIDs = getClientIDs(seedClientValue);				
+						if (seedClientIDs.length == 0) {
+							logger.log(Level.WARNING, "Seed client does not exist: " + seedClientValue);
+							return false;
+						}
+					}
+					int[] allClientIDs = new Query(Env.getCtx(), MClient.Table_Name, "AD_Client_ID>0 AND Value!=?", null)
+							.setOnlyActiveRecords(true)
+							.setParameters(seedClientValue)
+							.setOrderBy("AD_Client_ID")
+							.getIDs();
+					// Process first the seed client, put seed in front of the array
+					int shift = 0;
+					if (seedClientIDs.length > 0)
+						shift = 1;
+					clientIDs = new int[allClientIDs.length + shift];
+					if (seedClientIDs.length > 0)
+						clientIDs[0] = seedClientIDs[0];
+					for (int i = 0; i < allClientIDs.length; i++) {
+						clientIDs[i+shift] = allClientIDs[i];
+					}
+				} else {
+					clientIDs = getClientIDs(clientValue);
+					if (clientIDs.length == 0) {
+						logger.log(Level.WARNING, "Client does not exist: " + clientValue);
 						return false;
 					}
 				}
-				int[] allClientIDs = new Query(Env.getCtx(), MClient.Table_Name, "AD_Client_ID>0 AND Value!=?", null)
-						.setOnlyActiveRecords(true)
-						.setParameters(seedClientValue)
-						.setOrderBy("AD_Client_ID")
-						.getIDs();
-				// Process first the seed client, put seed in front of the array
-				int shift = 0;
-				if (seedClientIDs.length > 0)
-					shift = 1;
-				clientIDs = new int[allClientIDs.length + shift];
-				if (seedClientIDs.length > 0)
-					clientIDs[0] = seedClientIDs[0];
-				for (int i = 0; i < allClientIDs.length; i++) {
-					clientIDs[i+shift] = allClientIDs[i];
-				}
-			} else {
-				clientIDs = getClientIDs(clientValue);
-				if (clientIDs.length == 0) {
-					logger.log(Level.WARNING, "Client does not exist: " + clientValue);
-					return false;
-				}
 			}
-
+			else
+			{//LS solo system
+				allClients = false;
+				clientIDs = new Query(Env.getCtx(), MClient.Table_Name, "AD_Client_ID=0 ", null)
+						.setOnlyActiveRecords(true)
+						.getIDs();
+			}
+			
 			for (int clientID : clientIDs) {
 				MClient client = MClient.get(Env.getCtx(), clientID);
 				if  (allClients) {
