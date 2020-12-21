@@ -511,7 +511,9 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 	 * @param product
 	 * @param trxName
 	 * @return newly created ASI
+	 * @deprecated use {@link #generateLot(Properties ctx, MProduct product, PO po, String trxName)} instead.
 	 */
+	@Deprecated
 	public static MAttributeSetInstance generateLot(Properties ctx, MProduct product, String trxName)
 	{
 		return generateLot(ctx, product, null, trxName);
