@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.logging.Level;
 
+import org.adempiere.model.ImportValidator;
+import org.adempiere.process.ImportProcess;
 import org.compiere.model.I_M_Movement;
 import org.compiere.model.I_M_MovementLine;
 import org.compiere.model.MBPartner;
@@ -37,7 +39,9 @@ import org.compiere.model.MProduct;
 import org.compiere.model.MProject;
 import org.compiere.model.MShipper;
 import org.compiere.model.MTable;
+import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.Query;
+import org.compiere.model.X_I_Order;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
 import org.compiere.util.Env;
@@ -54,7 +58,7 @@ import org.eevolution.model.X_I_Movement;
  * 	@version 	$Id: ImportInventoryMovement.java,v 1.0
  */
 
-public class ImportInventoryMove extends SvrProcess
+public class ImportInventoryMove extends SvrProcess implements ImportProcess
 {
 
 	private boolean			m_DeleteOldImported = false;
@@ -117,7 +121,10 @@ public class ImportInventoryMove extends SvrProcess
 			if (log.isLoggable(Level.FINE)) log.fine("Delete Old Impored =" + no);
 		}
 		
-		fillIDValues();		
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_BEFORE_VALIDATE);
+		fillIDValues();
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);
+
 		importRecords();	
 		return "Imported: " + imported + ", Not imported: " + notimported;
 	}	//	doIt
@@ -213,6 +220,7 @@ public class ImportInventoryMove extends SvrProcess
 		
 		try
 		{
+			ModelValidationEngine.get().fireImportValidate(this, imove, moveLine, ImportValidator.TIMING_BEFORE_IMPORT);
 			moveLine.setM_Movement_ID(move.getM_Movement_ID());
 			moveLine.setAD_Org_ID(imove.getAD_Org_ID());
 			moveLine.setM_Product_ID(imove.getM_Product_ID());
@@ -221,6 +229,7 @@ public class ImportInventoryMove extends SvrProcess
 			moveLine.setMovementQty(imove.getMovementQty());
 			moveLine.saveEx();
 			imove.setM_MovementLine_ID(moveLine.getM_MovementLine_ID());
+			ModelValidationEngine.get().fireImportValidate(this, imove, moveLine, ImportValidator.TIMING_AFTER_IMPORT);
 			imove.saveEx();			
 			isImported = true;
 		}
@@ -309,6 +318,7 @@ public class ImportInventoryMove extends SvrProcess
 		move = new MMovement(Env.getCtx(), oldID, get_TrxName());
 		
 		try{
+			ModelValidationEngine.get().fireImportValidate(this, imove, move, ImportValidator.TIMING_BEFORE_IMPORT);
 			move.setDocumentNo(imove.getDocumentNo());
 			move.setC_DocType_ID(imove.getC_DocType_ID());
 			move.setAD_Org_ID(imove.getAD_Org_ID());
@@ -321,6 +331,8 @@ public class ImportInventoryMove extends SvrProcess
 			move.setC_Campaign_ID(imove.getC_Campaign_ID());
 			move.setAD_OrgTrx_ID(imove.getAD_OrgTrx_ID());			
 			move.saveEx();
+			ModelValidationEngine.get().fireImportValidate(this, imove, move, ImportValidator.TIMING_AFTER_IMPORT);
+
 		}
 		catch(Exception e)
 		{	
@@ -429,5 +441,18 @@ public class ImportInventoryMove extends SvrProcess
 		.setClient_ID()
 		.setParameters(imported)
 		.list();
+	}
+
+
+	@Override
+	public String getImportTableName() {
+		return X_I_Movement.Table_Name;
+	}
+
+
+	@Override
+	public String getWhereClause() {
+		StringBuilder whereClause = new StringBuilder(" AND AD_Client_ID=").append(Env.getAD_Client_ID(getCtx()));
+		return whereClause.toString();
 	}	
 }	//	Import Inventory Move

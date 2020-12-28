@@ -217,7 +217,7 @@ public class MRequisition extends X_M_Requisition implements DocAction, DocOptio
 	}	//	process
 	
 	/**	Process Message 			*/
-	private String			m_processMsg = null;
+	protected String			m_processMsg = null;
 	/**	Just Prepared Flag			*/
 	private boolean 		m_justPrepared = false;
 
@@ -509,14 +509,20 @@ public class MRequisition extends X_M_Requisition implements DocAction, DocOptio
 			return false;
 
 	//	setProcessed(false);
-		if (! reverseCorrectIt())
-			return false;
+//		if (! reverseCorrectIt()) //LS removed, throws 'PerformWork Error - MWFNode[(DocAuto)-DocumentAction=--] - DocStatus=CO'
+//			return false;
+		
+		MFactAcct.deleteEx(MRequisition.Table_ID, getM_Requisition_ID(), get_TrxName());
+		setPosted(false);
 
 		// After reActivate
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_REACTIVATE);
 		if (m_processMsg != null)
 			return false;
-
+		
+		setDocAction(DOCACTION_Complete);
+		setProcessed(false);
+	
 		return true;
 	}	//	reActivateIt
 	
@@ -608,6 +614,12 @@ public class MRequisition extends X_M_Requisition implements DocAction, DocOptio
 		{
 			options[index++] = DocumentEngine.ACTION_Prepare;
 		}
+		
+		// LS: needed to manage reactivate state
+		if (docStatus.equals(DOCSTATUS_Completed)) {
+			options[index++] = DocumentEngine.ACTION_ReActivate;
+		}
+		// LS end
 		
 		return index;
 	}

@@ -1237,4 +1237,32 @@ public class MOrderLine extends X_C_OrderLine
 	{
 		this.m_parent = null;
 	}
+	
+	/**
+	 * Re-imposta il flag isDescription in base alla presenza o all'assenza di prodotto e valore
+	 * 
+	 * @param mOrderLine orderLine in creazione e/o salvataggio
+	 */
+	public void setOrResetIsDescription()
+	{
+		if(isDescription())
+		{
+			if(getM_Product_ID() > 0 || 
+					getC_Charge_ID() > 0 || 
+					(getLineNetAmt().signum() != 0))
+			{
+				setIsDescription(false);
+			}			
+		}
+		else
+		{
+			if(getM_Product_ID() <= 0 &&
+					getC_Charge_ID() <= 0 && 
+					(getLineNetAmt().signum() == 0))
+			{
+				setIsDescription(true);
+			}
+		}
+	}
+
 }	//	MOrderLine

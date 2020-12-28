@@ -85,6 +85,8 @@ public class FreeOfCharge
 	{
 		boolean isFree = isFreeOfCharge(from);
 		setIsFreeOfCharge(to, isFree);
+		String freeType = getLIT_FreeOfChargeType(from);
+		setLIT_FreeOfChargeType(to, freeType);
 		
 		return isFree;		
 	}
@@ -105,4 +107,34 @@ public class FreeOfCharge
 		mdl.set_AttrValue(CompositeDiscount.COLUMNNAME_LIT_CompositeDisc, "100");
 	}	
 	
+	/** Column name LIT_FreeOfChargeType */
+	public static final String COLUMNNAME_LIT_FreeOfChargeType = "LIT_FreeOfChargeType";
+	/** Omaggio = O */
+	public static final String LIT_FreeOfChargeType_Omaggio = "O";
+	/** Sconto Merce = M */
+	public static final String LIT_FreeOfChargeType_ScontoMerce = "M";
+	/** Sconto Linea = L */
+	public static final String LIT_FreeOfChargeType_ScontoLinea = "L";
+	
+	public static final String LIT_FreeOfChargeType_NULL_CHECK = "X";
+		
+	//avoid AdempiereException because this field is not on every table
+	//checks already done on IsFreeOfCharge
+	public static void setLIT_FreeOfChargeType(PO po, String LIT_FreeOfChargeType) 
+	{
+		if(po.get_ColumnIndex(COLUMNNAME_LIT_FreeOfChargeType) < 0)
+//			throw new AdempiereException("Invalid object: no " + COLUMNNAME_LIT_FreeOfChargeType + " column");
+			return;
+			
+		po.set_ValueOfColumn(COLUMNNAME_LIT_FreeOfChargeType, LIT_FreeOfChargeType);
+	}
+
+	public static String getLIT_FreeOfChargeType(PO po) {
+		if(po.get_ColumnIndex(COLUMNNAME_LIT_FreeOfChargeType) < 0)
+//			throw new AdempiereException("Invalid object: no " + COLUMNNAME_LIT_FreeOfChargeType + " column");
+			return null;
+		
+		return (String) po.get_Value(COLUMNNAME_LIT_FreeOfChargeType);
+	}
+		
 }

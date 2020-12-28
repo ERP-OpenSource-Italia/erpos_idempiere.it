@@ -2,6 +2,7 @@ package it.idempiere.base.model;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
 import java.util.Properties;
 import java.util.logging.Level;
 
@@ -33,6 +34,7 @@ public class LGSMAttributeSetInstance
 		int M_AttributeSetInstance_ID = 0;
 		String lotName = null;
 		MAttributeSetInstance asi = null;
+		Timestamp guaranteeDate = null;
 		
 		MRule rule = PO.get(ctx, MRule.Table_Name, LGSMAttributeSet.getAD_Rule_ID((X_M_AttributeSet) product.getM_AttributeSet()), trxName);
 		String ruleParsed = Env.parseVariable(rule.getScript(), po, trxName, true);
@@ -43,6 +45,7 @@ public class LGSMAttributeSetInstance
 			if (rs.next()) {
 				M_AttributeSetInstance_ID = rs.getInt(1);
 				lotName = rs.getString(2);
+				guaranteeDate = rs.getTimestamp(3);
 			}
 		}
 		catch (Exception e) {
@@ -63,6 +66,7 @@ public class LGSMAttributeSetInstance
 				getLot(asi, true, product.get_ID(), lotName, trxName);  //F3P: use trx
 			}
 			//
+			asi.setGuaranteeDate(guaranteeDate);
 			asi.setDescription();
 			asi.saveEx(trxName);
 		}else {

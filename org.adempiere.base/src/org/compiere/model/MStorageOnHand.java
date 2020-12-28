@@ -288,6 +288,14 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		return getWarehouse(ctx, M_Warehouse_ID, M_Product_ID, M_AttributeSetInstance_ID, minGuaranteeDate, FiFo, positiveOnly, M_Locator_ID, trxName, forUpdate, 0);
 	}
 	
+	public static MStorageOnHand[] getWarehouse (Properties ctx, int M_Warehouse_ID, 
+			int M_Product_ID, int M_AttributeSetInstance_ID, Timestamp minGuaranteeDate,
+			boolean FiFo, boolean positiveOnly, int M_Locator_ID, String trxName, boolean forUpdate, int timeout)
+	{
+		return getWarehouse(ctx, M_Warehouse_ID, M_Product_ID, M_AttributeSetInstance_ID, minGuaranteeDate, FiFo, positiveOnly, M_Locator_ID, 
+				trxName, forUpdate, timeout, false);
+	}
+	
 	/**
 	 * 	Get Storage Info for Warehouse or locator
 	 *	@param ctx context
@@ -304,7 +312,7 @@ public class MStorageOnHand extends X_M_StorageOnHand
 	 */
 	public static MStorageOnHand[] getWarehouse (Properties ctx, int M_Warehouse_ID, 
 		int M_Product_ID, int M_AttributeSetInstance_ID, Timestamp minGuaranteeDate,
-		boolean FiFo, boolean positiveOnly, int M_Locator_ID, String trxName, boolean forUpdate, int timeout)
+		boolean FiFo, boolean positiveOnly, int M_Locator_ID, String trxName, boolean forUpdate, int timeout,boolean reverse)
 	{
 		if ((M_Warehouse_ID == 0 && M_Locator_ID == 0) || M_Product_ID == 0)
 			return new MStorageOnHand[0];
@@ -326,19 +334,19 @@ public class MStorageOnHand extends X_M_StorageOnHand
 			sql += "WHERE l.M_Warehouse_ID=?";
 		sql += " AND s.M_Product_ID=?"
 			 + " AND COALESCE(s.M_AttributeSetInstance_ID,0)=? ";
-		if (positiveOnly)
+		
+		if(reverse == false)
 		{
-			sql += " AND s.QtyOnHand > 0 ";
+			if (positiveOnly)
+			{
+				sql += " AND s.QtyOnHand > 0 ";
+			}
+			else
+			{
+				sql += " AND s.QtyOnHand <> 0 ";
+			}
 		}
-		else
-		{
-			sql += " AND s.QtyOnHand <> 0 ";
-		}
-		sql += "ORDER BY l.PriorityNo DESC, DateMaterialPolicy ";
-		if (!FiFo)
-			sql += " DESC, s.M_AttributeSetInstance_ID DESC ";
-		else
-			sql += ", s.M_AttributeSetInstance_ID ";
+		sql+=getWarehouseOrderByClause(allAttributeInstances, false, FiFo);
 		//	All Attribute Set Instances
 		if (allAttributeInstances)
 		{
@@ -353,13 +361,17 @@ public class MStorageOnHand extends X_M_StorageOnHand
 			else
 				sql += "WHERE l.M_Warehouse_ID=?";
 			sql += " AND s.M_Product_ID=? ";
-			if (positiveOnly)
+			
+			if(reverse == false)
 			{
-				sql += " AND s.QtyOnHand > 0 ";
-			}
-			else
-			{
-				sql += " AND s.QtyOnHand <> 0 ";
+				if (positiveOnly)
+				{
+					sql += " AND s.QtyOnHand > 0 ";
+				}
+				else
+				{
+					sql += " AND s.QtyOnHand <> 0 ";
+				}
 			}
 			
 			if (minGuaranteeDate != null)
@@ -368,24 +380,7 @@ public class MStorageOnHand extends X_M_StorageOnHand
 			}
 			
 			MProduct product = MProduct.get(Env.getCtx(), M_Product_ID);
-			
-			if(product.isUseGuaranteeDateForMPolicy()){
-				sql += "ORDER BY l.PriorityNo DESC, COALESCE(asi.GuaranteeDate,s.DateMaterialPolicy)";
-				if (!FiFo)
-					sql += " DESC, s.M_AttributeSetInstance_ID DESC ";
-				else
-					sql += ", s.M_AttributeSetInstance_ID ";
-			}
-			else
-			{
-				sql += "ORDER BY l.PriorityNo DESC, l.M_Locator_ID, s.DateMaterialPolicy";
-				if (!FiFo)
-					sql += " DESC, s.M_AttributeSetInstance_ID DESC ";
-				else
-					sql += ", s.M_AttributeSetInstance_ID ";
-			}
-			
-			sql += ", s.QtyOnHand DESC";
+			sql+=getWarehouseOrderByClause(allAttributeInstances, product.isUseGuaranteeDateForMPolicy(), FiFo);
 		} 
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -1116,4 +1111,41 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		
 		return null;
 	}  //getDateMaterialPolicy
+	
+	
+	/**
+	 * 
+	 * ALIASES
+	 * M_Storage > s
+	 * M_AttributeSetInstance > asi
+	 * M_Locator > l
+	 */
+	public static String getWarehouseOrderByClause(boolean allAttributeInstances, boolean isUseGuaranteeDateForMPolicy, boolean FiFo) {
+		StringBuilder sql = new StringBuilder(" ORDER BY l.PriorityNo DESC, ");
+		if (allAttributeInstances) {
+
+			if (isUseGuaranteeDateForMPolicy) {
+				sql.append("COALESCE(asi.GuaranteeDate,s.DateMaterialPolicy)");
+			} else {
+				sql.append("s.DateMaterialPolicy");
+			}
+
+			if (!FiFo)
+				sql.append(" DESC, s.M_AttributeSetInstance_ID DESC ");
+			else
+				sql.append(", s.M_AttributeSetInstance_ID ");
+
+				sql.append(", s.QtyOnHand DESC");
+		} else {
+
+			sql.append(" DateMaterialPolicy ");
+			if (!FiFo)
+				sql.append(" DESC, s.M_AttributeSetInstance_ID DESC ");
+			else
+				sql.append(", s.M_AttributeSetInstance_ID ");
+		}
+
+		return sql.toString();
+	}
+	
 }	//	MStorageOnHand
