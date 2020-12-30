@@ -499,10 +499,10 @@ public interface I_AD_WF_Node
     public static final String COLUMNNAME_IsSubcontracting = "IsSubcontracting";
 
 	/** Set Is Subcontracting	  */
-	public void setIsSubcontracting (boolean IsSubcontracting);
+	public void setIsSubcontracting (String IsSubcontracting);
 
 	/** Get Is Subcontracting	  */
-	public boolean isSubcontracting();
+	public String isSubcontracting();
 
     /** Column name JoinElement */
     public static final String COLUMNNAME_JoinElement = "JoinElement";

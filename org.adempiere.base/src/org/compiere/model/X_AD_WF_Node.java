@@ -841,26 +841,26 @@ public class X_AD_WF_Node extends PO implements I_AD_WF_Node, I_Persistent
 		}
 		return false;
 	}
-
+	
 	/** Set Is Subcontracting.
-		@param IsSubcontracting Is Subcontracting	  */
+	@param IsSubcontracting Is Subcontracting	  */
 	public void setIsSubcontracting (boolean IsSubcontracting)
 	{
 		set_Value (COLUMNNAME_IsSubcontracting, Boolean.valueOf(IsSubcontracting));
 	}
 
+	/** Set Is Subcontracting.
+		@param IsSubcontracting Is Subcontracting	  */
+	public void setIsSubcontracting (String IsSubcontracting)
+	{
+		set_Value (COLUMNNAME_IsSubcontracting, IsSubcontracting);
+	}
+
 	/** Get Is Subcontracting.
 		@return Is Subcontracting	  */
-	public boolean isSubcontracting () 
+	public String isSubcontracting () 
 	{
-		Object oo = get_Value(COLUMNNAME_IsSubcontracting);
-		if (oo != null) 
-		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
-			return "Y".equals(oo);
-		}
-		return false;
+		return get_ValueAsString(COLUMNNAME_IsSubcontracting);
 	}
 
 	/** JoinElement AD_Reference_ID=301 */
