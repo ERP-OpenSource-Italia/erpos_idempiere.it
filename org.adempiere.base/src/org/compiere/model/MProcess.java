@@ -363,7 +363,7 @@ public class MProcess extends X_AD_Process
 		if (log.isLoggable(Level.INFO)) log.info(pi.getClassName());
 
 		if (pi.getClassName().toLowerCase().startsWith(MRule.SCRIPT_PREFIX)) {
-			return ProcessUtil.startScriptProcess(getCtx(), pi, trx);
+			return ProcessUtil.startScriptProcess(getCtx(), pi, trx, managedTrx);
 		} else {
 			return ProcessUtil.startJavaProcess(getCtx(), pi, trx, managedTrx);
 		}
