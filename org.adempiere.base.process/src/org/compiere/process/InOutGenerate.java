@@ -798,7 +798,10 @@ public class InOutGenerate extends SvrProcess
 				{
 					// F3P: generate a new line only if we cannot accumulate it
 					line = new MInOutLine (m_shipment);
-					line.setOrderLine(orderLine, 0, order.isSOTrx() ? toDeliver : Env.ZERO);
+					//LS: set deliverFrom_M_Locator_ID and deliverM_AttributeSetInstance_ID
+					line.setOrderLine(orderLine, deliverFrom_M_Locator_ID, order.isSOTrx() ? toDeliver : Env.ZERO);
+					line.setM_AttributeSetInstance_ID(deliverM_AttributeSetInstance_ID);
+					//LS end
 					line.setQty(toDeliver);
 					if (orderLine.getQtyEntered().compareTo(orderLine.getQtyOrdered()) != 0)
 						 line.setQtyEntered(line.getMovementQty().multiply(orderLine.getQtyEntered())
