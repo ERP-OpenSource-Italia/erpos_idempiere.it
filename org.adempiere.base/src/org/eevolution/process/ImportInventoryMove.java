@@ -41,7 +41,6 @@ import org.compiere.model.MShipper;
 import org.compiere.model.MTable;
 import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.Query;
-import org.compiere.model.X_I_Order;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
 import org.compiere.util.Env;
@@ -61,21 +60,21 @@ import org.eevolution.model.X_I_Movement;
 public class ImportInventoryMove extends SvrProcess implements ImportProcess
 {
 
-	private boolean			m_DeleteOldImported = false;
+	protected boolean			m_DeleteOldImported = false;
 
-	private boolean			m_IsImportOnlyNoErrors = true;
+	protected boolean			m_IsImportOnlyNoErrors = true;
 	
-	private boolean			m_ErrorsFound = false;
+	protected boolean			m_ErrorsFound = false;
 
-	private String			m_docAction = MMovement.DOCACTION_Prepare;
+	protected String			m_docAction = MMovement.DOCACTION_Prepare;
 	
-	private boolean 		isImported = false;
+	protected boolean 		isImported = false;
 	
-	private int 			imported = 0;
+	protected int 			imported = 0;
 	
-	private int 			notimported = 0;
+	protected int 			notimported = 0;
 	
-	private List<String> idsPr = new ArrayList<String>();
+	protected List<String> idsPr = new ArrayList<String>();
 
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -134,7 +133,7 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 	 * import records using I_M_Movement table
 	 */
 	
-	private void importRecords()
+	protected void importRecords()
 	{
 		if (m_IsImportOnlyNoErrors && m_ErrorsFound)
 			return; // not importing because error were found
@@ -177,7 +176,7 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 		processAll();
 	}
 	
-	private void addForProcess(int id)
+	protected void addForProcess(int id)
 	{
 		String ids = String.valueOf(id);
 		boolean enc = false;
@@ -190,7 +189,7 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 			idsPr.add(ids);
 	}
 	
-	private void processAll()
+	protected void processAll()
 	{
 		for(String idx : idsPr)
 		{
@@ -207,7 +206,7 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 	 * @param imove X_I_M_Movement
 	 * @return isImported
 	 */
-	private boolean importMInventoryMoveLine(MMovement move, X_I_Movement imove)
+	protected boolean importMInventoryMoveLine(MMovement move, X_I_Movement imove)
 	{
 		isImported = false;
 		
@@ -221,12 +220,7 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 		try
 		{
 			ModelValidationEngine.get().fireImportValidate(this, imove, moveLine, ImportValidator.TIMING_BEFORE_IMPORT);
-			moveLine.setM_Movement_ID(move.getM_Movement_ID());
-			moveLine.setAD_Org_ID(imove.getAD_Org_ID());
-			moveLine.setM_Product_ID(imove.getM_Product_ID());
-			moveLine.setM_Locator_ID(imove.getM_Locator_ID());
-			moveLine.setM_LocatorTo_ID(imove.getM_LocatorTo_ID());
-			moveLine.setMovementQty(imove.getMovementQty());
+			propagateMovLineFields(imove, move, moveLine);
 			moveLine.saveEx();
 			imove.setM_MovementLine_ID(moveLine.getM_MovementLine_ID());
 			ModelValidationEngine.get().fireImportValidate(this, imove, moveLine, ImportValidator.TIMING_AFTER_IMPORT);
@@ -241,14 +235,14 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 		
 		return isImported;
 	}
-	
+
 	/**
 	 * get MMovementLine unique instance based on  X_I_M_Movement data
 	 * @param move MMovement
 	 * @param imove X_I_M_Movement
 	 * @return  unique instance of MMovementLine
 	 */
-	private MMovementLine getMInventoryMoveLine(MMovement move, X_I_Movement imove)
+	protected MMovementLine getMInventoryMoveLine(MMovement move, X_I_Movement imove)
 	{
 		
 		final StringBuilder whereClause = new StringBuilder();
@@ -288,7 +282,7 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 	 * get Inventory Move Columns
 	 * @return array MColumn
 	 */
-	private MColumn[] getMInventoryMoveColumns()
+	protected MColumn[] getMInventoryMoveColumns()
 	{
 			return MTable.get(getCtx(),I_M_MovementLine.Table_Name).getColumns(false);
 	}
@@ -299,7 +293,7 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 	 * @return MMovement
 	 */
 	
-	private MMovement importMInventoryMove(X_I_Movement imove)
+	protected MMovement importMInventoryMove(X_I_Movement imove)
 	{
 	    	final String  whereClause = I_M_Movement.COLUMNNAME_MovementDate + "= ? AND "
 	    				  + I_M_Movement.COLUMNNAME_DocumentNo + "=? AND "	  
@@ -319,17 +313,7 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 		
 		try{
 			ModelValidationEngine.get().fireImportValidate(this, imove, move, ImportValidator.TIMING_BEFORE_IMPORT);
-			move.setDocumentNo(imove.getDocumentNo());
-			move.setC_DocType_ID(imove.getC_DocType_ID());
-			move.setAD_Org_ID(imove.getAD_Org_ID());
-			move.setMovementDate(imove.getMovementDate());
-			move.setC_DocType_ID(imove.getC_DocType_ID());
-			move.setDocumentNo(imove.getDocumentNo());
-			move.setC_BPartner_ID(imove.getC_BPartner_ID());
-			move.setM_Shipper_ID(imove.getM_Shipper_ID());
-			move.setC_Project_ID(imove.getC_Project_ID());
-			move.setC_Campaign_ID(imove.getC_Campaign_ID());
-			move.setAD_OrgTrx_ID(imove.getAD_OrgTrx_ID());			
+			propagateMovFields(imove, move);			
 			move.saveEx();
 			ModelValidationEngine.get().fireImportValidate(this, imove, move, ImportValidator.TIMING_AFTER_IMPORT);
 
@@ -343,11 +327,10 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 		return move;
 	}
 
-	
 	/**
 	 * fill IDs values based on Search Key 
 	 */
-	private void fillIDValues()
+	protected void fillIDValues()
 	{
 		m_ErrorsFound = false;
 		for(X_I_Movement imove : getRecords(false, false))
@@ -414,7 +397,7 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 	 * @param values Object[]
 	 * @return unique record's ID in the table   
 	 */
-	private int getID(String tableName, String whereClause, Object[] values)
+	protected int getID(String tableName, String whereClause, Object[] values)
 	{
 		return new Query(getCtx(),tableName,whereClause,get_TrxName()).setClient_ID()
 		.setParameters(values).firstId();
@@ -427,7 +410,7 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 	 * @param isWithoutError boolean
 	 * @return collection of X_I_Movement records
 	 */
-	private Collection<X_I_Movement> getRecords(boolean imported, boolean isWithoutError)
+	protected Collection<X_I_Movement> getRecords(boolean imported, boolean isWithoutError)
 	{
 		final StringBuffer whereClause = new StringBuffer(X_I_Movement.COLUMNNAME_I_IsImported)
 		.append("=?"); 
@@ -455,4 +438,28 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 		StringBuilder whereClause = new StringBuilder(" AND AD_Client_ID=").append(Env.getAD_Client_ID(getCtx()));
 		return whereClause.toString();
 	}	
+	
+	protected void propagateMovFields(X_I_Movement imove, MMovement move) {
+		move.setDocumentNo(imove.getDocumentNo());
+		move.setC_DocType_ID(imove.getC_DocType_ID());
+		move.setAD_Org_ID(imove.getAD_Org_ID());
+		move.setMovementDate(imove.getMovementDate());
+		move.setC_DocType_ID(imove.getC_DocType_ID());
+		move.setDocumentNo(imove.getDocumentNo());
+		move.setC_BPartner_ID(imove.getC_BPartner_ID());
+		move.setM_Shipper_ID(imove.getM_Shipper_ID());
+		move.setC_Project_ID(imove.getC_Project_ID());
+		move.setC_Campaign_ID(imove.getC_Campaign_ID());
+		move.setAD_OrgTrx_ID(imove.getAD_OrgTrx_ID());
+	}
+	
+	protected void propagateMovLineFields(X_I_Movement imove, MMovement move, MMovementLine moveLine) {
+		moveLine.setM_Movement_ID(move.getM_Movement_ID());
+		moveLine.setAD_Org_ID(imove.getAD_Org_ID());
+		moveLine.setM_Product_ID(imove.getM_Product_ID());
+		moveLine.setM_Locator_ID(imove.getM_Locator_ID());
+		moveLine.setM_LocatorTo_ID(imove.getM_LocatorTo_ID());
+		moveLine.setMovementQty(imove.getMovementQty());
+	}
+	
 }	//	Import Inventory Move
