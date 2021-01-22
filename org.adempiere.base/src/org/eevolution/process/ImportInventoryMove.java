@@ -120,10 +120,9 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 			if (log.isLoggable(Level.FINE)) log.fine("Delete Old Impored =" + no);
 		}
 		
-		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_BEFORE_VALIDATE);
+		
 		fillIDValues();
-		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);
-
+		
 		importRecords();	
 		return "Imported: " + imported + ", Not imported: " + notimported;
 	}	//	doIt
@@ -333,6 +332,9 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 	protected void fillIDValues()
 	{
 		m_ErrorsFound = false;
+		
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_BEFORE_VALIDATE);
+		
 		for(X_I_Movement imove : getRecords(false, false))
 		{
 			if(imove.getAD_Org_ID()==0) {
@@ -388,6 +390,8 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 			}
 			imove.saveEx();
 		}
+		
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);
 	}
 	
 	/**
