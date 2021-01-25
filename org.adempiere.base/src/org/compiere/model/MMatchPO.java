@@ -317,7 +317,7 @@ public class MMatchPO extends X_M_MatchPO
 				for (MMatchPO matchpo : matchpos)
 				{
 					C_OrderLine_ID = matchpo.getC_OrderLine_ID();
-					MOrderLine orderLine = new MOrderLine(ctx, C_OrderLine_ID, trxName);
+					MOrderLine orderLine = PO.get(ctx, MOrderLine.Table_Name, C_OrderLine_ID, trxName);
 					BigDecimal toInvoice = orderLine.getQtyOrdered().subtract(orderLine.getQtyInvoiced());
 					if (toInvoice.signum() <= 0) 
 						continue;
@@ -488,7 +488,7 @@ public class MMatchPO extends X_M_MatchPO
 									if (!matchPO.isPosted() && matchPO.getQty().compareTo(retValue.getQty()) >=0 )  // greater than or equal quantity
 									{
 										otherMatchPO = matchPO;
-										iLine = new MInvoiceLine(retValue.getCtx(), matchPO.getC_InvoiceLine_ID(), retValue.get_TrxName());
+										iLine = PO.get(retValue.getCtx(), MInvoiceLine.Table_Name, matchPO.getC_InvoiceLine_ID(), retValue.get_TrxName());
 										matchPO.setQty(matchPO.getQty().subtract(retValue.getQty()));										
 										matchPO.saveEx();
 										break;
@@ -853,7 +853,7 @@ public class MMatchPO extends X_M_MatchPO
 	public MInvoiceLine getInvoiceLine()
 	{
 		if (m_iLine == null && getC_InvoiceLine_ID() != 0)
-			m_iLine = new MInvoiceLine(getCtx(), getC_InvoiceLine_ID(), get_TrxName());
+			m_iLine = PO.get(getCtx(), MInvoiceLine.Table_Name, getC_InvoiceLine_ID(), get_TrxName());
 		return m_iLine;
 	}	//	getInvoiceLine
 	
@@ -892,7 +892,7 @@ public class MMatchPO extends X_M_MatchPO
 	{
 		if ((m_oLine == null && getC_OrderLine_ID() != 0) 
 			|| getC_OrderLine_ID() != m_oLine.getC_OrderLine_ID())
-			m_oLine = new MOrderLine(getCtx(), getC_OrderLine_ID(), get_TrxName());
+			m_oLine = PO.get(getCtx(), MOrderLine.Table_Name, getC_OrderLine_ID(), get_TrxName());
 		return m_oLine;
 	}	//	getOrderLine
 	
@@ -935,7 +935,7 @@ public class MMatchPO extends X_M_MatchPO
 		//	Set ASI from Receipt
 		if (getM_AttributeSetInstance_ID() == 0 && getM_InOutLine_ID() != 0)
 		{
-			MInOutLine iol = new MInOutLine (getCtx(), getM_InOutLine_ID(), get_TrxName());
+			MInOutLine iol = PO.get(getCtx(), MInOutLine.Table_Name, getM_InOutLine_ID(), get_TrxName());
 			setM_AttributeSetInstance_ID(iol.getM_AttributeSetInstance_ID());
 		}
 		
@@ -963,7 +963,7 @@ public class MMatchPO extends X_M_MatchPO
 					}
 					else // create MatchPO record for PO-Invoice if different quantity
 					{
-						MInvoiceLine il = new MInvoiceLine(getCtx(), mpi[i].getC_InvoiceLine_ID(), get_TrxName());						
+						MInvoiceLine il = PO.get(getCtx(), MInvoiceLine.Table_Name, mpi[i].getC_InvoiceLine_ID(), get_TrxName());						
 						MMatchPO match = new MMatchPO(il, getDateTrx(), mpi[i].getQty());
 						match.setC_OrderLine_ID(getC_OrderLine_ID());
 						if (!match.save())
@@ -992,7 +992,7 @@ public class MMatchPO extends X_M_MatchPO
 			}	//	get from invoice
 			if (getC_OrderLine_ID() == 0 && getM_InOutLine_ID() != 0)
 			{
-				MInOutLine iol = new MInOutLine (getCtx(), getM_InOutLine_ID(), get_TrxName());
+				MInOutLine iol = PO.get(getCtx(), MInOutLine.Table_Name, getM_InOutLine_ID(), get_TrxName());
 				if (iol.getC_OrderLine_ID() != 0)
 				{
 					setC_OrderLine_ID(iol.getC_OrderLine_ID());
@@ -1047,7 +1047,7 @@ public class MMatchPO extends X_M_MatchPO
 						+" AND C_InvoiceLine_ID="+getC_InvoiceLine_ID());
 				if (cnt <= 0)
 				{
-					MInvoiceLine invoiceLine = new MInvoiceLine(getCtx(), getC_InvoiceLine_ID(), get_TrxName());
+					MInvoiceLine invoiceLine = PO.get(getCtx(), MInvoiceLine.Table_Name, getC_InvoiceLine_ID(), get_TrxName());
 					MInOutLine inoutLine = new MInOutLine(getCtx(), getM_InOutLine_ID(), get_TrxName());
 					throw new IllegalStateException("[MatchPO] Missing corresponding invoice matching record for invoice line "
 							+ invoiceLine + " and receipt line " + inoutLine);
@@ -1073,7 +1073,7 @@ public class MMatchPO extends X_M_MatchPO
 		{
 			if (getM_InOutLine_ID() > 0)
 			{
-				MInOutLine line = new MInOutLine(getCtx(), getM_InOutLine_ID(), get_TrxName());
+				MInOutLine line = PO.get(getCtx(), MInOutLine.Table_Name, getM_InOutLine_ID(), get_TrxName());
 				BigDecimal matchedQty = DB.getSQLValueBD(get_TrxName(), "SELECT Coalesce(SUM(Qty),0) FROM M_MatchPO WHERE M_InOutLine_ID=?" , getM_InOutLine_ID());
 				if (line.getMovementQty().signum() > 0 && matchedQty != null && matchedQty.compareTo(line.getMovementQty()) > 0)
 				{
@@ -1083,7 +1083,7 @@ public class MMatchPO extends X_M_MatchPO
 			
 			if (getC_InvoiceLine_ID() > 0)
 			{
-				MInvoiceLine line = new MInvoiceLine(getCtx(), getC_InvoiceLine_ID(), get_TrxName());				
+				MInvoiceLine line = PO.get(getCtx(), MInvoiceLine.Table_Name, getC_InvoiceLine_ID(), get_TrxName());				
 				BigDecimal matchedQty = DB.getSQLValueBD(get_TrxName(), "SELECT Coalesce(SUM(Qty),0) FROM M_MatchPO WHERE C_InvoiceLine_ID=?  AND Reversal_ID IS NULL " , getC_InvoiceLine_ID() );
 				if (matchedQty != null && matchedQty.compareTo(line.getQtyInvoiced()) > 0)
 				{
@@ -1096,7 +1096,7 @@ public class MMatchPO extends X_M_MatchPO
 				boolean validateOrderedQty = MSysConfig.getBooleanValue(MSysConfig.VALIDATE_MATCHING_TO_ORDERED_QTY, true, Env.getAD_Client_ID(Env.getCtx()));
 				if (validateOrderedQty)
 				{
-					MOrderLine line = new MOrderLine(getCtx(), getC_OrderLine_ID(), get_TrxName());
+					MOrderLine line = PO.get(getCtx(), MOrderLine.Table_Name, getC_OrderLine_ID(), get_TrxName());
 					BigDecimal invoicedQty = DB.getSQLValueBD(get_TrxName(), "SELECT Coalesce(SUM(Qty),0) FROM M_MatchPO WHERE C_InvoiceLine_ID > 0 and C_OrderLine_ID=? AND Reversal_ID IS NULL" , getC_OrderLine_ID());
 					if (invoicedQty != null && invoicedQty.compareTo(line.getQtyOrdered()) > 0)
 					{
@@ -1150,7 +1150,7 @@ public class MMatchPO extends X_M_MatchPO
 			if (orderLine.getM_AttributeSetInstance_ID() == 0
 				&& getM_InOutLine_ID() != 0)
 			{
-				MInOutLine iol = new MInOutLine (getCtx(), getM_InOutLine_ID(), get_TrxName());
+				MInOutLine iol = PO.get(getCtx(), MInOutLine.Table_Name, getM_InOutLine_ID(), get_TrxName());
 				if (iol.getMovementQty().compareTo(orderLine.getQtyOrdered()) == 0)
 					orderLine.setM_AttributeSetInstance_ID(iol.getM_AttributeSetInstance_ID());
 			}
@@ -1229,7 +1229,7 @@ public class MMatchPO extends X_M_MatchPO
 		//	(Reserved in VMatch and MInOut.completeIt)
 		if (success && getC_OrderLine_ID() != 0)
 		{
-			MOrderLine orderLine = new MOrderLine (getCtx(), getC_OrderLine_ID(), get_TrxName());
+			MOrderLine orderLine = PO.get(getCtx(), MOrderLine.Table_Name, getC_OrderLine_ID(), get_TrxName());
 			if (getM_InOutLine_ID() != 0)
 				orderLine.setQtyDelivered(orderLine.getQtyDelivered().subtract(getQty()));
 			if (getC_InvoiceLine_ID() != 0)
