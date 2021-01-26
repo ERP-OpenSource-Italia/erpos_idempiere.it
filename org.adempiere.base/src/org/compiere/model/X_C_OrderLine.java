@@ -90,6 +90,21 @@ public class X_C_OrderLine extends PO implements I_C_OrderLine, I_Persistent
     {
       return accessLevel.intValue();
     }
+    
+    @Override
+	public void setM_PriceList_ID(int M_PriceList_ID)
+	{
+		if(M_PriceList_ID > 0)
+			set_Value(COLUMNNAME_M_PriceList_ID, M_PriceList_ID);
+		else
+			set_Value(COLUMNNAME_M_PriceList_ID,null);
+	}
+	
+	@Override
+	public int getM_PriceList_ID()
+	{
+		return get_ValueAsInt(COLUMNNAME_M_PriceList_ID);
+	}
 
     /** Load Meta Data */
     protected POInfo initPO (Properties ctx)

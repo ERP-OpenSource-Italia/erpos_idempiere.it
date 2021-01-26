@@ -578,6 +578,22 @@ public class InfoProductWindow extends InfoWindow {
 				{
 					M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_Warehouse_ID", true);
 					M_PriceList_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_PriceList_ID", true);
+					
+					//LS Gestito pricelist anche su riga ordine
+					String C_OrderLine_UU = Env.getContext(Env.getCtx(), p_WindowNo, "C_OrderLine_UU", true);
+					
+					if(M_PriceList_ID <= 0 && Util.isEmpty(C_OrderLine_UU,true)==false)
+					{
+						int C_Order_ID = Env.getContextAsInt(Env.getCtx(),p_WindowNo, "C_Order_ID",true);
+						
+						if(C_Order_ID > 0)
+						{
+							//MOrder mOrder = PO.get(Env.getCtx(), MOrder.Table_Name,C_Order_ID, null);
+							//M_PriceList_ID = mOrder.getM_PriceList_ID();
+							M_PriceList_ID = DB.getSQLValue(null,"SELECT M_PriceList_ID FROM C_Order WHERE C_Order_ID=?",C_Order_ID);
+						}
+					}//LS END
+					
 				}				
 				
 				//int M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_Warehouse_ID");
