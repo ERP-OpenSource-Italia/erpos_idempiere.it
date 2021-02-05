@@ -34,6 +34,7 @@ import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.minigrid.ColumnInfo;
 import org.compiere.model.MDocType;
+import org.compiere.model.MOrder;
 import org.compiere.model.MPriceListVersion;
 import org.compiere.model.MRole;
 import org.compiere.util.DB;
@@ -580,9 +581,9 @@ public class InfoProductWindow extends InfoWindow {
 					M_PriceList_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_PriceList_ID", true);
 					
 					//LS Gestito pricelist anche su riga ordine
-					String C_OrderLine_UU = Env.getContext(Env.getCtx(), p_WindowNo, "C_OrderLine_UU", true);
+					String C_Order_UU = Env.getContext(Env.getCtx(),p_WindowNo, MOrder.COLUMNNAME_C_Order_UU,true);
 					
-					if(M_PriceList_ID <= 0 && Util.isEmpty(C_OrderLine_UU,true)==false)
+					if(M_PriceList_ID <= 0 && Util.isEmpty(C_Order_UU,true) == false)
 					{
 						int C_Order_ID = Env.getContextAsInt(Env.getCtx(),p_WindowNo, "C_Order_ID",true);
 						

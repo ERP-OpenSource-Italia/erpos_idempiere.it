@@ -112,7 +112,7 @@ public class MRMALine extends X_M_RMALine
             }
             else if (m_ioLine.getC_OrderLine_ID() != 0)
             {
-                MOrderLine orderLine = new MOrderLine (getCtx(), m_ioLine.getC_OrderLine_ID(), get_TrxName());
+                MOrderLine orderLine = PO.get(getCtx(),MOrderLine.Table_Name, m_ioLine.getC_OrderLine_ID(), get_TrxName());
                 precision = orderLine.getPrecision();
                 unitAmount = orderLine.getPriceEntered();
                 originalQty = orderLine.getQtyDelivered();

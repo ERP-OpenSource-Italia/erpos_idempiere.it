@@ -199,7 +199,11 @@ public class MOrderLine extends X_C_OrderLine
 			ol.setTax();
 			ol.saveEx();
 	 *  @param  order parent order
+	 *  @deprecated
+	 * This method is no longer acceptable to compute time between versions.
+     * <p> Use {@link MOrderLine.createFromOrder(MOrder)} instead.
 	 */
+	@Deprecated
 	public MOrderLine (MOrder order)
 	{
 		this (order.getCtx(), 0, order.get_TrxName());
@@ -207,6 +211,19 @@ public class MOrderLine extends X_C_OrderLine
 			throw new IllegalArgumentException("Header not saved");
 		setC_Order_ID (order.getC_Order_ID());	//	parent
 		setOrder(order);
+		
+		
+	}	//	MOrderLine
+	
+	public static MOrderLine createFromOrder(MOrder order)
+	{
+		MOrderLine orderLine = PO.create(order.getCtx(), MOrderLine.Table_Name, order.get_TrxName());
+		if (order.get_ID() == 0)
+			throw new IllegalArgumentException("Header not saved");
+		orderLine.setC_Order_ID (order.getC_Order_ID());	//	parent
+		orderLine.setOrder(order);
+		
+		return orderLine;
 	}	//	MOrderLine
 
 	/**

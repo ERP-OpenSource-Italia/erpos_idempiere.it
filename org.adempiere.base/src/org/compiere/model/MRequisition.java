@@ -426,7 +426,7 @@ public class MRequisition extends X_M_Requisition implements DocAction, DocOptio
 				finalQty = Env.ZERO;
 			else
 			{
-				MOrderLine ol = new MOrderLine (getCtx(), line.getC_OrderLine_ID(), get_TrxName());
+				MOrderLine ol = PO.get(getCtx(),MOrderLine.Table_Name, line.getC_OrderLine_ID(), get_TrxName());
 				finalQty = ol.getQtyOrdered();
 			}
 			//	final qty is not line qty
