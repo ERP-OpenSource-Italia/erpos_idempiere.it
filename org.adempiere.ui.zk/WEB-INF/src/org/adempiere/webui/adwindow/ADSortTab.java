@@ -394,6 +394,12 @@ public class ADSortTab extends Panel implements IADTabpanel
 		if (m_IdentifierTranslated)
 			sql.append(", ").append(m_TableName).append("_Trl tt");
 		//	Where
+		
+		if(gridTab.getLinkColumnName().length() >0)
+		{
+			sql.append(" WHERE t.").append(gridTab.getLinkColumnName()).append("=?");
+		}
+		else
 		//FR [ 2826406 ]
 		if(m_ParentColumnName != null)
 		{
@@ -430,8 +436,15 @@ public class ADSortTab extends Panel implements IADTabpanel
 		if (m_ColumnYesNoName != null)
 			sql.append("6 DESC,");		//	t.IsDisplayed DESC
 		sql.append("3,2");				//	t.SeqNo, tt.Name
-		//FR [ 2826406 ]
+		
 		int ID = 0;
+		//LS non vengono usati quelli del gridTab->m_ParentColumnName è la colonna chiave della tabella
+		if(gridTab.getLinkColumnName().length() >0)
+		{
+			ID = Env.getContextAsInt(Env.getCtx(), m_WindowNo, gridTab.getLinkColumnName());
+		}
+		else
+		//FR [ 2826406 ] 
 		if(m_ParentColumnName != null)
 		{	
 			ID = Env.getContextAsInt(Env.getCtx(), m_WindowNo, m_ParentColumnName);
