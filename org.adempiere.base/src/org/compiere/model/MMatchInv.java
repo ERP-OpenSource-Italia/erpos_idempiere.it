@@ -215,7 +215,7 @@ public class MMatchInv extends X_M_MatchInv
 		}
 		if (getM_AttributeSetInstance_ID() == 0 && getM_InOutLine_ID() != 0)
 		{
-			MInOutLine iol = new MInOutLine (getCtx(), getM_InOutLine_ID(), get_TrxName());
+			MInOutLine iol = PO.get(getCtx(), MInOutLine.Table_Name, getM_InOutLine_ID(), get_TrxName());
 			setM_AttributeSetInstance_ID(iol.getM_AttributeSetInstance_ID());
 		}
 		return true;
@@ -228,7 +228,7 @@ public class MMatchInv extends X_M_MatchInv
 		
 		if (getM_InOutLine_ID() > 0)
 		{
-			MInOutLine line = new MInOutLine(getCtx(), getM_InOutLine_ID(), get_TrxName());
+			MInOutLine line = PO.get(getCtx(), MInOutLine.Table_Name, getM_InOutLine_ID(), get_TrxName());
 			BigDecimal matchedQty = DB.getSQLValueBD(get_TrxName(), "SELECT Coalesce(SUM(Qty),0) FROM M_MatchInv WHERE M_InOutLine_ID=?" , getM_InOutLine_ID());
 			BigDecimal matchedQtyDB = matchedQty;
 			BigDecimal movementQty = line.getMovementQty();
@@ -244,7 +244,7 @@ public class MMatchInv extends X_M_MatchInv
 		
 		if (getC_InvoiceLine_ID() > 0)
 		{
-			MInvoiceLine line = new MInvoiceLine(getCtx(), getC_InvoiceLine_ID(), get_TrxName());
+			MInvoiceLine line = PO.get(getCtx(), MInvoiceLine.Table_Name, getC_InvoiceLine_ID(), get_TrxName());
 			BigDecimal matchedQty = DB.getSQLValueBD(get_TrxName(), "SELECT Coalesce(SUM(Qty),0) FROM M_MatchInv WHERE C_InvoiceLine_ID=?" , getC_InvoiceLine_ID());
 			BigDecimal matchedQtyDB = matchedQty;
 			BigDecimal qtyInvoiced = line.getQtyInvoiced();

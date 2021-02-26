@@ -37,6 +37,7 @@ import org.compiere.model.I_M_PromotionReward;
 import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
 import org.compiere.model.MTable;
+import org.compiere.model.PO;
 import org.compiere.model.Query;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -290,7 +291,7 @@ public class PromotionRule {
 
 	private static void addDiscountLine(MOrder order, MOrderLine ol, BigDecimal discount,
 			BigDecimal qty, int C_Charge_ID, I_M_Promotion promotion) throws Exception {
-		MOrderLine nol = new MOrderLine(order.getCtx(), 0, order.get_TrxName());
+		MOrderLine nol = PO.create(order.getCtx(),MOrderLine.Table_Name, order.get_TrxName());
 		nol.setC_Order_ID(order.getC_Order_ID());
 		nol.setOrder(order);
 		nol.setC_Charge_ID(C_Charge_ID);

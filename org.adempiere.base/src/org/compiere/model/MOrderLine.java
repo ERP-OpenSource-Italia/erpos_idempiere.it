@@ -120,6 +120,32 @@ public class MOrderLine extends X_C_OrderLine
 	/**	Logger	*/
 	protected static CLogger s_log = CLogger.getCLogger (MOrderLine.class);
 	
+	//LS Added M_PriceList_ID to C_OrderLine
+	public static final String COLUMNNAME_M_PriceList_ID = "M_PriceList_ID";
+	
+	@Override
+	public void setM_PriceList_ID(int M_PriceList_ID)
+	{
+		if(M_PriceList_ID > 0)
+			set_Value(COLUMNNAME_M_PriceList_ID, M_PriceList_ID);
+		else
+			set_Value(COLUMNNAME_M_PriceList_ID,null);
+		
+		m_M_PriceList_ID = M_PriceList_ID;
+	}
+	
+	@Override
+	public int getM_PriceList_ID()
+	{
+		m_M_PriceList_ID = get_ValueAsInt(COLUMNNAME_M_PriceList_ID);
+		
+		if(m_M_PriceList_ID <= 0 && m_parent != null)
+			m_M_PriceList_ID = m_parent.getM_PriceList_ID();
+		
+		return m_M_PriceList_ID;
+	}
+	//LS END
+	
 	/**************************************************************************
 	 *  Default Constructor
 	 *  @param ctx context
@@ -173,7 +199,11 @@ public class MOrderLine extends X_C_OrderLine
 			ol.setTax();
 			ol.saveEx();
 	 *  @param  order parent order
+	 *  @deprecated
+	 * This method is no longer acceptable to compute time between versions.
+     * <p> Use {@link MOrderLine.createFromOrder(MOrder)} instead.
 	 */
+	@Deprecated
 	public MOrderLine (MOrder order)
 	{
 		this (order.getCtx(), 0, order.get_TrxName());
@@ -181,6 +211,19 @@ public class MOrderLine extends X_C_OrderLine
 			throw new IllegalArgumentException("Header not saved");
 		setC_Order_ID (order.getC_Order_ID());	//	parent
 		setOrder(order);
+		
+		
+	}	//	MOrderLine
+	
+	public static MOrderLine createFromOrder(MOrder order)
+	{
+		MOrderLine orderLine = PO.create(order.getCtx(), MOrderLine.Table_Name, order.get_TrxName());
+		if (order.get_ID() == 0)
+			throw new IllegalArgumentException("Header not saved");
+		orderLine.setC_Order_ID (order.getC_Order_ID());	//	parent
+		orderLine.setOrder(order);
+		
+		return orderLine;
 	}	//	MOrderLine
 
 	/**
@@ -194,7 +237,7 @@ public class MOrderLine extends X_C_OrderLine
 		super(ctx, rs, trxName);
 	}	//	MOrderLine
 
-	protected int 			m_M_PriceList_ID = 0;
+	private int 			m_M_PriceList_ID = 0;
 	//
 	protected boolean			m_IsSOTrx = true;
 	//	Product Pricing
@@ -241,7 +284,7 @@ public class MOrderLine extends X_C_OrderLine
 	{
 		m_parent = order;
 		m_precision = Integer.valueOf(order.getPrecision());
-		m_M_PriceList_ID = order.getM_PriceList_ID();
+		m_M_PriceList_ID = getM_PriceList_ID();
 		m_IsSOTrx = order.isSOTrx();
 	}	//	setHeaderInfo
 	
@@ -820,9 +863,14 @@ public class MOrderLine extends X_C_OrderLine
 	{
 		if (m_M_PriceList_ID == 0)
 		{
-			m_M_PriceList_ID = DB.getSQLValue(get_TrxName(),
-				"SELECT M_PriceList_ID FROM C_Order WHERE C_Order_ID=?",
-				getC_Order_ID());
+			m_M_PriceList_ID = getM_PriceList_ID();
+			
+			if(m_M_PriceList_ID <= 0)
+			{
+				m_M_PriceList_ID = DB.getSQLValue(get_TrxName(),
+					"SELECT M_PriceList_ID FROM C_Order WHERE C_Order_ID=?",
+					getC_Order_ID());
+			}
 		}
 		MPriceList pl = MPriceList.get(getCtx(), m_M_PriceList_ID, get_TrxName());
 		return pl.isTaxIncluded();
@@ -960,7 +1008,7 @@ public class MOrderLine extends X_C_OrderLine
 				setPrice();
 			//	Check if on Price list
 			if (m_productPrice == null)
-				getProductPricing(m_M_PriceList_ID);
+				getProductPricing(getM_PriceList_ID());
 			// IDEMPIERE-1574 Sales Order Line lets Price under the Price Limit when updating
 			//	Check PriceLimit
 			boolean enforce = m_IsSOTrx && getParent().getM_PriceList().isEnforcePriceLimit();

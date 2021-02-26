@@ -34,6 +34,7 @@ import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.minigrid.ColumnInfo;
 import org.compiere.model.MDocType;
+import org.compiere.model.MOrder;
 import org.compiere.model.MPriceListVersion;
 import org.compiere.model.MRole;
 import org.compiere.util.DB;
@@ -578,6 +579,22 @@ public class InfoProductWindow extends InfoWindow {
 				{
 					M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_Warehouse_ID", true);
 					M_PriceList_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_PriceList_ID", true);
+					
+					//LS Gestito pricelist anche su riga ordine
+					String C_Order_UU = Env.getContext(Env.getCtx(),p_WindowNo, MOrder.COLUMNNAME_C_Order_UU,true);
+					
+					if(M_PriceList_ID <= 0 && Util.isEmpty(C_Order_UU,true) == false)
+					{
+						int C_Order_ID = Env.getContextAsInt(Env.getCtx(),p_WindowNo, "C_Order_ID",true);
+						
+						if(C_Order_ID > 0)
+						{
+							//MOrder mOrder = PO.get(Env.getCtx(), MOrder.Table_Name,C_Order_ID, null);
+							//M_PriceList_ID = mOrder.getM_PriceList_ID();
+							M_PriceList_ID = DB.getSQLValue(null,"SELECT M_PriceList_ID FROM C_Order WHERE C_Order_ID=?",C_Order_ID);
+						}
+					}//LS END
+					
 				}				
 				
 				//int M_Warehouse_ID = Env.getContextAsInt(Env.getCtx(), p_WindowNo, "M_Warehouse_ID");

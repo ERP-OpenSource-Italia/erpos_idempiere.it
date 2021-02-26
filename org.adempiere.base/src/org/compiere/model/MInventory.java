@@ -24,9 +24,11 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.NegativeInventoryDisallowedException;
 import org.adempiere.exceptions.PeriodClosedException;
 import org.compiere.process.DocAction;
+import org.compiere.process.DocOptions;
 import org.compiere.process.DocumentEngine;
 import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
@@ -49,7 +51,7 @@ import org.compiere.util.Util;
  * 			<li>BF [ 1745154 ] Cost in Reversing Material Related Docs
  *  @see http://sourceforge.net/tracker/?func=detail&atid=879335&aid=1948157&group_id=176962
  */
-public class MInventory extends X_M_Inventory implements DocAction
+public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 {
 	/**
 	 * 
@@ -1072,14 +1074,159 @@ public class MInventory extends X_M_Inventory implements DocAction
 		// Before reActivate
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_BEFORE_REACTIVATE);
 		if (m_processMsg != null)
-			return false;	
-		
+			return false;
+
+		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
+		String docSubTypeInv = dt.getDocSubTypeInv();
+
+		for(MInventoryLine line : getLines(false))
+		{
+			if (!line.isActive())
+				continue;
+
+			MProduct product = line.getProduct();
+			BigDecimal qtyDiff = Env.ZERO;
+			if (MDocType.DOCSUBTYPEINV_InternalUseInventory.equals(docSubTypeInv))
+				qtyDiff = line.getQtyInternalUse();
+			else if (MDocType.DOCSUBTYPEINV_PhysicalInventory.equals(docSubTypeInv))
+				qtyDiff = line.getQtyCount().subtract(line.getQtyBook()).negate();
+
+			MClient client = MClient.get(getCtx(), getAD_Client_ID());
+			MAcctSchema as = client.getAcctSchema();
+			MAcctSchema[] ass = MAcctSchema.getClientAcctSchema(getCtx(), client.get_ID());
+
+			if (as.getC_Currency_ID() != getC_Currency_ID()) 
+			{
+				for (int i = 0; i < ass.length ; i ++)
+				{
+					MAcctSchema a =  ass[i];
+					if (a.getC_Currency_ID() ==  getC_Currency_ID()) 
+						as = a ; 
+				}
+			}
+
+			MCostDetail cd = MCostDetail.get(getCtx(), "M_InventoryLine_ID=?", 
+					line.getM_InventoryLine_ID(), line.getM_AttributeSetInstance_ID(), 
+					as.getC_AcctSchema_ID(), get_TrxName());
+			if (cd !=  null)
+			{
+				// history
+
+				Query qCostHistory= new Query(getCtx(), X_M_CostHistory.Table_Name, "M_CostDetail_ID=?", get_TrxName());
+				qCostHistory.setParameters(cd.getM_CostDetail_ID());
+				List<X_M_CostHistory> costHistories = qCostHistory.list();
+
+				for(X_M_CostHistory history:costHistories)
+					history.deleteEx(true);
+
+				//				Revert delle modifiche sugli altri Cost Detail
+				revertCostDetail(cd);
+				cd.setProcessed(false);
+				cd.delete(true);
+
+				//costdetail inverso
+				// history
+				qCostHistory= new Query(getCtx(), X_M_CostHistory.Table_Name, "M_CostDetail_ID=?", get_TrxName());
+				qCostHistory.setParameters(cd.getM_CostDetail_ID());
+				costHistories = qCostHistory.list();
+
+				for(X_M_CostHistory history:costHistories)
+					history.deleteEx(true);
+				cd = MCostDetail.get(getCtx(), "Description = 'Reverse' AND M_InventoryLine_ID=?", 
+						line.getM_InventoryLine_ID(), line.getM_AttributeSetInstance_ID(), 
+						as.getC_AcctSchema_ID(), get_TrxName());
+				if(cd != null)
+				{
+					cd.setProcessed(false);
+					cd.delete(true);
+				}
+
+
+
+			}
+
+
+
+			//If Quantity Count minus Quantity Book = Zero, then no change in Inventory
+			if (qtyDiff.signum() == 0)
+				continue;
+
+			if (product == null || product.isStocked() == false) // Skip if no product, or not stocked
+			{
+				continue;
+			}
+
+			if(line.getM_AttributeSetInstance_ID() == 0)
+			{
+				MInventoryLineMA mas[] = MInventoryLineMA.get(getCtx(),	line.getM_InventoryLine_ID(), get_TrxName());
+
+				for (MInventoryLineMA lineMA : mas)
+				{
+
+					if(!MStorageOnHand.add(getCtx(), getM_Warehouse_ID(),
+							line.getM_Locator_ID(),
+							line.getM_Product_ID(), 
+							lineMA.getM_AttributeSetInstance_ID(),
+							lineMA.getMovementQty(),
+							lineMA.getDateMaterialPolicy(), get_TrxName()))
+					{
+						String lastError = CLogger.retrieveErrorString("");
+						m_processMsg = "Cannot correct Inventory OnHand (MA) - " + lastError;
+						throw new AdempiereException(m_processMsg);
+					}
+				}
+
+				int no = MInventoryLineMA.deleteInventoryLineMA(line.getM_InventoryLine_ID(), get_TrxName());
+				if (no > 0)
+					if (log.isLoggable(Level.CONFIG)) log.config("Delete old #" + no);
+			}
+			else
+			{
+				Timestamp dateMPolicy= qtyDiff.signum() > 0 ? getMovementDate() : null;
+				if (line.getM_AttributeSetInstance_ID() > 0)
+				{
+					Timestamp t = MStorageOnHand.getDateMaterialPolicy(line.getM_Product_ID(), line.getM_AttributeSetInstance_ID(), line.getM_Locator_ID(), line.get_TrxName());
+					if (t != null)
+						dateMPolicy = t;
+				}
+
+				if (!MStorageOnHand.add(getCtx(), getM_Warehouse_ID(),
+						line.getM_Locator_ID(),
+						line.getM_Product_ID(), 
+						line.getM_AttributeSetInstance_ID(), 
+						qtyDiff,dateMPolicy,get_TrxName())) //qtyDiff è già con il segno giusto 
+				{
+					String lastError = CLogger.retrieveErrorString("");
+					m_processMsg = "Cannot correct Inventory OnHand (MA) - " + lastError;
+					throw new AdempiereException(m_processMsg);
+				}
+			}
+		}
+
+		// Delete all generated transaction to clean up
+		final String allTransactionsSQL =  "M_InventoryLine_ID IN (SELECT M_InventoryLine_ID FROM M_InventoryLine WHERE M_Inventory_ID = ?)";
+
+		Query qTransactions = new Query(getCtx(),  MTransaction.Table_Name,  allTransactionsSQL, get_TrxName());
+		qTransactions.setParameters(getM_Inventory_ID());
+		List<MTransaction>transactions = qTransactions.list();
+
+		for(MTransaction transaction:transactions)
+			transaction.deleteEx(true);
+
+		//TODO i fact esistono?
+		MFactAcct.deleteEx(Table_ID, getM_Inventory_ID(), get_TrxName());
+		setPosted(false);
+
 		// After reActivate
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_REACTIVATE);
 		if (m_processMsg != null)
 			return false;
-		
-		return false;
+
+		setDocAction(DOCACTION_Complete);
+		setProcessed(false);
+		setIsApproved(false);
+
+		return true;
 	}	//	reActivateIt
 	
 	
@@ -1152,4 +1299,235 @@ public class MInventory extends X_M_Inventory implements DocAction
 			|| DOCSTATUS_Reversed.equals(ds);
 	}	//	isComplete
 	
+	//Aggiunta la riattivazione
+	@Override
+	public int customizeValidActions(String docStatus, Object processing, 
+			String orderType, String isSOTrx, int AD_Table_ID, String[] docAction, String[] options, int index)
+	{
+
+		if(docStatus.equals(DOCSTATUS_Completed))
+		{
+			options[index++] = ACTION_ReActivate;
+		}
+
+		return index;
+	}
+	
+	private void revertCostDetail(MCostDetail cd)
+	{
+		if (!isProcessed())
+		{
+			log.info("Not processed");
+			return;
+		}
+
+
+		//	get costing level for product
+		MAcctSchema as = MAcctSchema.get(getCtx(), cd.getC_AcctSchema_ID());
+		MProduct product = new MProduct(getCtx(), cd.getM_Product_ID(), get_TrxName());
+		String CostingLevel = product.getCostingLevel(as);
+		//	Org Element
+		int Org_ID = getAD_Org_ID();
+		int M_ASI_ID = cd.getM_AttributeSetInstance_ID();
+		if (MAcctSchema.COSTINGLEVEL_Client.equals(CostingLevel))
+		{
+			Org_ID = 0;
+			M_ASI_ID = 0;
+		}
+		else if (MAcctSchema.COSTINGLEVEL_Organization.equals(CostingLevel))
+			M_ASI_ID = 0;
+		else if (MAcctSchema.COSTINGLEVEL_BatchLot.equals(CostingLevel))
+			Org_ID = 0;
+
+
+		//	Create Material Cost elements
+		if (cd.getM_CostElement_ID() == 0)
+		{
+			MCostElement[] ces = MCostElement.getCostingMethods(cd);
+			for (int i = 0; i < ces.length; i++)
+			{
+				MCostElement ce = ces[i];
+				if (ce.isAverageInvoice() || ce.isAveragePO() || ce.isLifo() || ce.isFifo())
+				{
+					if (!product.isStocked())
+						continue;
+				}
+				createReverseInventory (as, Org_ID, cd.getM_Product_ID(), M_ASI_ID,
+						cd.getM_InventoryLine_ID(), cd.getM_CostElement_ID(), 
+						cd.getAmt().negate(), cd.getQty().negate(),
+						"Reverse",  cd.get_TrxName());
+			}
+		}	//	Material Cost elements
+		else
+		{
+			MCostElement ce = MCostElement.get(getCtx(), cd.getM_CostElement_ID());
+			if (ce.getCostingMethod() == null) 
+			{
+				MCostElement[] ces = MCostElement.getCostingMethods(cd);
+				for (MCostElement costingElement : ces)
+				{
+					if (costingElement.isAverageInvoice() || costingElement.isAveragePO() || costingElement.isLifo() || costingElement.isFifo())
+					{
+						if (!product.isStocked())
+							continue;
+					}
+					createReverseInventory (as, Org_ID, cd.getM_Product_ID(), M_ASI_ID,
+							cd.getM_InventoryLine_ID(), cd.getM_CostElement_ID(), 
+							cd.getAmt().negate(), cd.getQty().negate(),
+							"Reverse",  cd.get_TrxName());
+				}
+			}
+			else
+			{
+				if (ce.isAverageInvoice() || ce.isAveragePO() || ce.isLifo() || ce.isFifo())
+				{
+					if (product.isStocked())
+						createReverseInventory (as, Org_ID, cd.getM_Product_ID(), M_ASI_ID,
+								cd.getM_InventoryLine_ID(), cd.getM_CostElement_ID(), 
+								cd.getAmt().negate(), cd.getQty().negate(),
+								"Reverse",  cd.get_TrxName());
+				}
+				else
+				{
+					createReverseInventory (as, Org_ID, cd.getM_Product_ID(), M_ASI_ID,
+							cd.getM_InventoryLine_ID(), cd.getM_CostElement_ID(), 
+							cd.getAmt().negate(), cd.getQty().negate(),
+							"Reverse",  cd.get_TrxName());
+				}
+			}
+		}
+
+	}	//	revert cost detail
+
+	public static boolean createReverseInventory (MAcctSchema as, int AD_Org_ID, 
+			int M_Product_ID, int M_AttributeSetInstance_ID,
+			int M_InventoryLine_ID, int M_CostElement_ID, 
+			BigDecimal Amt, BigDecimal Qty,
+			String Description, String trxName)
+	{
+		MCostDetail cd = MCostDetail.get (as.getCtx(), "Description = 'Reverse' AND M_InventoryLine_ID=? AND Coalesce(M_CostElement_ID,0)="+M_CostElement_ID, 
+				M_InventoryLine_ID, M_AttributeSetInstance_ID, as.getC_AcctSchema_ID(), trxName);
+		//
+
+		if (cd == null)		//	createNew
+		{
+			cd = new MCostDetail (as, AD_Org_ID, 
+					M_Product_ID, M_AttributeSetInstance_ID, 
+					M_CostElement_ID, 
+					Amt, Qty, Description, trxName);
+			cd.setM_InventoryLine_ID(M_InventoryLine_ID);
+		}
+		else
+		{
+			if (cd.isProcessed())
+			{
+				// MZ Goodwill
+				// set deltaAmt=Amt, deltaQty=qty, and set Cost Detail for Amt and Qty	
+				cd.setDeltaAmt(Amt.subtract(cd.getAmt()));
+				cd.setDeltaQty(Qty.subtract(cd.getQty()));
+			}
+			else
+			{
+				cd.setDeltaAmt(BigDecimal.ZERO);
+				cd.setDeltaQty(BigDecimal.ZERO);
+				cd.setAmt(Amt);
+				cd.setQty(Qty);
+			}
+			if (cd.isDelta())
+			{
+				cd.setProcessed(false);
+				cd.setAmt(Amt);
+				cd.setQty(Qty);
+			}
+			// end MZ
+			else if (cd.isProcessed())
+				return true;	//	nothing to do
+		}
+		boolean ok = cd.save();
+		if (ok && !cd.isProcessed())
+		{
+			ok = cd.process();
+
+			MProduct product = (MProduct) cd.getM_Product();
+			if (cd.getM_CostElement_ID() == 0)
+			{
+				MCostElement[] ces = MCostElement.getCostingMethods(cd);
+				for (int i = 0; i < ces.length; i++)
+				{
+					MCostElement ce = ces[i];
+					if (ce.isAverageInvoice() || ce.isAveragePO() || ce.isLifo() || ce.isFifo())
+					{
+						if (!product.isStocked())
+							continue;
+					}
+					
+					MCost cost = MCost.get(product, M_AttributeSetInstance_ID, as, 
+							AD_Org_ID, ce.getM_CostElement_ID(), cd.get_TrxName());
+					if(Amt.signum()>0)
+						Amt = Amt.negate().multiply(new BigDecimal(2));
+					if(Qty.signum()>0)
+						Qty = Qty.negate().multiply(new BigDecimal(2));
+					cost.setCumulatedAmt(cost.getCumulatedAmt().add(Amt));
+					cost.setCumulatedQty(cost.getCumulatedQty().add(Qty));
+					cost.saveEx();
+				}
+			}	//	Material Cost elements
+			else
+			{
+				MCostElement ce = MCostElement.get(cd.getCtx(), cd.getM_CostElement_ID());
+				if (ce.getCostingMethod() == null) 
+				{
+					MCostElement[] ces = MCostElement.getCostingMethods(cd);
+					for (MCostElement costingElement : ces)
+					{
+						if (costingElement.isAverageInvoice() || costingElement.isAveragePO() || costingElement.isLifo() || costingElement.isFifo())
+						{
+							if (!product.isStocked())
+								continue;
+						}					
+						MCost cost = MCost.get(product, M_AttributeSetInstance_ID, as, 
+								AD_Org_ID, ce.getM_CostElement_ID(), cd.get_TrxName());
+						if(Amt.signum()>0)
+							Amt = Amt.negate().multiply(new BigDecimal(2));
+						if(Qty.signum()>0)
+							Qty = Qty.negate().multiply(new BigDecimal(2));
+						cost.setCumulatedAmt(cost.getCumulatedAmt().add(Amt));
+						cost.setCumulatedQty(cost.getCumulatedQty().add(Qty));
+						cost.saveEx();
+					}
+				}
+				else
+				{
+					if (ce.isAverageInvoice() || ce.isAveragePO() || ce.isLifo() || ce.isFifo())
+					{
+						if (product.isStocked())
+						{
+							MCost cost = MCost.get(product, M_AttributeSetInstance_ID, as, 
+									AD_Org_ID, ce.getM_CostElement_ID(), cd.get_TrxName());
+							if(Amt.signum()>0)
+								Amt = Amt.negate().multiply(new BigDecimal(2));
+							if(Qty.signum()>0)
+								Qty = Qty.negate().multiply(new BigDecimal(2));
+							cost.setCumulatedAmt(cost.getCumulatedAmt().add(Amt));
+							cost.setCumulatedQty(cost.getCumulatedQty().add(Qty));
+							cost.saveEx();
+						}
+					}
+					else
+					{
+						MCost cost = MCost.get(product, M_AttributeSetInstance_ID, as, 
+								AD_Org_ID, ce.getM_CostElement_ID(), cd.get_TrxName());
+						if(Amt.signum()>0)
+							Amt = Amt.negate().multiply(new BigDecimal(2));
+						if(Qty.signum()>0)
+							Qty = Qty.negate().multiply(new BigDecimal(2));
+						cost.setCumulatedAmt(cost.getCumulatedAmt().add(Amt));
+						cost.setCumulatedQty(cost.getCumulatedQty().add(Qty));
+						cost.saveEx();
+					}
+				}
+			}
+		}
+		return ok;
+	}
 }	//	MInventory
