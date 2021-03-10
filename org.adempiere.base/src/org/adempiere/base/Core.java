@@ -52,6 +52,9 @@ import org.compiere.util.PaymentExport;
 import org.compiere.util.ReplenishInterface;
 import org.compiere.util.WhereClauseAndParams;
 
+import it.idempiere.base.IAttributeSetInstanceUtil;
+import it.idempiere.base.IAttributeSetInstanceUtilFactory;
+
 /**
  * This is a facade class for the Service Locator.
  * It provides simple access to all core services.
@@ -582,4 +585,25 @@ public class Core {
 		
 		return cap;
 	}	
+	
+	/**
+	 * get AttributeSetInstanceUtil instance
+	 * 
+	 * @return instance of the IAttributeSetInstanceUtil or null
+	 */
+	public static IAttributeSetInstanceUtil getAttributeSetInstanceUtil() {
+
+		List<IAttributeSetInstanceUtilFactory> factoryList = 
+				Service.locator().list(IAttributeSetInstanceUtilFactory.class).getServices();
+		if (factoryList != null) {
+			for(IAttributeSetInstanceUtilFactory factory : factoryList) {
+				IAttributeSetInstanceUtil myAttributeSetInstanceUtil = factory.newAttributeSetInstanceUtil();
+				if (myAttributeSetInstanceUtil != null) {
+					return myAttributeSetInstanceUtil;
+				}
+			}
+		}
+
+		return null;
+	}
 }
