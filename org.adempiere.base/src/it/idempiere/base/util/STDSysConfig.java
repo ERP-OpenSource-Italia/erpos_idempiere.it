@@ -736,4 +736,12 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(COPY_DOCNO_FROM_ORDER_TO_INOUT, false, AD_Client_ID, AD_Org_ID);
 	}
 	
+	public static final String F3P_ACCT_NO_CLEARINGS_PAYMENTALLOCATION = "POST_PAYMENT_CLEARING";
+
+	public static boolean isAcctNoClearingsPaymentAlloc(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(F3P_ACCT_NO_CLEARINGS_PAYMENTALLOCATION, false, 
+				AD_Client_ID,AD_Org_ID);
+	}
+	
 }

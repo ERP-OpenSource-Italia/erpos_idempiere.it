@@ -43,6 +43,8 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *  Post Allocation Documents.
  *  <pre>
@@ -833,7 +835,9 @@ public class Doc_AllocationHdr extends Doc
 		// For Payment
 		BigDecimal paymentDifference = Env.ZERO;
 		StringBuilder descriptionPay = null;
-		if (payment != null && payment.getC_Payment_ID() > 0) {
+		if (payment != null && payment.getC_Payment_ID() > 0
+				&& STDSysConfig.isAcctNoClearingsPaymentAlloc(payment.getAD_Client_ID(), payment.getAD_Org_ID()) == false) 
+		{
 			List<Object> valuesPay = DB.getSQLValueObjectsEx(getTrxName(), sql.toString(),
 					MPayment.Table_ID, payment.getC_Payment_ID(), as.getC_AcctSchema_ID());
 			if (valuesPay != null) {
