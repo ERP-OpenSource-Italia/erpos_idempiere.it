@@ -36,6 +36,7 @@ import org.compiere.util.Msg;
 import it.idempiere.base.model.LineDocumentDiscount;
 import it.idempiere.base.util.ProductPricing2Support;
 import it.idempiere.base.util.STDSysConfig;
+import it.idempiere.base.util.STDUtils;
 
 /**
  *  Order Line Model.
@@ -1022,7 +1023,8 @@ public class MOrderLine extends X_C_OrderLine
 				return false;
 			}
 			//
-			if (!m_productPrice.isCalculated())
+			if (!m_productPrice.isCalculated() 
+					&& STDSysConfig.isPricelistOrderlineMandatory(getAD_Client_ID(), getAD_Org_ID()))
 			{
 				throw new ProductNotOnPriceListException(m_productPrice, getLine());
 			}
