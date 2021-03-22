@@ -205,6 +205,9 @@ public class MSysConfig extends X_AD_SysConfig
 
 	public static final String PAKIN_PROCESS_ALLCLIENT = "PAKIN_PROCESS_ALLCLIENT";
 	
+	//Login IP
+	public static final String LIT_LOGIN_BY_IP = "LIT_LOGIN_BY_IP";
+	
 	/**
 	 * 	Standard Constructor
 	 *	@param ctx context

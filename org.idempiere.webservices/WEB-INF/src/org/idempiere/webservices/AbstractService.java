@@ -113,7 +113,7 @@ public class AbstractService {
 			return ret;
 		
 		Login login = new Login(m_cs.getCtx());
-		KeyNamePair[] clients = login.getClients(loginRequest.getUser(), loginRequest.getPass(), ROLE_TYPES_WEBSERVICE);
+		KeyNamePair[] clients = login.getClients(loginRequest.getUser(), loginRequest.getPass(), ROLE_TYPES_WEBSERVICE, getHttpServletRequest().getRemoteAddr());
 		if (clients == null)
 			return "Error login - User invalid";
 		m_cs.setPassword(loginRequest.getPass());
