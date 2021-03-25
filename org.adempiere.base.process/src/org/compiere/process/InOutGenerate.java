@@ -48,6 +48,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 
+import it.idempiere.base.model.LITMBPartner;
 import it.idempiere.base.util.STDSysConfig;
 
 /**
@@ -272,18 +273,29 @@ public class InOutGenerate extends SvrProcess
 		ResultSet rs = null;
 		try
 		{
+			int C_BPartner_ID = -1;
+			String InvBacthRule = null;
 			rs = pstmt.executeQuery ();
 			while (rs.next ())		//	Order
 			{
 				MOrder order = new MOrder (getCtx(), rs, get_TrxName());
 				statusUpdate(Msg.getMsg(getCtx(), "Processing") + " " + order.getDocumentInfo());
 				
-				// F3P: ignore shipper on shipment consolidate ?
 				
+				if(C_BPartner_ID != order.getC_BPartner_ID())
+				{
+					C_BPartner_ID = order.getC_BPartner_ID();
+					InvBacthRule = DB.getSQLValueStringEx(get_TrxName(), "SELECT LIT_InvBacthRule FROM C_BPartner WHERE C_BPartner_ID = ? ", C_BPartner_ID);
+				}
+				
+				// F3P: ignore shipper on shipment consolidate ?
 				boolean	bIgnoreShipperOnConsolidate = STDSysConfig.isGenInOutIgnoreShipperOnConsolidate(order.getAD_Client_ID(), order.getAD_Org_ID());
 				
 				//	New Header different Shipper, Shipment Location
 				if (!p_ConsolidateDocument 
+						//LS
+						|| (InvBacthRule!= null  && InvBacthRule.equals(LITMBPartner.INVBACTHRULE_OneByOne))
+						//LS End
 					|| (m_shipment != null 
 					&& (m_shipment.getC_BPartner_Location_ID() != order.getC_BPartner_Location_ID()
 						|| (bIgnoreShipperOnConsolidate == false && m_shipment.getM_Shipper_ID() != order.getM_Shipper_ID() ))))
