@@ -1035,10 +1035,11 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		if (MWFNode.ACTION_WaitSleep.equals(action))
 		{
 			if (log.isLoggable(Level.FINE)) log.fine("Sleep:WaitTime=" + m_node.getWaitTime());
-			if (m_node.getWaitTime() == 0) // IDEMPIERE-73 Carlos Ruiz - globalqss
+			if (m_node.getWaitTime().signum() == 0) // IDEMPIERE-73 Carlos Ruiz - globalqss
 				return true;	//	done
 			Calendar cal = Calendar.getInstance();
-			cal.add(Calendar.MINUTE, m_node.getWaitTime());
+			cal.add(Calendar.MINUTE, m_node.getWaitTime().intValue());
+			cal.add(Calendar.SECOND, m_node.getWaitTime().remainder( BigDecimal.ONE ).multiply(new BigDecimal(60)).intValue());
 			setEndWaitTime(new Timestamp(cal.getTimeInMillis()));
 			return false;		//	not done
 		}

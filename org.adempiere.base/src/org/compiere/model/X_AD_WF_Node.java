@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.Properties;
+
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 
@@ -631,24 +632,24 @@ public class X_AD_WF_Node extends PO implements I_AD_WF_Node, I_Persistent
 		@param Duration 
 		Normal Duration in Duration Unit
 	  */
-	public void setDuration (int Duration)
+	public void setDuration (BigDecimal Duration)
 	{
-		set_Value (COLUMNNAME_Duration, Integer.valueOf(Duration));
+		set_Value (COLUMNNAME_Duration, Duration);
 	}
 
 	/** Get Duration.
 		@return Normal Duration in Duration Unit
 	  */
-	public int getDuration () 
+	public BigDecimal getDuration () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_Duration);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_Duration);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	/** Set Dynamic Priority Change.
-		@param DynPriorityChange 
+		@param DynPriorityChange 	
 		Change of priority when Activity is suspended waiting for user
 	  */
 	public void setDynPriorityChange (BigDecimal DynPriorityChange)
@@ -909,19 +910,19 @@ public class X_AD_WF_Node extends PO implements I_AD_WF_Node, I_Persistent
 
 	/** Set Moving Time.
 		@param MovingTime Moving Time	  */
-	public void setMovingTime (int MovingTime)
+	public void setMovingTime (BigDecimal MovingTime)
 	{
-		set_Value (COLUMNNAME_MovingTime, Integer.valueOf(MovingTime));
+		set_Value (COLUMNNAME_MovingTime, MovingTime);
 	}
 
 	/** Get Moving Time.
 		@return Moving Time	  */
-	public int getMovingTime () 
+	public BigDecimal getMovingTime () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_MovingTime);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_MovingTime);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	/** Set Name.
@@ -993,20 +994,20 @@ public class X_AD_WF_Node extends PO implements I_AD_WF_Node, I_Persistent
 		@param QueuingTime 
 		Queue time is the time a job waits at a work center before begin handled.
 	  */
-	public void setQueuingTime (int QueuingTime)
+	public void setQueuingTime (BigDecimal QueuingTime)
 	{
-		set_Value (COLUMNNAME_QueuingTime, Integer.valueOf(QueuingTime));
+		set_Value (COLUMNNAME_QueuingTime, QueuingTime);
 	}
 
 	/** Get Queuing Time.
 		@return Queue time is the time a job waits at a work center before begin handled.
 	  */
-	public int getQueuingTime () 
+	public BigDecimal getQueuingTime () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_QueuingTime);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_QueuingTime);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	public org.compiere.model.I_R_MailText getR_MailText() throws RuntimeException
@@ -1041,20 +1042,20 @@ public class X_AD_WF_Node extends PO implements I_AD_WF_Node, I_Persistent
 		@param SetupTime 
 		Setup time before starting Production
 	  */
-	public void setSetupTime (int SetupTime)
+	public void setSetupTime (BigDecimal SetupTime)
 	{
-		set_Value (COLUMNNAME_SetupTime, Integer.valueOf(SetupTime));
+		set_Value (COLUMNNAME_SetupTime, SetupTime);
 	}
 
 	/** Get Setup Time.
 		@return Setup time before starting Production
 	  */
-	public int getSetupTime () 
+	public BigDecimal getSetupTime () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_SetupTime);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_SetupTime);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	/** SplitElement AD_Reference_ID=301 */
@@ -1232,40 +1233,40 @@ public class X_AD_WF_Node extends PO implements I_AD_WF_Node, I_Persistent
 		@param WaitingTime 
 		Workflow Simulation Waiting time
 	  */
-	public void setWaitingTime (int WaitingTime)
+	public void setWaitingTime (BigDecimal WaitingTime)
 	{
-		set_Value (COLUMNNAME_WaitingTime, Integer.valueOf(WaitingTime));
+		set_Value (COLUMNNAME_WaitingTime,WaitingTime);
 	}
 
 	/** Get Waiting Time.
 		@return Workflow Simulation Waiting time
 	  */
-	public int getWaitingTime () 
+	public BigDecimal getWaitingTime () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_WaitingTime);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_WaitingTime);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	/** Set Wait Time.
 		@param WaitTime 
 		Time in minutes to wait (sleep)
 	  */
-	public void setWaitTime (int WaitTime)
+	public void setWaitTime (BigDecimal WaitTime)
 	{
-		set_Value (COLUMNNAME_WaitTime, Integer.valueOf(WaitTime));
+		set_Value (COLUMNNAME_WaitTime, WaitTime);
 	}
 
 	/** Get Wait Time.
 		@return Time in minutes to wait (sleep)
 	  */
-	public int getWaitTime () 
+	public BigDecimal getWaitTime () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_WaitTime);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_WaitTime);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	public org.compiere.model.I_AD_Workflow getWorkflow() throws RuntimeException
@@ -1300,20 +1301,20 @@ public class X_AD_WF_Node extends PO implements I_AD_WF_Node, I_Persistent
 		@param WorkingTime 
 		Workflow Simulation Execution Time
 	  */
-	public void setWorkingTime (int WorkingTime)
+	public void setWorkingTime (BigDecimal WorkingTime)
 	{
-		set_Value (COLUMNNAME_WorkingTime, Integer.valueOf(WorkingTime));
+		set_Value (COLUMNNAME_WorkingTime, WorkingTime);
 	}
 
 	/** Get Working Time.
 		@return Workflow Simulation Execution Time
 	  */
-	public int getWorkingTime () 
+	public BigDecimal getWorkingTime () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_WorkingTime);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_WorkingTime);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	/** Set X Position.

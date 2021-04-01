@@ -134,13 +134,13 @@ public class WorkflowElementHandler extends AbstractElementHandler {
 			if(getStringValue(atts, "Limit") != null)
 				m_Workflow.setLimit(Integer.valueOf(atts.getValue("Limit")));
 			if(getStringValue(atts, "Duration") != null)
-				m_Workflow.setDuration(Integer.valueOf(atts.getValue("Duration")));
+				m_Workflow.setDuration(new BigDecimal(atts.getValue("Duration")));
 			if(getStringValue(atts, "Cost") != null)
 				m_Workflow.setCost(new BigDecimal(atts.getValue("Cost")));
 			
-			m_Workflow.setWorkingTime(Integer.valueOf(atts
+			m_Workflow.setWorkingTime(new BigDecimal(atts
 					.getValue("WorkingTime")));
-			m_Workflow.setWaitingTime(Integer.valueOf(atts
+			m_Workflow.setWaitingTime(new BigDecimal(atts
 					.getValue("WaitingTime")));
 			m_Workflow.setPublishStatus(atts.getValue("PublishStatus"));
 			m_Workflow.setWorkflowType(atts.getValue("WorkflowType"));
