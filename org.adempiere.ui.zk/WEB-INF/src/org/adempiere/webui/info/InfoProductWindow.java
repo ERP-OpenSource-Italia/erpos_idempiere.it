@@ -1042,7 +1042,7 @@ public class InfoProductWindow extends InfoWindow {
 	}
 	
 	//Angelo Dabala' (genied): added tab to show availability by Locator
-	private void initLocatorTab(int  m_M_Warehouse_ID, int m_M_Product_ID)
+	protected void initLocatorTab(int  m_M_Warehouse_ID, int m_M_Product_ID)
 	{
 		boolean showWarehouse = (m_M_Warehouse_ID == 0);
 		//	Header
