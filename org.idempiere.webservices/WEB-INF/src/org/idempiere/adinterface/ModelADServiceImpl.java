@@ -401,6 +401,12 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 		try {
 			getCompiereService().connect();
 			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				log.log(Level.WARNING, req.toString());
+			}
+			
 			RunProcessResponseDocument resbadlogin = RunProcessResponseDocument.Factory.newInstance();
 			RunProcessResponse rbadlogin = resbadlogin.addNewRunProcessResponse();
 			ModelRunProcess modelRunProcess = req.getModelRunProcessRequest().getModelRunProcess();
@@ -435,6 +441,13 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			requestCtx.put(serviceType+"_Summary", response.getRunProcessResponse().getSummary());
 			return response;
 		} finally {
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				log.log(Level.WARNING, req.toString());
+			}
+			
 			getCompiereService().disconnect();
 		}
 	}
@@ -442,6 +455,12 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	public WindowTabDataDocument getList(ModelGetListRequestDocument req) {
 		try {
 			getCompiereService().connect();
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				log.log(Level.WARNING, req.toString());
+			}
 			
 			WindowTabDataDocument resdoc = WindowTabDataDocument.Factory.newInstance();
 			WindowTabData res = resdoc.addNewWindowTabData();
@@ -650,6 +669,13 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	
 			return resdoc;
 		} finally {
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				log.log(Level.WARNING, req.toString());
+			}
+			
 			getCompiereService().disconnect();
 		}
 	} // getList
