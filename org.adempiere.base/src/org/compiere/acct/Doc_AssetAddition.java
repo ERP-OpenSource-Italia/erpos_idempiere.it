@@ -217,7 +217,10 @@ public class Doc_AssetAddition extends Doc
 		}
 		else
 		{
-			pAssetAcct = getP_Expense_Acct(assetAdd.getM_Product_ID(), as);
+			if(assetAdd.getM_Product_ID() >0)
+				pAssetAcct = getP_Expense_Acct(assetAdd.getM_Product_ID(), as);
+			else if(getC_Charge_ID()>0)
+				pAssetAcct = MCharge.getAccount(assetAdd.getC_Charge_ID(), as, getTrxName());		
 		}
 		//
 		return pAssetAcct;
