@@ -175,7 +175,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().connect();
@@ -311,7 +312,6 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().disconnect();
@@ -404,7 +404,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
 			}
 			
 			RunProcessResponseDocument resbadlogin = RunProcessResponseDocument.Factory.newInstance();
@@ -445,7 +446,6 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().disconnect();
@@ -459,7 +459,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
 			}
 			
 			WindowTabDataDocument resdoc = WindowTabDataDocument.Factory.newInstance();
@@ -673,7 +674,6 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().disconnect();
@@ -687,7 +687,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().connect();
@@ -761,7 +762,6 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().disconnect();
@@ -782,7 +782,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().connect();
@@ -892,7 +893,6 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().disconnect();
@@ -907,7 +907,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().connect();
@@ -1111,7 +1112,6 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().disconnect();
@@ -1295,7 +1295,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().connect();
@@ -1406,7 +1407,6 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().disconnect();
@@ -1419,7 +1419,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().connect();
@@ -1519,7 +1520,6 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().disconnect();
@@ -1533,7 +1533,8 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().connect();
@@ -1702,7 +1703,6 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if(WSSysConfig.isWSLogON())
 			{
 				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
-				log.log(Level.WARNING, req.toString());
 			}
 			
 			getCompiereService().disconnect();

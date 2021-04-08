@@ -8,7 +8,15 @@ public class WSSysConfig
 	
 	public static boolean isWSLogON()
 	{
-		return MSysConfig.getBooleanValue(WS_LOG_ON, false);
+		return MSysConfig.getBooleanValue(WS_LOG_ON, false) || isWSLogDetailON();
+	}
+
+	
+	public static final String WS_LOG_DETAIL_ON = "WS_LOG_DETAIL_ON";
+	
+	public static boolean isWSLogDetailON()
+	{
+		return MSysConfig.getBooleanValue(WS_LOG_DETAIL_ON, false);
 	}
 
 }
