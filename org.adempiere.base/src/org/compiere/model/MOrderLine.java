@@ -33,6 +33,7 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.LITMOrderLine;
 import it.idempiere.base.model.LineDocumentDiscount;
 import it.idempiere.base.util.ProductPricing2Support;
 import it.idempiere.base.util.STDSysConfig;
@@ -622,10 +623,14 @@ public class MOrderLine extends X_C_OrderLine
 			
 			if(tryUndoRes && getParent().getDocStatus().equals(MOrder.DOCSTATUS_InProgress)) 
 			{
-				if(is_ValueChanged(COLUMNNAME_M_Product_ID))
+				if(is_ValueChanged(COLUMNNAME_M_Product_ID) || is_ValueChanged(LITMOrderLine.COLUMNNAME_BOM_Product_ID))
 				{
 					int M_Product_ID = getM_Product_ID(),
 							oldM_Product_ID = get_ValueOldAsInt(COLUMNNAME_M_Product_ID);
+					if(oldM_Product_ID <= 0)
+					{
+						oldM_Product_ID = get_ValueOldAsInt(LITMOrderLine.COLUMNNAME_BOM_Product_ID);
+					}
 					
 					if(oldM_Product_ID > 0)
 					{
