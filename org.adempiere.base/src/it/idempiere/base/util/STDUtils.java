@@ -13,6 +13,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.exceptions.DBException;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MAttachment;
 import org.compiere.model.MClientInfo;
@@ -647,5 +648,54 @@ public class STDUtils {
 	        }
 	     }
 	     return sb.toString();
+	  }
+	  
+	  public static String getSQLValueBuilderToString (String trxName, String sql, Object... params)
+	  {
+		StringBuilder retValue = new StringBuilder();
+    	PreparedStatement pstmt = null;
+    	ResultSet rs = null;
+    	
+    	try
+    	{
+    		pstmt = DB.prepareStatement(sql, trxName);
+    		DB.setParameters(pstmt, params);
+    		rs = pstmt.executeQuery();
+    		while (rs.next())
+    		{
+    			retValue.append(rs.getString(1)).append("\n");
+    		}
+    	}
+    	catch (SQLException e)
+    	{
+    		throw new DBException(e, sql);
+    	}
+    	finally
+    	{
+    		DB.close(rs, pstmt);
+    		rs = null; pstmt = null;
+    	}
+    	
+    	return retValue.toString();
+	  }
+	  
+	  public static void getSQLValueBuilderToStringEx (String trxName, String sql, Object... params)
+	  {
+		  String returnMsg = getSQLValueBuilderToString(trxName, sql, params);
+		  
+		  if(returnMsg != null && Util.isEmpty(returnMsg, true) == false)
+		  {
+			  throw new AdempiereException(returnMsg);
+		  }
+	  }
+	  
+	  public static void getSQLValueBuilderToStringExHeader (String trxName, String exceptionHeader, String sql, Object... params)
+	  {
+		  String returnMsg = getSQLValueBuilderToString(trxName, sql, params);
+		  
+		  if(returnMsg != null && Util.isEmpty(returnMsg, true) == false)
+		  {
+			  throw new AdempiereException(exceptionHeader+"\n"+returnMsg);
+		  }
 	  }
 }
