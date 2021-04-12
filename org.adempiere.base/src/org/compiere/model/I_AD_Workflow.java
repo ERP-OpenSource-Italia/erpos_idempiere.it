@@ -255,12 +255,12 @@ public interface I_AD_Workflow
 	/** Set Duration.
 	  * Normal Duration in Duration Unit
 	  */
-	public void setDuration (int Duration);
+	public void setDuration (BigDecimal Duration);
 
 	/** Get Duration.
 	  * Normal Duration in Duration Unit
 	  */
-	public int getDuration();
+	public BigDecimal getDuration();
 
     /** Column name DurationUnit */
     public static final String COLUMNNAME_DurationUnit = "DurationUnit";
@@ -372,10 +372,10 @@ public interface I_AD_Workflow
     public static final String COLUMNNAME_MovingTime = "MovingTime";
 
 	/** Set Moving Time	  */
-	public void setMovingTime (int MovingTime);
+	public void setMovingTime (BigDecimal MovingTime);
 
 	/** Get Moving Time	  */
-	public int getMovingTime();
+	public BigDecimal getMovingTime();
 
     /** Column name Name */
     public static final String COLUMNNAME_Name = "Name";
@@ -453,12 +453,12 @@ public interface I_AD_Workflow
 	/** Set Queuing Time.
 	  * Queue time is the time a job waits at a work center before begin handled.
 	  */
-	public void setQueuingTime (int QueuingTime);
+	public void setQueuingTime (BigDecimal QueuingTime);
 
 	/** Get Queuing Time.
 	  * Queue time is the time a job waits at a work center before begin handled.
 	  */
-	public int getQueuingTime();
+	public BigDecimal getQueuingTime();
 
     /** Column name SetupTime */
     public static final String COLUMNNAME_SetupTime = "SetupTime";
@@ -466,12 +466,12 @@ public interface I_AD_Workflow
 	/** Set Setup Time.
 	  * Setup time before starting Production
 	  */
-	public void setSetupTime (int SetupTime);
+	public void setSetupTime (BigDecimal SetupTime);
 
 	/** Get Setup Time.
 	  * Setup time before starting Production
 	  */
-	public int getSetupTime();
+	public BigDecimal getSetupTime();
 
     /** Column name S_Resource_ID */
     public static final String COLUMNNAME_S_Resource_ID = "S_Resource_ID";
@@ -584,12 +584,12 @@ public interface I_AD_Workflow
 	/** Set Waiting Time.
 	  * Workflow Simulation Waiting time
 	  */
-	public void setWaitingTime (int WaitingTime);
+	public void setWaitingTime (BigDecimal WaitingTime);
 
 	/** Get Waiting Time.
 	  * Workflow Simulation Waiting time
 	  */
-	public int getWaitingTime();
+	public BigDecimal getWaitingTime();
 
     /** Column name WorkflowType */
     public static final String COLUMNNAME_WorkflowType = "WorkflowType";
@@ -610,12 +610,12 @@ public interface I_AD_Workflow
 	/** Set Working Time.
 	  * Workflow Simulation Execution Time
 	  */
-	public void setWorkingTime (int WorkingTime);
+	public void setWorkingTime (BigDecimal WorkingTime);
 
 	/** Get Working Time.
 	  * Workflow Simulation Execution Time
 	  */
-	public int getWorkingTime();
+	public BigDecimal getWorkingTime();
 
     /** Column name Yield */
     public static final String COLUMNNAME_Yield = "Yield";

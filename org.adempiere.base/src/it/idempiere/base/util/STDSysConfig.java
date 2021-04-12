@@ -744,4 +744,11 @@ public class STDSysConfig
 				AD_Client_ID,AD_Org_ID);
 	}
 	
+	public static final String LIT_PRICELIST_ORDERLINE_MANDATORY = "LIT_PRICELIST_ORDERLINE_MANDATORY";
+
+	public static boolean isPricelistOrderlineMandatory(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LIT_PRICELIST_ORDERLINE_MANDATORY, true,  AD_Client_ID,AD_Org_ID);
+	}
+	
 }

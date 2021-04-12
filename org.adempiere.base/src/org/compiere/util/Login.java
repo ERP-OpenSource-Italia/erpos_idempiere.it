@@ -48,6 +48,8 @@ import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.Query;
 
 
+
+
 /**
  *	Login Manager
  *	
@@ -1244,7 +1246,7 @@ public class Login
 	}	//	getPrincipal
 
 	public KeyNamePair[] getClients(String app_user, String app_pwd) {
-		return getClients(app_user, app_pwd, null);
+		return getClients(app_user, app_pwd, null, null);
 	}
 
 	/**
@@ -1255,7 +1257,7 @@ public class Login
 	 *  @param roleTypes comma separated list of the role types allowed to login (NULL can be added)
 	 *  @return client array or null if in error.
 	 */
-	public KeyNamePair[] getClients(String app_user, String app_pwd, String roleTypes) {
+	public KeyNamePair[] getClients(String app_user, String app_pwd, String roleTypes, String sIPAddress) {
 		if (log.isLoggable(Level.INFO)) log.info("User=" + app_user);
 
 		if (Util.isEmpty(app_user))
@@ -1449,29 +1451,39 @@ public class Login
 		}
 		if (clientList.size() > 0)
 			authenticated=true;
-
+		
+		
 		if (authenticated) {
-			if (Ini.isClient())
-			{
-				if (MSystem.isSwingRememberUserAllowed())
-					Ini.setProperty(Ini.P_UID, app_user);
-				else
-					Ini.setProperty(Ini.P_UID, "");
-				if (Ini.isPropertyBool(Ini.P_STORE_PWD) && MSystem.isSwingRememberPasswordAllowed())
-					Ini.setProperty(Ini.P_PWD, app_pwd);
-
-			}
-			retValue = new KeyNamePair[clientList.size()];
-			clientList.toArray(retValue);
-			if (log.isLoggable(Level.FINE)) log.fine("User=" + app_user + " - roles #" + retValue.length);
 			
-			for (MUser user : users) 
+			//CHECK IP se sysconfig Y
+			if(checkAccesFromIP(users, sIPAddress))
 			{
-				user.setFailedLoginCount(0);
-				user.setDateLastLogin(new Timestamp(now));
-				Env.setContext(Env.getCtx(), "#AD_Client_ID", user.getAD_Client_ID());
-				if (!user.save())
-					log.severe("Failed to update user record with date last login (" + user.getName() + " / clientID = " + user.getAD_Client_ID() + ")");
+				if (Ini.isClient())
+				{
+					if (MSystem.isSwingRememberUserAllowed())
+						Ini.setProperty(Ini.P_UID, app_user);
+					else
+						Ini.setProperty(Ini.P_UID, "");
+					if (Ini.isPropertyBool(Ini.P_STORE_PWD) && MSystem.isSwingRememberPasswordAllowed())
+						Ini.setProperty(Ini.P_PWD, app_pwd);
+
+				}
+				retValue = new KeyNamePair[clientList.size()];
+				clientList.toArray(retValue);
+				if (log.isLoggable(Level.FINE)) log.fine("User=" + app_user + " - roles #" + retValue.length);
+
+				for (MUser user : users) 
+				{
+					user.setFailedLoginCount(0);
+					user.setDateLastLogin(new Timestamp(now));
+					Env.setContext(Env.getCtx(), "#AD_Client_ID", user.getAD_Client_ID());
+					if (!user.save())
+						log.severe("Failed to update user record with date last login (" + user.getName() + " / clientID = " + user.getAD_Client_ID() + ")");
+				}
+			}
+			else 
+			{
+				loginErrMsg = Msg.getMsg(m_ctx,"FailedLogin", true);
 			}
 		}
 		else if (validButLocked)
@@ -1531,6 +1543,84 @@ public class Login
 			}
 		}
 		return retValue;
+	}
+
+	private static final String sqlOK = "SELECT lit_checkIPRange(?,IP_Address,IP_Address_To) FROM AD_UserLogin "
+					+ " WHERE AD_User_ID = ? AND isActive='Y' ",
+			sqlKO = "SELECT lit_checkIPRange(?,IP_Address,IP_Address_To) FROM AD_UserLogin "
+					+ " WHERE AD_User_ID <> ? AND isActive='Y' AND lit_checkIPRange(?,IP_Address,IP_Address_To) = 'Y' ";
+	private boolean checkAccesFromIP(List<MUser> users, String sIPAddress) {
+		boolean addressOk = false;
+		if(MSysConfig.getBooleanValue(MSysConfig.LIT_LOGIN_BY_IP, false) 
+				&& sIPAddress != null)
+		{
+			PreparedStatement st = null;
+			ResultSet rs = null;
+			try
+			{
+				boolean param = false;
+				for(MUser user : users)
+				{
+					st = DB.prepareStatement(sqlOK,null);
+					st.setString(1, sIPAddress);
+					st.setInt(2, user.getAD_User_ID());
+					
+					rs= st.executeQuery();
+					while(rs.next())
+					{
+						param = true;
+						if(rs.getString(1).equalsIgnoreCase("Y"))
+						{
+							addressOk = true;
+							break;
+						}
+					}					
+					DB.close(rs, st);
+					if(addressOk == true)
+						break;
+				}
+
+				//LS: Non c'è una parametrizzazione per l'utente controllo gli altri
+				if(param == false) 
+				{
+					addressOk = true;
+
+					for(MUser user : users)
+					{
+						st = DB.prepareStatement(sqlKO,null);
+						st.setString(1, sIPAddress);
+						st.setInt(2, user.getAD_User_ID());
+						st.setString(3, sIPAddress);
+
+						rs= st.executeQuery();
+						while(rs.next())
+						{
+							if(rs.getString(1).equalsIgnoreCase("Y"))
+							{
+								addressOk = false;
+								break;
+							}
+						}					
+						DB.close(rs, st);
+						if(addressOk == false)
+							break;
+					}	
+				}
+			}
+			catch(SQLException e)
+			{
+				addressOk = false;
+			}
+			finally {
+				DB.close(rs, st);
+			}
+		}
+		else
+		{
+			addressOk = true;
+		}
+		
+		return addressOk;
 	}
 
 	public KeyNamePair[] getRoles(String app_user, KeyNamePair client) {

@@ -577,7 +577,7 @@ public class LoginPanel extends Window implements EventListener<Event>
 
         Session currSess = Executions.getCurrent().getDesktop().getSession();
         
-        KeyNamePair clientsKNPairs[] = login.getClients(userId, userPassword, ROLE_TYPES_WEBUI);
+        KeyNamePair clientsKNPairs[] = login.getClients(userId, userPassword, ROLE_TYPES_WEBUI, Executions.getCurrent().getRemoteAddr());
         
         if (clientsKNPairs == null || clientsKNPairs.length == 0)
         {

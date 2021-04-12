@@ -872,7 +872,7 @@ public final class ALogin extends CDialog
 		KeyNamePair[] clients = null;
 		try 
 		{
-			clients = m_login.getClients(m_user, new String(m_pwd), ROLE_TYPES_SWING);
+			clients = m_login.getClients(m_user, new String(m_pwd), ROLE_TYPES_SWING, null);
 			if (clients == null || clients.length == 0)
 			{
 				String loginErrMsg = m_login.getLoginErrMsg();

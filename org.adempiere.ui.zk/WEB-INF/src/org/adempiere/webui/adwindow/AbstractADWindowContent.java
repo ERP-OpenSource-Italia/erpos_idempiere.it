@@ -2517,20 +2517,40 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 			{
 				if (result)
 				{
-		        	//error will be catch in the dataStatusChanged event
-		            adTabbox.getSelectedGridTab().dataDelete();
-		            adTabbox.getSelectedGridTab().dataRefreshAll(true, true);
-		    		adTabbox.getSelectedGridTab().refreshParentTabs();
-
-		            adTabbox.getSelectedTabpanel().dynamicDisplay(0);
-		            focusToActivePanel();
-		            MRecentItem.publishChangedEvent(Env.getAD_User_ID(ctx));		            
+					PO po = adTabbox.getSelectedGridTab().getMTable().getPO(adTabbox.getSelectedGridTab().getCurrentRow());
+					if(po != null) // If null we have an error, skip gathering feedbacks
+					{//GatherFeedback  				
+						String gatherFor = IEventTopics.PO_BEFORE_DELETE;
+						final FeedbackContainer container = FeedbackContainer.gatherFeedback(po, gatherFor);
+						final UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getComponent(), container,false, new Callback<UIFeedbackNotifier>()
+						{
+							public void onCallback(UIFeedbackNotifier notifier) {
+								boolean bSave = onDeleteCallback1(postCallback);
+								if(bSave)
+									container.saveFeedbackRequest(adTabbox.getSelectedGridTab().getRecord_ID());
+							};
+						});
+						notifier.processFeedback();
+					}
 				}
-				if (postCallback != null)
-					postCallback.onCallback(result);
-	        }
+			}
 		});
     }
+    
+	private boolean onDeleteCallback1(final Callback<Boolean> postCallback) {
+		boolean retValue = adTabbox.getSelectedGridTab().dataDelete();
+		adTabbox.getSelectedGridTab().dataRefreshAll(true, true);
+		adTabbox.getSelectedGridTab().refreshParentTabs();
+
+		adTabbox.getSelectedTabpanel().dynamicDisplay(0);
+		focusToActivePanel();
+		MRecentItem.publishChangedEvent(Env.getAD_User_ID(ctx));
+
+		if (postCallback != null)
+			postCallback.onCallback(true);
+		return retValue;
+	}
+
 
     // Elaine 2008/12/01
     private void onDeleteSelected(final Callback<Boolean> postCallback)
