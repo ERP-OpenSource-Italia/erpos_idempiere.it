@@ -1154,9 +1154,14 @@ public class InOutGenerate extends SvrProcess
 	
 	// F3P: split creation in overridabile function
 	
+	protected MInOut buildMInOut(MOrder order, Timestamp movementDate)
+	{
+		return new MInOut (order, 0, movementDate);
+	}
+	
 	protected MInOut createShipment(MOrder order, MOrderLine orderLine, Timestamp movementDate)
 	{
-		MInOut shipment = new MInOut (order, 0, movementDate);
+		MInOut shipment = buildMInOut(order, movementDate);
 				
 		shipment.setM_Warehouse_ID(orderLine.getM_Warehouse_ID());	//	sets Org too
 		if (order.getC_BPartner_ID() != orderLine.getC_BPartner_ID())
@@ -1193,10 +1198,10 @@ public class InOutGenerate extends SvrProcess
 		 * 
 		 */
 		
-		protected static final long serialVersionUID = -7385140481126599352L;
-		protected MOrderLine	orderLine = null;
-		protected BigDecimal	qty = null;
-		protected Map<String, Object> additionalData = new HashMap<>(); 
+		public static final long serialVersionUID = -7385140481126599352L;
+		public MOrderLine	orderLine = null;
+		public BigDecimal	qty = null;
+		public Map<String, Object> additionalData = new HashMap<>(); 
 		
 		public SelectionLineOrderLineWrapper(MOrderLine line)
 		{
