@@ -189,6 +189,19 @@ public class MInOutLine extends X_M_InOutLine
 	 */
 	public void setOrderLine (MOrderLine oLine, int M_Locator_ID, BigDecimal Qty)
 	{
+		setOrderLine(oLine, M_Locator_ID, Qty, false);
+	}	//	setOrderLine
+
+	/**
+	 * 	Set Order Line.
+	 * 	Does not set Quantity!
+	 *	@param oLine order line
+	 *	@param M_Locator_ID locator
+	 * 	@param Qty used only to find suitable locator
+	 *  @param Force locator on inoutline even if prd is not item
+	 */
+	public void setOrderLine (MOrderLine oLine, int M_Locator_ID, BigDecimal Qty, boolean forceLocatorNoItem)
+	{
 		// F3P: keep cache
 		m_orderLine = oLine;
 		
@@ -207,7 +220,7 @@ public class MInOutLine extends X_M_InOutLine
 			setM_Product_ID(oLine.getM_Product_ID());
 			setM_AttributeSetInstance_ID(oLine.getM_AttributeSetInstance_ID());
 			//
-			if (product.isItem())
+			if (product.isItem() || forceLocatorNoItem)
 			{
 				if (M_Locator_ID == 0)
 					setM_Locator_ID(Qty);	//	requires warehouse, product, asi
@@ -230,7 +243,7 @@ public class MInOutLine extends X_M_InOutLine
 		setUser1_ID(oLine.getUser1_ID());
 		setUser2_ID(oLine.getUser2_ID());
 	}	//	setOrderLine
-
+	
 	/**
 	 * 	Set Invoice Line.
 	 * 	Does not set Quantity!
