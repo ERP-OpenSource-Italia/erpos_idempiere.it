@@ -751,4 +751,10 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LIT_PRICELIST_ORDERLINE_MANDATORY, true,  AD_Client_ID,AD_Org_ID);
 	}
 	
+	public static final String LIT_REQ_PO_CREATE_PREFER_BP_PRICELIST = "LIT_REQ_PO_CREATE_PREFER_BP_PRICELIST";
+
+	public static boolean isReqPOCreatePreferBPPriceList(int AD_Client_ID,int AD_Org_ID) {
+		return MSysConfig.getBooleanValue(LIT_REQ_PO_CREATE_PREFER_BP_PRICELIST, false,  AD_Client_ID,AD_Org_ID);
+	}
+	
 }
