@@ -757,4 +757,11 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LIT_REQ_PO_CREATE_PREFER_BP_PRICELIST, false,  AD_Client_ID,AD_Org_ID);
 	}
 	
+	public static final String LIT_DESCRIPTIONLINE_SET_LINENETAMT_0 = "LIT_DESCRIPTIONLINE_SET_LINENETAMT_0";
+
+	public static boolean isDescriptionLineWithLineNetAmt0(int AD_Client_ID, int AD_Org_ID) {
+		return MSysConfig.getBooleanValue(LIT_DESCRIPTIONLINE_SET_LINENETAMT_0, false,AD_Client_ID,AD_Org_ID);
+
+	}
+	
 }

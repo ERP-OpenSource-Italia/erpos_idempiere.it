@@ -433,6 +433,13 @@ public class MOrderLine extends X_C_OrderLine
 	 */
 	public void setLineNetAmt ()
 	{
+		if(isDescription() && STDSysConfig.isDescriptionLineWithLineNetAmt0(getAD_Client_ID(), getAD_Org_ID()))
+		{
+			super.setLineNetAmt (Env.ZERO);
+		}
+		else
+		{
+		
 		BigDecimal bd = getPriceActual().multiply(getQtyOrdered()); 
 		int precision = getPrecision();
 		if (bd.scale() > precision)
@@ -448,6 +455,7 @@ public class MOrderLine extends X_C_OrderLine
 		}
 		
 		super.setLineNetAmt (bd);
+		}
 	}	//	setLineNetAmt
 	
 	/**
@@ -1129,6 +1137,28 @@ public class MOrderLine extends X_C_OrderLine
 		
 		return true;
 	}	//	beforeSave
+	
+	protected boolean validationLineNetAmt()
+	{
+		/*int AD_Rule_ID = STDSysConfig.getValidationAmt(getAD_Client_ID(),getAD_Org_ID());
+		
+		if(AD_Rule_ID <= 0 )
+			return true;
+		else
+		{
+			MRule mRule = MRule.get(getCtx(), AD_Rule_ID);
+			
+			String sql = mRule.getScript();
+			
+			String sqlParsed = Env.parseVariable(sql, this, get_TrxName(),true);
+
+			String results = DB.getSQLValueString(get_TrxName(), sqlParsed);
+			if(results != null && results.isBlank() == false && results.equals("N"))
+				return false;
+		}*/
+			
+		return true;
+	}
 
 	
 	/**

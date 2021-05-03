@@ -536,22 +536,29 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	 */
 	public void setLineNetAmt ()
 	{
-		//	Calculations & Rounding
-		BigDecimal bd = getPriceActual().multiply(getQtyInvoiced());
-		int precision = getPrecision();
-		if (bd.scale() > precision)
-			bd = bd.setScale(precision, RoundingMode.HALF_UP);
-		
-		// F3P: doc discount
-		
-		BigDecimal bdDocDiscount = LineDocumentDiscount.getLIT_LineDocDiscVal(this);
-		
-		if(bdDocDiscount != null)
+		if(isDescription() && STDSysConfig.isDescriptionLineWithLineNetAmt0(getAD_Client_ID(), getAD_Org_ID()))
 		{
-			bd = bd.subtract(bdDocDiscount);
+			super.setLineNetAmt (Env.ZERO);
 		}
-		
-		super.setLineNetAmt (bd);
+		else
+		{
+			//	Calculations & Rounding
+			BigDecimal bd = getPriceActual().multiply(getQtyInvoiced());
+			int precision = getPrecision();
+			if (bd.scale() > precision)
+				bd = bd.setScale(precision, RoundingMode.HALF_UP);
+			
+			// F3P: doc discount
+			
+			BigDecimal bdDocDiscount = LineDocumentDiscount.getLIT_LineDocDiscVal(this);
+			
+			if(bdDocDiscount != null)
+			{
+				bd = bd.subtract(bdDocDiscount);
+			}
+			
+			super.setLineNetAmt (bd);
+		}
 	}	//	setLineNetAmt
 	/**
 	 * 	Get Charge
