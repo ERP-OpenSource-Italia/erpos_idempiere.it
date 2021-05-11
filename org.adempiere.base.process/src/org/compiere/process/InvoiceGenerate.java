@@ -516,7 +516,16 @@ public class InvoiceGenerate extends SvrProcess
 		//F3P end
 		
 		if (!line.save())
+			
+		try
+		{
+			line.saveEx();
+		}
+		catch (Exception e) 
+		{
+			addLog(e.getMessage());
 			throw new IllegalStateException("Could not create Invoice Line (o)");
+		}
 		
 		//F3P
 		if(p_overrideLineNo)
