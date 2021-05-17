@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Level;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -42,6 +43,7 @@ import org.compiere.model.Query;
 import org.compiere.model.X_WS_WebServiceMethod;
 import org.compiere.model.X_WS_WebServiceTypeAccess;
 import org.compiere.util.CCache;
+import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
@@ -55,6 +57,7 @@ import org.idempiere.adInterface.x10.OutputFields;
 import org.idempiere.adInterface.x10.StandardResponse;
 import org.idempiere.adInterface.x10.StandardResponseDocument;
 import org.idempiere.adinterface.CompiereService;
+import org.idempiere.adinterface.WSSysConfig;
 import org.idempiere.webservices.fault.IdempiereServiceFault;
 
 import it.idempiere.base.util.STDSysConfig;
@@ -67,6 +70,9 @@ import it.idempiere.base.util.STDSysConfig;
  *
  */
 public class AbstractService {
+	
+	private static CLogger	log = CLogger.getCLogger(AbstractService.class);
+
 
 	public static final String ROLE_TYPES_WEBSERVICE = "NULL,WS";  //webservice+null
 	private static final String ROLE_ACCESS_SQL = "SELECT IsActive FROM WS_WebServiceTypeAccess WHERE AD_Role_ID IN ("
@@ -111,6 +117,11 @@ public class AbstractService {
 		String ret =invokeLoginValidator(loginRequest, m_cs.getCtx(), null, IWSValidator.TIMING_BEFORE_LOGIN);
 		if(ret!=null && ret.length()>0)
 			return ret;
+		
+		if(WSSysConfig.isWSLogON())
+		{
+			log.log(Level.WARNING, "LSWS LOGIN REQUEST:"+loginRequest.getStage());
+		}
 		
 		Login login = new Login(m_cs.getCtx());
 		KeyNamePair[] clients = login.getClients(loginRequest.getUser(), loginRequest.getPass(), ROLE_TYPES_WEBSERVICE, getHttpServletRequest().getRemoteAddr());
