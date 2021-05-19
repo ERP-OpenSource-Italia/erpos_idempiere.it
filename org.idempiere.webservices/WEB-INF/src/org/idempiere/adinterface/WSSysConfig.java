@@ -18,5 +18,11 @@ public class WSSysConfig
 	{
 		return MSysConfig.getBooleanValue(WS_LOG_DETAIL_ON, false);
 	}
+	
+	public static final String WS_LOGIN_EXPIRE_MINUTE = "WS_LOGIN_EXPIRE_MINUTE";
+
+	public static int getExpiryMinutesCustom() {
+		return MSysConfig.getIntValue(WS_LOGIN_EXPIRE_MINUTE, -2);
+	}
 
 }

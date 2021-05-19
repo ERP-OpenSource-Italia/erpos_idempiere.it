@@ -118,17 +118,22 @@ public class AbstractService {
 		if(ret!=null && ret.length()>0)
 			return ret;
 		
-		if(WSSysConfig.isWSLogON())
-		{
-			log.log(Level.WARNING, "LSWS LOGIN REQUEST:"+loginRequest.getStage());
-		}
-		
 		Login login = new Login(m_cs.getCtx());
 		KeyNamePair[] clients = login.getClients(loginRequest.getUser(), loginRequest.getPass(), ROLE_TYPES_WEBSERVICE, getHttpServletRequest().getRemoteAddr());
 		if (clients == null)
 			return "Error login - User invalid";
 		m_cs.setPassword(loginRequest.getPass());
-		m_cs.setExpiryMinutes(loginRequest.getStage());
+		
+		int expiryMinutes = WSSysConfig.getExpiryMinutesCustom();
+		if( expiryMinutes != -2)
+			expiryMinutes = loginRequest.getStage();
+		
+		if(WSSysConfig.isWSLogON())
+		{
+			log.log(Level.WARNING, "LSWS LOGIN REQUEST:"+expiryMinutes);
+		}
+		
+		m_cs.setExpiryMinutes(expiryMinutes);
 		m_cs.setIPAddress(getHttpServletRequest().getRemoteAddr());
 
 		boolean okclient = false;
