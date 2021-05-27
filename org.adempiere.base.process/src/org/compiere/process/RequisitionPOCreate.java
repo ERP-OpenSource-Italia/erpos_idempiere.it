@@ -486,7 +486,7 @@ public class RequisitionPOCreate extends SvrProcess
 		
 		if(STDSysConfig.isReqPOCreatePreferBPPriceList(rLine.getAD_Client_ID(),rLine.getAD_Org_ID()))
 		{
-			M_PriceList_ID = m_bpartner.getM_PriceList_ID();
+			M_PriceList_ID = m_bpartner.getPO_PriceList_ID();
 			
 			if(M_PriceList_ID <= 0)
 			{
