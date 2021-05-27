@@ -308,6 +308,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		}
 		
 		pageSize = MSysConfig.getIntValue(MSysConfig.ZK_PAGING_SIZE, DEFAULT_PAGE_SIZE, Env.getAD_Client_ID(Env.getCtx()));
+		if (infoWindow != null && infoWindow.getPagingSize() > 0)
+			pageSize = infoWindow.getPagingSize();
 		
 		if(infoWindow != null)
 			isImmediateSaveSelection = LITMInfoWindow.isSaveSelectionImmediate(infoWindow);

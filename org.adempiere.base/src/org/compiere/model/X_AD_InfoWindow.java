@@ -174,6 +174,24 @@ public class X_AD_InfoWindow extends PO implements I_AD_InfoWindow, I_Persistent
 			 return 0;
 		return ii.intValue();
 	}
+	
+	/** Set Paging Size.
+		@param PagingSize Paging Size	  
+	 */
+	public void setPagingSize (int PagingSize)
+	{
+		set_Value (COLUMNNAME_PagingSize, Integer.valueOf(PagingSize));
+	}
+	
+	/** Get Paging Size.
+		@return Paging Size	  */
+	public int getPagingSize () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_PagingSize);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
 
 	/** Set Description.
 		@param Description 
