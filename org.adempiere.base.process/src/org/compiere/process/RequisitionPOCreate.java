@@ -455,6 +455,7 @@ public class RequisitionPOCreate extends SvrProcess
 
 		//	Update Order Line
 		m_orderLine.setQty(m_orderLine.getQtyOrdered().add(rLine.getQty()));
+		m_orderLine.setPrice();
 		//	Update Requisition Line
 		rLine.setC_OrderLine_ID(m_orderLine.getC_OrderLine_ID());
 		rLine.saveEx();
