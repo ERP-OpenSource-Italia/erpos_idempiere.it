@@ -832,7 +832,7 @@ public class MWorkflow extends X_AD_Workflow
 		//
 		
 		//
-		if (getWorkflowType().equals(MWorkflow.WORKFLOWTYPE_Manufacturing))
+		if (MWorkflow.WORKFLOWTYPE_Manufacturing.equals(getWorkflowType()))
 		{
 			this.setAD_Table_ID(0);
 		}
