@@ -104,7 +104,7 @@ public class CalloutInventory extends CalloutEngine
 		BigDecimal bd = null;
 		if (MDocType.DOCSUBTYPEINV_PhysicalInventory.equals(docSubTypeInv)) {
 			try {
-				bd = setQtyBook(M_AttributeSetInstance_ID, M_Product_ID, M_Locator_ID);
+				bd = setQtyBook(M_AttributeSetInstance_ID, M_Product_ID, M_Locator_ID,doctypeid);
 				mTab.setValue("QtyBook", bd);
 			} catch (Exception e) {
 				return e.getLocalizedMessage();
@@ -120,6 +120,11 @@ public class CalloutInventory extends CalloutEngine
 	}   //  product
 	
 	
+	protected BigDecimal setQtyBook (int M_AttributeSetInstance_ID, int M_Product_ID, int M_Locator_ID,int C_DocType_ID) throws Exception {
+		return setQtyBook(M_AttributeSetInstance_ID, M_Product_ID, M_Locator_ID);
+	}
+	
+	
 	/**
 	 * kviiksaar
 	 * 
@@ -131,7 +136,7 @@ public class CalloutInventory extends CalloutEngine
 	 * @return
 	 * @throws Exception
 	 */
-	private BigDecimal setQtyBook (int M_AttributeSetInstance_ID, int M_Product_ID, int M_Locator_ID) throws Exception {
+	protected BigDecimal setQtyBook (int M_AttributeSetInstance_ID, int M_Product_ID, int M_Locator_ID) throws Exception {
 		// Set QtyBook from first storage location
 		BigDecimal bd = null;
 		String sql = "SELECT SUM(QtyOnHand) FROM M_StorageOnHand "

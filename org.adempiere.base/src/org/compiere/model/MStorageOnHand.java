@@ -326,26 +326,49 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		String sql = "SELECT s.M_Product_ID,s.M_Locator_ID,s.M_AttributeSetInstance_ID,"
 			+ "s.AD_Client_ID,s.AD_Org_ID,s.IsActive,s.Created,s.CreatedBy,s.Updated,s.UpdatedBy,"
 			+ "s.QtyOnHand,s.DateLastInventory,s.M_StorageOnHand_UU,s.DateMaterialPolicy "
-			+ "FROM M_StorageOnHand_v s"
-			+ " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID) ";
+			+ " FROM (SELECT m_storageonhand.ad_client_id, "
+			+ "    m_storageonhand.ad_org_id, "
+			+ "    min(m_storageonhand.created) AS created, "
+			+ "    min(m_storageonhand.createdby) AS createdby, "
+			+ "    max(m_storageonhand.datelastinventory) AS datelastinventory, "
+			+ "    m_storageonhand.isactive, "
+			+ "    m_storageonhand.m_attributesetinstance_id, "
+			+ "    m_storageonhand.m_locator_id, "
+			+ "    m_storageonhand.m_product_id, "
+			+ "    sum(m_storageonhand.qtyonhand) AS qtyonhand, "
+			+ "    min(m_storageonhand.updated) AS updated, "
+			+ "    min(m_storageonhand.updatedby) AS updatedby, "
+			+ "    min(m_storageonhand.m_storageonhand_uu::text) AS m_storageonhand_uu, "
+			+ "    min(m_storageonhand.datematerialpolicy) AS datematerialpolicy "
+			+ "   FROM m_storageonhand ";
+			
 		if (M_Locator_ID > 0)
-			sql += "WHERE l.M_Locator_ID = ?";
+			sql += "WHERE m_storageonhand.M_Locator_ID = ?";
 		else
-			sql += "WHERE l.M_Warehouse_ID=?";
-		sql += " AND s.M_Product_ID=?"
-			 + " AND COALESCE(s.M_AttributeSetInstance_ID,0)=? ";
+			sql += "INNER JOIN M_Locator l ON (l.M_Locator_ID=m_storageonhand.M_Locator_ID) WHERE l.M_Warehouse_ID=?";
 		
-		if(reverse == false)
-		{
-			if (positiveOnly)
+			sql += " AND m_storageonhand.M_Product_ID=?"
+				 + " AND COALESCE(m_storageonhand.M_AttributeSetInstance_ID,0)=? ";
+			
+			if(reverse == false)
 			{
-				sql += " AND s.QtyOnHand > 0 ";
+				if (positiveOnly)
+				{
+					sql += " AND m_storageonhand.QtyOnHand > 0 ";
+				}
+				else
+				{
+					sql += " AND m_storageonhand.QtyOnHand <> 0 ";
+				}
 			}
-			else
-			{
-				sql += " AND s.QtyOnHand <> 0 ";
-			}
-		}
+		
+			sql+= "  GROUP BY m_storageonhand.ad_client_id, m_storageonhand.ad_org_id, m_storageonhand.isactive, "
+			+ "		   m_storageonhand.m_attributesetinstance_id, m_storageonhand.m_locator_id, m_storageonhand.m_product_id "
+			+ "		) s "
+		    + " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID) ";
+			
+		
+		
 		sql+=getWarehouseOrderByClause(allAttributeInstances, false, FiFo);
 		//	All Attribute Set Instances
 		if (allAttributeInstances)
@@ -353,26 +376,45 @@ public class MStorageOnHand extends X_M_StorageOnHand
 			sql = "SELECT s.M_Product_ID,s.M_Locator_ID,s.M_AttributeSetInstance_ID,"
 				+ " s.AD_Client_ID,s.AD_Org_ID,s.IsActive,s.Created,s.CreatedBy,s.Updated,s.UpdatedBy,"
 				+ " s.QtyOnHand,s.DateLastInventory,s.M_StorageOnHand_UU,s.DateMaterialPolicy "
-				+ " FROM M_StorageOnHand_v s"
-				+ " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID)"
-				+ " LEFT OUTER JOIN M_AttributeSetInstance asi ON (s.M_AttributeSetInstance_ID=asi.M_AttributeSetInstance_ID) ";
+				+ " FROM (SELECT m_storageonhand.ad_client_id, "
+						+ "    m_storageonhand.ad_org_id, "
+						+ "    min(m_storageonhand.created) AS created, "
+						+ "    min(m_storageonhand.createdby) AS createdby, "
+						+ "    max(m_storageonhand.datelastinventory) AS datelastinventory, "
+						+ "    m_storageonhand.isactive, "
+						+ "    m_storageonhand.m_attributesetinstance_id, "
+						+ "    m_storageonhand.m_locator_id, "
+						+ "    m_storageonhand.m_product_id, "
+						+ "    sum(m_storageonhand.qtyonhand) AS qtyonhand, "
+						+ "    min(m_storageonhand.updated) AS updated, "
+						+ "    min(m_storageonhand.updatedby) AS updatedby, "
+						+ "    min(m_storageonhand.m_storageonhand_uu::text) AS m_storageonhand_uu, "
+						+ "    min(m_storageonhand.datematerialpolicy) AS datematerialpolicy "
+						+ "   FROM m_storageonhand ";
+						
 			if (M_Locator_ID > 0)
-				sql += "WHERE l.M_Locator_ID = ?";
+				sql += "WHERE m_storageonhand.M_Locator_ID = ?";
 			else
-				sql += "WHERE l.M_Warehouse_ID=?";
-			sql += " AND s.M_Product_ID=? ";
+				sql += "INNER JOIN M_Locator l ON (l.M_Locator_ID=m_storageonhand.M_Locator_ID) WHERE l.M_Warehouse_ID=?";
+			sql += " AND m_storageonhand.M_Product_ID=? ";
 			
 			if(reverse == false)
 			{
 				if (positiveOnly)
 				{
-					sql += " AND s.QtyOnHand > 0 ";
+					sql += " AND m_storageonhand.QtyOnHand > 0 ";
 				}
 				else
 				{
-					sql += " AND s.QtyOnHand <> 0 ";
+					sql += " AND m_storageonhand.QtyOnHand <> 0 ";
 				}
 			}
+			
+			sql+= "  GROUP BY m_storageonhand.ad_client_id, m_storageonhand.ad_org_id, m_storageonhand.isactive, "
+			+ "		   m_storageonhand.m_attributesetinstance_id, m_storageonhand.m_locator_id, m_storageonhand.m_product_id "
+			+ "		) s "
+			+ " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID)"
+			+ " LEFT OUTER JOIN M_AttributeSetInstance asi ON (s.M_AttributeSetInstance_ID=asi.M_AttributeSetInstance_ID) ";
 			
 			if (minGuaranteeDate != null)
 			{
@@ -489,16 +531,31 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		String sql = "SELECT s.M_Product_ID,s.M_Locator_ID,s.M_AttributeSetInstance_ID,"
 			+ "s.AD_Client_ID,s.AD_Org_ID,s.IsActive,s.Created,s.CreatedBy,s.Updated,s.UpdatedBy,"
 			+ "s.QtyOnHand,s.DateLastInventory,s.M_StorageOnHand_UU,s.DateMaterialPolicy "
-			+ "FROM M_StorageOnHand_v s"
-			+ " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID)"
-			+ " LEFT OUTER JOIN M_AttributeSetInstance asi ON (s.M_AttributeSetInstance_ID=asi.M_AttributeSetInstance_ID) ";
-		if (M_Locator_ID > 0)
-			sql += "WHERE l.M_Locator_ID = ?";
-		else
-			sql += "WHERE l.M_Warehouse_ID=?";
-		sql += " AND s.M_Product_ID=? "
-			+ " AND s.QtyOnHand < 0 ";
-		
+			+ "FROM (SELECT m_storageonhand.ad_client_id, "
+					+ "    m_storageonhand.ad_org_id, "
+					+ "    min(m_storageonhand.created) AS created, "
+					+ "    min(m_storageonhand.createdby) AS createdby, "
+					+ "    max(m_storageonhand.datelastinventory) AS datelastinventory, "
+					+ "    m_storageonhand.isactive, "
+					+ "    m_storageonhand.m_attributesetinstance_id, "
+					+ "    m_storageonhand.m_locator_id, "
+					+ "    m_storageonhand.m_product_id, "
+					+ "    sum(m_storageonhand.qtyonhand) AS qtyonhand, "
+					+ "    min(m_storageonhand.updated) AS updated, "
+					+ "    min(m_storageonhand.updatedby) AS updatedby, "
+					+ "    min(m_storageonhand.m_storageonhand_uu::text) AS m_storageonhand_uu, "
+					+ "    min(m_storageonhand.datematerialpolicy) AS datematerialpolicy "
+					+ "   FROM m_storageonhand "
+					+ " INNER JOIN M_Locator l ON (l.M_Locator_ID=m_storageonhand.M_Locator_ID)"
+					+ " LEFT OUTER JOIN M_AttributeSetInstance asi ON (m_storageonhand.M_AttributeSetInstance_ID=asi.M_AttributeSetInstance_ID) ";
+			
+			if (M_Locator_ID > 0)
+				sql += "WHERE m_storageonhand.M_Locator_ID = ?";
+			else
+				sql += "INNER JOIN M_Locator l ON (l.M_Locator_ID=m_storageonhand.M_Locator_ID) WHERE l.M_Warehouse_ID=?";
+			sql += " AND m_storageonhand.M_Product_ID=? "
+					+ " AND m_storageonhand.QtyOnHand < 0 ";
+			
 		if (minGuaranteeDate != null)
 		{
 			sql += "AND (asi.GuaranteeDate IS NULL OR asi.GuaranteeDate>?) ";
@@ -506,12 +563,19 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		
 		if (M_AttributeSetInstance_ID > 0)
 		{
-			sql += "AND s.M_AttributeSetInstance_ID=? ";
+			sql += "AND m_storageonhand.M_AttributeSetInstance_ID=? ";
 		}
 		else if (M_AttributeSetInstance_ID == 0)
 		{
-			sql += "AND (s.M_AttributeSetInstance_ID=0 OR s.M_AttributeSetInstance_ID IS NULL) ";
+			sql += "AND (m_storageonhand.M_AttributeSetInstance_ID=0 OR m_storageonhand.M_AttributeSetInstance_ID IS NULL) ";
 		}
+		
+		sql+= "  GROUP BY m_storageonhand.ad_client_id, m_storageonhand.ad_org_id, m_storageonhand.isactive, "
+				+ "   m_storageonhand.m_attributesetinstance_id, m_storageonhand.m_locator_id, m_storageonhand.m_product_id "
+				+ ") s";
+				
+		sql += " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID)"
+				+ " LEFT OUTER JOIN M_AttributeSetInstance asi ON (s.M_AttributeSetInstance_ID=asi.M_AttributeSetInstance_ID) ";
 		
 		MProduct product = MProduct.get(Env.getCtx(), M_Product_ID);
 		
