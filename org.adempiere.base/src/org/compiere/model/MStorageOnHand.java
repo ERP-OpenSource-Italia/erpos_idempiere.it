@@ -350,22 +350,23 @@ public class MStorageOnHand extends X_M_StorageOnHand
 			sql += " AND m_storageonhand.M_Product_ID=?"
 				 + " AND COALESCE(m_storageonhand.M_AttributeSetInstance_ID,0)=? ";
 			
-			if(reverse == false)
-			{
-				if (positiveOnly)
-				{
-					sql += " AND m_storageonhand.QtyOnHand > 0 ";
-				}
-				else
-				{
-					sql += " AND m_storageonhand.QtyOnHand <> 0 ";
-				}
-			}
-		
 			sql+= "  GROUP BY m_storageonhand.ad_client_id, m_storageonhand.ad_org_id, m_storageonhand.isactive, "
 			+ "		   m_storageonhand.m_attributesetinstance_id, m_storageonhand.m_locator_id, m_storageonhand.m_product_id "
 			+ "		) s "
 		    + " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID) ";
+			
+			
+			if(reverse == false)
+			{
+				if (positiveOnly)
+				{
+					sql += " WHERE s.QtyOnHand > 0 ";
+				}
+				else
+				{
+					sql += " WHERE s.QtyOnHand <> 0 ";
+				}
+			}
 			
 		
 		
@@ -398,17 +399,7 @@ public class MStorageOnHand extends X_M_StorageOnHand
 				sql += "INNER JOIN M_Locator l ON (l.M_Locator_ID=m_storageonhand.M_Locator_ID) WHERE l.M_Warehouse_ID=?";
 			sql += " AND m_storageonhand.M_Product_ID=? ";
 			
-			if(reverse == false)
-			{
-				if (positiveOnly)
-				{
-					sql += " AND m_storageonhand.QtyOnHand > 0 ";
-				}
-				else
-				{
-					sql += " AND m_storageonhand.QtyOnHand <> 0 ";
-				}
-			}
+			
 			
 			sql+= "  GROUP BY m_storageonhand.ad_client_id, m_storageonhand.ad_org_id, m_storageonhand.isactive, "
 			+ "		   m_storageonhand.m_attributesetinstance_id, m_storageonhand.m_locator_id, m_storageonhand.m_product_id "
@@ -419,6 +410,18 @@ public class MStorageOnHand extends X_M_StorageOnHand
 			if (minGuaranteeDate != null)
 			{
 				sql += "AND (asi.GuaranteeDate IS NULL OR asi.GuaranteeDate>?) ";
+			}
+			
+			if(reverse == false)
+			{
+				if (positiveOnly)
+				{
+					sql += " WHERE s.QtyOnHand > 0 ";
+				}
+				else
+				{
+					sql += " WHERE s.QtyOnHand <> 0 ";
+				}
 			}
 			
 			MProduct product = MProduct.get(Env.getCtx(), M_Product_ID);
