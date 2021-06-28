@@ -67,7 +67,7 @@ public class Charge
 		Vector<Vector<Object>> data = new Vector<Vector<Object>>();
 		String sql = "SELECT C_ElementValue_ID,Value, Name, AccountType "
 			+ "FROM C_ElementValue "
-			+ "WHERE AccountType IN ('R','E')"
+			+ "WHERE AccountType NOT IN ('M')"
 			+ " AND IsSummary='N'"
 			+ " AND IsActive='Y'"
 			+ " AND C_Element_ID=? "
