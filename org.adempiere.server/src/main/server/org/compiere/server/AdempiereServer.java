@@ -78,7 +78,7 @@ public abstract class AdempiereServer implements Runnable
 	/**	Milliseconds to sleep - 0 Sec default	*/
 	protected long				m_sleepMS = 0;
 	/** Sleeping					*/
-	private volatile boolean	m_sleeping = true;
+	protected volatile boolean	m_sleeping = true;
 	/** Server start time					*/
 	protected long				m_start = 0;
 	/** Number of Work executions	*/
