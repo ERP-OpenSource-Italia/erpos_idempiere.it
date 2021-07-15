@@ -27,6 +27,7 @@ import java.util.logging.Level;
 
 import org.compiere.Adempiere;
 import org.compiere.model.I_AD_Message;
+import org.compiere.model.PO;
 
 /**
  *	Reads all Messages and stores them in a HashMap
@@ -262,9 +263,15 @@ public final class Msg
 	 *	Get translated text for AD_Message
 	 *  @param  ad_language - Language
 	 *  @param	AD_Message - Message Key
-	 *  @return translated text
+	 *  @param	po - PO to resolve
+	 *  @param	ctx - Context to resolve NB: il po != null and ctx != null parse po first, then ctx
+	 *  @param	keepUnparseable - Keep Unparsable Elements
+	 *  @return translated and resolved from po/ctx text
 	 */
-	public static String getMsg (String ad_language, String AD_Message)
+	public static String getMsg (String ad_language, String AD_Message, 
+			PO po, String sEscape, 
+			Properties ctx, int WindowNo, int tabNo, boolean onlyWindow ,boolean onlyTab,
+			boolean keepUnparseable)
 	{
 		if (AD_Message == null || AD_Message.length() == 0)
 			return "";
@@ -281,9 +288,34 @@ public final class Msg
 			return AD_Message;
 		}
 
+		//LS aggiunta risoluzione del PO
+		if(po != null)
+		{
+			retStr = Env.parseVariable(retStr, po, po.get_TrxName(), keepUnparseable, sEscape);
+		}
+		
+		if(ctx != null)
+		{
+			if(tabNo > 0)
+				retStr = Env.parseContext(ctx, WindowNo, tabNo, retStr, onlyTab, !keepUnparseable);
+			else
+				retStr = Env.parseContext(ctx, WindowNo,retStr,onlyWindow, !keepUnparseable);
+		}
+		
 		return retStr;
 	}	//	getMsg
 
+	/**************************************************************************
+	 *	Get translated text for AD_Message
+	 *  @param  ad_language - Language
+	 *  @param	AD_Message - Message Key
+	 *  @return translated text
+	 */
+	public static String getMsg (String ad_language, String AD_Message)
+	{
+		return getMsg(ad_language, AD_Message, (PO)null, null, null, 0, 0, true, true, true);
+	}	//	getMsg
+	
 	/**
 	 *  Get translated text message for AD_Message
 	 *  @param  ctx Context to retrieve language
@@ -295,6 +327,56 @@ public final class Msg
 		return getMsg (Env.getAD_Language(ctx), AD_Message);
 	}   //  getMeg
 
+	/**
+	 *  Get translated text message for AD_Message
+	 *  @param  ctx Context to retrieve language
+	 *  @param	AD_Message - Message Key
+	 *  @return translated text
+	 */
+	public static String getMsgResolved (Properties ctx, String AD_Message, PO po, boolean keepUnparseable)
+	{
+		return getMsgResolved (ctx, AD_Message, po, (String) null, keepUnparseable);
+	}   //  getMeg
+	
+	/**
+	 *  Get translated text message for AD_Message
+	 *  @param  ctx Context to retrieve language
+	 *  @param	AD_Message - Message Key
+	 *  @param	po - po to resolve from
+	 *  @param	escapeAt - string to use to escape at-sign (used in multipass resolving of variables)
+	 *  @return translated and resolved from po text
+	 */
+	public static String getMsgResolved (Properties ctx, String AD_Message, PO po, String sEscape, boolean keepUnparseable)
+	{
+		return getMsg (Env.getAD_Language(ctx), AD_Message, po, sEscape, null, 0, 0, true, true, keepUnparseable);
+	}   //  getMeg
+	
+	/**
+	 *  Get translated text message for AD_Message
+	 *  @param  ctx Context to retrieve language
+	 *  @param	AD_Message - Message Key
+	 *  @param	ctx - ctx to resolve from
+	 *  @return translated and resolved from po text
+	 */
+	public static String getMsgResolved (Properties ctx, String AD_Message, int WindowNo, int tabNo, boolean onlyTab,
+			boolean keepUnparseable)
+	{
+		return getMsg (Env.getAD_Language(ctx), AD_Message, null, null, ctx, WindowNo, tabNo, true ,onlyTab, keepUnparseable);
+	}   //  getMeg
+	
+	/**
+	 *  Get translated text message for AD_Message
+	 *  @param  ctx Context to retrieve language
+	 *  @param	AD_Message - Message Key
+	 *  @param	ctx - ctx to resolve from
+	 *  @return translated and resolved from po text
+	 */
+	public static String getMsgResolved (Properties ctx, String AD_Message, int WindowNo, boolean onlyWindow,
+			boolean keepUnparseable)
+	{
+		return getMsg (Env.getAD_Language(ctx), AD_Message, null, null, ctx, WindowNo, 0, onlyWindow , true, keepUnparseable);
+	}   //  getMeg
+	
 	/**
 	 *  Get translated text message for AD_Message
 	 *  @param  language Language
