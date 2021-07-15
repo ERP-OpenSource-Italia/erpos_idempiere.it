@@ -11,4 +11,6 @@ public interface BaseMessages
 	public static final String MSG_ERR_EXISTING_REL_DOCS = "LIT_ErrorExistingRelatedDocuments";
 	
 	public static final String MSG_ERR_AUTOLOT_NO_RESULTS = "LGS_ERR_AUTOLOT_NO_RESULTS";
+	
+	public static final String ERROR_POCREATE_BPARTNER = "ERROR_POCREATE_BPARTNER";
 }
