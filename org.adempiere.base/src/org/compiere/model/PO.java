@@ -4455,6 +4455,17 @@ public abstract class PO
 			dump (i,Level.WARNING);
 	}   //  dump
 	
+	
+	public void dump ()
+	{
+		if (CLogMgt.isLevelFinest())
+		{
+			log.finer(get_WhereClause (true));
+			for (int i = 0; i < get_ColumnCount (); i++)
+				dump (i);
+		}
+	}
+	
 	/**
 	 *  Dump column
 	 *  @param index index
