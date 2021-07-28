@@ -3310,7 +3310,7 @@ public class MOrder extends X_C_Order implements DocAction
 	}	//	getApprovalAmt
 	
 	//AZ Goodwill
-	protected String deleteMatchPOCostDetail(MOrderLine line)
+	public String deleteMatchPOCostDetail(MOrderLine line)
 	{
 		// Get Account Schemas to delete MCostDetail
 		MAcctSchema[] acctschemas = MAcctSchema.getClientAcctSchema(getCtx(), getAD_Client_ID());
