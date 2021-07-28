@@ -1132,20 +1132,29 @@ public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 
 				for(X_M_CostHistory history:costHistories)
 					history.deleteEx(true);
+				
+				String CostingLevel = product.getCostingLevel(as);
+				
+				int M_ASI_ID = line.getM_AttributeSetInstance_ID();
+				
+				//in base al costinglevel viene creato un record di reverse con asi 0 o valorizzato quindi andiamo a cercare
+				//il cost_detail generato con l'asi corretto
+				if (MAcctSchema.COSTINGLEVEL_Client.equals(CostingLevel))  
+				{
+					M_ASI_ID = 0;
+				}
+				else if (MAcctSchema.COSTINGLEVEL_Organization.equals(CostingLevel))
+					M_ASI_ID = 0;
+				
 				cd = MCostDetail.get(getCtx(), "Description = 'Reverse' AND M_InventoryLine_ID=?", 
-						line.getM_InventoryLine_ID(), line.getM_AttributeSetInstance_ID(), 
+						line.getM_InventoryLine_ID(), M_ASI_ID, 
 						as.getC_AcctSchema_ID(), get_TrxName());
 				if(cd != null)
 				{
 					cd.setProcessed(false);
 					cd.delete(true);
 				}
-
-
-
 			}
-
-
 
 			//If Quantity Count minus Quantity Book = Zero, then no change in Inventory
 			if (qtyDiff.signum() == 0)
