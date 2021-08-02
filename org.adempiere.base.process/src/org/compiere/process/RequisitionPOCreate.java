@@ -120,6 +120,8 @@ public class RequisitionPOCreate extends SvrProcess
 	
 	protected List<MOrder> m_orders_generated = new ArrayList<>();
 	
+	/** LS Aggiunto parametro per consolidare le linee per prodotto con data richiesta minore**/
+	protected boolean		p_consolidateByRequisitionDate = true;
 	
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -170,7 +172,9 @@ public class RequisitionPOCreate extends SvrProcess
 			else if (name.equals("Vendor_ID"))
 				p_Vendor_ID = para[i].getParameterAsInt();
 			else if (name.equals("CompleteBeforeGenerateOrder")) //DR vedo se completare prima gli ordini.
-				p_CompleteBeforeGenerateOrder = para[i].getParameterAsBoolean();			
+				p_CompleteBeforeGenerateOrder = para[i].getParameterAsBoolean();	
+			else if (name.equalsIgnoreCase("ConsolidateByRequisitionDate"))
+				p_consolidateByRequisitionDate = para[i].getParameterAsBoolean();
 			//end
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
@@ -427,7 +431,7 @@ public class RequisitionPOCreate extends SvrProcess
 			|| m_order == null
 			|| (p_ConsolidateByDatePromised == true && m_order.getDatePromised().compareTo(rLine.getDateRequired()) != 0) // FR [ 3471930 ] If consolidation by date promised is true, then consider it
 			// FR [ 3471930 ] Due to the changes to the previous line, we need to check if two lines differ by date and avoid consolidating them
-			|| (m_orderLine.getDatePromised().compareTo(rLine.getDateRequired()) != 0) 
+			|| (p_consolidateByRequisitionDate == true && m_orderLine.getDatePromised().compareTo(rLine.getDateRequired()) != 0) 
 			|| (m_M_Warehouse_ID != rLine.getM_Requisition().getM_Warehouse_ID()//F3P: rottura ordine per magazzino
 			|| (rLine.get_ValueAsInt("PP_OrderNode_ID") > 0)) 
 			)
@@ -694,9 +698,17 @@ public class RequisitionPOCreate extends SvrProcess
 			orderClause.append("(SELECT C_BPartner_ID FROM M_Product_PO WHERE M_Product_PO.M_Product_ID = M_RequisitionLine.M_Product_ID ORDER BY IsCurrentVendor DESC FETCH FIRST 1 ROWS ONLY)) NULLS FIRST,"); // Nulls firts -> fast fail if no BP
 		}
 		
-		orderClause.append("(SELECT DateRequired FROM M_Requisition r WHERE M_RequisitionLine.M_Requisition_ID=r.M_Requisition_ID),");
-		orderClause.append("M_RequisitionLine.M_Product_ID, M_RequisitionLine.C_Charge_ID, M_RequisitionLine.M_AttributeSetInstance_ID");
-		
+		if(p_consolidateByRequisitionDate) 
+		{
+			orderClause.append("(SELECT DateRequired FROM M_Requisition r WHERE M_RequisitionLine.M_Requisition_ID=r.M_Requisition_ID),");
+			orderClause.append("M_RequisitionLine.M_Product_ID, M_RequisitionLine.C_Charge_ID, M_RequisitionLine.M_AttributeSetInstance_ID");
+		}
+		else
+		{
+			orderClause.append("M_RequisitionLine.M_Product_ID, ");//LS consolido per prodotto
+			orderClause.append("(SELECT DateRequired FROM M_Requisition r WHERE M_RequisitionLine.M_Requisition_ID=r.M_Requisition_ID),");
+			orderClause.append(" M_RequisitionLine.C_Charge_ID, M_RequisitionLine.M_AttributeSetInstance_ID");			
+		}
 		return orderClause.toString();
 	}
 }	//	RequisitionPOCreate
