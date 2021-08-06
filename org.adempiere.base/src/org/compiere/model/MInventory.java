@@ -1363,7 +1363,7 @@ public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 				}
 				createReverseInventory (as, Org_ID, cd.getM_Product_ID(), M_ASI_ID,
 						cd.getM_InventoryLine_ID(), cd.getM_CostElement_ID(), 
-						cd.getAmt().negate(), cd.getQty().negate(),
+						cd.getAmt().negate(), cd.getQty(),
 						"Reverse",  cd.get_TrxName());
 			}
 		}	//	Material Cost elements
