@@ -1509,17 +1509,20 @@ public class MCost extends X_M_Cost
 	public void add (BigDecimal amt, BigDecimal qty)
 	{
 		MCostElement costElement = (MCostElement) getM_CostElement();
+		BigDecimal currentQty = getCurrentQty().add(qty);
 		if (costElement.isAveragePO() || costElement.isAverageInvoice()) 
 		{
-			if (getCurrentQty().add(qty).signum() < 0)
+			if (currentQty.signum() < 0)
 			{
-				throw new AverageCostingNegativeQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()+", Trx Qty="+qty
-						+ ", CostElement="+costElement.getName()+", Schema="+getC_AcctSchema().getName());
+				currentQty = Env.ZERO;
+//				throw new AverageCostingNegativeQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()+", Trx Qty="+qty
+//						+ ", CostElement="+costElement.getName()+", Schema="+getC_AcctSchema().getName());
 			}
 		}
+		
 		setCumulatedAmt(getCumulatedAmt().add(amt));
 		setCumulatedQty(getCumulatedQty().add(qty));
-		setCurrentQty(getCurrentQty().add(qty));
+		setCurrentQty(currentQty);
 	}	//	add
 
 	/**
@@ -1539,18 +1542,19 @@ public class MCost extends X_M_Cost
 		//can't do cost adjustment if there's no stock left
 		if (qty.signum() == 0 && getCurrentQty().signum() <= 0)
 		{
-			throw new AverageCostingZeroQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()+", Trx Qty="+qty
-					+", CostElement="+getM_CostElement().getName()+", Schema="+getC_AcctSchema().getName());
+			setCurrentQty(Env.ZERO);
+//			throw new AverageCostingZeroQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()+", Trx Qty="+qty
+//					+", CostElement="+getM_CostElement().getName()+", Schema="+getC_AcctSchema().getName());
 		}
 		
 		if (getCurrentQty().add(qty).signum() < 0)
 		{
-			throw new AverageCostingNegativeQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()+", Trx Qty="+qty
-					+", CostElement="+getM_CostElement().getName()+", Schema="+getC_AcctSchema().getName());
+//			throw new AverageCostingNegativeQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()+", Trx Qty="+qty
+//					+", CostElement="+getM_CostElement().getName()+", Schema="+getC_AcctSchema().getName());
 		}
 				
 		BigDecimal sumQty = getCurrentQty().add(qty);
-		if (sumQty.signum() != 0)
+		if (sumQty.signum() > 0)
 		{
 			BigDecimal oldSum = getCurrentCostPrice().multiply(getCurrentQty());
 			BigDecimal oldCost = oldSum.divide(sumQty, 12, RoundingMode.HALF_UP);
@@ -1562,10 +1566,14 @@ public class MCost extends X_M_Cost
 			}
 			setCurrentCostPrice(cost);
 		}
+		else 
+		{
+			sumQty= Env.ZERO;
+		}
 		//
 		setCumulatedAmt(getCumulatedAmt().add(amt));
 		setCumulatedQty(getCumulatedQty().add(qty));
-		setCurrentQty(getCurrentQty().add(qty));
+		setCurrentQty(sumQty);
 	}	//	setWeightedAverage
 
 	/**
@@ -1723,8 +1731,9 @@ public class MCost extends X_M_Cost
 		{
 			if (getCurrentQty().signum() < 0)
 			{
-				throw new AverageCostingNegativeQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()
-						+", CostElement="+getM_CostElement().getName()+", Schema="+getC_AcctSchema().getName());
+				setCurrentQty(Env.ZERO);
+//				throw new AverageCostingNegativeQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()
+//						+", CostElement="+getM_CostElement().getName()+", Schema="+getC_AcctSchema().getName());
 			}
 		}
 		
@@ -1749,8 +1758,9 @@ public class MCost extends X_M_Cost
 		{
 			if (CurrentQty.signum() < 0)
 			{
-				throw new AverageCostingNegativeQtyException("Product="+getM_Product().getName()+", Current Qty="+getCurrentQty()+", New Current Qty="+CurrentQty
-						+", CostElement="+ce.getName()+", Schema="+getC_AcctSchema().getName());
+				CurrentQty= Env.ZERO;
+//				throw new AverageCostingNegativeQtyException("Product="+getM_Product().getName()+", Current Qty="+getCurrentQty()+", New Current Qty="+CurrentQty
+//						+", CostElement="+ce.getName()+", Schema="+getC_AcctSchema().getName());
 			}
 		}
 		super.setCurrentQty(CurrentQty);
