@@ -179,6 +179,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	public static final String CTX_EDIT_AD_PINSTANCE_ID_Compat = "Edit_AD_Pinstance_ID"; // Old value with typo for compatibility
 	protected boolean isImmediateSaveSelection;
 	protected boolean hasImmediatePersistEdit = false;
+	public static final String CTX_SOURCE_AD_PINSTANCE_ID = "Source_AD_PInstance_ID";
 	
 	/**
 	 * store selected record info
@@ -308,6 +309,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		}
 		
 		pageSize = MSysConfig.getIntValue(MSysConfig.ZK_PAGING_SIZE, DEFAULT_PAGE_SIZE, Env.getAD_Client_ID(Env.getCtx()));
+		if (infoWindow != null && infoWindow.getPagingSize() > 0)
+			pageSize = infoWindow.getPagingSize();
 		
 		if(infoWindow != null)
 			isImmediateSaveSelection = LITMInfoWindow.isSaveSelectionImmediate(infoWindow);

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -697,5 +698,36 @@ public class STDUtils {
 		  {
 			  throw new AdempiereException(exceptionHeader+"\n"+returnMsg);
 		  }
+	  }
+	  
+	  public static PO setPOFieldsFromResultSet(ResultSet rs, PO po) throws SQLException
+	  {
+		  ResultSetMetaData	rsMeta = rs.getMetaData();
+		  int iCount = rsMeta.getColumnCount();
+		
+		  for(int i=0;i<iCount;i++)
+		  {
+			  String sColName = rsMeta.getColumnName(i+1);						
+			  Object oColValue = rs.getObject(sColName);
+				
+			  if(oColValue != null && isValidPOColumn(sColName, po))
+			  {
+				  po.set_ValueOfColumn(sColName, oColValue);
+			  }						
+		  }	
+		
+		  return po;
+	  }
+		
+	  public static boolean isValidPOColumn(String columnName, PO po)
+	  {
+		  boolean valid = true;
+		  
+		  if(po.get_ColumnIndex(columnName)<0)
+		  {
+			  valid = false;
+		  }
+			
+		  return valid;
 	  }
 }

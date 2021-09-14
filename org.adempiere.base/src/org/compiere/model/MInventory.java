@@ -532,7 +532,7 @@ public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 							if (log.isLoggable(Level.FINE)) log.fine("Diff=" + qtyDiff 
 									+ " - Instance OnHand=" + QtyMA + "->" + QtyNew);
 	
-							if (!MStorageOnHand.add(getCtx(), getM_Warehouse_ID(),
+							if (!MStorageOnHand.add(getCtx(), line.getM_Locator().getM_Warehouse_ID(),
 									line.getM_Locator_ID(),
 									line.getM_Product_ID(), 
 									ma.getM_AttributeSetInstance_ID(), 
@@ -591,7 +591,7 @@ public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 						}
 						
 						//Fallback: Update Storage - see also VMatch.createMatchRecord
-						if (!MStorageOnHand.add(getCtx(), getM_Warehouse_ID(),
+						if (!MStorageOnHand.add(getCtx(), line.getM_Locator().getM_Warehouse_ID(),
 								line.getM_Locator_ID(),
 								line.getM_Product_ID(), 
 								line.getM_AttributeSetInstance_ID(), 
@@ -699,7 +699,7 @@ public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 			if (qtyDiff.signum() > 0)	//	Incoming Trx
 			{
 				//auto balance negative on hand
-				MStorageOnHand[] storages = MStorageOnHand.getWarehouseNegative(getCtx(), getM_Warehouse_ID(), line.getM_Product_ID(), 0,
+				MStorageOnHand[] storages = MStorageOnHand.getWarehouseNegative(getCtx(), line.getM_Locator().getM_Warehouse_ID(), line.getM_Product_ID(), 0,
 						null, MClient.MMPOLICY_FiFo.equals(product.getMMPolicy()), line.getM_Locator_ID(), get_TrxName(), false);
 				for (MStorageOnHand storage : storages)
 				{
@@ -728,7 +728,7 @@ public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 					if (as != null && as.isInstanceAttribute())
 					{
 						//add quantity to last attributesetinstance
-						storages = MStorageOnHand.getWarehouse(getCtx(), getM_Warehouse_ID(), line.getM_Product_ID(), 0, null,
+						storages = MStorageOnHand.getWarehouse(getCtx(), line.getM_Locator().getM_Warehouse_ID(), line.getM_Product_ID(), 0, null,
 								false, true, 0, get_TrxName());
 						for (MStorageOnHand storage : storages)
 						{
@@ -795,7 +795,7 @@ public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 			else	//	Outgoing Trx
 			{
 				String MMPolicy = product.getMMPolicy();
-				MStorageOnHand[] storages = MStorageOnHand.getWarehouse(getCtx(), getM_Warehouse_ID(), line.getM_Product_ID(), 0,
+				MStorageOnHand[] storages = MStorageOnHand.getWarehouse(getCtx(), line.getM_Locator().getM_Warehouse_ID(), line.getM_Product_ID(), 0,
 						null, MClient.MMPOLICY_FiFo.equals(MMPolicy), true, line.getM_Locator_ID(), get_TrxName(), false);
 
 				BigDecimal qtyToDeliver = qtyDiff.negate();
@@ -1132,20 +1132,29 @@ public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 
 				for(X_M_CostHistory history:costHistories)
 					history.deleteEx(true);
+				
+				String CostingLevel = product.getCostingLevel(as);
+				
+				int M_ASI_ID = line.getM_AttributeSetInstance_ID();
+				
+				//in base al costinglevel viene creato un record di reverse con asi 0 o valorizzato quindi andiamo a cercare
+				//il cost_detail generato con l'asi corretto
+				if (MAcctSchema.COSTINGLEVEL_Client.equals(CostingLevel))  
+				{
+					M_ASI_ID = 0;
+				}
+				else if (MAcctSchema.COSTINGLEVEL_Organization.equals(CostingLevel))
+					M_ASI_ID = 0;
+				
 				cd = MCostDetail.get(getCtx(), "Description = 'Reverse' AND M_InventoryLine_ID=?", 
-						line.getM_InventoryLine_ID(), line.getM_AttributeSetInstance_ID(), 
+						line.getM_InventoryLine_ID(), M_ASI_ID, 
 						as.getC_AcctSchema_ID(), get_TrxName());
 				if(cd != null)
 				{
 					cd.setProcessed(false);
 					cd.delete(true);
 				}
-
-
-
 			}
-
-
 
 			//If Quantity Count minus Quantity Book = Zero, then no change in Inventory
 			if (qtyDiff.signum() == 0)
@@ -1163,7 +1172,7 @@ public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 				for (MInventoryLineMA lineMA : mas)
 				{
 
-					if(!MStorageOnHand.add(getCtx(), getM_Warehouse_ID(),
+					if(!MStorageOnHand.add(getCtx(), line.getM_Locator().getM_Warehouse_ID(),
 							line.getM_Locator_ID(),
 							line.getM_Product_ID(), 
 							lineMA.getM_AttributeSetInstance_ID(),
@@ -1190,7 +1199,7 @@ public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 						dateMPolicy = t;
 				}
 
-				if (!MStorageOnHand.add(getCtx(), getM_Warehouse_ID(),
+				if (!MStorageOnHand.add(getCtx(), line.getM_Locator().getM_Warehouse_ID(),
 						line.getM_Locator_ID(),
 						line.getM_Product_ID(), 
 						line.getM_AttributeSetInstance_ID(), 
@@ -1354,7 +1363,7 @@ public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 				}
 				createReverseInventory (as, Org_ID, cd.getM_Product_ID(), M_ASI_ID,
 						cd.getM_InventoryLine_ID(), cd.getM_CostElement_ID(), 
-						cd.getAmt().negate(), cd.getQty().negate(),
+						cd.getAmt().negate(), cd.getQty(),
 						"Reverse",  cd.get_TrxName());
 			}
 		}	//	Material Cost elements

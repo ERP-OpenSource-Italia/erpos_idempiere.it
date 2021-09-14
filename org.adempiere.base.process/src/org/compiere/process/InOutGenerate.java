@@ -328,17 +328,17 @@ public class InOutGenerate extends SvrProcess
 				if(isNewInOutNeeded(order, m_shipment))
 					completeShipment();
 					
-				if (log.isLoggable(Level.FINE)) log.fine("check: " + order + " - DeliveryRule=" + order.getDeliveryRule());
+				if (log.isLoggable(Level.FINE)) log.fine("check: " + order + " - DeliveryRule=" + getDeliveryRule(order));
 				//
 				Timestamp minGuaranteeDate = m_movementDate;
-				boolean completeOrder = MOrder.DELIVERYRULE_CompleteOrder.equals(order.getDeliveryRule());
+				boolean completeOrder = MOrder.DELIVERYRULE_CompleteOrder.equals(getDeliveryRule(order));
 				//	OrderLine WHERE
 				StringBuilder where = new StringBuilder(" AND M_Warehouse_ID=").append(p_M_Warehouse_ID);
 				if (p_DatePromised != null)
 					where.append(" AND (TRUNC(DatePromised)<=").append(DB.TO_DATE(p_DatePromised, true))
 						.append(" OR DatePromised IS NULL)");		
 				//	Exclude Auto Delivery if not Force
-				if (!MOrder.DELIVERYRULE_Force.equals(order.getDeliveryRule()))
+				if (!MOrder.DELIVERYRULE_Force.equals(getDeliveryRule(order)))
 					where.append(" AND (C_OrderLine.M_Product_ID IS NULL")
 						.append(" OR EXISTS (SELECT * FROM M_Product p ")
 						.append("WHERE C_OrderLine.M_Product_ID=p.M_Product_ID")
@@ -484,7 +484,7 @@ public class InOutGenerate extends SvrProcess
 						&& (line.getQtyOrdered().signum() == 0 	//	comments
 							|| toDeliver.signum() != 0))		//	lines w/o product
 					{
-						if (!MOrder.DELIVERYRULE_CompleteOrder.equals(order.getDeliveryRule()))	//	printed later
+						if (!MOrder.DELIVERYRULE_CompleteOrder.equals(getDeliveryRule(order)))	//	printed later
 							createLine (order, wrapperOrLine, toDeliver, null, false);
 						else
 							logOrderLineInfo(line, " skipped: delivery rule == complete order");  // F3P: Helper for order line-related logs (level info)
@@ -516,7 +516,7 @@ public class InOutGenerate extends SvrProcess
 						break;
 					}
 					//	Complete Line
-					else if (fullLine && MOrder.DELIVERYRULE_CompleteLine.equals(order.getDeliveryRule()))
+					else if (fullLine && MOrder.DELIVERYRULE_CompleteLine.equals(getDeliveryRule(order)))
 					{
 						if (log.isLoggable(Level.FINE)) log.fine("CompleteLine - OnHand=" + onHand 
 							+ " (Unconfirmed=" + unconfirmedShippedQty
@@ -525,7 +525,7 @@ public class InOutGenerate extends SvrProcess
 						createLine (order, wrapperOrLine, toDeliver, storages, false);
 					}
 					//	Availability
-					else if (MOrder.DELIVERYRULE_Availability.equals(order.getDeliveryRule())
+					else if (MOrder.DELIVERYRULE_Availability.equals(getDeliveryRule(order))
 						&& (onHand.signum() > 0
 							|| toDeliver.signum() < 0))
 					{
@@ -540,7 +540,7 @@ public class InOutGenerate extends SvrProcess
 						createLine (order, wrapperOrLine, deliver, storages, false);
 					}
 					//	Force
-					else if (MOrder.DELIVERYRULE_Force.equals(order.getDeliveryRule()))
+					else if (MOrder.DELIVERYRULE_Force.equals(getDeliveryRule(order)))
 					{
 						BigDecimal deliver = toDeliver;
 						if (log.isLoggable(Level.FINE)) log.fine("Force - OnHand=" + onHand 
@@ -551,19 +551,19 @@ public class InOutGenerate extends SvrProcess
 						createLine (order, wrapperOrLine, deliver, storages, true);
 					}
 					//	Manual
-					else if (MOrder.DELIVERYRULE_Manual.equals(order.getDeliveryRule())) {
+					else if (MOrder.DELIVERYRULE_Manual.equals(getDeliveryRule(order))) {
 						if (log.isLoggable(Level.FINE)) log.fine("Manual - OnHand=" + onHand 
 							+ " (Unconfirmed=" + unconfirmedShippedQty
 							+ ") - " + line);
 					} else {
-						if (log.isLoggable(Level.FINE)) log.fine("Failed: " + order.getDeliveryRule() + " - OnHand=" + onHand 
+						if (log.isLoggable(Level.FINE)) log.fine("Failed: " + getDeliveryRule(order) + " - OnHand=" + onHand 
 								+ " (Unconfirmed=" + unconfirmedShippedQty
 								+ "), ToDeliver=" + toDeliver + " - " + line);
 					}
 				}	//	for all order lines
 				
 				//	Complete Order successful
-				if (completeOrder && MOrder.DELIVERYRULE_CompleteOrder.equals(order.getDeliveryRule()))
+				if (completeOrder && MOrder.DELIVERYRULE_CompleteOrder.equals(getDeliveryRule(order)))
 				{
 					for (int i = 0; i < lines.length; i++)
 					{
@@ -657,6 +657,11 @@ public class InOutGenerate extends SvrProcess
 	
 	
 	
+	protected String getDeliveryRule(MOrder order) {
+		
+		return order.getDeliveryRule();
+	}
+
 	/**************************************************************************
 	 * 	Create Line
 	 *	@param order order
@@ -1154,9 +1159,14 @@ public class InOutGenerate extends SvrProcess
 	
 	// F3P: split creation in overridabile function
 	
+	protected MInOut buildMInOut(MOrder order, Timestamp movementDate)
+	{
+		return new MInOut (order, 0, movementDate);
+	}
+	
 	protected MInOut createShipment(MOrder order, MOrderLine orderLine, Timestamp movementDate)
 	{
-		MInOut shipment = new MInOut (order, 0, movementDate);
+		MInOut shipment = buildMInOut(order, movementDate);
 				
 		shipment.setM_Warehouse_ID(orderLine.getM_Warehouse_ID());	//	sets Org too
 		if (order.getC_BPartner_ID() != orderLine.getC_BPartner_ID())
@@ -1193,10 +1203,10 @@ public class InOutGenerate extends SvrProcess
 		 * 
 		 */
 		
-		protected static final long serialVersionUID = -7385140481126599352L;
-		protected MOrderLine	orderLine = null;
-		protected BigDecimal	qty = null;
-		protected Map<String, Object> additionalData = new HashMap<>(); 
+		public static final long serialVersionUID = -7385140481126599352L;
+		public MOrderLine	orderLine = null;
+		public BigDecimal	qty = null;
+		public Map<String, Object> additionalData = new HashMap<>(); 
 		
 		public SelectionLineOrderLineWrapper(MOrderLine line)
 		{

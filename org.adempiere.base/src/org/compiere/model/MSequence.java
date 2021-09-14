@@ -44,6 +44,8 @@ import org.compiere.util.Ini;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
 
+import it.idempiere.base.model.LITMSequence;
+
 /**
  *	Sequence Model.
  *	@see org.compiere.process.SequenceCheck
@@ -413,7 +415,13 @@ public class MSequence extends X_AD_Sequence
 		if (!DB.isOracle() && !DB.isPostgreSQL())
 			selectSQL = DB.getDatabase().convertStatement(selectSQL);
 		Connection conn = null;
-		Trx trx = trxName == null ? null : Trx.get(trxName, true);
+		
+		Trx trx = null;
+		
+		if(LITMSequence.isUseTrxNew(seq) == false)
+		{
+			trx = trxName == null ? null : Trx.get(trxName, true);
+		}
 		//
 		
 		String calendarYearMonth = NoYearNorMonth;

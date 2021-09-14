@@ -2539,13 +2539,15 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
     
 	private boolean onDeleteCallback1(final Callback<Boolean> postCallback) {
 		boolean retValue = adTabbox.getSelectedGridTab().dataDelete();
-		adTabbox.getSelectedGridTab().dataRefreshAll(true, true);
-		adTabbox.getSelectedGridTab().refreshParentTabs();
-
-		adTabbox.getSelectedTabpanel().dynamicDisplay(0);
-		focusToActivePanel();
-		MRecentItem.publishChangedEvent(Env.getAD_User_ID(ctx));
-
+		if (retValue)
+		{
+			adTabbox.getSelectedGridTab().dataRefreshAll(true, true);
+			adTabbox.getSelectedGridTab().refreshParentTabs();
+	
+			adTabbox.getSelectedTabpanel().dynamicDisplay(0);
+			focusToActivePanel();
+			MRecentItem.publishChangedEvent(Env.getAD_User_ID(ctx));
+		}
 		if (postCallback != null)
 			postCallback.onCallback(true);
 		return retValue;

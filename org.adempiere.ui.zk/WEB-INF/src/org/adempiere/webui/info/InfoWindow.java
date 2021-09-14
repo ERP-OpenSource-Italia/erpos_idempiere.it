@@ -3330,6 +3330,14 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		
 		if(piParams != null)
 		{
+			ProcessInfoParameter[] tmp = new ProcessInfoParameter[piParams.length + 1];
+			int i;
+			for (i = 0; i < piParams.length; i++)
+				tmp[i] = piParams[i];
+			tmp[i] = new ProcessInfoParameter(CTX_SOURCE_AD_PINSTANCE_ID, pi.getAD_PInstance_ID(), null, null, null);
+			
+			piParams = tmp;
+			
 			for (ProcessInfoParameter param : piParams)
 			{				
 				Object value = param.getParameter();

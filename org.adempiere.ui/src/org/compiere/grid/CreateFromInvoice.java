@@ -450,7 +450,18 @@ public abstract class CreateFromInvoice extends CreateFrom
 
 		if (p_order != null)
 		{
+			int M_PriceList_ID = invoice.getM_PriceList_ID(); //se ho gia delle righe non sovrascrivo il listino prezzi e lascio continuare
 			invoice.setOrder(p_order);	//	overwrite header values
+			
+			if(M_PriceList_ID > 0)
+			{
+				int count = DB.getSQLValue(trxName, "SELECT count(*) FROM C_InvoiceLine WHERE C_Invoice_ID = ?",invoice.getC_Invoice_ID());
+				if(count > 0)
+				{
+					invoice.setM_PriceList_ID(M_PriceList_ID);
+				}
+			}
+			
 			invoice.saveEx();
 		}
 

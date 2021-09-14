@@ -4448,6 +4448,14 @@ public abstract class PO
 	/**************************************************************************
 	 *  Dump Record
 	 */
+	public void forceDump ()
+	{
+		log.warning(get_WhereClause (true));
+		for (int i = 0; i < get_ColumnCount (); i++)
+			dump (i,Level.WARNING);
+	}   //  dump
+	
+	
 	public void dump ()
 	{
 		if (CLogMgt.isLevelFinest())
@@ -4456,24 +4464,33 @@ public abstract class PO
 			for (int i = 0; i < get_ColumnCount (); i++)
 				dump (i);
 		}
-	}   //  dump
-
+	}
+	
 	/**
 	 *  Dump column
 	 *  @param index index
 	 */
 	public void dump (int index)
 	{
+		dump(index, Level.FINEST);
+	}
+
+	/**
+	 *  Dump column
+	 *  @param index index
+	 */
+	public void dump (int index,Level level)
+	{
 		StringBuilder sb = new StringBuilder(" ").append(index);
 		if (index < 0 || index >= get_ColumnCount())
 		{
-			if (log.isLoggable(Level.FINEST)) log.finest(sb.append(": invalid").toString());
+			if (log.isLoggable(level)) log.finest(sb.append(": invalid").toString());
 			return;
 		}
 		sb.append(": ").append(get_ColumnName(index))
 			.append(" = ").append(m_oldValues[index])
 			.append(" (").append(m_newValues[index]).append(")");
-		if (log.isLoggable(Level.FINEST)) log.finest(sb.toString());
+		if (log.isLoggable(level)) log.log(level,sb.toString());
 	}   //  dump
 
 

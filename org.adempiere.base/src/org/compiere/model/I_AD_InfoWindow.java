@@ -244,6 +244,15 @@ public interface I_AD_InfoWindow
 	  * When load data for info window, also load number of paging
 	  */
 	public boolean isLoadPageNum();
+	
+	/** Column name PagingSize */
+    public static final String COLUMNNAME_PagingSize = "PagingSize";
+
+	/** Set Paging Size	  */
+	public void setPagingSize (int PagingSize);
+
+	/** Get Paging Size	  */
+	public int getPagingSize();
 
     /** Column name IsShowInDashboard */
     public static final String COLUMNNAME_IsShowInDashboard = "IsShowInDashboard";

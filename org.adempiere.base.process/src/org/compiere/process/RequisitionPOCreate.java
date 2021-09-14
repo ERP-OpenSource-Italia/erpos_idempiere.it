@@ -44,6 +44,8 @@ import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  * 	Create PO from Requisition 
  *	
@@ -96,6 +98,8 @@ public class RequisitionPOCreate extends SvrProcess
 	/** BP Filtro			*/
 	private int 		p_Vendor_ID = 0;
 	//end
+	
+	protected int 		p_C_Order_ID = 0;
 
 	/** Consolidate			*/
 	private boolean		p_ConsolidateDocument = false;
@@ -105,6 +109,9 @@ public class RequisitionPOCreate extends SvrProcess
 	
 	/** Order				*/
 	protected MOrder		m_order = null;
+	
+	protected MOrder		m_orderToAdd = null;
+	
 	/** Order Line			*/
 	protected MOrderLine	m_orderLine = null;
 	/** Orders Cache : (C_BPartner_ID, DateRequired, M_PriceList_ID) -> MOrder */
@@ -175,6 +182,8 @@ public class RequisitionPOCreate extends SvrProcess
 				p_CompleteBeforeGenerateOrder = para[i].getParameterAsBoolean();	
 			else if (name.equalsIgnoreCase("ConsolidateByRequisitionDate"))
 				p_consolidateByRequisitionDate = para[i].getParameterAsBoolean();
+			else if (name.equals("C_Order_ID"))
+				p_C_Order_ID = para[i].getParameterAsInt();
 			//end
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
@@ -188,6 +197,12 @@ public class RequisitionPOCreate extends SvrProcess
 	 */
 	protected String doIt() throws Exception
 	{
+		if (p_C_Order_ID > 0)
+		{
+			m_orderToAdd = PO.get(getCtx(), MOrder.Table_Name, p_C_Order_ID, get_TrxName());
+			m_orders_generated.add(m_orderToAdd);
+		}
+		
 		if(p_Selection) // F3P: add support for T_Selection
 		{
 			String sql = "SELECT M_RequisitionLine.M_RequisitionLine_ID "
@@ -444,6 +459,7 @@ public class RequisitionPOCreate extends SvrProcess
 
 		//	Update Order Line
 		m_orderLine.setQty(m_orderLine.getQtyOrdered().add(rLine.getQty()));
+		m_orderLine.setPrice();
 		//	Update Requisition Line
 		rLine.setC_OrderLine_ID(m_orderLine.getC_OrderLine_ID());
 		rLine.saveEx();
@@ -468,14 +484,30 @@ public class RequisitionPOCreate extends SvrProcess
 			m_bpartner = MBPartner.get(getCtx(), C_BPartner_ID);
 		}
 		
+		int M_PriceList_ID = 0;
 		
 		//	Order
 		Timestamp DateRequired = rLine.getDateRequired();
-		int M_PriceList_ID = rLine.getParent().getM_PriceList_ID();
+		
+		if(STDSysConfig.isReqPOCreatePreferBPPriceList(rLine.getAD_Client_ID(),rLine.getAD_Org_ID()))
+		{
+			M_PriceList_ID = m_bpartner.getPO_PriceList_ID();
+			
+			if(M_PriceList_ID <= 0)
+			{
+				M_PriceList_ID = rLine.getParent().getM_PriceList_ID();
+			}
+		}
+		else
+		{
+			M_PriceList_ID = rLine.getParent().getM_PriceList_ID(); 
+		}
+		
+		//
 		int M_Warehouse_ID = rLine.getParent().getM_Warehouse_ID();
 		MultiKey key = new MultiKey(C_BPartner_ID, DateRequired, M_PriceList_ID,M_Warehouse_ID);
 		m_order = m_cacheOrders.get(key);
-		if (m_order == null)
+		if (m_order == null && m_orderToAdd == null)
 		{
 			m_order = new MOrder(getCtx(), 0, get_TrxName());
 			m_order.setAD_Org_ID(rLine.getAD_Org_ID());
@@ -601,8 +633,11 @@ public class RequisitionPOCreate extends SvrProcess
 			newOrder(rLine, C_BPartner_ID);
 		}
 		
-		//	No Order Line
-		m_orderLine = new MOrderLine(m_order);
+		if(m_orderToAdd != null)
+			m_orderLine = new MOrderLine(m_orderToAdd);
+		else
+			m_orderLine = new MOrderLine(m_order);
+		
 		m_orderLine.setDatePromised(rLine.getDateRequired());
 		if (product != null)
 		{
