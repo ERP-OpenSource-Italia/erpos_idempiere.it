@@ -97,13 +97,13 @@ public class MWFNode extends X_AD_WF_Node
 		//	setName (null);
 			setAction (ACTION_WaitSleep);
 			setCost (Env.ZERO);
-			setDuration (0);
+			setDuration (Env.ZERO);
 			setEntityType (ENTITYTYPE_UserMaintained);	// U
 			setIsCentrallyMaintained (true);	// Y
 			setJoinElement (JOINELEMENT_XOR);	// X
 			setLimit (0);
 			setSplitElement (SPLITELEMENT_XOR);	// X
-			setWaitingTime (0);
+			setWaitingTime (Env.ZERO);
 			setXPosition (0);
 			setYPosition (0);
 		}
@@ -443,7 +443,7 @@ public class MWFNode extends X_AD_WF_Node
 	 */
 	public long getDurationMS ()
 	{
-		long duration = super.getDuration ();
+		long duration = super.getDuration ().longValue();
 		if (duration == 0)
 			return 0;
 		if (m_durationBaseMS == -1)

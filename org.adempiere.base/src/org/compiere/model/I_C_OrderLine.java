@@ -56,6 +56,10 @@ public interface I_C_OrderLine
 	  * Organizational entity within client
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
+	
+	public void setM_PriceList_ID(int M_PriceList_ID);
+	
+	public int getM_PriceList_ID();
 
 	/** Get Organization.
 	  * Organizational entity within client
@@ -102,6 +106,9 @@ public interface I_C_OrderLine
 	  * Identifies a Business Partner
 	  */
 	public int getC_BPartner_ID();
+	
+	public static final String COLUMNNAME_M_PriceList_ID = "M_PriceList_ID";
+
 
 	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException;
 

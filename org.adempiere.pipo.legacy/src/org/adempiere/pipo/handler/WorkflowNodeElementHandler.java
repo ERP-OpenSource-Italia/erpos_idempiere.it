@@ -203,16 +203,16 @@ public class WorkflowNodeElementHandler extends AbstractElementHandler {
 				m_WFNode.setXPosition(Integer.valueOf(atts.getValue("XPosition")));
 			if (getStringValue(atts, "YPosition") != null) 
 				m_WFNode.setYPosition(Integer.valueOf(atts.getValue("YPosition")));
-			m_WFNode.setWaitingTime(Integer.valueOf(atts
+			m_WFNode.setWaitingTime(new BigDecimal(atts
 					.getValue("WaitingTime")));
 			if (getStringValue(atts, "WaitTime") != null)
-				m_WFNode.setWaitTime(Integer.valueOf(atts.getValue("WaitTime")));
-			m_WFNode.setWorkingTime(Integer.valueOf(atts
+				m_WFNode.setWaitTime(new BigDecimal(atts.getValue("WaitTime")));
+			m_WFNode.setWorkingTime(new BigDecimal(atts
 					.getValue("WorkingTime")));
 			if (getStringValue(atts, "Cost") != null)
 				m_WFNode.setCost(new BigDecimal(atts.getValue("Cost")));
 			if (getStringValue(atts, "Duration") != null)
-				m_WFNode.setDuration(Integer.valueOf(atts.getValue("Duration")));
+				m_WFNode.setDuration(new BigDecimal(atts.getValue("Duration")));
 			if (getStringValue(atts, "Priority") != null)
 				m_WFNode.setPriority(Integer.valueOf(atts.getValue("Priority")));
 			m_WFNode.setStartMode(getStringValue(atts, "StartMode"));

@@ -78,7 +78,7 @@ public class MSystem extends X_AD_System
 		{
 			system.saveEx();
 		}
-		s_system.put(0, system);
+//		s_system.put(0, system);
 		return system;
 	}	//	get
 	

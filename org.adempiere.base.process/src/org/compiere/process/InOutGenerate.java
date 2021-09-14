@@ -48,6 +48,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 
+import it.idempiere.base.model.LITMBPartner;
 import it.idempiere.base.util.STDSysConfig;
 
 /**
@@ -73,50 +74,50 @@ public class InOutGenerate extends SvrProcess
 	public static final String P_SELECTIONLINE = "SelectionLine";
 	
 	/**	Manual Selection		*/
-	private boolean 	p_Selection = false;
+	protected boolean 	p_Selection = false;
 	/** Warehouse				*/
-	private int			p_M_Warehouse_ID = 0;
+	protected int			p_M_Warehouse_ID = 0;
 	/** BPartner				*/
-	private int			p_C_BPartner_ID = 0;
+	protected int			p_C_BPartner_ID = 0;
 	/** Promise Date			*/
-	private Timestamp	p_DatePromised = null;
+	protected Timestamp	p_DatePromised = null;
 	/** Include Orders w. unconfirmed Shipments	*/
-	private boolean		p_IsUnconfirmedInOut = false;
+	protected boolean		p_IsUnconfirmedInOut = false;
 	/** DocAction				*/
-	private String		p_docAction = DocAction.ACTION_None;
+	protected String		p_docAction = DocAction.ACTION_None;
 	/** Consolidate				*/
-	private boolean		p_ConsolidateDocument = true;
+	protected boolean		p_ConsolidateDocument = true;
     /** Shipment Date                       */
-	private Timestamp       p_DateShipped = null;
+	protected Timestamp       p_DateShipped = null;
 	
 	// F3P: selection line
 	protected boolean p_SelectionLine = false;
-	private int	DocProcess_AD_Workflow_ID = -1;
+	protected int	DocProcess_AD_Workflow_ID = -1;
 	
 	//F3P: renumber line
-	private boolean	p_overrideLineNo = false;
+	protected boolean	p_overrideLineNo = false;
 	protected int lineNoIncr = 0;
 	/**	The current Shipment	*/
 	protected MInOut 		m_shipment = null;
 	/** Number of Shipments	being created	*/
 	protected int			m_created = 0;
 	/**	Line Number				*/
-	private int			m_line = 0;
+	protected int			m_line = 0;
 	/** Movement Date			*/
-	private Timestamp	m_movementDate = null;
+	protected Timestamp	m_movementDate = null;
 	/**	Last BP Location		*/
-	private int			m_lastC_BPartner_Location_ID = -1;
+	protected int			m_lastC_BPartner_Location_ID = -1;
 
 	/** The Query sql			*/
-	private StringBuffer 		m_sql = null;
+	protected StringBuilder 		m_sql = null;
 
 	
 	/** Storages temp space				*/
-	private HashMap<SParameter,MStorageOnHand[]> m_map = new HashMap<SParameter,MStorageOnHand[]>();
+	protected HashMap<SParameter,MStorageOnHand[]> m_map = new HashMap<SParameter,MStorageOnHand[]>();
 	/** Last Parameter					*/
-	private SParameter		m_lastPP = null;
+	protected SParameter		m_lastPP = null;
 	/** Last Storage					*/
-	private MStorageOnHand[]		m_lastStorages = null;
+	protected MStorageOnHand[]		m_lastStorages = null;
 
 	
 	/**
@@ -192,16 +193,67 @@ public class InOutGenerate extends SvrProcess
 		if (p_M_Warehouse_ID == 0)
 			throw new AdempiereUserError("@NotFound@ @M_Warehouse_ID@");
 		
+		m_sql = generateSqlBuilder();
+
+		PreparedStatement pstmt = null;
+		//F3P: log error
+		boolean error = false;
+		try
+		{
+			pstmt = DB.prepareStatement (m_sql.toString(), get_TrxName());
+			pstmt = setParameter(pstmt);
+		}
+		catch (Exception e)
+		{
+			//F3P: log error
+			//throw new AdempiereException(e);
+			log.log(Level.SEVERE, m_sql.toString(), e);
+			addLog(e.getMessage());
+			error = true;
+
+		}
+		//F3P: log error
+		if(error)
+			return "@Error@";
+		
+		return generate(pstmt);
+	}	//	doIt
+	
+	
+	protected PreparedStatement setParameter(PreparedStatement pstmt) throws SQLException 
+	{
+		int index = 1;
+		if (p_Selection)
+		{
+			pstmt.setInt(index++, Env.getAD_Client_ID(getCtx()));
+			pstmt.setInt(index++, getAD_PInstance_ID());
+		}
+		else	
+		{
+			pstmt.setInt(index++, p_M_Warehouse_ID);
+			if (p_DatePromised != null)
+				pstmt.setTimestamp(index++, p_DatePromised);
+			if (p_C_BPartner_ID != 0)
+				pstmt.setInt(index++, p_C_BPartner_ID);
+		}
+		
+		return pstmt;
+	}
+
+	protected StringBuilder generateSqlBuilder()
+	{
+		StringBuilder sql = null;
+		
 		if (p_Selection)	//	VInOutGen
 		{
-			m_sql = new StringBuffer("SELECT C_Order.* FROM C_Order, T_Selection ")
+			sql = new StringBuilder("SELECT C_Order.* FROM C_Order, T_Selection ")
 				.append("WHERE C_Order.DocStatus='CO' AND C_Order.IsSOTrx='Y' AND C_Order.AD_Client_ID=? ")
 				.append("AND C_Order.C_Order_ID = T_Selection.T_Selection_ID ") 
 				.append("AND T_Selection.AD_PInstance_ID=? ");
 		}
 		else
 		{
-			m_sql = new StringBuffer("SELECT * FROM C_Order o ")
+			sql = new StringBuilder("SELECT * FROM C_Order o ")
 				.append("WHERE DocStatus='CO' AND IsSOTrx='Y'")
 				//	No Offer,POS
 				.append(" AND o.C_DocType_ID IN (SELECT C_DocType_ID FROM C_DocType ")
@@ -220,74 +272,62 @@ public class InOutGenerate extends SvrProcess
 				m_sql.append(" AND o.C_BPartner_ID=?");					//	#3
 		}
 		//F3P: add order by dateOrdered, DocumentNo
-		m_sql.append(" ORDER BY M_Warehouse_ID, PriorityRule, M_Shipper_ID, C_BPartner_ID, C_BPartner_Location_ID, DateOrdered, DocumentNo, C_Order_ID");
+		sql.append(" ORDER BY M_Warehouse_ID, PriorityRule, M_Shipper_ID, C_BPartner_ID, C_BPartner_Location_ID, DateOrdered, DocumentNo, C_Order_ID");
 		//	m_sql += " FOR UPDATE";
-
-		PreparedStatement pstmt = null;
-		//F3P: log error
-		boolean error = false;
-		try
-		{
-			pstmt = DB.prepareStatement (m_sql.toString(), get_TrxName());
-			int index = 1;
-			if (p_Selection)
-			{
-				pstmt.setInt(index++, Env.getAD_Client_ID(getCtx()));
-				pstmt.setInt(index++, getAD_PInstance_ID());
-			}
-			else	
-			{
-				pstmt.setInt(index++, p_M_Warehouse_ID);
-				if (p_DatePromised != null)
-					pstmt.setTimestamp(index++, p_DatePromised);
-				if (p_C_BPartner_ID != 0)
-					pstmt.setInt(index++, p_C_BPartner_ID);
-			}
-		}
-		catch (Exception e)
-		{
-			//F3P: log error
-			//throw new AdempiereException(e);
-			log.log(Level.SEVERE, m_sql.toString(), e);
-			addLog(e.getMessage());
-			error = true;
-
-		}
-		//F3P: log error
-		if(error)
-			return "@Error@";
 		
-		return generate(pstmt);
-	}	//	doIt
+		return sql;
+	}
+	
+	protected boolean isNewInOutNeeded(MOrder order,MInOut mCurrentInOut)
+	{
+		// F3P: ignore shipper on shipment consolidate ?
+		boolean	bIgnoreShipperOnConsolidate = STDSysConfig.isGenInOutIgnoreShipperOnConsolidate(order.getAD_Client_ID(), order.getAD_Org_ID());
+		
+		String InvBacthRule = DB.getSQLValueStringEx(get_TrxName(), "SELECT LIT_InvBacthRule FROM C_BPartner WHERE C_BPartner_ID = ? ", order.getC_BPartner_ID());
+		
+		if (!p_ConsolidateDocument 
+				//LS
+				|| (InvBacthRule!= null  && InvBacthRule.equals(LITMBPartner.INVBACTHRULE_OneByOne))
+				//LS End
+			|| (m_shipment != null 
+			&& (m_shipment.getC_BPartner_Location_ID() != order.getC_BPartner_Location_ID()
+				|| (bIgnoreShipperOnConsolidate == false && m_shipment.getM_Shipper_ID() != order.getM_Shipper_ID() ))))
+		return true;
+		
+		return false;
+	}
 	
 	/**
 	 * 	Generate Shipments
 	 * 	@param pstmt Order Query
 	 *	@return info
 	 */
-	private String generate (PreparedStatement pstmt)
+	protected String generate (PreparedStatement pstmt)
 	{
 		String sError = null; // F3P: errors as of now are ignored, manage them
 		
 		ResultSet rs = null;
 		try
 		{
+			int C_BPartner_ID = -1;
+			//String InvBacthRule = null;
 			rs = pstmt.executeQuery ();
 			while (rs.next ())		//	Order
 			{
 				MOrder order = new MOrder (getCtx(), rs, get_TrxName());
 				statusUpdate(Msg.getMsg(getCtx(), "Processing") + " " + order.getDocumentInfo());
 				
-				// F3P: ignore shipper on shipment consolidate ?
 				
-				boolean	bIgnoreShipperOnConsolidate = STDSysConfig.isGenInOutIgnoreShipperOnConsolidate(order.getAD_Client_ID(), order.getAD_Org_ID());
+				if(C_BPartner_ID != order.getC_BPartner_ID())
+				{
+					C_BPartner_ID = order.getC_BPartner_ID();
+					//InvBacthRule = DB.getSQLValueStringEx(get_TrxName(), "SELECT LIT_InvBacthRule FROM C_BPartner WHERE C_BPartner_ID = ? ", C_BPartner_ID);
+				}
 				
 				//	New Header different Shipper, Shipment Location
-				if (!p_ConsolidateDocument 
-					|| (m_shipment != null 
-					&& (m_shipment.getC_BPartner_Location_ID() != order.getC_BPartner_Location_ID()
-						|| (bIgnoreShipperOnConsolidate == false && m_shipment.getM_Shipper_ID() != order.getM_Shipper_ID() ))))
+				if(isNewInOutNeeded(order, m_shipment))
 					completeShipment();
+					
 				if (log.isLoggable(Level.FINE)) log.fine("check: " + order + " - DeliveryRule=" + order.getDeliveryRule());
 				//
 				Timestamp minGuaranteeDate = m_movementDate;
@@ -625,7 +665,7 @@ public class InOutGenerate extends SvrProcess
 	 *	@param storages storage info
 	 *	@param force force delivery
 	 */
-	private void createLine (MOrder order, MOrderLine orderLine, BigDecimal qty, 
+	protected void createLine (MOrder order, MOrderLine orderLine, BigDecimal qty, 
 		MStorageOnHand[] storages, boolean force)
 	{
 		SelectionLineOrderLineWrapper orderLineWrapper = null;
@@ -834,7 +874,7 @@ public class InOutGenerate extends SvrProcess
 	 *	@param FiFo
 	 *	@return storages
 	 */
-	private MStorageOnHand[] getStorages(int M_Warehouse_ID, 
+	protected MStorageOnHand[] getStorages(int M_Warehouse_ID, 
 			 int M_Product_ID, int M_AttributeSetInstance_ID, int M_Locator_ID, 
 			  Timestamp minGuaranteeDate, boolean FiFo)
 	{
@@ -962,7 +1002,7 @@ public class InOutGenerate extends SvrProcess
 	}	//	completeOrder
 	
 	// F3P: added to simplify rollback management
-	private void rollback(Trx trx,Savepoint savepoint)
+	protected void rollback(Trx trx,Savepoint savepoint)
 	{
 		try
 		{
@@ -977,7 +1017,7 @@ public class InOutGenerate extends SvrProcess
 	
 	// F3P: Helper for order line-related logs (level info)
 	
-	private void logOrderLineInfo(MOrderLine orderLine,String info)
+	protected void logOrderLineInfo(MOrderLine orderLine,String info)
 	{
 		if(log.isLoggable(Level.INFO))
 		{
@@ -1153,10 +1193,10 @@ public class InOutGenerate extends SvrProcess
 		 * 
 		 */
 		
-		private static final long serialVersionUID = -7385140481126599352L;
-		private MOrderLine	orderLine = null;
-		private BigDecimal	qty = null;
-		private Map<String, Object> additionalData = new HashMap<>(); 
+		protected static final long serialVersionUID = -7385140481126599352L;
+		protected MOrderLine	orderLine = null;
+		protected BigDecimal	qty = null;
+		protected Map<String, Object> additionalData = new HashMap<>(); 
 		
 		public SelectionLineOrderLineWrapper(MOrderLine line)
 		{

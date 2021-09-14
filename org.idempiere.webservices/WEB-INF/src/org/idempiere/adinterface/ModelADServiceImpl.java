@@ -32,6 +32,7 @@ package org.idempiere.adinterface;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Properties;
@@ -170,6 +171,14 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	public StandardResponseDocument setDocAction(ModelSetDocActionRequestDocument req) {
 		Trx trx=null;
 		try {
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
+			}
+			
 			getCompiereService().connect();
 			
 			StandardResponseDocument ret = StandardResponseDocument.Factory.newInstance();
@@ -197,6 +206,7 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			} catch (IdempiereServiceFault e) {
 				resp.setError(e.getMessage());
 				resp.setIsError(true);
+				log.log(Level.WARNING, e.getMessage(), e);
 				return ret;
 			}
 			
@@ -264,6 +274,7 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 					return rollbackAndSetError(trx, resp, ret, true,
 							"Couldn't set docAction: " + ((org.compiere.process.DocAction) po).getProcessMsg());
 			} catch (Exception e) {
+				log.log(Level.WARNING, e.getMessage(), e);
 				return rollbackAndSetError(trx, resp, ret, true, e.toString());
 			}
 	
@@ -297,7 +308,12 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 		} finally {
 			if (manageTrx && trx != null)
 				trx.close();
-
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+			}
+			
 			getCompiereService().disconnect();
 		}
 	}
@@ -385,6 +401,13 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 		try {
 			getCompiereService().connect();
 			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
+			}
+			
 			RunProcessResponseDocument resbadlogin = RunProcessResponseDocument.Factory.newInstance();
 			RunProcessResponse rbadlogin = resbadlogin.addNewRunProcessResponse();
 			ModelRunProcess modelRunProcess = req.getModelRunProcessRequest().getModelRunProcess();
@@ -419,6 +442,12 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			requestCtx.put(serviceType+"_Summary", response.getRunProcessResponse().getSummary());
 			return response;
 		} finally {
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+			}
+			
 			getCompiereService().disconnect();
 		}
 	}
@@ -426,6 +455,13 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	public WindowTabDataDocument getList(ModelGetListRequestDocument req) {
 		try {
 			getCompiereService().connect();
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
+			}
 			
 			WindowTabDataDocument resdoc = WindowTabDataDocument.Factory.newInstance();
 			WindowTabData res = resdoc.addNewWindowTabData();
@@ -634,6 +670,12 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	
 			return resdoc;
 		} finally {
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+			}
+			
 			getCompiereService().disconnect();
 		}
 	} // getList
@@ -641,6 +683,14 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	public StandardResponseDocument deleteData(ModelCRUDRequestDocument req) {
 		Trx trx = null;
 		try {
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
+			}
+			
 			getCompiereService().connect();
 			
 			StandardResponseDocument ret = StandardResponseDocument.Factory.newInstance();
@@ -662,6 +712,9 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			} catch (IdempiereServiceFault e) {
 				resp.setError(e.getMessage());
 				resp.setIsError(true);
+				
+				log.log(Level.WARNING, e.getMessage(), e);
+				
 				return ret;
 			}
 	
@@ -706,6 +759,11 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if (manageTrx && trx != null)
 				trx.close();
 			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+			}
+			
 			getCompiereService().disconnect();
 		}
 	}
@@ -720,6 +778,14 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	public StandardResponseDocument createData(ModelCRUDRequestDocument req) {
 		Trx trx = null;
 		try {
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
+			}
+			
 			getCompiereService().connect();
 			
 	    	StandardResponseDocument ret = StandardResponseDocument.Factory.newInstance();
@@ -741,6 +807,9 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	    	} catch (IdempiereServiceFault e) {
 				resp.setError(e.getMessage());
 				resp.setIsError(true);
+				
+				log.log(Level.WARNING, e.getMessage(), e);
+				
 				return ret;
 			}
 	
@@ -821,6 +890,11 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if (manageTrx && trx != null)
 				trx.close();
 			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+			}
+			
 			getCompiereService().disconnect();
 				
 		}
@@ -829,6 +903,14 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	public StandardResponseDocument createUpdateData(ModelCRUDRequestDocument req) {
 		Trx trx = null;
 		try {
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
+			}
+			
 			getCompiereService().connect();
 			
 			StandardResponseDocument ret = StandardResponseDocument.Factory.newInstance();
@@ -850,6 +932,9 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			} catch (IdempiereServiceFault e) {
 				resp.setError(e.getMessage());
 				resp.setIsError(true);
+				
+				log.log(Level.WARNING, e.getMessage(), e);
+				
 				return ret;
 			}
 	
@@ -1023,6 +1108,11 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 		} finally {
 			if (manageTrx && trx != null)
 				trx.close();
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+			}
 			
 			getCompiereService().disconnect();
 		}
@@ -1201,6 +1291,14 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	public StandardResponseDocument updateData(ModelCRUDRequestDocument req){
 		Trx trx = null;
 		try {
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
+			}
+			
 			getCompiereService().connect();
 			
 	    	StandardResponseDocument ret = StandardResponseDocument.Factory.newInstance();
@@ -1222,6 +1320,9 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			} catch (IdempiereServiceFault e) {
 				resp.setError(e.getMessage());
 				resp.setIsError(true);
+				
+				log.log(Level.WARNING, e.getMessage(), e);
+				
 				return ret;
 			}
 	
@@ -1303,12 +1404,25 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 			if (manageTrx && trx != null)
 				trx.close();
 			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+			}
+			
 			getCompiereService().disconnect();
 		}
 	} // updateData
 
 	public WindowTabDataDocument readData(ModelCRUDRequestDocument req) {
 		try {
+
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
+			}
+			
 			getCompiereService().connect();
 			
 			WindowTabDataDocument ret = WindowTabDataDocument.Factory.newInstance();
@@ -1329,6 +1443,9 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 				validateCRUD(modelCRUD);
 			} catch (IdempiereServiceFault e) {
 				resp.setError(e.getMessage());
+				
+				log.log(Level.WARNING, e.getMessage(), e);
+				
 				return ret;
 			}
 	
@@ -1399,6 +1516,12 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	
 			return ret;
 		} finally {
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+			}
+			
 			getCompiereService().disconnect();
 		}
 	}
@@ -1406,6 +1529,14 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 	public WindowTabDataDocument queryData(ModelCRUDRequestDocument req) {
 		Trx trx=null;
 		try {
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"Start #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+				if(WSSysConfig.isWSLogDetailON())
+					log.log(Level.WARNING, req.toString());
+			}
+			
 			getCompiereService().connect();
 			
 			CompiereService m_cs = getCompiereService();
@@ -1568,6 +1699,11 @@ public class ModelADServiceImpl extends AbstractService implements ModelADServic
 		} finally {
 			if (manageTrx && trx != null)
 				trx.close();
+			
+			if(WSSysConfig.isWSLogON())
+			{
+				log.log(Level.WARNING,"End #LSWS: "+(new Timestamp(System.currentTimeMillis()).toString()));
+			}
 			
 			getCompiereService().disconnect();
 		}

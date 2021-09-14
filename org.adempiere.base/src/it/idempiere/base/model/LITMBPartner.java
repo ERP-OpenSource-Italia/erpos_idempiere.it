@@ -118,4 +118,8 @@ public class LITMBPartner
 		
 		return retValue;
 	}	//	getNotInvoicedAmt
+	
+	//LS: usato in InOutGenerate per spezzare
+	public static final String INVBACTHRULE_OneByOne = "O";
+
 }
