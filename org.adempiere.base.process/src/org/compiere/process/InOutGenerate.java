@@ -849,8 +849,15 @@ public class InOutGenerate extends SvrProcess
 					//LS end
 					line.setQty(toDeliver);
 					if (orderLine.getQtyEntered().compareTo(orderLine.getQtyOrdered()) != 0)
-						 line.setQtyEntered(line.getMovementQty().multiply(orderLine.getQtyEntered())
+					{
+						if(orderLine.getQtyOrdered().signum() == 0)
+							throw new AdempiereException("Ordine "+order.getDocumentNo()+" line "+orderLine.getLine()+" con @QtyOrdered@ a 0");
+
+							line.setQtyEntered(line.getMovementQty().multiply(orderLine.getQtyEntered())
 						 .divide(orderLine.getQtyOrdered(), 12, RoundingMode.HALF_UP));
+					}
+					
+					
 					 line.setLine(m_line + orderLine.getLine());
 				}	
 				
