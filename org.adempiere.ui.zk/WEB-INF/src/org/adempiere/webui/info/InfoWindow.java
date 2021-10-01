@@ -2376,7 +2376,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
     		countSql = countSql + " " + otherClause;
         }
 		
-		countSql = "SELECT COUNT(*) FROM ( " + countSql + " ) a";			
+		countSql = "SELECT COUNT(zzz.*) FROM ( " + countSql + " ) zzz";			
 		
 		if (log.isLoggable(Level.FINER))
 			log.finer(countSql);
