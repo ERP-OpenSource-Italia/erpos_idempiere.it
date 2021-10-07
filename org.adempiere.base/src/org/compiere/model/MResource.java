@@ -136,8 +136,27 @@ public class MResource extends X_S_Resource
 		{
 			if (getValue() == null || getValue().length() == 0)
 				setValue(getName());
-			m_product = new MProduct(this, getResourceType());
-			m_product.saveEx(get_TrxName());
+			
+			Query mQuery = new Query(getCtx(),MProduct.Table_Name,"Value = ?",get_TrxName());
+			mQuery.setParameters(getValue());
+			MProduct product = mQuery.first();
+			
+			
+			if(product == null)
+			{
+				m_product = new MProduct(this, getResourceType());
+				m_product.saveEx(get_TrxName());
+			}
+			else
+			{
+				product.setProductType(X_M_Product.PRODUCTTYPE_Resource);
+				product.setResource(this);
+				product.setResource(getResourceType(),false);
+				product.saveEx(get_TrxName());
+				
+				m_product = product;
+				
+			}
 		}
 		//
 		// Validate Manufacturing Resource

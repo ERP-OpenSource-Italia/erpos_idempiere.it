@@ -382,6 +382,16 @@ public class MProduct extends X_M_Product
 	 */
 	public boolean setResource (MResourceType parent)
 	{
+		return setResource(parent, true);
+	}	//	setResource
+	
+	/**
+	 * 	Set Resource Type
+	 *	@param parent resource type
+	 *	@return true if changed
+	 */
+	public boolean setResource (MResourceType parent,boolean setUOM)
+	{
 		boolean changed = false;
 		if (PRODUCTTYPE_Resource.equals(getProductType()))
 		{
@@ -389,7 +399,7 @@ public class MProduct extends X_M_Product
 			changed = true;
 		}
 		//
-		if (parent.getC_UOM_ID() != getC_UOM_ID())
+		if (parent.getC_UOM_ID() != getC_UOM_ID() && setUOM)
 		{
 			setC_UOM_ID(parent.getC_UOM_ID());
 			changed = true;
@@ -699,7 +709,7 @@ public class MProduct extends X_M_Product
 		{
 			String sql = "UPDATE A_Asset a "
 				+ "SET (Name, Description)="
-					+ "(SELECT SUBSTR((SELECT bp.Name FROM C_BPartner bp WHERE bp.C_BPartner_ID=a.C_BPartner_ID) || ' - ' || p.Name,1,60), p.Description "
+					+ "(SELECT SUBSTR(coalesce((SELECT bp.Name||' - ' FROM C_BPartner bp WHERE bp.C_BPartner_ID=a.C_BPartner_ID),'') || p.Name,1,60), p.Description "
 					+ "FROM M_Product p "
 					+ "WHERE p.M_Product_ID=a.M_Product_ID) "
 				+ "WHERE IsActive='Y'"
