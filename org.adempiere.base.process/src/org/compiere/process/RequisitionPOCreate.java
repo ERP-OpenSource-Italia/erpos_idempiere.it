@@ -66,54 +66,54 @@ import org.compiere.util.Msg;
 public class RequisitionPOCreate extends SvrProcess
 {
 	/** Org					*/
-	private int			p_AD_Org_ID = 0;
+	protected int			p_AD_Org_ID = 0;
 	/** Warehouse			*/
-	private int			p_M_Warehouse_ID = 0;
+	protected int			p_M_Warehouse_ID = 0;
 	/**	Doc Date From		*/
-	private Timestamp	p_DateDoc_From;
+	protected Timestamp	p_DateDoc_From;
 	/**	Doc Date To			*/
-	private Timestamp	p_DateDoc_To;
+	protected Timestamp	p_DateDoc_To;
 	/**	Doc Date From		*/
-	private Timestamp	p_DateRequired_From;
+	protected Timestamp	p_DateRequired_From;
 	/**	Doc Date To			*/
-	private Timestamp	p_DateRequired_To;
+	protected Timestamp	p_DateRequired_To;
 	/** Priority			*/
-	private String		p_PriorityRule = null;
+	protected String		p_PriorityRule = null;
 	/** User				*/
-	private int			p_AD_User_ID = 0;
+	protected int			p_AD_User_ID = 0;
 	/** Product				*/
-	private int			p_M_Product_ID = 0;
+	protected int			p_M_Product_ID = 0;
 	/** Product	Category	*/
-	private int			p_M_Product_Category_ID = 0;
+	protected int			p_M_Product_Category_ID = 0;
 	/** BPartner Group	*/
-	private int			p_C_BP_Group_ID = 0;
+	protected int			p_C_BP_Group_ID = 0;
 	/** Requisition			*/
-	private int 		p_M_Requisition_ID = 0;
+	protected int 		p_M_Requisition_ID = 0;
 	//F3P: gestione fornitori
 	/** BP			*/
 	protected int 		p_C_BPartner_ID = 0;
 	
 	/** BP Filtro			*/
-	private int 		p_Vendor_ID = 0;
+	protected int 		p_Vendor_ID = 0;
 	//end
 
 	/** Consolidate			*/
-	private boolean		p_ConsolidateDocument = false;
+	protected boolean		p_ConsolidateDocument = false;
 	
 	/** FR [ 3471930 ] added new parameter **/
-	private boolean		p_ConsolidateByDatePromised = true;
+	protected boolean		p_ConsolidateByDatePromised = true;
 	
 	/** Order				*/
 	protected MOrder		m_order = null;
 	/** Order Line			*/
 	protected MOrderLine	m_orderLine = null;
 	/** Orders Cache : (C_BPartner_ID, DateRequired, M_PriceList_ID) -> MOrder */
-	private HashMap<MultiKey, MOrder> m_cacheOrders = new HashMap<MultiKey, MOrder>();
+	protected HashMap<MultiKey, MOrder> m_cacheOrders = new HashMap<MultiKey, MOrder>();
 	
 	protected int m_M_Warehouse_ID = 0; //F3P: Gestione rottura per magazzino
 	
 	/** DR Aggiunto parametro per il completamento pre-generazione ordine **/
-	private boolean		p_CompleteBeforeGenerateOrder = false;
+	protected boolean		p_CompleteBeforeGenerateOrder = false;
 	
 	/**	Manual Selection		*/
 	protected boolean 	 	p_Selection = false;
@@ -395,11 +395,11 @@ public class RequisitionPOCreate extends SvrProcess
 		return "";
 	}	//	doit
 		
-	private int 		m_M_Requisition_ID = 0;
-	private int 		m_M_Product_ID = 0;
-	private int			m_M_AttributeSetInstance_ID = 0;
+	protected int 		m_M_Requisition_ID = 0;
+	protected int 		m_M_Product_ID = 0;
+	protected int			m_M_AttributeSetInstance_ID = 0;
 	/** BPartner				*/
-	private MBPartner	m_bpartner = null;
+	protected MBPartner	m_bpartner = null;
 	
 	/**
 	 * 	Process Line
@@ -508,7 +508,7 @@ public class RequisitionPOCreate extends SvrProcess
 	 * 	Close Order
 	 * 	@throws Exception
 	 */
-	private void closeOrder() throws Exception
+	protected void closeOrder() throws Exception
 	{
 		if (m_orderLine != null)
 		{
@@ -624,7 +624,7 @@ public class RequisitionPOCreate extends SvrProcess
 	 * @param C_BPartner_ID
 	 * @return true if it's allowed
 	 */
-	private boolean isGenerateForVendor(int C_BPartner_ID)
+	protected boolean isGenerateForVendor(int C_BPartner_ID)
 	{
 		// No filter group was set => generate for all vendors
 		if (p_C_BP_Group_ID <= 0)
@@ -672,7 +672,7 @@ public class RequisitionPOCreate extends SvrProcess
 		return processed;
 	}
 	
-	private List<Integer> m_excludedVendors = new ArrayList<Integer>();
+	protected List<Integer> m_excludedVendors = new ArrayList<Integer>();
 	
 	// F3P: Common order by clause for standard and T_Selection processing
 	
