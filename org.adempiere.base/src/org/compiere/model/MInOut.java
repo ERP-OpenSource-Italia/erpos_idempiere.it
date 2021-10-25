@@ -2321,13 +2321,18 @@ public class MInOut extends X_M_InOut implements DocAction
 	 */
 	public boolean reverseCorrectIt()
 	{
+		return reverseCorrectIt(true);
+	}
+	
+	public boolean reverseCorrectIt(boolean unlinkInvoiceLine)
+	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
 		// Before reverseCorrect
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_BEFORE_REVERSECORRECT);
 		if (m_processMsg != null)
 			return false;
 
-		MInOut reversal = reverse(false);
+		MInOut reversal = reverse(false, unlinkInvoiceLine);
 		if (reversal == null)
 			return false;
 
@@ -2344,6 +2349,10 @@ public class MInOut extends X_M_InOut implements DocAction
 	}	//	reverseCorrectionIt
 
 	protected MInOut reverse(boolean accrual) {
+		return reverse(accrual, true); 
+	}
+	
+	protected MInOut reverse(boolean accrual, boolean unlinkInvoiceLine) {
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		Timestamp reversalDate = accrual ? Env.getContextAsDate(getCtx(), "#Date") : getDateAcct();
 		if (reversalDate == null) {
@@ -2417,32 +2426,35 @@ public class MInOut extends X_M_InOut implements DocAction
 				asset.saveEx();
 			}
 			// Un-Link inoutline to Invoiceline
-			String sql = "SELECT C_InvoiceLine_ID FROM C_InvoiceLine WHERE M_InOutLine_ID=?";
-			PreparedStatement pstmt = null;
-			ResultSet rs = null;
-			try
+			if(unlinkInvoiceLine)
 			{
-				pstmt = DB.prepareStatement(sql, get_TrxName());
-				pstmt.setInt(1, sLines[i].getM_InOutLine_ID());
-				rs = pstmt.executeQuery();
-				while (rs.next())
+				String sql = "SELECT C_InvoiceLine_ID FROM C_InvoiceLine WHERE M_InOutLine_ID=?";
+				PreparedStatement pstmt = null;
+				ResultSet rs = null;
+				try
 				{
-					int invoiceLineId = rs.getInt(1);
-					if (invoiceLineId > 0 ){
-						MInvoiceLine iLine = new MInvoiceLine(getCtx(),invoiceLineId , get_TrxName());
-						iLine.setM_InOutLine_ID(0);
-						iLine.saveEx();
+					pstmt = DB.prepareStatement(sql, get_TrxName());
+					pstmt.setInt(1, sLines[i].getM_InOutLine_ID());
+					rs = pstmt.executeQuery();
+					while (rs.next())
+					{
+						int invoiceLineId = rs.getInt(1);
+						if (invoiceLineId > 0 ){
+							MInvoiceLine iLine = new MInvoiceLine(getCtx(),invoiceLineId , get_TrxName());
+							iLine.setM_InOutLine_ID(0);
+							iLine.saveEx();
+						}
 					}
 				}
-			}
-			catch (SQLException e)
-			{
-				throw new DBException(e, sql);
-			}
-			finally
-			{
-				DB.close(rs, pstmt);
-				rs = null; pstmt = null;
+				catch (SQLException e)
+				{
+					throw new DBException(e, sql);
+				}
+				finally
+				{
+					DB.close(rs, pstmt);
+					rs = null; pstmt = null;
+				}
 			}
 		}
 		reversal.setC_Order_ID(getC_Order_ID());
