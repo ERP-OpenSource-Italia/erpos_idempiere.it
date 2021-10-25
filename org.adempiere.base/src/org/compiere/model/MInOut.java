@@ -2321,10 +2321,10 @@ public class MInOut extends X_M_InOut implements DocAction
 	 */
 	public boolean reverseCorrectIt()
 	{
-		return reverseCorrectIt(true);
+		return reverseCorrectIt(true, true);
 	}
 	
-	public boolean reverseCorrectIt(boolean unlinkInvoiceLine)
+	public boolean reverseCorrectIt(boolean unlinkInvoiceLine, boolean reverseMatchInv)
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
 		// Before reverseCorrect
@@ -2332,7 +2332,7 @@ public class MInOut extends X_M_InOut implements DocAction
 		if (m_processMsg != null)
 			return false;
 
-		MInOut reversal = reverse(false, unlinkInvoiceLine);
+		MInOut reversal = reverse(false, unlinkInvoiceLine, reverseMatchInv);
 		if (reversal == null)
 			return false;
 
@@ -2349,10 +2349,10 @@ public class MInOut extends X_M_InOut implements DocAction
 	}	//	reverseCorrectionIt
 
 	protected MInOut reverse(boolean accrual) {
-		return reverse(accrual, true); 
+		return reverse(accrual, true, true); 
 	}
 	
-	protected MInOut reverse(boolean accrual, boolean unlinkInvoiceLine) {
+	protected MInOut reverse(boolean accrual, boolean unlinkInvoiceLine, boolean reverseMatchInv) {
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		Timestamp reversalDate = accrual ? Env.getContextAsDate(getCtx(), "#Date") : getDateAcct();
 		if (reversalDate == null) {
@@ -2366,7 +2366,7 @@ public class MInOut extends X_M_InOut implements DocAction
 		}
 
 		//	Reverse/Delete Matching
-		if (!isSOTrx())
+		if (!isSOTrx() && reverseMatchInv)
 		{
 			if (!reverseMatching(reversalDate))
 				return null;			
