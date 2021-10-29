@@ -1281,10 +1281,16 @@ public class MInOut extends X_M_InOut implements DocAction
 				continue;
 			if (product != null && product.isASIMandatory(isSOTrx()))
 			{
-				if (product.getAttributeSet() != null && !product.getAttributeSet().excludeTableEntry(MInOutLine.Table_ID, isSOTrx())) {
-					m_processMsg = "@M_AttributeSet_ID@ @IsMandatory@ (@Line@ #" + lines[i].getLine() +
-									", @M_Product_ID@=" + product.getValue() + ")";
-					return DocAction.STATUS_Invalid;
+				if (product.getAttributeSet() != null && !product.getAttributeSet().excludeTableEntry(MInOutLine.Table_ID, isSOTrx())) 
+				{
+					//LS: InOutLineMA  
+					int MAs = DB.getSQLValueEx(get_TrxName(), "SELECT COUNT('OK') FROM M_InOutLineMA WHERE M_InOutLine_ID = ? ", line.getM_InOutLine_ID());
+					if(MAs == 0)
+					{
+						m_processMsg = "@M_AttributeSet_ID@ @IsMandatory@ (@Line@ #" + lines[i].getLine() +
+								", @M_Product_ID@=" + product.getValue() + ")";
+						return DocAction.STATUS_Invalid;
+					}
 				}
 			}
 		}
