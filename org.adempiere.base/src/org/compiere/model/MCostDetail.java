@@ -25,7 +25,6 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.compiere.acct.Doc;
-import org.compiere.model.X_M_CostHistory;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -913,14 +912,22 @@ public class MCostDetail extends X_M_CostDetail
 		else if (MAcctSchema.COSTINGLEVEL_BatchLot.equals(CostingLevel))
 			Org_ID = 0;
 
-		//	Create Material Cost elements
+		//	Create Material Cost elements LS: ProductType = Service -> Outside Processing Cost Element
 		if (getM_CostElement_ID() == 0)
 		{
-			MCostElement[] ces = MCostElement.getCostingMethods(this);
+			//LS
+			MCostElement[] ces;
+			if(!getM_Product().getProductType().equals(MProduct.PRODUCTTYPE_Service))
+				ces = MCostElement.getCostingMethods(this);
+			else//Servizi->lavorazione esterna
+				ces = MCostElement.getOutsideProcessingCostElement(this, as.getCostingMethod());
+
 			for (int i = 0; i < ces.length; i++)
 			{
 				MCostElement ce = ces[i];
-				if (ce.isAverageInvoice() || ce.isAveragePO() || ce.isLifo() || ce.isFifo())
+				//LS calcolo comuqnue il costo, al massimo non valorizzo il prodotto
+				if (!MSysConfig.getBooleanValue(MSysConfig.LIT_COSTDETAIL_CALC_ALL, false, getAD_Client_ID(), getAD_Org_ID())  
+						&& (ce.isAverageInvoice(product.getProductType()) || ce.isAveragePO(product.getProductType()) || ce.isLifo() || ce.isFifo()))
 				{
 					if (!product.isStocked())
 						continue;
@@ -929,39 +936,105 @@ public class MCostDetail extends X_M_CostDetail
 				if (!ok)
 					break;
 			}
-		}	//	Material Cost elements
+			//LS: servizio: processo anche il Medio fatture e ultimo acquisto
+			if(getM_Product().getProductType().equals(MProduct.PRODUCTTYPE_Service))
+			{
+				MCostElement ce = MCostElement.getMaterialCostElement(this, MCostElement.COSTINGMETHOD_AverageInvoice);
+				//LS calcolo comuqnue il costo, al massimo non valorizzo il prodotto
+				if (MSysConfig.getBooleanValue(MSysConfig.LIT_COSTDETAIL_CALC_ALL, false, getAD_Client_ID(), getAD_Org_ID())  
+						|| (ce.isAverageInvoice(product.getProductType()) || ce.isAveragePO(product.getProductType()) 
+								|| ce.isLifo() || ce.isFifo() && product.isStocked()))
+				{
+					process (as, product, ce, Org_ID, M_ASI_ID, true);
+				}
+				ce = MCostElement.getMaterialCostElement(this, MCostElement.COSTINGMETHOD_LastPOPrice);
+				//LS calcolo comuqnue il costo, al massimo non valorizzo il prodotto
+				if (MSysConfig.getBooleanValue(MSysConfig.LIT_COSTDETAIL_CALC_ALL, false, getAD_Client_ID(), getAD_Org_ID())  
+						|| (ce.isAverageInvoice(product.getProductType()) || ce.isAveragePO(product.getProductType()) 
+								|| ce.isLifo() || ce.isFifo() && product.isStocked()))
+				{
+					process (as, product, ce, Org_ID, M_ASI_ID, true);
+				}
+				ce = MCostElement.getMaterialCostElement(this, MCostElement.COSTINGMETHOD_LastInvoice);
+				//LS calcolo comuqnue il costo, al massimo non valorizzo il prodotto
+				if (MSysConfig.getBooleanValue(MSysConfig.LIT_COSTDETAIL_CALC_ALL, false, getAD_Client_ID(), getAD_Org_ID())  
+						|| (ce.isAverageInvoice(product.getProductType()) || ce.isAveragePO(product.getProductType()) 
+								|| ce.isLifo() || ce.isFifo() && product.isStocked()))
+				{
+					process (as, product, ce, Org_ID, M_ASI_ID, true);
+				}
+			}
+		}	//	Material Cost elements LS: ProductType = Service -> Outside Processing Cost Element
 		else
 		{
-			MCostElement ce = MCostElement.get(getCtx(), getM_CostElement_ID());
-			if (ce.getCostingMethod() == null) 
+			MCostElement costingElement = MCostElement.get(getCtx(), getM_CostElement_ID());
+			if (costingElement.getCostingMethod() == null) 
 			{
-				MCostElement[] ces = MCostElement.getCostingMethods(this);
-				for (MCostElement costingElement : ces)
+				//				MCostElement[] ces = MCostElement.getCostingMethods(this);
+				//LS
+				MCostElement[] ces;
+				if(!getM_Product().getProductType().equals(MProduct.PRODUCTTYPE_Service))
+					ces = MCostElement.getCostingMethods(this);
+				else//Servizi->lavorazione esterna
+					ces = MCostElement.getOutsideProcessingCostElement(this, as.getCostingMethod());
+
+				for (MCostElement ce : ces)
 				{
-					if (costingElement.isAverageInvoice() || costingElement.isAveragePO() || costingElement.isLifo() || costingElement.isFifo())
+					if (!MSysConfig.getBooleanValue(MSysConfig.LIT_COSTDETAIL_CALC_ALL, false, getAD_Client_ID(), getAD_Org_ID())  
+							&& (ce.isAverageInvoice(product.getProductType()) || ce.isAveragePO(product.getProductType()) || ce.isLifo() || ce.isFifo()))
 					{
 						if (!product.isStocked())
 							continue;
 					}					
-					ok = process (as, product, costingElement, Org_ID, M_ASI_ID);
+					ok = process (as, product, ce, Org_ID, M_ASI_ID);
 					if (!ok)
 						break;
+				}
+				//LS: servizio: processo anche il Medio fatture e ultimo acquisto
+				if(getM_Product().getProductType().equals(MProduct.PRODUCTTYPE_Service))
+				{
+					MCostElement ce = MCostElement.getMaterialCostElement(this, MCostElement.COSTINGMETHOD_AverageInvoice);
+					//LS calcolo comuqnue il costo, al massimo non valorizzo il prodotto
+					if (MSysConfig.getBooleanValue(MSysConfig.LIT_COSTDETAIL_CALC_ALL, false, getAD_Client_ID(), getAD_Org_ID())  
+							|| (ce.isAverageInvoice(product.getProductType()) || ce.isAveragePO(product.getProductType()) 
+									|| ce.isLifo() || ce.isFifo() && product.isStocked()))
+					{
+						process (as, product, ce, Org_ID, M_ASI_ID, true);
+					}
+					ce = MCostElement.getMaterialCostElement(this, MCostElement.COSTINGMETHOD_LastPOPrice);
+					//LS calcolo comuqnue il costo, al massimo non valorizzo il prodotto
+					if (MSysConfig.getBooleanValue(MSysConfig.LIT_COSTDETAIL_CALC_ALL, false, getAD_Client_ID(), getAD_Org_ID())  
+							|| (ce.isAverageInvoice(product.getProductType()) || ce.isAveragePO(product.getProductType()) 
+									|| ce.isLifo() || ce.isFifo() && product.isStocked()))
+					{
+						process (as, product, ce, Org_ID, M_ASI_ID, true);
+					}
+					ce = MCostElement.getMaterialCostElement(this, MCostElement.COSTINGMETHOD_LastInvoice);
+					//LS calcolo comuqnue il costo, al massimo non valorizzo il prodotto
+					if (MSysConfig.getBooleanValue(MSysConfig.LIT_COSTDETAIL_CALC_ALL, false, getAD_Client_ID(), getAD_Org_ID())  
+							|| (ce.isAverageInvoice(product.getProductType()) || ce.isAveragePO(product.getProductType()) 
+									|| ce.isLifo() || ce.isFifo() && product.isStocked()))
+					{
+						process (as, product, ce, Org_ID, M_ASI_ID, true);
+					}
 				}
 			}
 			else
 			{
-				if (ce.isAverageInvoice() || ce.isAveragePO() || ce.isLifo() || ce.isFifo())
+				//LS calcolo comuqnue il costo, al massimo non valorizzo il prodotto
+				if (MSysConfig.getBooleanValue(MSysConfig.LIT_COSTDETAIL_CALC_ALL, false, getAD_Client_ID(), getAD_Org_ID())  
+						|| (costingElement.isAverageInvoice(product.getProductType()) || costingElement.isAveragePO(product.getProductType()) 
+								|| costingElement.isLifo() || costingElement.isFifo() && product.isStocked()))
 				{
-					if (product.isStocked())
-						ok = process (as, product, ce, Org_ID, M_ASI_ID);
+					ok = process (as, product, costingElement, Org_ID, M_ASI_ID);
 				}
 				else
 				{
-					ok = process (as, product, ce, Org_ID, M_ASI_ID);
+					ok = process (as, product, costingElement, Org_ID, M_ASI_ID);
 				}
 			}
 		}
-		
+
 		//	Save it
 		if (ok)
 		{
@@ -973,6 +1046,7 @@ public class MCostDetail extends X_M_CostDetail
 		if (log.isLoggable(Level.INFO)) log.info(ok + " - " + toString());
 		return ok;
 	}	//	process
+	
 	
 	/**
 	 * 	Process cost detail for cost record
@@ -986,14 +1060,37 @@ public class MCostDetail extends X_M_CostDetail
 	protected boolean process (MAcctSchema as, MProduct product, MCostElement ce, 
 		int Org_ID, int M_ASI_ID)
 	{
+		return process (as, product,ce,Org_ID,M_ASI_ID, false);
+	}
+	/**
+	 * 	Process cost detail for cost record
+	 *	@param as accounting schema
+	 *	@param product product
+	 *	@param ce cost element
+	 *	@param Org_ID org - corrected for costing level
+	 *	@param M_ASI_ID - asi corrected for costing level
+	 *	@return true if cost ok
+	 */
+	protected boolean process (MAcctSchema as, MProduct product, MCostElement ce, 
+		int Org_ID, int M_ASI_ID,
+		boolean forceMaterial)
+	{
+		String productType = product.getProductType();
+		if(forceMaterial)
+			productType = null;
+		
+			
 		//handle compatibility issue between average invoice and average po
 		String costingMethod = product.getCostingMethod(as);
-		if (X_M_Cost.COSTINGMETHOD_AverageInvoice.equals(costingMethod)) {
-			if (ce.isAveragePO())
-				return true;
-		} else if (X_M_Cost.COSTINGMETHOD_AveragePO.equals(costingMethod)) {
-			if (ce.isAverageInvoice())
-				return true;
+		if(!MSysConfig.getBooleanValue(MSysConfig.LIT_COSTDETAIL_ALWAYS_CALC_AVERAGE, false, getAD_Client_ID(), getAD_Org_ID()))
+		{
+			if (X_M_Cost.COSTINGMETHOD_AverageInvoice.equals(costingMethod)) {
+				if (ce.isAveragePO())
+					return true;
+			} else if (X_M_Cost.COSTINGMETHOD_AveragePO.equals(costingMethod)) {
+				if (ce.isAverageInvoice())
+					return true;
+			}
 		}
 		
 		MCost cost = MCost.get(product, M_ASI_ID, as, 
@@ -1067,12 +1164,12 @@ public class MCostDetail extends X_M_CostDetail
 		{		
 			boolean isReturnTrx = qty.signum() < 0;
 			
-			if (ce.isAveragePO())
+			if (ce.isAveragePO(productType))
 			{
 				cost.setWeightedAverage(amt, qty);
 				if (log.isLoggable(Level.FINER)) log.finer("PO - AveragePO - " + cost);
 			}
-			else if (ce.isLastPOPrice() && !costAdjustment)
+			else if (ce.isLastPOPrice(productType) && !costAdjustment)
 			{
 				if(!isReturnTrx)
 				{
@@ -1122,12 +1219,12 @@ public class MCostDetail extends X_M_CostDetail
 		{
 			boolean isReturnTrx = qty.signum() < 0;
 			
-			if (ce.isAverageInvoice())
+			if (ce.isAverageInvoice(productType))
 			{
 				cost.setWeightedAverage(amt, qty);
 				if (log.isLoggable(Level.FINER)) log.finer("Inv - AverageInv - " + cost);
 			}
-			else if (ce.isAveragePO() && costAdjustment)
+			else if (ce.isAveragePO(productType) && costAdjustment)
 			{
 				cost.setWeightedAverage(amt, qty);
 			}
@@ -1147,7 +1244,7 @@ public class MCostDetail extends X_M_CostDetail
 				cost.add(amt, qty);
 				if (log.isLoggable(Level.FINER)) log.finer("Inv - FiFo/LiFo - " + cost);
 			}
-			else if (ce.isLastInvoice() && !costAdjustment)
+			else if (ce.isLastInvoice(productType) && !costAdjustment)
 			{
 				if (!isReturnTrx)
 				{
@@ -1191,7 +1288,7 @@ public class MCostDetail extends X_M_CostDetail
 		}
 		else if (getM_InOutLine_ID() != 0 && costAdjustment)
 		{
-			if (ce.isAverageInvoice())
+			if (ce.isAverageInvoice(productType))
 			{
 				cost.setWeightedAverage(amt, qty);
 			}
@@ -1208,7 +1305,7 @@ public class MCostDetail extends X_M_CostDetail
 			boolean adjustment = getM_InventoryLine_ID() > 0 && qty.signum() == 0 && amt.signum() != 0;
 			boolean isVendorRMA = isVendorRMA();
 			//
-			if (ce.isAverageInvoice())
+			if (ce.isAverageInvoice(productType))
 			{
 				if (!isVendorRMA)
 				{
@@ -1240,7 +1337,7 @@ public class MCostDetail extends X_M_CostDetail
 					if (log.isLoggable(Level.FINER)) log.finer("QtyAdjust - AverageInv - " + cost);
 				}
 			}
-			else if (ce.isAveragePO())
+			else if (ce.isAveragePO(productType))
 			{
 				if (adjustment)
 				{
@@ -1305,12 +1402,12 @@ public class MCostDetail extends X_M_CostDetail
 					if (log.isLoggable(Level.FINER)) log.finer("QtyAdjust - FiFo/Lifo - " + cost);
 				}
 			}
-			else if (ce.isLastInvoice() && !isVendorRMA && !adjustment)
+			else if (ce.isLastInvoice(productType) && !isVendorRMA && !adjustment)
 			{
 				cost.setCurrentQty(cost.getCurrentQty().add(qty));
 				if (log.isLoggable(Level.FINER)) log.finer("QtyAdjust - LastInv - " + cost);
 			}
-			else if (ce.isLastPOPrice() && !isVendorRMA && !adjustment)
+			else if (ce.isLastPOPrice(productType) && !isVendorRMA && !adjustment)
 			{
 				cost.setCurrentQty(cost.getCurrentQty().add(qty));
 				if (log.isLoggable(Level.FINER)) log.finer("QtyAdjust - LastPO - " + cost);
@@ -1374,7 +1471,7 @@ public class MCostDetail extends X_M_CostDetail
 		}
 		else if (getM_MatchInv_ID() > 0)
 		{
-			if (ce.isAveragePO())
+			if (ce.isAveragePO(productType))
 			{
 				cost.setWeightedAverage(amt, qty);
 			}			
