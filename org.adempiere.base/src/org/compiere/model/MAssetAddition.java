@@ -111,7 +111,6 @@ public class MAssetAddition extends X_A_Asset_Addition
 	}	//	beforeSave
 	
 //	private boolean m_confirmed_AssetValues = false;
-
 	/**
 	 * Create Asset and asset Addition from MMatchInv.
 	 * MAssetAddition is saved.
@@ -120,7 +119,19 @@ public class MAssetAddition extends X_A_Asset_Addition
 	 */
 	public static MAssetAddition createAsset(MMatchInv match)
 	{
+		return createAsset(match, -1);
+	}
+	/**
+	 * Create Asset and asset Addition from MMatchInv.
+	 * MAssetAddition is saved.
+	 * @param match match invoice
+	 * @return asset addition
+	 */
+	public static MAssetAddition createAsset(MMatchInv match, int A_Asset_ID)
+	{
 		MAssetAddition assetAdd = new MAssetAddition(match);
+		if(A_Asset_ID > 0)
+			assetAdd.setA_Asset_ID(A_Asset_ID);
 		assetAdd.dump();
 		//@win add condition to prevent asset creation when expense addition or second addition
 		if (MAssetAddition.A_CAPVSEXP_Capital.equals(assetAdd.getA_CapvsExp())
