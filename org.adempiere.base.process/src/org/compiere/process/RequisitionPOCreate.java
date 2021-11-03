@@ -129,6 +129,9 @@ public class RequisitionPOCreate extends SvrProcess
 	
 	/** LS Aggiunto parametro per consolidare le linee per prodotto con data richiesta minore**/
 	protected boolean		p_consolidateByRequisitionDate = true;
+	/** LS Aggiunto parametri per spezzare per singola linea di RDA **/
+	protected boolean		p_breakForRDALine = false;
+	protected boolean		p_useRDALinePrice = false;
 	
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -185,6 +188,10 @@ public class RequisitionPOCreate extends SvrProcess
 			else if (name.equals("C_Order_ID"))
 				p_C_Order_ID = para[i].getParameterAsInt();
 			//end
+			else if(name.equalsIgnoreCase("BreakForRDALine"))
+				p_breakForRDALine = para[i].getParameterAsBoolean();
+			else if(name.equalsIgnoreCase("UseRDALinePrice"))
+				p_useRDALinePrice = para[i].getParameterAsBoolean();
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -440,6 +447,7 @@ public class RequisitionPOCreate extends SvrProcess
 			closeOrder();
 		}
 		if (m_orderLine == null
+			|| p_breakForRDALine 
 			|| rLine.getM_Product_ID() != m_M_Product_ID
 			|| rLine.getM_AttributeSetInstance_ID() != m_M_AttributeSetInstance_ID
 			|| rLine.getC_Charge_ID() != 0		//	single line per charge
@@ -459,7 +467,13 @@ public class RequisitionPOCreate extends SvrProcess
 
 		//	Update Order Line
 		m_orderLine.setQty(m_orderLine.getQtyOrdered().add(rLine.getQty()));
-		m_orderLine.setPrice();
+		if(p_breakForRDALine && p_useRDALinePrice)
+		{
+			m_orderLine.setPrice(rLine.getPriceActual());
+		}
+		else
+			m_orderLine.setPrice();
+
 		//	Update Requisition Line
 		rLine.setC_OrderLine_ID(m_orderLine.getC_OrderLine_ID());
 		rLine.saveEx();
@@ -634,9 +648,9 @@ public class RequisitionPOCreate extends SvrProcess
 		}
 		
 		if(m_orderToAdd != null)
-			m_orderLine = new MOrderLine(m_orderToAdd);
+			m_orderLine = MOrderLine.createFromOrder(m_orderToAdd);
 		else
-			m_orderLine = new MOrderLine(m_order);
+			m_orderLine = MOrderLine.createFromOrder(m_order);
 		
 		m_orderLine.setDatePromised(rLine.getDateRequired());
 		if (product != null)
