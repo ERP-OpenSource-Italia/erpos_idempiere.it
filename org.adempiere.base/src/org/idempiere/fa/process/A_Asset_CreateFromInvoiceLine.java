@@ -16,12 +16,14 @@ package org.idempiere.fa.process;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.I_C_BPartner;
 import org.compiere.model.MAccount;
 import org.compiere.model.MAcctSchema;
@@ -236,10 +238,36 @@ public class A_Asset_CreateFromInvoiceLine extends SvrProcess {
 		{
 			return;
 		}
-		
+		MAssetAddition	addition = null;
+
 		MInvoiceLine invLine = m_lstLines.get(0);
+		int iM_InOutLine_ID = invLine.getM_InOutLine_ID();
+		if(iM_InOutLine_ID >0)
+		{
+			PreparedStatement st = DB.prepareStatement("SELECT A_Asset_ID FROM A_Asset WHERE M_InOutLine_ID = ? ", invLine.get_TrxName());
+			ResultSet rs = null;
+			try 
+			{
+				st.setInt(1, iM_InOutLine_ID);
+				rs = st.executeQuery();
+				while(rs.next())
+				{
+					addition = MAssetAddition.createAsset(invLine, rs.getInt(1));
+					break;//LS gestiamo un solo asset per linea di entrata merci
+				}
+			}
+			catch (SQLException e)
+			{
+				throw new AdempiereException(e);
+			}
+			finally
+			{
+				DB.close(rs, st);
+			}
+		}
 		
-		MAssetAddition	addition = MAssetAddition.createAsset(invLine);
+		if(addition == null)
+			addition = MAssetAddition.createAsset(invLine);
 		MAsset					asset = null;
 		// More the one line: turn to manual
 		
@@ -374,7 +402,8 @@ public class A_Asset_CreateFromInvoiceLine extends SvrProcess {
 				0,								//User1_ID
 				0,								//User2_ID
 				0,								//UserElement1_ID
-				0);  							//UserElement2_ID
+				0,  							//UserElement2_ID
+				get_TrxName());
 		acct.saveEx();
 
 		int C_Charge_ID = DB.getSQLValue(get_TrxName(), sqlCharge, acct.getC_ValidCombination_ID());
@@ -397,7 +426,8 @@ public class A_Asset_CreateFromInvoiceLine extends SvrProcess {
 					0,								//User1_ID
 					0,								//User2_ID
 					0,								//UserElement1_ID
-					0);  							//UserElement2_ID
+					0,  							//UserElement2_ID
+					get_TrxName());
 			acct.saveEx();
 			
 			C_Charge_ID = DB.getSQLValue(get_TrxName(), sqlCharge, acct.getC_ValidCombination_ID());

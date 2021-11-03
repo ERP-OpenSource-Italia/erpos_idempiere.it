@@ -130,30 +130,39 @@ public class MAssetAddition extends X_A_Asset_Addition
 	public static MAssetAddition createAsset(MMatchInv match, int A_Asset_ID)
 	{
 		MAssetAddition assetAdd = new MAssetAddition(match);
-		if(A_Asset_ID > 0)
-			assetAdd.setA_Asset_ID(A_Asset_ID);
 		assetAdd.dump();
 		//@win add condition to prevent asset creation when expense addition or second addition
-		if (MAssetAddition.A_CAPVSEXP_Capital.equals(assetAdd.getA_CapvsExp())
-				&& match.getC_InvoiceLine().getA_Asset_ID() == 0 && assetAdd.isA_CreateAsset()) { 
-		//end @win add condition to prevent asset creation when expense addition or second addition
-		MAsset asset = assetAdd.createAsset();
-		asset.dump();
-		//@win add
-		// F3P: copy life years from asset group to asset addition, all assetGroup not only first
-		List<MAssetGroupAcct> lstGroupAcct = MAssetGroupAcct.forA_Asset_Group_ID(assetAdd.getCtx(), asset.getA_Asset_Group_ID());
-				
-		for(MAssetGroupAcct groupAcct:lstGroupAcct)
-		{
-			if(groupAcct.getPostingType().equals(assetAdd.getPostingType()))
+		if (A_Asset_ID <=0
+				&& MAssetAddition.A_CAPVSEXP_Capital.equals(assetAdd.getA_CapvsExp())
+				&& match.getC_InvoiceLine().getA_Asset_ID() == 0 && assetAdd.isA_CreateAsset()) 
+		{ 
+			//end @win add condition to prevent asset creation when expense addition or second addition
+			MAsset asset = assetAdd.createAsset();
+			asset.dump();
+			//@win add
+			// F3P: copy life years from asset group to asset addition, all assetGroup not only first
+			List<MAssetGroupAcct> lstGroupAcct = MAssetGroupAcct.forA_Asset_Group_ID(assetAdd.getCtx(), asset.getA_Asset_Group_ID());
+
+			for(MAssetGroupAcct groupAcct:lstGroupAcct)
 			{
-				assetAdd.setDeltaUseLifeYears(groupAcct.getUseLifeYears());
-				assetAdd.setDeltaUseLifeYears_F(groupAcct.getUseLifeYears_F());
+				if(groupAcct.getPostingType().equals(assetAdd.getPostingType()))
+				{
+					assetAdd.setDeltaUseLifeYears(groupAcct.getUseLifeYears());
+					assetAdd.setDeltaUseLifeYears_F(groupAcct.getUseLifeYears_F());
+				}
 			}
-		}
-		//F3P:end
+			//F3P:end
 		} else {
-			assetAdd.setA_Asset_ID(match.getC_InvoiceLine().getA_Asset_ID());
+			if(A_Asset_ID > 0)
+			{
+				MAsset asset = PO.get(match.getCtx(), MAsset.Table_Name, A_Asset_ID, match.get_TrxName());
+				assetAdd.setA_Asset_ID(A_Asset_ID);
+				assetAdd.setA_CreateAsset(false);
+				assetAdd.setA_QTY_Current(asset.getA_QTY_Current());
+				assetAdd.setA_CapvsExp(A_CAPVSEXP_Capital);//LS se ho creato il cespite sulla linea è per forza nuovo
+			}
+			else
+				assetAdd.setA_Asset_ID(match.getC_InvoiceLine().getA_Asset_ID());
 			assetAdd.setA_CreateAsset(false);
 		}
 		assetAdd.saveEx();
@@ -170,10 +179,40 @@ public class MAssetAddition extends X_A_Asset_Addition
 	 */
 	public static MAssetAddition createAsset(MInvoiceLine invLine)
 	{
+		return createAsset(invLine, -1);
+	}
+	/**
+	 * Create Asset and asset Addition from InvoiceLine.
+	 * MAssetAddition is saved.
+	 * @param invLine invoice line
+	 * @return asset addition
+	 * @author Angelo Dabala' (genied)
+	 */
+	public static MAssetAddition createAsset(MInvoiceLine invLine, int A_Asset_ID)
+	{
 		MAssetAddition assetAdd = new MAssetAddition(invLine);
 		assetAdd.dump();
-				
-		MAsset asset = assetAdd.createAsset();
+		
+		MAsset asset = null;
+		if(A_Asset_ID > 0)
+		{
+			asset = PO.get(invLine.getCtx(), MAsset.Table_Name, A_Asset_ID, invLine.get_TrxName());
+			if(asset.getA_Asset_Group_ID()<=0)
+			{
+				asset.setA_Asset_Group_ID(invLine.getA_Asset_Group_ID());
+				asset.saveEx();
+			}
+		}
+		
+		if(asset == null)
+			asset = assetAdd.createAsset();
+		else
+		{
+			assetAdd.setA_Asset_ID(A_Asset_ID);
+			invLine.setA_Asset_ID(A_Asset_ID);
+			//LS al salvataggio non è detto che mantenga il riferimento: vedi org.idempiere.fa.model.ModelValidator.modelChange_InvoiceLine
+			invLine.saveEx();
+		}
 		asset.dump();
 		
 		// F3P: copy life years from asset group to asset addition
