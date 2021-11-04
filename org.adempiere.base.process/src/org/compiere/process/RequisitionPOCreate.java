@@ -467,7 +467,7 @@ public class RequisitionPOCreate extends SvrProcess
 
 		//	Update Order Line
 		m_orderLine.setQty(m_orderLine.getQtyOrdered().add(rLine.getQty()));
-		if(p_breakForRDALine && p_useRDALinePrice)
+		if(p_breakForRDALine && p_useRDALinePrice && rLine.getPriceActual().signum() != 0)
 		{
 			m_orderLine.setPrice(rLine.getPriceActual());
 		}
