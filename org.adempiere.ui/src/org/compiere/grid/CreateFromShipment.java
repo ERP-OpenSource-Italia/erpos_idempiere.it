@@ -37,6 +37,7 @@ import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
 import org.compiere.model.MRMA;
 import org.compiere.model.MRMALine;
+import org.compiere.model.MSysConfig;
 import org.compiere.model.MUOM;
 import org.compiere.model.MWarehouse;
 import org.compiere.model.PO;
@@ -906,4 +907,134 @@ public abstract class CreateFromShipment extends CreateFrom
 	{
 		return sql;
 	}
+	
+	protected ArrayList<KeyNamePair> loadOrderData (int C_BPartner_ID, boolean forInvoice, boolean sameWarehouseOnly, boolean forCreditMemo)
+	{
+		if(MSysConfig.getBooleanValue(MSysConfig.LIT_CREATEFROMSHIPMENT_STDORDER_QUERY, true, Env.getAD_Client_ID(Env.getCtx())))
+			return super.loadOrderData(C_BPartner_ID, forInvoice, sameWarehouseOnly, forCreditMemo);
+		
+		ArrayList<KeyNamePair> list = new ArrayList<KeyNamePair>();
+		
+		String isSOTrxParam = isSOTrx ? "Y":"N";
+		
+   	// F3P: integrated display based on selection columns		
+		/*
+		//	Display
+		StringBuffer display = new StringBuffer("o.DocumentNo||' - ' ||")
+			.append(DB.TO_CHAR("o.DateOrdered", DisplayType.Date, Env.getAD_Language(Env.getCtx())))
+			.append("||' - '||")
+			.append(DB.TO_CHAR("o.GrandTotal", DisplayType.Amount, Env.getAD_Language(Env.getCtx())));
+		*/
+		//
+		String column = "ol.QtyDelivered";
+		String colBP = "o.C_BPartner_ID";
+		if (forInvoice)
+		{
+			column = "ol.QtyInvoiced";
+			colBP = "o.Bill_BPartner_ID";
+		}
+		
+		// F3P: integrated display based on selection columns		
+		String display = MLookupFactory.getDisplayBaseQuery(Env.getLanguage(Env.getCtx()), "C_Order_ID", "C_Order","o","o.C_Order_ID", null);		
+		
+		StringBuilder sql = new StringBuilder(display);
+				
+		List<Integer> docTypeIDs = STDSysConfig.getListDocTypeIDShowNegativeQtyOrdered(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx()));
+		
+		if(docTypeIDs == null)
+		{ 
+			sql.append(" WHERE ")
+			.append(colBP)
+			.append("=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO') AND o.C_Order_ID IN (SELECT ol.C_Order_ID FROM C_OrderLine ol ")
+			.append(" LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID") //F3P: added product link
+			.append(" WHERE ");
+			if (forCreditMemo)
+				sql.append(column).append(">0 AND (CASE WHEN ol.QtyDelivered>=ol.QtyOrdered THEN ol.QtyDelivered-ol.QtyInvoiced!=0 ELSE 1=1 END) ");
+			else
+				sql.append("ol.QtyOrdered-").append(column).append(">0");
+
+		}
+		else
+		{
+			boolean isFirst=true;
+			StringBuilder sqlDocType = new StringBuilder();
+			for(Integer docType_ID : docTypeIDs)
+			{
+				if(isFirst)
+				{
+					sqlDocType.append(docType_ID);
+					isFirst = false;
+				}
+				else
+					sqlDocType.append(",").append(docType_ID);
+			}
+			
+			sql.append(" WHERE ")
+			.append(colBP)
+			.append("=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO') "
+					+ "AND (o.C_DocType_ID in (").append(sqlDocType.toString()).append(")").append(
+					" OR o.C_Order_ID IN "
+						  + "(SELECT ol.C_Order_ID FROM C_OrderLine ol"
+						  + " LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID"); //F3P: added product link
+			sql.append(" WHERE ");
+			if (forCreditMemo)
+				sql.append(column).append(">0 AND (CASE WHEN ol.QtyDelivered>=ol.QtyOrdered THEN ol.QtyDelivered-ol.QtyInvoiced!=0 ELSE 1=1 END) ");
+			else
+				sql.append("ol.QtyOrdered-").append(column).append("!=0 ");
+
+		}			
+		
+		//F3P: show only service order
+		if(isShowOnlyServiceOrder() && forInvoice)
+			sql.append(" AND (ol.c_charge_id IS NOT NULL OR p.producttype <> 'I' )");
+		
+		
+		if(docTypeIDs == null)
+			sql.append(") ");
+		else
+			sql.append(")) ");	
+			
+		if(sameWarehouseOnly)
+		{
+			sql = sql.append(" AND o.M_Warehouse_ID=? ");
+		}
+		if (forCreditMemo)
+			sql = sql.append("ORDER BY o.DateOrdered DESC,o.DocumentNo DESC");
+		else
+			sql = sql.append("ORDER BY o.DateOrdered,o.DocumentNo");
+		
+		// F3P: apply filter
+		sql = filterLoadOrderDataQuery(sql, C_BPartner_ID, forInvoice, sameWarehouseOnly);
+		
+		//
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		try
+		{
+			pstmt = DB.prepareStatement(sql.toString(), null);
+			pstmt.setInt(1, C_BPartner_ID);
+			pstmt.setString(2, isSOTrxParam);
+			if(sameWarehouseOnly)
+			{
+				//only active for material receipts
+				pstmt.setInt(3, getM_Warehouse_ID());
+			}
+			rs = pstmt.executeQuery();
+			while (rs.next())
+			{
+				list.add(new KeyNamePair(rs.getInt(1), rs.getString(2)));
+			}
+		}
+		catch (SQLException e)
+		{
+			log.log(Level.SEVERE, sql.toString(), e);
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
+		}
+
+		return list;
+	} 
 }

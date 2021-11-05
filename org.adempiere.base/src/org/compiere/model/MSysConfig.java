@@ -208,8 +208,11 @@ public class MSysConfig extends X_AD_SysConfig
 	//LS
 	//Login IP
 	public static final String LIT_LOGIN_BY_IP = "LIT_LOGIN_BY_IP";
+	
 	public static final String LIT_COSTDETAIL_CALC_ALL = "LIT_COSTDETAIL_CALC_ALL";
 	public static final String LIT_COSTDETAIL_ALWAYS_CALC_AVERAGE = "LIT_COSTDETAIL_ALWAYS_CALC_AVERAGE";
+	
+	public static final String LIT_CREATEFROMSHIPMENT_STDORDER_QUERY = "LIT_CREATEFROMSHIPMENT_STDORDER_QUERY";
 	//LS End
 	/**
 	 * 	Standard Constructor
