@@ -764,4 +764,9 @@ public class STDSysConfig
 
 	}
 	
+	public static boolean isBlockAddInOutLineCompleted() {
+		return MSysConfig.getBooleanValue("LIT_BLOCK_INOUT_COMPLETED", true);
+
+	}
+	
 }
