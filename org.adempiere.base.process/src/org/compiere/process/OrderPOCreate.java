@@ -27,6 +27,7 @@ import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
 import org.compiere.model.MOrgInfo;
 import org.compiere.model.MRole;
+import org.compiere.model.MSysConfig;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
 import org.compiere.util.Msg;
@@ -303,7 +304,11 @@ public class OrderPOCreate extends SvrProcess
 		po.setC_DocTypeTarget_ID();
 		//
 		po.setDescription(so.getDescription());
-		po.setPOReference(so.getDocumentNo());
+		if(MSysConfig.getBooleanValue(MSysConfig.LIT_CREATEPOFROMSO_POREFERENCE_DOCNO, true, so.getAD_Client_ID(), so.getAD_Org_ID()))
+			po.setPOReference(so.getDocumentNo());
+		else
+			po.setPOReference(so.getPOReference());
+
 		po.setPriorityRule(so.getPriorityRule());
 		po.setSalesRep_ID(so.getSalesRep_ID());
 		po.setM_Warehouse_ID(so.getM_Warehouse_ID());

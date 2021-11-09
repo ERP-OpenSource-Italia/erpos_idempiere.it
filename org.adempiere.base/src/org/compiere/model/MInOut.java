@@ -1266,6 +1266,13 @@ public class MInOut extends X_M_InOut implements DocAction
 		BigDecimal Volume = Env.ZERO;
 		BigDecimal Weight = Env.ZERO;
 
+		//LS 
+		boolean isSOTrx = isSOTrx();
+		if(getMovementType().endsWith("+"))
+			isSOTrx = false;
+		else if (getMovementType().endsWith("-"))
+			isSOTrx = true;
+		//LS end
 		//	Mandatory Attributes
 		for (int i = 0; i < lines.length; i++)
 		{
@@ -1279,9 +1286,10 @@ public class MInOut extends X_M_InOut implements DocAction
 			//
 			if (line.getM_AttributeSetInstance_ID() != 0)
 				continue;
-			if (product != null && product.isASIMandatory(isSOTrx()))
+			
+			if (product != null && product.isASIMandatory(isSOTrx))
 			{
-				if (product.getAttributeSet() != null && !product.getAttributeSet().excludeTableEntry(MInOutLine.Table_ID, isSOTrx())) 
+				if (product.getAttributeSet() != null && !product.getAttributeSet().excludeTableEntry(MInOutLine.Table_ID, isSOTrx)) 
 				{
 					//LS: InOutLineMA  
 					int MAs = DB.getSQLValueEx(get_TrxName(), "SELECT COUNT('OK') FROM M_InOutLineMA WHERE M_InOutLine_ID = ? ", line.getM_InOutLine_ID());
