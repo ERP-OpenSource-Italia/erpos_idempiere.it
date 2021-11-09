@@ -31,6 +31,7 @@ import org.compiere.model.MSysConfig;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
 
 import it.idempiere.base.util.STDSysConfig;
 
@@ -304,7 +305,8 @@ public class OrderPOCreate extends SvrProcess
 		po.setC_DocTypeTarget_ID();
 		//
 		po.setDescription(so.getDescription());
-		if(MSysConfig.getBooleanValue(MSysConfig.LIT_CREATEPOFROMSO_POREFERENCE_DOCNO, true, so.getAD_Client_ID(), so.getAD_Org_ID()))
+		if(Util.isEmpty(so.getPOReference(), true)
+				|| MSysConfig.getBooleanValue(MSysConfig.LIT_CREATEPOFROMSO_POREFERENCE_DOCNO, true, so.getAD_Client_ID(), so.getAD_Org_ID()))
 			po.setPOReference(so.getDocumentNo());
 		else
 			po.setPOReference(so.getPOReference());
