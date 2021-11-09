@@ -213,6 +213,8 @@ public class MSysConfig extends X_AD_SysConfig
 	public static final String LIT_COSTDETAIL_ALWAYS_CALC_AVERAGE = "LIT_COSTDETAIL_ALWAYS_CALC_AVERAGE";
 	
 	public static final String LIT_CREATEFROMSHIPMENT_STDORDER_QUERY = "LIT_CREATEFROMSHIPMENT_STDORDER_QUERY";
+	public static final String LIT_CREATEPOFROMSO_POREFERENCE_DOCNO = "LIT_CREATEPOFROMSO_POREFERENCE_DOCNO";
+
 	//LS End
 	/**
 	 * 	Standard Constructor
