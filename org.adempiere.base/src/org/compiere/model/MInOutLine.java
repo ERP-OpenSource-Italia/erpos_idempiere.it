@@ -542,8 +542,9 @@ public class MInOutLine extends X_M_InOutLine
 	protected boolean beforeSave (boolean newRecord)
 	{
 		log.fine("");
-		if (newRecord && getParent().isComplete()) {
+		if (newRecord && getParent().isComplete() && STDSysConfig.isBlockAddInOutLineCompleted()) {
 			log.saveError("ParentComplete", Msg.translate(getCtx(), "M_InOutLine"));
+			
 			return false;
 		}
 		// Locator is mandatory if no charge is defined - teo_sarca BF [ 2757978 ]
