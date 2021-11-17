@@ -121,6 +121,10 @@
         <name>org.zkoss.theme.preferred</name>
         <value>breeze</value>
     </library-property>
+    <library-property>
+	    <name>org.zkoss.zul.listbox.DataLoader.class</name>
+	    <value>org.zkoss.zul.impl.CustomListboxDataLoader</value>
+	</library-property>
 	<preference>
     	<name>org.zkoss.zk.ui.WebApp.name</name>
     	<value>iDempiere</value>

@@ -1690,6 +1690,14 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
         ZKUpdateUtil.setVflex(contentPanel, true);
         contentPanel.setSizedByContent(true);
         
+        //LS 
+		if (STDSysConfig.isInfoWindowLoadAllPageRecords(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx()))) {
+			contentPanel.setAttribute("org.zkoss.zul.listbox.rod", true);
+			contentPanel.setAttribute("org.zkoss.zul.listbox.initRodSize", pageSize); //no of records loaded initially
+//      contentPanel.setAttribute("org.zkoss.zul.listbox.preloadSize", 200);  //no of records loaded after scrolling
+		}
+        //LS end
+
         // F3P: auto span spaces
         
         if(LITMInfoWindow.isAutoSpan(infoWindow))
