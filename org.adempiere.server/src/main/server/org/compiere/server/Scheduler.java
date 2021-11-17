@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MAttachment;
 import org.compiere.model.MClient;
 import org.compiere.model.MMailText;
@@ -186,6 +187,10 @@ public class Scheduler extends AdempiereServer
 		MUser from = new MUser(getCtx(), pi.getAD_User_ID(), null);
 		
 		pi.setTransactionName(m_trx != null ? m_trx.getTrxName() : null);
+		
+		if(pi.isProcessRunning(null))
+			throw new AdempiereException("ProcessAlreadyRunning");
+		
 		if (!Util.isEmpty(process.getJasperReport())) 
 		{
 			pi.setExport(true);

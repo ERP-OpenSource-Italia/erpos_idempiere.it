@@ -22,6 +22,7 @@ import java.util.logging.Level;
 
 import javax.xml.namespace.QName;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.util.ProcessUtil;
 import org.compiere.model.Lookup;
 import org.compiere.model.MLookup;
@@ -284,6 +285,10 @@ public class Process {
 			ProcessInfoUtil.setParameterFromDB(pi);
 			parameters = pi.getParameter();
 		}
+		
+		if(pi.isProcessRunning(null))
+			throw new AdempiereException("ProcessAlreadyRunning");
+		
 		for(DataField field : fields) {
 			if (isDataURI(field.getVal())) {
 				for(ProcessInfoParameter param : parameters) {

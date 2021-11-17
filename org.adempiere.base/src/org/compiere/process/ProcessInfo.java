@@ -910,14 +910,26 @@ public class ProcessInfo implements Serializable
 			return false;
 		
 		Timestamp lastRebootDate = getLastServerRebootDate();
-		if (lastRebootDate == null)
-			return false;
 		
-		List<MPInstance> processInstanceList = new Query(Env.getCtx(), MPInstance.Table_Name, " AD_Process_ID=? AND AD_User_ID=? AND IsProcessing='Y' AND record_ID = ? AND Created > ? ", null)
-				.setParameters(getAD_Process_ID(), getAD_User_ID(), getRecord_ID(), lastRebootDate)
-				.setClient_ID()
-				.setOnlyActiveRecords(true)
-				.list();
+		List<MPInstance> processInstanceList = null;
+		
+		if(lastRebootDate == null)
+		{
+			processInstanceList = new Query(Env.getCtx(), MPInstance.Table_Name, " AD_Process_ID=? AND AD_User_ID=? AND IsProcessing='Y' AND record_ID = ?  ", null)
+					.setParameters(getAD_Process_ID(), getAD_User_ID(), getRecord_ID())
+					.setClient_ID()
+					.setOnlyActiveRecords(true)
+					.list();
+		}
+		else
+		{
+			processInstanceList = new Query(Env.getCtx(), MPInstance.Table_Name, " AD_Process_ID=? AND AD_User_ID=? AND IsProcessing='Y' AND record_ID = ? AND Created > ? ", null)
+					.setParameters(getAD_Process_ID(), getAD_User_ID(), getRecord_ID(), lastRebootDate)
+					.setClient_ID()
+					.setOnlyActiveRecords(true)
+					.list();
+		}
+		
 		
 		if (processInstanceList == null || processInstanceList.isEmpty())
 			return false;
@@ -926,6 +938,7 @@ public class ProcessInfo implements Serializable
 		if (multipleExecutions.equals(MProcess.ALLOWMULTIPLEEXECUTION_DisallowMultipleExecutions)) 
 			return true;
 		
+		//LS not working for scheduler and webservice
 		//Disallow multiple executions with the same params
 		if (multipleExecutions.equals(MProcess.ALLOWMULTIPLEEXECUTION_DisallowMultipleExecutionsWithTheSameParameters)) {
 			for (MPInstance instance : processInstanceList) {
@@ -948,7 +961,7 @@ public class ProcessInfo implements Serializable
 				.setOnlyActiveRecords(true)
 				.first();
 
-		return lastServerSession.getCreated();
+		return lastServerSession != null ? lastServerSession.getCreated():null;
 	}
 
 	private IProcessUI processUI;
