@@ -5,6 +5,7 @@ package org.adempiere.webui.info;
 
 import java.io.File;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -3151,7 +3152,23 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	@Override
 	public void onQueryCallback(Event event)
 	{
-		super.onQueryCallback(event);		
+		super.onQueryCallback(event);
+		//LS keep focus after full refresh
+		if (frf_active && frf_lastSelectedRow >= 0)
+		{
+			int newFocus = -1;
+			int deltaRows = frf_totRows - contentPanel.getRowCount(); //removed lines after process
+			if (deltaRows == frf_totSelectedRows)
+				newFocus = frf_lastSelectedRow - frf_totSelectedRowsBeforeLast;
+			else {
+				BigDecimal stima = ((new BigDecimal(frf_totSelectedRowsBeforeLast)).multiply(new BigDecimal(deltaRows))).divide(new BigDecimal(frf_totRows), 0, RoundingMode.DOWN);
+				newFocus = frf_lastSelectedRow - stima.intValue();
+			}
+
+			contentPanel.getItemAtIndex(newFocus > 0 ? newFocus : 0).focus();
+			frf_active = false;
+		}
+		//
 		enableExportButton();
 	}
 	
