@@ -344,11 +344,15 @@ public class Process {
 	
 		if (process.isJavaProcess() && !jasperreport)
 		{
+			pInstance.setIsProcessing(true);
+			pInstance.saveEx();
+			
 			Trx trx = trxName == null ? Trx.get(Trx.createTrxName("WebPrc"), true) : Trx.get(trxName, true);
 			if (trxName == null)
 				trx.setDisplayName(Process.class.getName()+"_runProcess");
 			try
 			{
+				
 				processOK = process.processIt(pi, trx, false);
 				if (trxName == null)
 					trx.commit();				
@@ -361,6 +365,9 @@ public class Process {
 			{
 				if (trxName == null)
 					trx.close();
+				
+				pInstance.setIsProcessing(false);
+				pInstance.saveEx();
 			}
 			if (!processOK || pi.isError())
 			{
