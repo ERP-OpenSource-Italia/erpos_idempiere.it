@@ -769,4 +769,10 @@ public class STDSysConfig
 
 	}
 	
+	public static final String LS_INFOWINDOW_LOAD_ALL_PAGE_RECORDS = "LS_INFOWINDOW_LOAD_ALL_PAGE_RECORDS";
+
+	public static boolean isInfoWindowLoadAllPageRecords(int AD_Client_ID, int AD_Org_ID) {
+		return MSysConfig.getBooleanValue(LS_INFOWINDOW_LOAD_ALL_PAGE_RECORDS, false,AD_Client_ID,AD_Org_ID);
+
+	}
 }

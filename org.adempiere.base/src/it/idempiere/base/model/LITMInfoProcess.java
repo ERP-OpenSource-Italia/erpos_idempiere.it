@@ -14,6 +14,8 @@ public class LITMInfoProcess {
 	public static final String REFRESHAFTERPROCESS_RefreshAndKeepSelection = "K";
 	/** Full refresh = F */
 	public static final String REFRESHAFTERPROCESS_FullRefresh = "F";
+	/** Full refresh and keep focus = Z */
+	public static final String REFRESHAFTERPROCESS_FullRefreshAndKeepFocus = "Z";
 	
 	/** Column name IsRefreshCallerRecord */
 	public static final String COLUMNNAME_IsRefreshCallerRecord = "IsRefreshCallerRecord";

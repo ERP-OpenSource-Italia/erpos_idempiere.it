@@ -219,6 +219,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	
 	protected boolean m_refreshParentOnClose = false;
 	
+	//LS on full refresh, keep focus near last selected row
+	protected int frf_lastSelectedRow = -1;
+	protected int frf_totSelectedRowsBeforeLast = -1;
+	protected int frf_totRows = -1;
+	protected int frf_totSelectedRows = -1;
+	protected boolean frf_active = false;
+	
     public static InfoPanel create (int WindowNo,
             String tableName, String keyColumn, String value,
             boolean multiSelection, String whereClause)
@@ -2285,6 +2292,26 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		String refreshMode = LITMInfoProcess.getRefreshAfterProcess(infoProcess);
 		if(m_refreshParentOnClose == false)
 			m_refreshParentOnClose = LITMInfoProcess.isRefreshCallerRecord(infoProcess);
+
+		if (contentPanel.getSelectedCount() > 0 && m_lastSelectedIndex >= 0)
+			frf_lastSelectedRow = m_lastSelectedIndex;
+		if (refreshMode.equals(LITMInfoProcess.REFRESHAFTERPROCESS_FullRefreshAndKeepFocus))
+		{
+			frf_active = true;
+			frf_totSelectedRows = contentPanel.getSelectedCount();
+			int[] selectedIndices = contentPanel.getSelectedIndices();
+//			fr_lastSelectedRow = selectedIndices[selectedIndices.length - 1];
+			// se lancio 2 processi in fila, dopo il primo m_lastSelectedIndex e' -1, quindi il secondo perde il focus
+			// >> lo salvo ad ogni esecuzione processo
+//			if (m_lastSelectedIndex >= 0)
+//				fr_lastSelectedRow = m_lastSelectedIndex;
+			frf_totSelectedRowsBeforeLast = 0;
+			for (int idx : selectedIndices) {
+				if (idx < frf_lastSelectedRow)
+					frf_totSelectedRowsBeforeLast++;
+			}
+			frf_totRows = contentPanel.getRowCount();
+		}	
 		
 		instance.saveEx();
 		final int pInstanceID = instance.getAD_PInstance_ID();
@@ -2326,7 +2353,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	                        boolean shouldExecuteQuery = !LITMInfoProcess.REFRESHAFTERPROCESS_DoNotRefresh.equals(refreshMode);
 							isRequeryByRunSuccessProcess = true;
 							
-							if(LITMInfoProcess.REFRESHAFTERPROCESS_FullRefresh.equals(refreshMode))
+							if(LITMInfoProcess.REFRESHAFTERPROCESS_FullRefresh.equals(refreshMode)
+									|| LITMInfoProcess.REFRESHAFTERPROCESS_FullRefreshAndKeepFocus.equals(refreshMode))
 							{
 								recordSelectedData.clear();
 								isRequeryByRunSuccessProcess = false;
@@ -2389,7 +2417,8 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 						boolean shouldExecuteQuery = !LITMInfoProcess.REFRESHAFTERPROCESS_DoNotRefresh.equals(refreshMode);
 						isRequeryByRunSuccessProcess = true;
 						
-						if(LITMInfoProcess.REFRESHAFTERPROCESS_FullRefresh.equals(refreshMode))
+						if(LITMInfoProcess.REFRESHAFTERPROCESS_FullRefresh.equals(refreshMode)
+								|| LITMInfoProcess.REFRESHAFTERPROCESS_FullRefreshAndKeepFocus.equals(refreshMode))
 						{
 							recordSelectedData.clear();
 							isRequeryByRunSuccessProcess = false;
