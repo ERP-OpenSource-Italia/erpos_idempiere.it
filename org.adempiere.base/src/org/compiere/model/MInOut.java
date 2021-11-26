@@ -1293,7 +1293,9 @@ public class MInOut extends X_M_InOut implements DocAction
 				{
 					//LS: InOutLineMA  
 					int MAs = DB.getSQLValueEx(get_TrxName(), "SELECT COUNT('OK') FROM M_InOutLineMA WHERE M_InOutLine_ID = ? ", line.getM_InOutLine_ID());
-					if(MAs == 0)
+					int MAs2 = DB.getSQLValueEx(get_TrxName(), "SELECT COUNT('OK') FROM M_InOutLineMA WHERE M_InOutLine_ID = ? AND COALESCE(M_AttributeSetInstance_ID,0) > 0 ", line.getM_InOutLine_ID());
+
+					if(MAs == 0 || MAs != MAs2)
 					{
 						m_processMsg = "@M_AttributeSet_ID@ @IsMandatory@ (@Line@ #" + lines[i].getLine() +
 								", @M_Product_ID@=" + product.getValue() + ")";
