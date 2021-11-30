@@ -2395,7 +2395,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 		//	Deep Copy
 		MInvoice counter = copyFrom(this, getDateInvoiced(), getDateAcct(),
-			C_DocTypeTarget_ID, !isSOTrx(), true, get_TrxName(), true, getDocumentNo()); // F3P: Keep doc no
+			C_DocTypeTarget_ID, !isSOTrx(), false, get_TrxName(), true, getDocumentNo()); // F3P: Keep doc no
 		//
 		counter.setAD_Org_ID(counterAD_Org_ID);
 	//	counter.setM_Warehouse_ID(counterOrgInfo.getM_Warehouse_ID());

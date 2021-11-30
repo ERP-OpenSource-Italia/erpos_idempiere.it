@@ -3164,8 +3164,18 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 				BigDecimal stima = ((new BigDecimal(frf_totSelectedRowsBeforeLast)).multiply(new BigDecimal(deltaRows))).divide(new BigDecimal(frf_totRows), 0, RoundingMode.DOWN);
 				newFocus = frf_lastSelectedRow - stima.intValue();
 			}
-
-			contentPanel.getItemAtIndex(newFocus > 0 ? newFocus : 0).focus();
+			
+			if (contentPanel.getItemCount() > 0)
+			{
+				if (newFocus <= 0)
+					newFocus = 0;
+				
+				if (contentPanel.getItemCount() - 1 < newFocus)
+					newFocus = contentPanel.getItemCount() - 1;
+				
+				if (contentPanel.getItemAtIndex(newFocus) != null)
+					contentPanel.getItemAtIndex(newFocus).focus();
+			}
 			frf_active = false;
 		}
 		//
