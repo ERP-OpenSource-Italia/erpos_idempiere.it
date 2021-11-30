@@ -74,6 +74,7 @@ public abstract class GenForm
 
 	public void setTrx(Trx trx) {
 		this.trx = trx;
+		trx.commit();
 	}
 
 	public ProcessInfo getProcessInfo() {

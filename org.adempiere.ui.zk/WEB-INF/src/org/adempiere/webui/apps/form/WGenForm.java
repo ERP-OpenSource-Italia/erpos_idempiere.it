@@ -345,6 +345,12 @@ public class WGenForm extends ADForm implements EventListener<Event>, WTableMode
 			worker.run();     //  complete tasks in unlockUI / generateShipments_complete						
 		} finally{						
 			unlockUI();
+			
+			if(genForm != null && genForm.getTrx() != null)
+			{
+				genForm.getTrx().commit();
+				genForm.getTrx().close();
+			}
 		}
 	}
 	
