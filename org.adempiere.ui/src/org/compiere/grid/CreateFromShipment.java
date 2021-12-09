@@ -223,7 +223,8 @@ public abstract class CreateFromShipment extends CreateFrom
 				.append(" COALESCE(l.M_Product_ID,0),COALESCE(p.Name,c.Name)||( case when m_product.m_product_id is not null THEN " + 
 						"' ('||m_product.name||' - '||pp_order_node.name||')' else '' end), ") //	7..8
 				.append(" po.VendorProductNo, " )// 9
-				.append(" l.C_OrderLine_ID,l.Line "	)//	10..11
+				.append(" l.C_OrderLine_ID, ")//	10..11
+				.append(STDSysConfig.getCreateFromShipmentOrderLineLabel(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
 				.append(" , COALESCE(p.Value,l.Description)||( case when m_product.m_product_id is not null THEN ' ('||m_product.value||')' else '' end) ") //F3P: note 2, added value, and changed sequence to product value, line description to improve readability on charge lines
 				.append("FROM C_OrderLine l")
 				.append(" LEFT OUTER JOIN M_Product_PO po ON (l.M_Product_ID = po.M_Product_ID AND l.C_BPartner_ID = po.C_BPartner_ID) ")

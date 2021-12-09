@@ -21,6 +21,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -100,49 +101,94 @@ public class Evaluator
 	 */
 	public static boolean evaluateLogic (Evaluatee source, String logic)
 	{
-		//	Conditional
-		StringTokenizer st = new StringTokenizer(logic.trim(), "&|", true);
-		int it = st.countTokens();
-		if (((it/2) - ((it+1)/2)) == 0)		//	only uneven arguments
-		{
-			s_log.severe ("Logic does not comply with format "
-				+ "'<expression> [<logic> <expression>]' => " + logic);
-			return false;
+		boolean retValue;
+		//Nuova gestione con parentesi
+		if(!Util.isEmpty(logic) && logic.indexOf("(") == 0){
+			//se uso parentesi, deve iniziare con '('; si assume che ci sia SOLO 1 lvl di parentesi, no annidamento
+			//quindi (..)|(..)&()...
+			List<String> tokens = new ArrayList<String>();
+			List<String> tokensOp = new ArrayList<String>();
+			int posx = 0;
+			do {
+				int start = posx + 1;
+				int end = logic.indexOf(")", start);
+				String tmpTK = logic.substring(start, end);
+				tokens.add(tmpTK);
+				if (logic.indexOf("(", end) > 0){
+					posx = logic.indexOf("(", end);
+					String tmpOP = logic.substring(end, posx);
+					tmpOP = tmpOP.replace("(", "").replace(")", "").trim();
+					
+					if (!tmpOP.equals("&") && !tmpOP.equals("|")){
+						s_log.log(Level.SEVERE, "Logic operant '|' or '&' expected => " + logic);
+						return false;
+					}
+					
+					tokensOp.add(tmpOP);
+				}else{
+					posx = logic.length();
+				}
+			} 
+			while (posx < logic.length());
+			
+			retValue = evaluateLogic(source, tokens.get(0));
+			for (int i = 1; i < tokens.size(); i++) {
+				String tk = tokens.get(i);
+
+				boolean temp = evaluateLogic(source, tk);
+				String logOp = tokensOp.get(i - 1);
+				if (logOp.equals("&"))
+					retValue = retValue & temp;
+				else if (logOp.equals("|"))
+					retValue = retValue | temp;
+			}
+			
 		}
+		else{ //gestione standard
+			//	Conditional
+			StringTokenizer st = new StringTokenizer(logic.trim(), "&|", true);
+			int it = st.countTokens();
+			if (((it/2) - ((it+1)/2)) == 0)		//	only uneven arguments
+			{
+				s_log.severe ("Logic does not comply with format "
+						+ "'<expression> [<logic> <expression>]' => " + logic);
+				return false;
+			}
 
-		String exprStrand = st.nextToken().trim();		
-		if (exprStrand.matches("^@\\d+$") || "@P".equals(exprStrand))
-		{
-			exprStrand = exprStrand.concat(st.nextToken());
-			exprStrand = exprStrand.concat(st.nextToken());			
-		}		
-
-		//boolean retValue = evaluateLogicTuple(source, st.nextToken());
-		boolean retValue = evaluateLogicTuple(source, exprStrand);
-		while (st.hasMoreTokens())
-		{
-			String logOp = st.nextToken().trim();
-			//boolean temp = evaluateLogicTuple(source, st.nextToken());			
-
-			exprStrand = st.nextToken().trim();		
+			String exprStrand = st.nextToken().trim();		
 			if (exprStrand.matches("^@\\d+$") || "@P".equals(exprStrand))
 			{
 				exprStrand = exprStrand.concat(st.nextToken());
-				exprStrand = exprStrand.concat(st.nextToken());				
-			}
+				exprStrand = exprStrand.concat(st.nextToken());			
+			}		
 
-			boolean temp = evaluateLogicTuple(source, exprStrand);
-
-			if (logOp.equals("&"))
-				retValue = retValue & temp;
-			else if (logOp.equals("|"))
-				retValue = retValue | temp;
-			else
+			//boolean retValue = evaluateLogicTuple(source, st.nextToken());
+			retValue = evaluateLogicTuple(source, exprStrand);
+			while (st.hasMoreTokens())
 			{
-				s_log.log(Level.SEVERE, "Logic operand '|' or '&' expected => " + logic);
-				return false;
-			}
-		}	// hasMoreTokens
+				String logOp = st.nextToken().trim();
+				//boolean temp = evaluateLogicTuple(source, st.nextToken());			
+
+				exprStrand = st.nextToken().trim();		
+				if (exprStrand.matches("^@\\d+$") || "@P".equals(exprStrand))
+				{
+					exprStrand = exprStrand.concat(st.nextToken());
+					exprStrand = exprStrand.concat(st.nextToken());				
+				}
+
+				boolean temp = evaluateLogicTuple(source, exprStrand);
+
+				if (logOp.equals("&"))
+					retValue = retValue & temp;
+				else if (logOp.equals("|"))
+					retValue = retValue | temp;
+				else
+				{
+					s_log.log(Level.SEVERE, "Logic operand '|' or '&' expected => " + logic);
+					return false;
+				}
+			}	// hasMoreTokens
+		}
 		return retValue;
 	}   //  evaluateLogic
 

@@ -736,4 +736,10 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(COPY_DOCNO_FROM_ORDER_TO_INOUT, false, AD_Client_ID, AD_Org_ID);
 	}
 	
+	public static final String LIT_CREATEFROMSHIPMENT_ORDERLINE_LABEL = "LIT_CREATEFROMSHIPMENT_ORDERLINE_LABEL"; 
+	public static final String LIT_CREATEFROMSHIPMENT_ORDERLINE_LABEL_DEFAULT = " l.Line ";
+	public static String getCreateFromShipmentOrderLineLabel(int AD_Client_ID,int AD_Org_ID)
+	{
+		return MSysConfig.getValue(LIT_CREATEFROMSHIPMENT_ORDERLINE_LABEL, LIT_CREATEFROMSHIPMENT_ORDERLINE_LABEL_DEFAULT, AD_Client_ID, AD_Org_ID);
+	}
 }
