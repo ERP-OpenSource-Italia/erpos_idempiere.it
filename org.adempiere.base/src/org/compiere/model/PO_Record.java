@@ -26,6 +26,8 @@ import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 
+import it.idempiere.base.util.SavedFromUI;
+
 /**
  * 	Maintain AD_Table_ID/Record_ID constraint
  *	
@@ -155,6 +157,7 @@ public class PO_Record
 
 	//IDEMPIERE-2060
 	public static void deleteModelCascade(String tableName, int Record_ID, String trxName) {
+		PO recordToDelete = PO.get(Env.getCtx(), tableName, Record_ID, trxName);
 		//find dependent tables to delete cascade	
 		final String sql = ""
 				+ "SELECT t.TableName, "
@@ -183,7 +186,14 @@ public class PO_Record
 						dependentWhere,
 						trxName).setParameters(Record_ID).list();
 				for (PO po : poList) {
+					
+					if(SavedFromUI.isSavedFromUI(recordToDelete))
+						SavedFromUI.add(po);
+					
 					po.deleteEx(true, trxName);
+					
+					if(SavedFromUI.isSavedFromUI(recordToDelete))
+						SavedFromUI.remove(po);
 				}
 			}
 		}
