@@ -157,7 +157,13 @@ public class PO_Record
 
 	//IDEMPIERE-2060
 	public static void deleteModelCascade(String tableName, int Record_ID, String trxName) {
-		PO recordToDelete = PO.get(Env.getCtx(), tableName, Record_ID, trxName);
+		MTable table = MTable.get(Env.getCtx(), tableName);
+		PO recordToDelete = null;
+		if(table.getKeyColumns().length == 1)
+		{
+			recordToDelete = PO.get(Env.getCtx(), tableName, Record_ID, trxName);
+		}
+		
 		//find dependent tables to delete cascade	
 		final String sql = ""
 				+ "SELECT t.TableName, "
@@ -187,12 +193,12 @@ public class PO_Record
 						trxName).setParameters(Record_ID).list();
 				for (PO po : poList) {
 					
-					if(SavedFromUI.isSavedFromUI(recordToDelete))
+					if(recordToDelete != null && SavedFromUI.isSavedFromUI(recordToDelete))
 						SavedFromUI.add(po);
 					
 					po.deleteEx(true, trxName);
 					
-					if(SavedFromUI.isSavedFromUI(recordToDelete))
+					if(recordToDelete != null && SavedFromUI.isSavedFromUI(recordToDelete))
 						SavedFromUI.remove(po);
 				}
 			}
