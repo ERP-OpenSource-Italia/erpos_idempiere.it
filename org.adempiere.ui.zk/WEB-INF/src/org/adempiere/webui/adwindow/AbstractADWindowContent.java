@@ -1592,8 +1592,9 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
         {
 	        //  update Change
 	        boolChanges = changed;
-
-	        if (insertRecord)
+	        
+	        // LS se sono su un tab lvl 0 non conta la logica di sola lettura
+	        if (tabPanel.getGridTab().getTabLevel() == 0 || insertRecord)
 	        {
 	            insertRecord = tabPanel.getGridTab().isInsertRecord();
 	        }
