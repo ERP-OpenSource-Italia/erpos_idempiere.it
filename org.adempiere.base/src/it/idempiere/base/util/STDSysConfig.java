@@ -775,4 +775,13 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LS_INFOWINDOW_LOAD_ALL_PAGE_RECORDS, false,AD_Client_ID,AD_Org_ID);
 
 	}
+	
+	//LS
+	public static final String LS_INOUTGEN_SHOW_POREFERENCE = "LS_INOUTGEN_SHOW_POREFERENCE";
+	
+	public static boolean isInOutGenShowPOReference(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getBooleanValue(LS_INOUTGEN_SHOW_POREFERENCE, false,AD_Client_ID,AD_Org_ID);
+	}
+	//LS END
 }
