@@ -220,6 +220,15 @@ public class MAttachment extends X_AD_Attachment
 	 */
 	public boolean addEntry (File file)
 	{
+		return addEntry(file, null);
+	}
+	/**
+	 * 	Add new Data Entry
+	 *	@param file file
+	 *	@return true if added
+	 */
+	public boolean addEntry (File file, String name)
+	{
 		
 		if (file == null)
 		{
@@ -234,7 +243,9 @@ public class MAttachment extends X_AD_Attachment
 		}
 		if (log.isLoggable(Level.FINE)) log.fine("addEntry - " + file);
 		//
-		String name = file.getName();
+//		String name = file.getName();
+		if (Util.isEmpty(name, true))
+			name = file.getName();
 		byte[] data = null;
 		
 		// F3P: BF [2992291] modified to be able to close streams in "finally" block 		
