@@ -28,6 +28,8 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
 
+import it.idempiere.base.model.LITMUserDefField;
+
 
 /**
  *	User overrides for field model
@@ -415,7 +417,14 @@ public class MUserDefField extends X_AD_UserDef_Field
 						fakeField.setIsAutocomplete(isAutocomplete);
 					
 					if(isSelectionColumn != null)
-						fakeField.setIsSelectionColumn(isSelectionColumn);				
+						fakeField.setIsSelectionColumn(isSelectionColumn);
+					
+					if(rs.getInt(LITMUserDefField.COLUMNNAME_AD_SearchReference_ID)>0)
+						LITMUserDefField.setAD_SearchReference_ID(fakeField,rs.getInt(LITMUserDefField.COLUMNNAME_AD_SearchReference_ID));
+					
+					if(rs.getInt(LITMUserDefField.COLUMNNAME_AD_SearchVal_Rule_ID)>0)
+						LITMUserDefField.setAD_SearchVal_Rule_ID(fakeField,rs.getInt(LITMUserDefField.COLUMNNAME_AD_SearchVal_Rule_ID));
+ 					
 					
 					// Callouts are in append
 					

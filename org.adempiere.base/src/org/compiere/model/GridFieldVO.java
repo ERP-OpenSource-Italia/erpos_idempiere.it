@@ -32,6 +32,8 @@ import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Util;
 
+import it.idempiere.base.model.LITMUserDefField;
+
 
 /**
  *  Field Model Value Object
@@ -254,6 +256,10 @@ public class GridFieldVO implements Serializable
 					vo.Placeholder = rs.getString(i);
 				else if (columnName.equalsIgnoreCase("IsHtml"))
 					vo.IsHtml = "Y".equals(rs.getString(i));
+				else if (columnName.equalsIgnoreCase("AD_SearchReference_ID"))//LS: add search column
+					vo.AD_SearchReference_ID = rs.getInt (i);
+				else if (columnName.equalsIgnoreCase("AD_SearchVal_Rule_ID"))//LS: add search column
+					vo.AD_SearchVal_Rule_ID = rs.getInt (i);
 			}
 			if (vo.Header == null)
 				vo.Header = vo.ColumnName;
@@ -393,6 +399,14 @@ public class GridFieldVO implements Serializable
 			
 			if(userDef.getPlaceholder() != null)
 				vo.Placeholder = userDef.getPlaceholder();
+			
+			//LS:add search column
+			if (LITMUserDefField.getAD_SearchReference_ID(userDef)>0)
+				vo.AD_SearchReference_ID = LITMUserDefField.getAD_SearchReference_ID(userDef);
+			
+			//LS:add search column
+			if (LITMUserDefField.getAD_SearchVal_Rule_ID(userDef)>0)
+				vo.AD_SearchVal_Rule_ID = LITMUserDefField.getAD_SearchVal_Rule_ID(userDef);
 		}
 		//
 		vo.initFinish();
@@ -445,6 +459,8 @@ public class GridFieldVO implements Serializable
 			vo.MandatoryLogic = rs.getString("MandatoryLogic");
 			vo.Placeholder = rs.getString("Placeholder");
 			vo.Placeholder2 = rs.getString("Placeholder2");
+			vo.AD_SearchReference_ID = rs.getInt("AD_SearchReference_ID"); //LS: add search column
+			vo.AD_SearchVal_Rule_ID = rs.getInt("AD_SearchVal_Rule_ID"); //LS: add search column
 		}
 		catch (SQLException e)
 		{
@@ -501,6 +517,9 @@ public class GridFieldVO implements Serializable
 		voT.ReadOnlyLogic = voF.ReadOnlyLogic;
 		voT.DisplayLogic = voF.DisplayLogic;
 		voT.AD_Process_ID_Of_Panel = voF.AD_Process_ID_Of_Panel;
+		voT.AD_SearchReference_ID = voF.AD_SearchReference_ID;
+		voT.AD_SearchVal_Rule_ID = voF.AD_SearchVal_Rule_ID;
+		
 		voT.initFinish();
 		
 		return voT;
@@ -715,6 +734,13 @@ public class GridFieldVO implements Serializable
 	public String		ValidationCode = "";
 	/**	Reference Value			*/
 	public int			AD_Reference_Value_ID = 0;
+	
+	/**	Reference Value	Search		*/
+	public int			AD_SearchReference_ID  = 0; //LS: add search column
+ 
+	/**	Val Rule Search		*/
+	public int			AD_SearchVal_Rule_ID   = 0; //LS: add search column
+	
 
 	/**	Process Parameter Range		*/
 	public boolean      isRange = false;
@@ -913,6 +939,11 @@ public class GridFieldVO implements Serializable
 		clone.AD_Process_ID_Of_Panel = AD_Process_ID_Of_Panel;
 		clone.AD_Window_ID_Of_Panel = AD_Window_ID_Of_Panel;
 		clone.AD_Infowindow_ID = AD_Infowindow_ID;
+		
+		//LS:add search column
+		clone.AD_SearchReference_ID  = AD_SearchReference_ID ;
+		clone.AD_SearchVal_Rule_ID  = AD_SearchVal_Rule_ID ;		
+				
 		return clone;
 	}	//	clone
 	
