@@ -422,7 +422,7 @@ public class MMovement extends X_M_Movement implements DocAction, DocOptions
 		
 		StringBuilder errors = new StringBuilder();
 		//
-		MMovementLine[] lines = getLines(false);
+		MMovementLine[] lines = getLines(true);
 		for (int i = 0; i < lines.length; i++)
 		{
 			MMovementLine line = lines[i];

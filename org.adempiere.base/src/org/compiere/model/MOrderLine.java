@@ -334,7 +334,16 @@ public class MOrderLine extends X_C_OrderLine
 		if (getM_Product_ID() == 0)
 			return;
 		if (m_M_PriceList_ID == 0)
-			throw new IllegalStateException("PriceList unknown!");
+		{
+			if(m_parent == null)
+			{
+				setHeaderInfo(getParent());
+			}
+			else
+			{
+				m_M_PriceList_ID=getM_PriceList_ID();
+			}
+		}
 		setPrice (m_M_PriceList_ID);
 	}	//	setPrice
 
