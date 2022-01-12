@@ -30,6 +30,7 @@ import org.adempiere.pipo2.PIPOContext;
 import org.adempiere.pipo2.PackOut;
 import org.adempiere.pipo2.PackoutItem;
 import org.adempiere.pipo2.SQLElementParameters;
+import org.compiere.model.MSysConfig;
 import org.compiere.model.X_AD_Package_Imp_Detail;
 import org.compiere.util.CacheMgt;
 import org.compiere.util.DB;
@@ -52,7 +53,10 @@ public class SQLStatementElementHandler extends AbstractElementHandler {
 		String sql = getStringValue(element, "statement");
 		if (sql.endsWith(";") && !(sql.toLowerCase().endsWith("end;")))
 			sql = sql.substring(0, sql.length() - 1);
-		sql=Env.parseContext(Env.getCtx(), 0, sql, false);  // tbayen IDEMPIERE-2140
+		//LS do not resolve sql statement with ctx
+		if(MSysConfig.getBooleanValue(MSysConfig.PAKIN_SQL_ENV_PARSE, false))
+			sql=Env.parseContext(Env.getCtx(), 0, sql, false);  // tbayen IDEMPIERE-2140
+		//LS END
 		Savepoint savepoint = null;
 		int count = 0;
 		PreparedStatement pstmt = null;

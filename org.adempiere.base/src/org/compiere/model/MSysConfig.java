@@ -203,9 +203,9 @@ public class MSysConfig extends X_AD_SysConfig
 	public static final String LIT_ORDER_CHECK_CREDIT_AS_WARNING ="LIT_ORDER_CHECK_CREDIT_AS_WARNING";
 	public static final String LIT_INOUT_CHECK_CREDIT_AS_WARNING = "LIT_INOUT_CHECK_CREDIT_AS_WARNING";
 
-	public static final String PAKIN_PROCESS_ALLCLIENT = "PAKIN_PROCESS_ALLCLIENT";
-	
 	//LS
+	public static final String PAKIN_PROCESS_ALLCLIENT = "PAKIN_PROCESS_ALLCLIENT";
+	public static final String PAKIN_SQL_ENV_PARSE = "PAKIN_SQL_ENV_PARSE";
 	//Login IP
 	public static final String LIT_LOGIN_BY_IP = "LIT_LOGIN_BY_IP";
 	
