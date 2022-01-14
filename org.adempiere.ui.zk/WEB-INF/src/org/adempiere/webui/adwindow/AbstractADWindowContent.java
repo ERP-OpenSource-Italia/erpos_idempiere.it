@@ -1916,7 +1916,8 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 			            breadCrumb.enableLastNavigation(adTabbox.getSelectedGridTab().getCurrentRow() + 1 < adTabbox.getSelectedGridTab().getRowCount());
 			            toolbar.enableTabNavigation(breadCrumb.hasParentLink(), adTabbox.getSelectedDetailADTabpanel() != null);
 			            toolbar.enableIgnore(true);
-			            if (adTabbox.getSelectedGridTab().isSingleRow()) 
+			            boolean isforcenewsingle = STDSysConfig.isGridTabOnNewForceSingleRow(Env.getAD_Client_ID(ctx), Env.getAD_Org_ID(ctx));
+			            if (adTabbox.getSelectedGridTab().isSingleRow() || isforcenewsingle) 
 			            {
 			            	if (adTabbox.getSelectedTabpanel().isGridView())
 			            	{

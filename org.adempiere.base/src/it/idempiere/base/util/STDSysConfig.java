@@ -742,4 +742,11 @@ public class STDSysConfig
 	{
 		return MSysConfig.getValue(LIT_CREATEFROMSHIPMENT_ORDERLINE_LABEL, LIT_CREATEFROMSHIPMENT_ORDERLINE_LABEL_DEFAULT, AD_Client_ID, AD_Org_ID);
 	}
+	
+	public static final String GRIDTAB_ONNEW_FORCE_SINGLEROW = "LS_GRIDTAB_ONNEW_FORCE_SINGLEROW"; 
+	
+	public static boolean isGridTabOnNewForceSingleRow(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(GRIDTAB_ONNEW_FORCE_SINGLEROW, false, AD_Client_ID, AD_Org_ID);
+	}
 }
