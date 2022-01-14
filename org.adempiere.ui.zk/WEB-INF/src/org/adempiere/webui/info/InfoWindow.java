@@ -1564,7 +1564,17 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			}
 			pstmt.setString(parameterIndex, valueStr.toString());
 		} else {
-			pstmt.setObject(parameterIndex, value);
+			//LS gestito operatore FullLike per poter fare ricerche _ID su colonne calcolate con lista _ID
+			if (queryOperator.equals(X_AD_InfoColumn.QUERYOPERATOR_FullLike)) {
+				StringBuilder valueStr = new StringBuilder();
+				valueStr.append("%");
+				valueStr.append(value.toString());
+				valueStr.append("%");
+
+				pstmt.setString(parameterIndex, valueStr.toString());
+			} else {
+				pstmt.setObject(parameterIndex, value);
+			}
 		}
 	}
 	
