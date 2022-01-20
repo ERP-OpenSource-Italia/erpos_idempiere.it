@@ -154,6 +154,7 @@ public class CompositeADTabbox extends AbstractADTabbox
 					final IADTabpanel tabPanel = getSelectedDetailADTabpanel();
 					
 					// F3P: inserted in-between call to feedback notifier, calling save0 as last thing
+					// copied from method AbstractADWindowContent.onSave0()
 					
 					String gatherFor = IEventTopics.PO_BEFORE_CHANGE;
 	  			GridTab gridTab = tabPanel.getGridTab();;
@@ -197,7 +198,7 @@ public class CompositeADTabbox extends AbstractADTabbox
 	  			}
 		  			  			
 	  			if(isFeedbackManaged == false)
-	  				onActivateDetail(tabPanel);
+	  				onDetailSaveEvent(tabPanel); // F3P: if no need to save still call original function
 		  		// F3P: end
 				}
 				else if (DetailPane.ON_DELETE_EVENT.equals(event.getName())) {
