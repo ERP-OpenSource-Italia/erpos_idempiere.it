@@ -295,6 +295,6 @@ public class MZoomCondition extends X_AD_ZoomCondition
 			.append(Env.parseContext(Env.getCtx(), 0, getWhereClause(), false, true));
 		
 		int no = DB.getSQLValue(null, builder.toString());		
-		return no == 1;
+		return no >0 ;
 	}
 }	//	MZoomCondition
