@@ -790,5 +790,12 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LS_STORAGEONHAND_USE_DATEFIRSTMOVEMENT, false);
 	}
+	
+	public static final String LS_STORAGEONHAND_USE_TRANSACTION_ID = "LS_STORAGEONHAND_USE_TRANSACTION_ID";
+
+	public static boolean isStorageOnHandUseTransaction_ID()
+	{
+		return MSysConfig.getBooleanValue(LS_STORAGEONHAND_USE_TRANSACTION_ID, false);
+	}
 	//LS END
 }
