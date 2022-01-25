@@ -791,6 +791,13 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LS_IGNORE_SPECIAL_CHARACTER_PRODUCT_VALUE,false,AD_Client_ID,AD_Org_ID);
 	}
 	
+	public static final String LS_STORAGEONHAND_USE_DATEFIRSTMOVEMENT = "LS_STORAGEONHAND_USE_DATEFIRSTMOVEMENT";
+
+	public static boolean isStorageOnHandUseDateFirstMovement()
+	{
+		return MSysConfig.getBooleanValue(LS_STORAGEONHAND_USE_DATEFIRSTMOVEMENT, false);
+	}
+	
 	public static final String LS_STORAGEONHAND_USE_TRANSACTION_ID = "LS_STORAGEONHAND_USE_TRANSACTION_ID";
 
 	public static boolean isStorageOnHandUseTransaction_ID()
