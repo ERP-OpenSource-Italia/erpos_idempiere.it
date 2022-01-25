@@ -1,5 +1,6 @@
 package com.ls.idempiere;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -30,14 +31,14 @@ public class LSSOAPWSUtil {
 		return callSoapWebServiceSubmitOrder(soapEndpointUrl, data);
 	}
 	
-	public static List<String> getInvoices(String soapEndpointUrl,String data,boolean isLines) {
+	public static List<String> getInvoices(String soapEndpointUrl,String fiks,String nr_kontrahenta_motonet,String data,boolean isLines) {
 		
 		soapEndpointUrl = "https://195.242.186.3/MotoBiznesWS/WSMotoKlient.asmx";
 
-		return callSoapWebServiceGetInvoices(soapEndpointUrl, data,isLines);
+		return callSoapWebServiceGetInvoices(soapEndpointUrl, data,fiks,nr_kontrahenta_motonet,isLines);
 	}
 	
-	private static List<String> callSoapWebServiceGetInvoices(String soapEndpointUrl, String data,boolean isLines) {
+	private static List<String> callSoapWebServiceGetInvoices(String soapEndpointUrl, String data,String fiks, String nr_kontrahenta_motonet, boolean isLines) {
 
 		List<String> dataResponse = null;
 		SOAPConnection soapConnection = null;
@@ -47,7 +48,7 @@ public class LSSOAPWSUtil {
 			soapConnection = cf.createConnection();
 			// Create SOAP Connection
 			// Send SOAP Message to SOAP Server
-			SOAPMessage soapResponse = soapConnection.call(createSOAPGetInvoices(data,isLines),
+			SOAPMessage soapResponse = soapConnection.call(createSOAPGetInvoices(data,fiks,nr_kontrahenta_motonet,isLines),
 					soapEndpointUrl);
 
 			dataResponse = getInvoicesResponse(soapResponse,isLines);
@@ -138,7 +139,7 @@ public class LSSOAPWSUtil {
 	
 	private static List<String> getInvoicesResponse(SOAPMessage response,boolean isLines) throws SOAPException {
 
-		List<String> listResponse =null;
+		List<String> listResponse = new ArrayList<String>();
 
 		Iterator itr = response.getSOAPBody().getChildElements();
 		while (itr.hasNext()) {
@@ -148,14 +149,27 @@ public class LSSOAPWSUtil {
 
 				NodeList nodeList = ele.getChildNodes();
 				
-				for(int i=0; i < nodeList.getLength();)
+				for(int i=0; i < nodeList.getLength();i++)
 				{
 					Node nodeOfList = nodeList.item(i);
 					Element eleOfList = (Element) nodeOfList;
-					System.out.println(eleOfList.getFirstChild());
 					
-					listResponse.add(eleOfList.getFirstChild().toString());
-					break;
+					if(eleOfList.getFirstChild() != null && isLines == false)
+					{
+							listResponse.add(eleOfList.getFirstChild().toString()
+									.replace("<ns1:string xmlns:ns1=\"http://moto-profil.pl/\">", "").replace("</ns1:string>", ""));
+					}
+					else if(eleOfList.getFirstChild() != null)
+					{
+						NodeList listNodeLines = eleOfList.getChildNodes();
+						for(int a=0; a < listNodeLines.getLength();a++)
+						{
+							Node nodeOfListLine = listNodeLines.item(a);
+							
+							listResponse.add(nodeOfListLine.toString()
+									.replace("<ns1:string xmlns:ns1=\"http://moto-profil.pl/\">", "").replace("</ns1:string>", ""));
+						}
+					}
 				}
 			}
 		}
@@ -165,11 +179,11 @@ public class LSSOAPWSUtil {
 	
 	
 
-	private static SOAPMessage createSOAPGetInvoices(String data,boolean isLines) throws Exception {
+	private static SOAPMessage createSOAPGetInvoices(String data,String fiks, String nr_kontrahenta_motonet, boolean isLines) throws Exception {
 		MessageFactory mf = new MessageFactoryImpl();
 		SOAPMessage soapMessage = mf.createMessage();
 
-		createSoapEnvelopeGetInvoiceData(soapMessage,data,isLines);
+		createSoapEnvelopeGetInvoiceData(soapMessage,data,fiks,nr_kontrahenta_motonet,isLines);
 
 		MimeHeaders headers = soapMessage.getMimeHeaders();
 		String soapAction = isLines ? "http://moto-profil.pl/ZwrocPozycjeFaktury" : "http://moto-profil.pl/ZwrocNumeryFaktur";
@@ -206,7 +220,7 @@ public class LSSOAPWSUtil {
 	}
 	
 	
-	private static void createSoapEnvelopeGetInvoiceData(SOAPMessage soapMessage, String data,boolean isLines )
+	private static void createSoapEnvelopeGetInvoiceData(SOAPMessage soapMessage, String data,String fiks, String nr_kontrahenta_motonet, boolean isLines )
 			throws SOAPException {
 		SOAPPart soapPart = soapMessage.getSOAPPart();
 
@@ -229,9 +243,16 @@ public class LSSOAPWSUtil {
 
 		// SOAP Body
 		SOAPBody soapBody = envelope.getBody();
-		SOAPElement ZwrocNumeryFaktur = soapBody.addChildElement(isLines ? "ZwrocPozycjeFaktury":"ZwrocNumeryFaktur", myNamespace);
+		SOAPElement sub_data = soapBody.addChildElement(isLines ? "ZwrocPozycjeFaktury":"ZwrocNumeryFaktur", myNamespace);
 		
-		ZwrocNumeryFaktur.addTextNode(data);
+		SOAPElement soap_fiks = sub_data.addChildElement("fiks", myNamespace);
+		soap_fiks.addTextNode(fiks);
+		
+		SOAPElement soap_nr_kontrahenta_motonet = sub_data.addChildElement("nr_kontrahenta_motonet", myNamespace);
+		soap_nr_kontrahenta_motonet.addTextNode(nr_kontrahenta_motonet);
+		
+		SOAPElement specify_data = sub_data.addChildElement(isLines ? "numer_ksiegowy":"data", myNamespace);
+		specify_data.addTextNode(data);
 		
 	}
 	

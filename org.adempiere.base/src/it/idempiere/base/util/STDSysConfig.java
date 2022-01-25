@@ -784,6 +784,13 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LS_INOUTGEN_SHOW_POREFERENCE, false,AD_Client_ID,AD_Org_ID);
 	}
 	
+	
+	public static final String LS_IGNORE_SPECIAL_CHARACTER_PRODUCT_VALUE = "LS_IGNORE_SPECIAL_CHARACTER_PRODUCT_VALUE";
+
+	public static boolean isIgnoreProductValue(int AD_Client_ID, int AD_Org_ID) {
+		return MSysConfig.getBooleanValue(LS_IGNORE_SPECIAL_CHARACTER_PRODUCT_VALUE,false,AD_Client_ID,AD_Org_ID);
+	}
+	
 	public static final String LS_STORAGEONHAND_USE_DATEFIRSTMOVEMENT = "LS_STORAGEONHAND_USE_DATEFIRSTMOVEMENT";
 
 	public static boolean isStorageOnHandUseDateFirstMovement()
