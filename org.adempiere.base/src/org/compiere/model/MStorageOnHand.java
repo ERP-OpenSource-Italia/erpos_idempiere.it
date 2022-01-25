@@ -423,6 +423,17 @@ public class MStorageOnHand extends X_M_StorageOnHand
 									+ "		   AND t.m_locator_id = m_storageonhand.m_locator_id "
 									+ "		   AND t.MovementQty>0 "
 									+ "		  ) AS datefirstmovement ";
+							
+							if(STDSysConfig.isStorageOnHandUseTransaction_ID())
+							{
+
+								sql += "    , (select min (M_Transaction_ID) FROM M_Transaction t "
+										+ "		   WHERE t.M_Product_ID = m_storageonhand.M_product_ID "
+										+ "		   AND t.M_AttributesetInstance_ID = m_storageonhand.M_AttributesetInstance_ID "
+										+ "		   AND t.m_locator_id = m_storageonhand.m_locator_id "
+										+ "		   AND t.MovementQty>0 "
+										+ "		  ) AS M_Transaction_ID ";
+							}
 						}
 						/** LS END */
 						sql +=  "   FROM m_storageonhand ";
