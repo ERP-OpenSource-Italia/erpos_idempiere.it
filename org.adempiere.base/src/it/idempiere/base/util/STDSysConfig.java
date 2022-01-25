@@ -790,5 +790,12 @@ public class STDSysConfig
 	public static boolean isIgnoreProductValue(int AD_Client_ID, int AD_Org_ID) {
 		return MSysConfig.getBooleanValue(LS_IGNORE_SPECIAL_CHARACTER_PRODUCT_VALUE,false,AD_Client_ID,AD_Org_ID);
 	}
+	
+	public static final String LS_STORAGEONHAND_USE_TRANSACTION_ID = "LS_STORAGEONHAND_USE_TRANSACTION_ID";
+
+	public static boolean isStorageOnHandUseTransaction_ID()
+	{
+		return MSysConfig.getBooleanValue(LS_STORAGEONHAND_USE_TRANSACTION_ID, false);
+	}
 	//LS END
 }

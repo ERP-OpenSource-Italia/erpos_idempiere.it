@@ -34,6 +34,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Util;
 
 import it.idempiere.base.model.LITMReplenish;
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  * 	Inventory Storage Model
@@ -339,8 +340,30 @@ public class MStorageOnHand extends X_M_StorageOnHand
 			+ "    min(m_storageonhand.updated) AS updated, "
 			+ "    min(m_storageonhand.updatedby) AS updatedby, "
 			+ "    min(m_storageonhand.m_storageonhand_uu::text) AS m_storageonhand_uu, "
-			+ "    min(m_storageonhand.datematerialpolicy) AS datematerialpolicy "
-			+ "   FROM m_storageonhand ";
+			+ "    min(m_storageonhand.datematerialpolicy) AS datematerialpolicy ";
+			/** LS */
+			if(STDSysConfig.isStorageOnHandUseDateFirstMovement())
+			{
+				sql += "    , (select min (MovementDate) FROM M_Transaction t "
+						+ "		   WHERE t.M_Product_ID = m_storageonhand.M_product_ID "
+						+ "		   AND t.M_AttributesetInstance_ID = m_storageonhand.M_AttributesetInstance_ID "
+						+ "		   AND t.m_locator_id = m_storageonhand.m_locator_id "
+						+ "		   AND t.MovementQty>0 "
+						+ "		  ) AS datefirstmovement ";
+				
+				if(STDSysConfig.isStorageOnHandUseTransaction_ID())
+				{
+
+					sql += "    , (select min (M_Transaction_ID) FROM M_Transaction t "
+							+ "		   WHERE t.M_Product_ID = m_storageonhand.M_product_ID "
+							+ "		   AND t.M_AttributesetInstance_ID = m_storageonhand.M_AttributesetInstance_ID "
+							+ "		   AND t.m_locator_id = m_storageonhand.m_locator_id "
+							+ "		   AND t.MovementQty>0 "
+							+ "		  ) AS M_Transaction_ID ";
+				}
+			}
+			/** LS END */
+			sql += "   FROM m_storageonhand ";
 			
 		if (M_Locator_ID > 0)
 			sql += "WHERE m_storageonhand.M_Locator_ID = ?";
@@ -390,8 +413,30 @@ public class MStorageOnHand extends X_M_StorageOnHand
 						+ "    min(m_storageonhand.updated) AS updated, "
 						+ "    min(m_storageonhand.updatedby) AS updatedby, "
 						+ "    min(m_storageonhand.m_storageonhand_uu::text) AS m_storageonhand_uu, "
-						+ "    min(m_storageonhand.datematerialpolicy) AS datematerialpolicy "
-						+ "   FROM m_storageonhand ";
+						+ "    min(m_storageonhand.datematerialpolicy) AS datematerialpolicy ";
+						/** LS */
+						if(STDSysConfig.isStorageOnHandUseDateFirstMovement())
+						{
+							sql += "    , (select min (MovementDate) FROM M_Transaction t "
+									+ "		   WHERE t.M_Product_ID = m_storageonhand.M_product_ID "
+									+ "		   AND t.M_AttributesetInstance_ID = m_storageonhand.M_AttributesetInstance_ID "
+									+ "		   AND t.m_locator_id = m_storageonhand.m_locator_id "
+									+ "		   AND t.MovementQty>0 "
+									+ "		  ) AS datefirstmovement ";
+							
+							if(STDSysConfig.isStorageOnHandUseTransaction_ID())
+							{
+
+								sql += "    , (select min (M_Transaction_ID) FROM M_Transaction t "
+										+ "		   WHERE t.M_Product_ID = m_storageonhand.M_product_ID "
+										+ "		   AND t.M_AttributesetInstance_ID = m_storageonhand.M_AttributesetInstance_ID "
+										+ "		   AND t.m_locator_id = m_storageonhand.m_locator_id "
+										+ "		   AND t.MovementQty>0 "
+										+ "		  ) AS M_Transaction_ID ";
+							}
+						}
+						/** LS END */
+						sql +=  "   FROM m_storageonhand ";
 						
 			if (M_Locator_ID > 0)
 				sql += "WHERE m_storageonhand.M_Locator_ID = ?";
@@ -1189,6 +1234,27 @@ public class MStorageOnHand extends X_M_StorageOnHand
 	 */
 	public static String getWarehouseOrderByClause(boolean allAttributeInstances, boolean isUseGuaranteeDateForMPolicy, boolean FiFo) {
 		StringBuilder sql = new StringBuilder(" ORDER BY l.PriorityNo DESC, ");
+		
+		/** LS Gestione data primo movimento */
+		if(STDSysConfig.isStorageOnHandUseDateFirstMovement())
+		{
+			sql.append(" s.datefirstmovement ");
+			if(!FiFo)
+				sql.append(" DESC,");
+			else 
+				sql.append(" ,");
+			
+			if(STDSysConfig.isStorageOnHandUseTransaction_ID())
+			{
+				sql.append(" s.M_Transaction_ID ");
+				if(!FiFo)
+					sql.append(" DESC,");
+				else 
+					sql.append(" ,");
+			}
+		}
+		/** LS End*/
+		
 		if (allAttributeInstances) {
 
 			if (isUseGuaranteeDateForMPolicy) {

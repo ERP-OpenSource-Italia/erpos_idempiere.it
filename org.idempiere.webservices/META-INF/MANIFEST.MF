@@ -15,6 +15,8 @@ Import-Package: javax.activation,
  javax.servlet;version="3.0.0",
  javax.servlet.http;version="3.0.0",
  javax.xml.bind;version="2.3.0",
+ javax.xml.ws,
+ javax.xml.ws.handler,
  net.sf.jasperreports.engine,
  net.sf.jasperreports.engine.base,
  net.sf.jasperreports.engine.util,
@@ -114,3 +116,4 @@ Web-ContextPath: ADInterface
 Bundle-ActivationPolicy: lazy
 Automatic-Module-Name: org.idempiere.webservices
 Bundle-Vendor: iDempiere Community
+Bundle-RequiredExecutionEnvironment: JavaSE-11
