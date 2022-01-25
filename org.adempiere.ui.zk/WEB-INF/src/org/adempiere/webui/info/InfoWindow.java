@@ -86,6 +86,7 @@ import org.compiere.model.MLookupFactory;
 import org.compiere.model.MLookupInfo;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MProcess;
+import org.compiere.model.MProduct;
 import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
@@ -722,7 +723,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			} 
 		}
 		
-		if (m_count > 0) {
+		if (m_count == 1) {
+			executeQuery();
+			renderItems();
+		}
+		else if (m_count > 0) {
 			executeQuery();
 			renderItems();
 		} else if (!splitValue) {
@@ -1371,11 +1376,16 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					if(function.equalsIgnoreCase("upper") && mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_Like) &&
 							STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
 					{
-						function = FilterQuery.SPECIAL_CHAR_FUNCTION;
 						
-						if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
+						if(STDSysConfig.isIgnoreProductValue(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())) 
+								&& table.get_TableName().equals(MProduct.Table_Name) == false)
 						{
-							function = FilterQuery.getFilterFunction(function);
+							function = FilterQuery.SPECIAL_CHAR_FUNCTION;
+							
+							if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
+							{
+								function = FilterQuery.getFilterFunction(function);
+							}
 						}
 					}
 					//F3P
@@ -1389,14 +1399,18 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())) &&
 						mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_Like))
 					{
-						columnClause = FilterQuery.SPECIAL_CHAR_FUNCTION;
-						
-						if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
+						if(STDSysConfig.isIgnoreProductValue(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())) 
+								&& table.get_TableName().equals(MProduct.Table_Name) == false)
 						{
-							columnClause = FilterQuery.getFilterFunction(columnClause);
+							columnClause = FilterQuery.SPECIAL_CHAR_FUNCTION;
+							
+							if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
+							{
+								columnClause = FilterQuery.getFilterFunction(columnClause);
+							}
+							
+							columnClause.replaceFirst("[?]", columnName);
 						}
-						
-						columnClause.replaceFirst("[?]", columnName);
 					}
 					else
 						columnClause = columnName;
