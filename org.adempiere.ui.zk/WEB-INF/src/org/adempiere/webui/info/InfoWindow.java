@@ -1534,7 +1534,7 @@
  					//F3P filter special char	
  					valueStr = new StringBuilder();
  					if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())) && 
- 							(Util.isEmpty(queryFunction, true)) || queryFunction.equalsIgnoreCase("upper"))
+ 							((Util.isEmpty(queryFunction, true)) || queryFunction.equalsIgnoreCase("upper")))
  					{
  						valueStr.append(FilterQuery.filterString(value.toString()));
  					} else if(Util.isEmpty(queryFunction, true) == false && queryFunction.equalsIgnoreCase("upper"))
@@ -1547,7 +1547,7 @@
  				//F3P filter special char	
  					valueStr = new StringBuilder();
  					if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())) && 
- 							(Util.isEmpty(queryFunction, true)) || queryFunction.equalsIgnoreCase("upper"))
+ 							((Util.isEmpty(queryFunction, true)) || queryFunction.equalsIgnoreCase("upper")))
  					{
  						valueStr.append(FilterQuery.filterString(value.toString()));
  					} else if(Util.isEmpty(queryFunction, true) == false && queryFunction.equalsIgnoreCase("upper"))
