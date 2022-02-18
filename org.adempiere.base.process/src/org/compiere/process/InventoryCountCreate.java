@@ -62,9 +62,11 @@ public class InventoryCountCreate extends SvrProcess
 	/** Delete Parameter			*/
 	private boolean		p_DeleteOld = false;
 	
+	private Timestamp p_MovementDate = null;
 	/** Inventory Line				*/
 	private MInventoryLine	m_line = null; 
 	private Timestamp oldDateMPolicy = null;
+	
 	
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -91,6 +93,8 @@ public class InventoryCountCreate extends SvrProcess
 				p_InventoryCountSetZero = "Z".equals(para[i].getParameter());
 			else if (name.equals("DeleteOld"))
 				p_DeleteOld = "Y".equals(para[i].getParameter());
+			else if (name.equals("MovementDate"))
+				p_MovementDate = para[i].getParameterAsTimestamp();
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -220,7 +224,15 @@ public class InventoryCountCreate extends SvrProcess
 				int M_Product_ID = rs.getInt(1);
 				int M_Locator_ID = rs.getInt(2);
 				int M_AttributeSetInstance_ID = rs.getInt(3);
-				BigDecimal QtyOnHand = rs.getBigDecimal(4);
+				BigDecimal QtyOnHand = null;
+				if(p_MovementDate != null) {
+					String sqlGDate = " SELECT sum(mt.movementqty) as giacenza " + 
+							" FROM m_transaction mt "
+							+ " WHERE mt.M_Product_ID = ? AND mt.M_Locator_ID = ? AND mt.movementdate <=  ?";
+					QtyOnHand = DB.getSQLValueBD(get_TrxName(), sqlGDate, M_Product_ID,M_Locator_ID,p_MovementDate);
+				}else {
+				QtyOnHand = rs.getBigDecimal(4);
+				}
 				if (QtyOnHand == null)
 					QtyOnHand = Env.ZERO;
 				int M_AttributeSet_ID = rs.getInt(5);
