@@ -22,9 +22,12 @@ import java.sql.ResultSet;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.model.ImportValidator;
+import org.adempiere.process.ImportProcess;
 import org.compiere.model.MBankAccount;
 import org.compiere.model.MBankStatement;
 import org.compiere.model.MBankStatementLine;
+import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.X_I_BankStatement;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -36,6 +39,7 @@ import org.compiere.util.Env;
  *	@version $Id: ImportBankStatement.java,v 1.2 2006/07/30 00:51:01 jjanke Exp $
  */
 public class ImportBankStatement extends SvrProcess
+implements ImportProcess
 {
 	/**	Client to be imported to		*/
 	private int				p_AD_Client_ID = 0;
@@ -114,6 +118,9 @@ public class ImportBankStatement extends SvrProcess
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info ("Reset=" + no);
 
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_BEFORE_VALIDATE);
+
+		
 		sql = new StringBuilder ("UPDATE I_BankStatement o ")
 			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Org, '")
 			.append("WHERE (AD_Org_ID IS NULL OR AD_Org_ID=0")
@@ -377,6 +384,8 @@ public class ImportBankStatement extends SvrProcess
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Duplicates=" + no);
 		
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);
+		
 		commitEx();
 		
 		//Import Bank Statement
@@ -466,8 +475,13 @@ public class ImportBankStatement extends SvrProcess
 					statement.setDescription(imp.getDescription());
 					statement.setEftStatementReference(imp.getEftStatementReference());
 					statement.setEftStatementDate(imp.getEftStatementDate());
+					
+					ModelValidationEngine.get().fireImportValidate(this, imp, statement, ImportValidator.TIMING_BEFORE_IMPORT);
+
 					if (statement.save(get_TrxName()))
 					{
+						ModelValidationEngine.get().fireImportValidate(this, imp, statement, ImportValidator.TIMING_AFTER_IMPORT);
+
 						noInsert++;
 					}
 					lineNo = 10;
@@ -513,9 +527,13 @@ public class ImportBankStatement extends SvrProcess
 				line.setEftCurrency(imp.getEftCurrency());
 				line.setEftAmt(imp.getEftAmt());
 				
+				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_BEFORE_IMPORT);
+
 				//	Save statement line
 				if (line.save(get_TrxName()))
 				{
+					ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_AFTER_IMPORT);
+
 					imp.setC_BankStatement_ID(statement.getC_BankStatement_ID());
 					imp.setC_BankStatementLine_ID(line.getC_BankStatementLine_ID());
 					imp.setI_IsImported(true);
@@ -551,5 +569,19 @@ public class ImportBankStatement extends SvrProcess
 		return "";
 
 	}	//	doIt
+
+
+	@Override
+	public String getImportTableName()
+	{
+		return X_I_BankStatement.Table_Name;
+	}
+
+
+	@Override
+	public String getWhereClause()
+	{
+		return (new StringBuilder(" AND AD_Client_ID=").append(p_AD_Client_ID)).toString();
+	}
 
 }	//	ImportBankStatement
