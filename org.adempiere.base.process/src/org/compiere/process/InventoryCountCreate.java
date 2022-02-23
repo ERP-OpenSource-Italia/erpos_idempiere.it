@@ -225,16 +225,18 @@ public class InventoryCountCreate extends SvrProcess
 				int M_Locator_ID = rs.getInt(2);
 				int M_AttributeSetInstance_ID = rs.getInt(3);
 				BigDecimal QtyOnHand = null;
+				
 				if(p_MovementDate != null) {
 					String sqlGDate = " SELECT sum(mt.movementqty) as giacenza " + 
 							" FROM m_transaction mt "
 							+ " WHERE mt.M_Product_ID = ? AND mt.M_Locator_ID = ? AND mt.movementdate <=  ?";
+					if(M_AttributeSetInstance_ID > 0) {
+						sqlGDate = sqlGDate + " AND M_AttributeSetInstance_ID = " + M_AttributeSetInstance_ID;
+					}
 					QtyOnHand = DB.getSQLValueBD(get_TrxName(), sqlGDate, M_Product_ID,M_Locator_ID,p_MovementDate);
 				}else {
 				QtyOnHand = rs.getBigDecimal(4);
 				}
-				if (QtyOnHand == null)
-					QtyOnHand = Env.ZERO;
 				int M_AttributeSet_ID = rs.getInt(5);
 				
 				Timestamp dateMpolicy = rs.getTimestamp(6);
@@ -292,6 +294,7 @@ public class InventoryCountCreate extends SvrProcess
 		if (QtyOnHand.signum() == 0)
 			M_AttributeSetInstance_ID = 0;
 
+		
 		// TODO???? This is not working --- must create one line and multiple MA
 		if (m_line != null 
 			&& m_line.getM_Locator_ID() == M_Locator_ID
