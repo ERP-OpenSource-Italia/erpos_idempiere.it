@@ -46,6 +46,62 @@ public class MSession extends X_AD_Session
 	 * 
 	 */
 	private static final long serialVersionUID = 480745219310430126L;
+	
+	/**
+	 * 	Get existing or create local session
+	 *	@param ctx context
+	 *	@param createNew create if not found
+	 *	@return session session
+	 */
+	public static MSession forceCreateNew (Properties ctx)
+	{
+		int AD_Session_ID = 0;
+		MSession session = null;
+
+		if (session == null && AD_Session_ID > 0)
+		{
+			session = new MSession(ctx, AD_Session_ID, null);
+			if (session.get_ID() != AD_Session_ID) {
+				Env.setContext (ctx, "#AD_Session_ID", AD_Session_ID);
+			}
+			s_sessions.put(AD_Session_ID, session);
+		}
+		// Create New
+		if (session == null)
+		{
+			session = new MSession (ctx, null);	//	local session
+			session.saveEx();
+			AD_Session_ID = session.getAD_Session_ID();
+			Env.setContext (ctx, "#AD_Session_ID", AD_Session_ID);
+			s_sessions.put (Integer.valueOf(AD_Session_ID), session);
+		}	
+		return session;
+	}	//	get
+	
+	/**
+	 * 	Get existing or create remote session
+	 *	@param ctx context
+	 *	@param Remote_Addr remote address
+	 *	@param Remote_Host remote host
+	 *	@param WebSession web session
+	 *	@return session
+	 */
+	public static MSession forceCreateNew (Properties ctx, String Remote_Addr, String Remote_Host, String WebSession)
+	{
+		int AD_Session_ID = 0;
+		MSession session = null;
+
+		if (session == null)
+		{
+			session = new MSession (ctx, Remote_Addr, Remote_Host, WebSession, null);	//	remote session
+			session.saveEx();
+			AD_Session_ID = session.getAD_Session_ID();
+			Env.setContext(ctx, "#AD_Session_ID", AD_Session_ID);
+			s_sessions.put(Integer.valueOf(AD_Session_ID), session);
+		}	
+		return session;
+	}	//	get
+
 
 
 	/**
