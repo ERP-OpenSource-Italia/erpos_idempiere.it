@@ -190,11 +190,27 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 	        		}
 	        	}
 	        	
-	        	String remote_addr = Executions.getCurrent().getRemoteAddr();
+	        	boolean isValid = false;
+
+	            if(MSysConfig.getBooleanValue("LS_FILTER_BY_IP", true))
+	            {
+		        	String remote_addr = Executions.getCurrent().getRemoteAddr();
+		        	
+		        	logger.log(Level.WARNING,"Tentativo di connessione da: \n"+remote_addr+" con token :"+token_ID
+		        			+"\n"+AD_Client_ID+"\n"+AD_Org_ID+"\n"+AD_User_ID );
+		        	
+		        	isValid = 1 == DB.getSQLValue(null, "SELECT 1 FROM AD_Session WHERE remote_addr = ? AND websession = ? "
+		        			+ " AND processed = 'N' AND loginDate > current_timestamp - interval '1 day'"
+		        			+ " AND AD_Client_ID = ? AND AD_Org_ID = ? AND CreatedBy = ?  ",remote_addr,token_ID,AD_Client_ID,AD_Org_ID,AD_User_ID);
+	            }
+	            else
+	            {
+	            	isValid = 1 == DB.getSQLValue(null, "SELECT 1 FROM AD_Session WHERE websession = ? "
+		        			+ " AND processed = 'N' AND loginDate > current_timestamp - interval '1 day'"
+		        			+ " AND AD_Client_ID = ? AND AD_Org_ID = ? AND CreatedBy = ?  ",token_ID,AD_Client_ID,AD_Org_ID,AD_User_ID);
+	            }
 	        		        	
-	        	boolean isValid = 1 == DB.getSQLValue(null, "SELECT 1 FROM AD_Session WHERE remote_addr = ? AND websession = ? "
-	        			+ " AND processed = 'N' AND loginDate > current_timestamp - interval '1 day'"
-	        			+ " AND AD_Client_ID = ? AND AD_Org_ID = ? AND CreatedBy = ?  ",remote_addr,token_ID,AD_Client_ID,AD_Org_ID,AD_User_ID);
+	        	
 	        	
 	        	if(saveDataToCtx && isValid)
 	        	{
