@@ -287,7 +287,7 @@ public class Process {
 		}
 		
 		if(pi.isProcessRunning(null))
-			throw new AdempiereException("ProcessAlreadyRunning");
+			throw new AdempiereException("ProcessAlreadyRunning "+pi.getAD_Process_ID());
 		
 		for(DataField field : fields) {
 			if (isDataURI(field.getVal())) {

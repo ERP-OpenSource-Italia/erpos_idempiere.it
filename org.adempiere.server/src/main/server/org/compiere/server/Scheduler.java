@@ -189,7 +189,7 @@ public class Scheduler extends AdempiereServer
 		pi.setTransactionName(m_trx != null ? m_trx.getTrxName() : null);
 		
 		if(pi.isProcessRunning(null))
-			throw new AdempiereException("ProcessAlreadyRunning");
+			throw new AdempiereException("ProcessAlreadyRunning "+pi.getAD_Process_ID());
 		
 		if (!Util.isEmpty(process.getJasperReport())) 
 		{

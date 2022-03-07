@@ -154,6 +154,79 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
         
         Properties ctx = Env.getCtx();
         langSession = Env.getContext(ctx, Env.LANGUAGE);
+        
+        
+        if(MSysConfig.getBooleanValue("LS_AUTH_WITH_TOKEN", false))
+        {
+        	if(m_URLParameters.isEmpty() == false)
+	        {
+	        	boolean saveDataToCtx = false;
+	        	String token_ID = null;
+	        	int AD_Client_ID = -3;
+	        	int AD_User_ID = -3;
+	        	int AD_Org_ID = -3;
+	        	
+	        	for(Entry<String, String[]> para : m_URLParameters.entrySet())
+	        	{
+	        		String key = "#"+para.getKey();
+	        		String [] value = para.getValue();
+	        		
+	        		if(key.equals("#AD_Token_ID"))
+	        		{
+	        			saveDataToCtx = true;
+	        			token_ID = value[0];
+	        		}
+	        		else if(key.equals("#AD_Client_ID"))
+	        		{
+	        			AD_Client_ID = Integer.parseInt(value[0]);
+	        		}
+	        		else if(key.equals("#AD_Org_ID"))
+	        		{
+	        			AD_Org_ID = Integer.parseInt(value[0]);
+	        		}
+	        		else if(key.equals("#AD_User_ID"))
+	        		{
+	        			AD_User_ID = Integer.parseInt(value[0]);
+	        		}
+	        	}
+	        	
+	        	boolean isValid = false;
+
+	            if(MSysConfig.getBooleanValue("LS_FILTER_BY_IP", true))
+	            {
+		        	String remote_addr = Executions.getCurrent().getRemoteAddr();
+		        	
+		        	logger.log(Level.WARNING,"Tentativo di connessione da: \n"+remote_addr+" con token :"+token_ID
+		        			+"\n"+AD_Client_ID+"\n"+AD_Org_ID+"\n"+AD_User_ID );
+		        	
+		        	isValid = 1 == DB.getSQLValue(null, "SELECT 1 FROM AD_Session WHERE remote_addr = ? AND websession = ? "
+		        			+ " AND processed = 'N' AND loginDate > current_timestamp - interval '1 day'"
+		        			+ " AND AD_Client_ID = ? AND AD_Org_ID = ? AND CreatedBy = ?  ",remote_addr,token_ID,AD_Client_ID,AD_Org_ID,AD_User_ID);
+	            }
+	            else
+	            {
+	            	isValid = 1 == DB.getSQLValue(null, "SELECT 1 FROM AD_Session WHERE websession = ? "
+		        			+ " AND processed = 'N' AND loginDate > current_timestamp - interval '1 day'"
+		        			+ " AND AD_Client_ID = ? AND AD_Org_ID = ? AND CreatedBy = ?  ",token_ID,AD_Client_ID,AD_Org_ID,AD_User_ID);
+	            }
+	        		        	
+	        	
+	        	
+	        	if(saveDataToCtx && isValid)
+	        	{
+		        	for(Entry<String, String[]> para : m_URLParameters.entrySet())
+		        	{
+		        		String key = "#"+para.getKey();
+		        		if(key.equals("#AD_User_ID") ||key.equals("#AD_Role_ID") ||key.equals("#AD_Client_ID") ||key.equals("#AD_Org_ID")|| key.equals("#AD_Token_ID") )
+		        		{
+		        			String [] value = para.getValue();
+		        			ctx.put(key, value[0]);
+		        		}
+		        	}
+	        	}
+	        }
+        }
+        
         if (session.getAttribute(SessionContextListener.SESSION_CTX) == null || !SessionManager.isUserLoggedIn(ctx))
         {
         	loginDesktop = new WLogin(this, false);  // FIN: (st) 20/09/2017 need to know if its a role change
