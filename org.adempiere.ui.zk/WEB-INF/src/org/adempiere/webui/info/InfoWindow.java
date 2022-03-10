@@ -1960,7 +1960,7 @@
          else 
          {
  	        editor = WebEditorFactory.getEditor(mField, false);
- 	        editor.setReadWrite(true);
+ 	        editor.setReadWrite(infoColumn.isQueryCriteriaReadOnly() == false); //LS new field
  	        editor.dynamicDisplay();
  	        editor.addValueChangeListener(this);
  	        editor.fillHorizontal();
