@@ -1107,7 +1107,8 @@ public class MInOut extends X_M_InOut implements DocAction
         }
 
 		//	Shipment - Needs Order/RMA
-		if (!getMovementType().contentEquals(MInOut.MOVEMENTTYPE_CustomerReturns) && isSOTrx() && getC_Order_ID() == 0 && getM_RMA_ID() == 0)
+		if (!getMovementType().contentEquals(MInOut.MOVEMENTTYPE_CustomerReturns) && isSOTrx() && getC_Order_ID() == 0 && getM_RMA_ID() == 0
+				&& STDSysConfig.isCheckOrderOnShipmentPrepare(getAD_Client_ID(), getAD_Org_ID()) == false)
 		{
 			log.saveError("FillMandatory", Msg.translate(getCtx(), "C_Order_ID"));
 			return false;
