@@ -264,7 +264,8 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
         m_title = title;
         m_AD_Table_ID = AD_Table_ID;
         m_tableName = tableName;
-        m_whereExtended = Env.parseContext(Env.getCtx(), targetWindowNo, whereExtended, false);//F3P from adempiere parse context
+//        m_whereExtended = Env.parseContext(Env.getCtx(), targetWindowNo, whereExtended, false);//F3P from adempiere parse context
+        m_whereExtended = whereExtended;
         m_findFields = findFields;
         m_sNew = "** ".concat(Msg.getMsg(Env.getCtx(), "New Query")).concat(" **");		
         m_AD_Tab_ID = adTabId;
