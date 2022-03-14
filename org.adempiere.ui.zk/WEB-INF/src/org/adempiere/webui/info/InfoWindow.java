@@ -3506,7 +3506,7 @@
  	}
  	
  	private class XlsExportAction implements EventListener<Event>
- 	{		
+ 	{	
  		@Override
  		public void onEvent(Event evt) throws Exception
  		{
@@ -3524,6 +3524,8 @@
  		private ResultSet m_rs = null;
  		private int rowCount = -1;
  		private int currentRow = -1;
+		//LS aggiunto un offset: le colonne ID hanno due "colonne" nella select (uno è il valore visualizzato, laltro la chiave)
+		private int offset = 0;
  		
  		public void doExport() throws Exception
  		{
@@ -3596,6 +3598,8 @@
  		@Override
  		protected void setCurrentRow(int row)
  		{
+ 			//LS reset dell'offset al cambio riga
+ 			offset = 0;
  			if(row > currentRow)
  			{
  				try
@@ -3619,6 +3623,8 @@
  		@Override
  		public boolean isColumnPrinted(int col)
  		{
+ 			if(Util.isEmpty(columnInfos[col].getKeyPairColSQL()) == false && columnInfos[col].getGridField() != null)
+				offset++;
  			return (columnInfos[col].getGridField() != null);
  		}
  
@@ -3645,7 +3651,7 @@
  			
  			try
  			{
- 				val = m_rs.getObject(col + 1); // Col are zero-based, while resultset col are 1 based
+				val = m_rs.getObject(col + 1+ offset); // Col are zero-based, while resultset col are 1 based
  			}
  			catch(SQLException e)
  			{
