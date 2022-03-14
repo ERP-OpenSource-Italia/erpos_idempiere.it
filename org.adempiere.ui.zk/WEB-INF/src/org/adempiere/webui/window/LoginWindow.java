@@ -92,7 +92,15 @@ public class LoginWindow extends FWindow implements EventListener<Event>
     {
     	this.ctx = Env.getCtx();
         this.app = app;
-        initComponents(isRoleChange);
+        
+        if(MSysConfig.getBooleanValue("LS_AUTH_WITH_TOKEN", false))
+        {
+        	initComponentsToken(isRoleChange);
+        }
+        else
+        {
+        	initComponents(isRoleChange);
+        }
         
         if(pnlLogin != null) // FIN: (st) 20/09/2017 can be null if the user is logged via sso
         	this.appendChild(pnlLogin);
@@ -101,6 +109,119 @@ public class LoginWindow extends FWindow implements EventListener<Event>
         // add listener on 'ENTER' key for the login window
         addEventListener(Events.ON_OK,this);
         setWidgetListener("onOK", "zAu.cmd0.showBusy(null)");
+    }
+    
+    private void initComponentsToken(boolean isRoleChange)
+    {
+    		Execution ex = Executions.getCurrent();
+    		
+    		String AD_Token_ID = null;
+    		
+    		try {
+        	// Login requires both information...
+    		AD_Token_ID = ex.getParameter("AD_Token_ID");
+    		}
+    		catch (Exception e) {
+				log.severe("token not found");
+			}
+    		
+        	if(AD_Token_ID != null && AD_Token_ID.isEmpty() == false)
+        	{
+        		final String baseSql = "Select 15 "
+        				+ "from AD_User_Roles "
+        				+ "where  ad_user_id = ? and ad_role_id = ? "
+        				+ "and ad_org_id = ? and ad_client_id = ?"
+        				+ "and IsActive='Y' and exists (select 1 from ad_session where websession = ? and "
+        				+ "							ad_session.created + interval '5 hours' > current_timestamp "
+        				+ "							)";
+        		
+        		int AD_User_ID = -1;
+        		int AD_Role_ID = -1;
+        		int AD_Org_ID = -1;
+        		int AD_Client_ID = -1;
+        		int M_Warehouse_ID = -1;
+        		
+        		AD_User_ID = Integer.parseInt(ex.getParameter("AD_User_ID"));
+    			AD_Client_ID = Integer.parseInt(ex.getParameter("AD_Client_ID"));
+    			AD_Org_ID = Integer.parseInt(ex.getParameter("AD_Org_ID"));
+    			AD_Role_ID = Integer.parseInt(ex.getParameter("AD_Role_ID"));
+    			M_Warehouse_ID = Integer.parseInt(ex.getParameter("M_Warehouse_ID"));
+    			
+    			int result = DB.getSQLValue(null, baseSql,AD_User_ID,AD_Role_ID,AD_Org_ID,AD_Client_ID,AD_Token_ID);
+        		
+        			        		
+        		if(AD_User_ID > 0 && AD_Org_ID >= 0 && AD_Client_ID >= 0 && M_Warehouse_ID >= 0 && result == 15)
+        		{
+        			MUser user = MUser.get(ctx, AD_User_ID);
+        			MOrg mOrg;
+        			
+        			mOrg = MOrg.get(ctx, AD_Org_ID);
+        			// MRole mRole = MRole.get(ctx, AD_Role_ID);
+        			MWarehouse mWarehouse = MWarehouse.get(ctx, M_Warehouse_ID);
+        			
+        			// Login
+        			
+        			// 1. Copiato da RolePanel.setUserID()
+        			
+        			Env.setContext(ctx, Env.AD_CLIENT_ID, AD_Client_ID);
+        			Env.setContext(ctx, Env.AD_USER_ID, AD_User_ID);
+        			Env.setContext(ctx, "#AD_User_Name", user.getName());
+        			Env.setContext(ctx, "#SalesRep_ID", AD_User_ID);
+        			Env.setContext(ctx, "#Locale","it_IT");
+        			Env.setContext(ctx, "#LanguageName" ,"Italiano");
+
+        			
+        			// 2. Necessario, ma non ho trovato chi lo fa...
+        			
+        			Env.setContext(ctx, Env.AD_ROLE_ID, AD_Role_ID);
+        			
+        			// 3. Copiato da RolePanel.validateRoles
+        			
+        			final Component component = this;
+        			
+        			Login login = new Login(ctx);
+        			
+        			Timestamp date = TimeUtil.getDay(System.currentTimeMillis());
+        			
+        			KeyNamePair orgKNPair = new KeyNamePair(mOrg.get_ID(), mOrg.getName());
+        			KeyNamePair	warehouseKNPair = new KeyNamePair(mWarehouse.get_ID(), mWarehouse.getName());
+
+        			String msg = login.loadPreferences(orgKNPair, warehouseKNPair, date, null);
+        	        if (Util.isEmpty(msg))
+        	        {
+        	            Session currSess = Executions.getCurrent().getDesktop().getSession();            
+
+        	            int timeout = MSysConfig.getIntValue(MSysConfig.ZK_SESSION_TIMEOUT_IN_SECONDS, -2, Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx()));
+        	            if (timeout != -2) // default to -2 meaning not set            	
+        	            	currSess.setMaxInactiveInterval(timeout);
+
+        	            msg = login.validateLogin(orgKNPair);
+        	        }
+        	        if (! Util.isEmpty(msg))
+        			{
+        				Env.getCtx().clear();
+        				FDialog.error(0, this, "Error", msg, new Callback<Integer>() {
+        					@Override
+        					public void onCallback(Integer result) {
+        						Events.echoEvent(new Event(ON_DEFER_LOGOUT, component));
+        					}
+        				});
+        	            return;
+        			}
+
+        	        loginCompleted();
+        			
+        			return;
+        		}
+        		else // SSO user not found, do standard login and log the info
+        		{
+        			log.warning("SSO User not found: " + AD_User_ID + " on client: " + AD_Client_ID + ", using standard login");
+        		}
+        	}
+    	
+    	// FIN end
+
+        createLoginPanel();
     }
 
     private void initComponents(boolean isRoleChange) // FIN: (st) 20/09/2017 need to know if its a role change
@@ -147,10 +268,10 @@ public class LoginWindow extends FWindow implements EventListener<Event>
         		ssoUser = ssoUser.trim().toLowerCase();
         		
         		String sClient = ex.getParameter("ad_client_id"),
-         			   sOrg = ex.getParameter("ad_org_id");
+          			   sOrg = ex.getParameter("ad_org_id");
         		
-            	int urlAD_Client_ID = -1,
-                    urlAD_Org_ID = -1;
+        		int urlAD_Client_ID = -1,
+                        urlAD_Org_ID = -1;
          		
          		try
          		{
@@ -216,6 +337,7 @@ public class LoginWindow extends FWindow implements EventListener<Event>
         			tmp = (Number) values.get(4);
         			M_Warehouse_ID = tmp.intValue();
         		}
+        		
         			        		
         		if(AD_User_ID > 0 && AD_Org_ID >= 0 && AD_Client_ID >= 0 && M_Warehouse_ID >= 0)
         		{
