@@ -45,6 +45,7 @@ import org.compiere.model.MWarehouse;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
+import org.compiere.util.Ini;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Login;
 import org.compiere.util.TimeUtil;
@@ -130,7 +131,7 @@ public class LoginWindow extends FWindow implements EventListener<Event>
         		final String baseSql = "Select 15 "
         				+ "from AD_User_Roles "
         				+ "where  ad_user_id = ? and ad_role_id = ? "
-        				+ "and ad_org_id = ? and ad_client_id = ?"
+        				+ "and ad_org_id in (?,0) and ad_client_id = ?"
         				+ "and IsActive='Y' and exists (select 1 from ad_session where websession = ? and "
         				+ "							ad_session.created + interval '5 hours' > current_timestamp "
         				+ "							)";
@@ -169,6 +170,17 @@ public class LoginWindow extends FWindow implements EventListener<Event>
         			Env.setContext(ctx, "#SalesRep_ID", AD_User_ID);
         			Env.setContext(ctx, "#Locale","it_IT");
         			Env.setContext(ctx, "#LanguageName" ,"Italiano");
+        			Env.setContext(ctx, Env.LANGUAGE,"it_IT");
+        			
+        			
+        			String client_name = DB.getSQLValueString(null, "SELECT name FROM AD_Client WHERE AD_Client_ID = ? ", AD_Client_ID);
+        			
+        			Env.setContext(ctx, "#AD_Client_Name", client_name);
+        			Ini.setProperty(Ini.P_CLIENT, client_name);
+        			
+        			String role_name = DB.getSQLValueString(null, "SELECT name FROM AD_Role WHERE AD_Role_ID = ? ", AD_Role_ID);
+        			
+        			Env.setContext(ctx, "#AD_Role_Name",role_name);
 
         			
         			// 2. Necessario, ma non ho trovato chi lo fa...
