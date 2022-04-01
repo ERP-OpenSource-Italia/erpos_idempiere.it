@@ -135,22 +135,33 @@ public class MProduct extends X_M_Product
 			return null;
 		}
 		
-		// Try Cache
-		if (trxName == null)
+		boolean addProduct = true;
+		
+		try
 		{
-			for (MProduct p : s_cache.values())
+			// Try Cache
+			if (trxName == null)
 			{
-				if (p.getS_Resource_ID() == S_Resource_ID)
+				for (MProduct p : s_cache.values())
 				{
-					return p;
+					if (p.getS_Resource_ID() == S_Resource_ID)
+					{
+						return p;
+					}
 				}
 			}
 		}
+		catch(Exception e)
+		{
+			addProduct = false;
+		}
+		
 		// Load from DB
 		MProduct p = new Query(ctx, Table_Name, COLUMNNAME_S_Resource_ID+"=?", trxName)
 						.setParameters(new Object[]{S_Resource_ID})
 						.firstOnly();
-		if (p != null && trxName == null)
+		
+		if (p != null && trxName == null && addProduct)
 		{
 			s_cache.put(p.getM_Product_ID(), p);
 		}
