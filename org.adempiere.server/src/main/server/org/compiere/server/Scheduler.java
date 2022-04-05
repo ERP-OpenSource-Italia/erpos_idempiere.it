@@ -43,6 +43,7 @@ import org.compiere.model.MRole;
 import org.compiere.model.MScheduler;
 import org.compiere.model.MSchedulerLog;
 import org.compiere.model.MSchedulerPara;
+import org.compiere.model.MSchedulerRecipient;
 import org.compiere.model.MUser;
 import org.compiere.print.MPrintFormat;
 import org.compiere.process.ProcessInfo;
@@ -242,7 +243,7 @@ public class Scheduler extends AdempiereServer
 		}
 		
 		// always notify recipients
-		Integer[] userIDs = scheduler.getRecipientAD_User_IDs();
+		MSchedulerRecipient[] userIDs = scheduler.getRecipients(true);
 		if (userIDs.length > 0) 
 		{
 			ProcessInfoUtil.setLogFromDB(pi);
@@ -257,72 +258,76 @@ public class Scheduler extends AdempiereServer
 			
 			for (int i = 0; i < userIDs.length; i++)
 			{
-				MUser user = new MUser(getCtx(), userIDs[i].intValue(), null);
+				MUser user = new MUser(getCtx(), userIDs[i].getAD_User_ID(), null);
 				boolean email = user.isNotificationEMail();
 				boolean notice = user.isNotificationNote();
-								
-				if (notice) {
-					int AD_Message_ID = 441; // ProcessOK
-					if (isReport)
-						AD_Message_ID = 884; //	HARDCODED SchedulerResult
-					MNote note = new MNote(getCtx(), AD_Message_ID, userIDs[i].intValue(), null);
-					note.setClientOrg(scheduler.getAD_Client_ID(), scheduler.getAD_Org_ID());
-					if (isReport) {
-						note.setTextMsg(schedulerName);
-						note.setDescription(scheduler.getDescription());
-						note.setRecord(AD_Table_ID, Record_ID);
-					} else {
-						note.setTextMsg(schedulerName + "\n" + pi.getSummary());
-						note.setRecord(MPInstance.Table_ID, pi.getAD_PInstance_ID());
-					}
-					if (note.save()) {
-						MAttachment attachment = null;
-						if (fileList != null && !fileList.isEmpty()) {
-							//	Attachment
-							attachment = new MAttachment (getCtx(), MNote.Table_ID, note.getAD_Note_ID(), null);
-							attachment.setClientOrg(scheduler.getAD_Client_ID(), scheduler.getAD_Org_ID());
-							attachment.setTextMsg(schedulerName);
-							for (File entry : fileList)
-								attachment.addEntry(entry);
 							
-						} 
-						String log = pi.getLogInfo(true);
-						if (log != null &&  log.trim().length() > 0) {
-							if (attachment == null) {
+				if(pi.isError() && userIDs[i].isLogError()
+						|| pi.isError() == false && userIDs[i].isLogProcess())
+				{
+					if (notice) {
+						int AD_Message_ID = 441; // ProcessOK
+						if (isReport)
+							AD_Message_ID = 884; //	HARDCODED SchedulerResult
+						MNote note = new MNote(getCtx(), AD_Message_ID, userIDs[i].getAD_User_ID(), null);
+						note.setClientOrg(scheduler.getAD_Client_ID(), scheduler.getAD_Org_ID());
+						if (isReport) {
+							note.setTextMsg(schedulerName);
+							note.setDescription(scheduler.getDescription());
+							note.setRecord(AD_Table_ID, Record_ID);
+						} else {
+							note.setTextMsg(schedulerName + "\n" + pi.getSummary());
+							note.setRecord(MPInstance.Table_ID, pi.getAD_PInstance_ID());
+						}
+						if (note.save()) {
+							MAttachment attachment = null;
+							if (fileList != null && !fileList.isEmpty()) {
+								//	Attachment
 								attachment = new MAttachment (getCtx(), MNote.Table_ID, note.getAD_Note_ID(), null);
 								attachment.setClientOrg(scheduler.getAD_Client_ID(), scheduler.getAD_Org_ID());
 								attachment.setTextMsg(schedulerName);
+								for (File entry : fileList)
+									attachment.addEntry(entry);
+								
+							} 
+							String log = pi.getLogInfo(true);
+							if (log != null &&  log.trim().length() > 0) {
+								if (attachment == null) {
+									attachment = new MAttachment (getCtx(), MNote.Table_ID, note.getAD_Note_ID(), null);
+									attachment.setClientOrg(scheduler.getAD_Client_ID(), scheduler.getAD_Org_ID());
+									attachment.setTextMsg(schedulerName);
+								}
+								attachment.addEntry("ProcessLog.html", log.getBytes("UTF-8"));
+								attachment.saveEx();
 							}
-							attachment.addEntry("ProcessLog.html", log.getBytes("UTF-8"));
-							attachment.saveEx();
+							if (attachment != null)
+								attachment.saveEx();
 						}
-						if (attachment != null)
-							attachment.saveEx();
-					}
-				}
-				
-				if (email)
-				{
-					MMailText mailTemplate = new MMailText(getCtx(), scheduler.getR_MailText_ID(), null);
-					String mailContent = "";
-					
-					if (mailTemplate.is_new()){
-						mailContent = scheduler.getDescription();
-					}else{
-						mailTemplate.setUser(user);
-						mailTemplate.setLanguage(Env.getContext(getCtx(), "#AD_Language"));
-						// if user has bpartner link. maybe use language depend user
-						mailContent = mailTemplate.getMailText(true);
-						schedulerName = mailTemplate.getMailHeader();
-					}
-
-					MClient client = MClient.get(scheduler.getCtx(), scheduler.getAD_Client_ID());
-					if (fileList != null && !fileList.isEmpty()) {
-						client.sendEMailAttachments(from, user, schedulerName, mailContent, fileList);
-					} else {
-						client.sendEMail(from, user, schedulerName, mailContent + "\n" + pi.getSummary() + " " + pi.getLogInfo(), null);
 					}
 					
+					if (email)
+					{
+						MMailText mailTemplate = new MMailText(getCtx(), scheduler.getR_MailText_ID(), null);
+						String mailContent = "";
+						
+						if (mailTemplate.is_new()){
+							mailContent = scheduler.getDescription();
+						}else{
+							mailTemplate.setUser(user);
+							mailTemplate.setLanguage(Env.getContext(getCtx(), "#AD_Language"));
+							// if user has bpartner link. maybe use language depend user
+							mailContent = mailTemplate.getMailText(true);
+							schedulerName = mailTemplate.getMailHeader();
+						}
+	
+						MClient client = MClient.get(scheduler.getCtx(), scheduler.getAD_Client_ID());
+						if (fileList != null && !fileList.isEmpty()) {
+							client.sendEMailAttachments(from, user, schedulerName, mailContent, fileList);
+						} else {
+							client.sendEMail(from, user, schedulerName, mailContent + "\n" + pi.getSummary() + " " + pi.getLogInfo(), null);
+						}
+						
+					}
 				}
 				
 			}

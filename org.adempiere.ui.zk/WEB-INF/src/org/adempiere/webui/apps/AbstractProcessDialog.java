@@ -1253,9 +1253,9 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			
 			int AD_Client_ID = Env.getAD_Client_ID(m_ctx);
 			int AD_User_ID = Env.getAD_User_ID(m_ctx);
+			MProcess process = new MProcess(m_ctx, m_pi.getAD_Process_ID(), null);
 			
 			try {
-				MProcess process = new MProcess(m_ctx, m_pi.getAD_Process_ID(), null);	
 				if (process.isReport() && process.getJasperReport() != null) {
 					if (!Util.isEmpty(process.getJasperReport())) 
 					{
@@ -1288,6 +1288,7 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 				{
 					MClient client = MClient.get(m_ctx, AD_Client_ID);
 					client.sendEMailAttachments(AD_User_ID, process.get_Translation("Name", Env.getAD_Language(Env.getCtx())), m_pi.getSummary() + " " + m_pi.getLogInfo(), getDownloadFiles());
+					sendEmail = false;
 				}
 				
 				if (createNotice)
@@ -1314,7 +1315,15 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 						attachment.saveEx();
 				}
 			} catch (Exception e) {
-				log.log(Level.SEVERE, e.getLocalizedMessage());				
+				log.log(Level.SEVERE, e.getLocalizedMessage());			
+				
+				if (sendEmail )
+				{
+					MClient client = MClient.get(m_ctx, AD_Client_ID);
+					client.sendEMailAttachments(AD_User_ID, process.get_Translation("Name", Env.getAD_Language(Env.getCtx())), (m_pi != null ? m_pi.getSummary()+" "+m_pi.getLogInfo() : "") 
+						+ " in errore durante l'esecuzione del processo \n "+e.getMessage()  , getDownloadFiles());
+				}
+				
 			} finally {
 				instance.setIsProcessing(false);
 				instance.saveEx();
