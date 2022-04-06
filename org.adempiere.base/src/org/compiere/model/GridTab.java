@@ -2159,7 +2159,17 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				C_DocTyp_ID = target.intValue();
 			if (C_DocTyp_ID == 0)
 				return;
-
+			
+			if (STDSysConfig.isAllowDifferentOrderType(Env.getAD_Client_ID(m_vo.ctx), Env.getAD_Org_ID(m_vo.ctx)))
+			{
+				String ot = (String)getValue("OrderType");
+				if (Util.isEmpty(ot) == false)
+				{
+					Env.setContext(m_vo.ctx, m_vo.WindowNo, "OrderType", ot);
+					return;
+				}
+			}
+			
 			String sql = "SELECT DocSubTypeSO FROM C_DocType WHERE C_DocType_ID=?";
 			PreparedStatement pstmt = null;
 			ResultSet rs = null;

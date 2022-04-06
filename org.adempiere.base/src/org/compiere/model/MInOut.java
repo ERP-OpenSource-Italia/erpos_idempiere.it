@@ -47,6 +47,7 @@ import org.compiere.util.TimeUtil;
 
 import it.idempiere.base.model.LITMBPartner;
 import it.idempiere.base.model.LITMInOut;
+import it.idempiere.base.model.LITMOrder;
 import it.idempiere.base.util.STDSysConfig;
 
 /**
@@ -1223,7 +1224,7 @@ public class MInOut extends X_M_InOut implements DocAction
 				&& MSysConfig.getBooleanValue(MSysConfig.LIT_INOUT_CHECK_CREDIT_AS_WARNING, false, getAD_Client_ID(), getAD_Org_ID()) == false)
 		{
 			I_C_Order order = getC_Order();
-			if (order != null && MDocType.DOCSUBTYPESO_PrepayOrder.equals(order.getC_DocType().getDocSubTypeSO())
+			if (order != null && MDocType.DOCSUBTYPESO_PrepayOrder.equals(LITMOrder.getDocSubTypeSO((X_C_Order) order, null))
 					&& !MSysConfig.getBooleanValue(MSysConfig.CHECK_CREDIT_ON_PREPAY_ORDER, true, getAD_Client_ID(), getAD_Org_ID())) {
 				// ignore -- don't validate Prepay Orders depending on sysconfig parameter
 			} else {

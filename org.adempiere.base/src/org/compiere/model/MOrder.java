@@ -50,6 +50,7 @@ import org.compiere.util.Util;
 
 import it.idempiere.base.model.LITMBPartner;
 import it.idempiere.base.model.LITMBPartnerLocation;
+import it.idempiere.base.model.LITMOrder;
 import it.idempiere.base.model.LITMOrderLine;
 import it.idempiere.base.util.BaseMessages;
 import it.idempiere.base.util.STDSysConfig;
@@ -1545,7 +1546,7 @@ public class MOrder extends X_C_Order implements DocAction
 			{
 				MDocType dtOld = MDocType.get(getCtx(), getC_DocType_ID());
 				if (MDocType.DOCSUBTYPESO_StandardOrder.equals(dtOld.getDocSubTypeSO())		//	From SO
-					&& !MDocType.DOCSUBTYPESO_StandardOrder.equals(dt.getDocSubTypeSO()))	//	To !SO
+					&& !MDocType.DOCSUBTYPESO_StandardOrder.equals(LITMOrder.getDocSubTypeSO(this, dt)))	//	To !SO
 				{
 					for (int i = 0; i < lines.length; i++)
 					{
@@ -1634,14 +1635,15 @@ public class MOrder extends X_C_Order implements DocAction
 		if (isSOTrx()
 				&& MSysConfig.getBooleanValue(MSysConfig.LIT_ORDER_CHECK_CREDIT_AS_WARNING, false, getAD_Client_ID(), getAD_Org_ID()) == false)
 		{
-			if (   MDocType.DOCSUBTYPESO_POSOrder.equals(dt.getDocSubTypeSO())
+			String DocSubTypeSO = LITMOrder.getDocSubTypeSO(this, dt);
+			if (   MDocType.DOCSUBTYPESO_POSOrder.equals(DocSubTypeSO)
 					&& PAYMENTRULE_Cash.equals(getPaymentRule())
 					&& !MSysConfig.getBooleanValue(MSysConfig.CHECK_CREDIT_ON_CASH_POS_ORDER, true, getAD_Client_ID(), getAD_Org_ID())) {
 				// ignore -- don't validate for Cash POS Orders depending on sysconfig parameter
-			} else if (MDocType.DOCSUBTYPESO_PrepayOrder.equals(dt.getDocSubTypeSO())
+			} else if (MDocType.DOCSUBTYPESO_PrepayOrder.equals(DocSubTypeSO)
 					&& !MSysConfig.getBooleanValue(MSysConfig.CHECK_CREDIT_ON_PREPAY_ORDER, true, getAD_Client_ID(), getAD_Org_ID())) {
 				// ignore -- don't validate Prepay Orders depending on sysconfig parameter
-			} else if ((MDocType.DOCSUBTYPESO_Proposal.equals(dt.getDocSubTypeSO()) || MDocType.DOCSUBTYPESO_Quotation.equals(dt.getDocSubTypeSO()))
+			} else if ((MDocType.DOCSUBTYPESO_Proposal.equals(DocSubTypeSO) || MDocType.DOCSUBTYPESO_Quotation.equals(DocSubTypeSO))
 					&& !MSysConfig.getBooleanValue(MSysConfig.CHECK_CREDIT_ON_PROPOSAL_ORDER, true, getAD_Client_ID(), getAD_Org_ID())) {
 				// ignore -- don't validate Prepay Orders depending on sysconfig parameter
 			} else {
@@ -2095,7 +2097,7 @@ public class MOrder extends X_C_Order implements DocAction
 		if (log.isLoggable(Level.FINE)) log.fine("Binding=" + binding + " - IsSOTrx=" + isSOTrx);
 		//	Force same WH for all but SO/PO
 		int header_M_Warehouse_ID = getM_Warehouse_ID();
-		if (MDocType.DOCSUBTYPESO_StandardOrder.equals(dt.getDocSubTypeSO())
+		if (MDocType.DOCSUBTYPESO_StandardOrder.equals(LITMOrder.getDocSubTypeSO(this, dt))
 			|| MDocType.DOCBASETYPE_PurchaseOrder.equals(dt.getDocBaseType()))
 			header_M_Warehouse_ID = 0;		//	don't enforce
 		
@@ -2275,7 +2277,8 @@ public class MOrder extends X_C_Order implements DocAction
 	public String completeIt()
 	{
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
-		String DocSubTypeSO = dt.getDocSubTypeSO();
+//		String DocSubTypeSO = dt.getDocSubTypeSO();
+		String DocSubTypeSO = LITMOrder.getDocSubTypeSO(this, dt); //LS check if forced on Order
 		
 		//	Just prepare
 		if (DOCACTION_Prepare.equals(getDocAction()))
@@ -2364,7 +2367,7 @@ public class MOrder extends X_C_Order implements DocAction
 						setDeliveryRule(DELIVERYRULE_Force);
 				}
 				//
-				shipment = createShipment (dt, realTimePOS ? null : getDateOrdered());
+				shipment = createShipment (dt, realTimePOS ? null : getDateOrdered(), DocSubTypeSO);
 				if (shipment == null)
 					return DocAction.STATUS_Invalid;
 				info.append("@M_InOut_ID@: ").append(shipment.getDocumentNo());
@@ -2453,7 +2456,7 @@ public class MOrder extends X_C_Order implements DocAction
 		// Just for POS order with payment rule mixed
 		if (! this.isSOTrx())
 			return null;
-		if (! MOrder.DocSubTypeSO_POS.equals(this.getC_DocType().getDocSubTypeSO()))
+		if (! MOrder.DocSubTypeSO_POS.equals(LITMOrder.getDocSubTypeSO(this, null)))
 			return null;
 		if (! MOrder.PAYMENTRULE_MixedPOSPayment.equals(this.getPaymentRule()))
 			return null;
@@ -2592,10 +2595,15 @@ public class MOrder extends X_C_Order implements DocAction
 	 */
 	protected MInOut createShipment(MDocType dt, Timestamp movementDate)
 	{
+		return createShipment(dt, movementDate, LITMOrder.getDocSubTypeSO(this, dt));
+	}
+	
+	protected MInOut createShipment(MDocType dt, Timestamp movementDate, String DocSubTypeSO)
+	{
 		if (log.isLoggable(Level.INFO)) log.info("For " + dt);
 		MInOut shipment = new MInOut (this, dt.getC_DocTypeShipment_ID(), movementDate);
 		
-		String DocSubTypeSO = dt.getDocSubTypeSO();
+//		String DocSubTypeSO = dt.getDocSubTypeSO();
 		
 		if((MDocType.DOCSUBTYPESO_WarehouseOrder.equals(DocSubTypeSO) 
 				&& STDSysConfig.isCopyDocNoFromWhOrderToInout(getAD_Client_ID(),getAD_Org_ID()))// F3P: align document no of inout
@@ -3196,7 +3204,8 @@ public class MOrder extends X_C_Order implements DocAction
 			return false;	
 				
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
-		String DocSubTypeSO = dt.getDocSubTypeSO();
+//		String DocSubTypeSO = dt.getDocSubTypeSO();
+		String DocSubTypeSO = LITMOrder.getDocSubTypeSO(this, dt);
 		
 		//	Replace Prepay with POS to revert all doc
 		if (MDocType.DOCSUBTYPESO_PrepayOrder.equals (DocSubTypeSO))

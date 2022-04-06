@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 
 import org.compiere.model.MOrder;
 import org.compiere.model.MSysConfig;
+import org.compiere.process.DocAction;
 import org.compiere.util.Ini;
 import org.compiere.util.Util;
 
@@ -818,5 +819,13 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LS_CHECK_ORDER_ON_SHIPMENT_PREPARE, false, AD_Client_ID, AD_Org_ID);
 	}
+	
+	public static final String LS_ALLOW_DIFFERENT_ORDERTYPE = "LS_ALLOW_DIFFERENT_ORDERTYPE";
+
+	public static boolean isAllowDifferentOrderType(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_ALLOW_DIFFERENT_ORDERTYPE, false, AD_Client_ID, AD_Org_ID);
+	}
+	
 	//LS END
 }
