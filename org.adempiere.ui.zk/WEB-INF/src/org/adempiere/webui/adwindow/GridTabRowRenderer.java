@@ -45,6 +45,7 @@ import org.compiere.model.GridTab;
 import org.compiere.model.MStyle;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.X_AD_StyleLine;
+import org.compiere.process.DocAction;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Evaluator;
@@ -68,6 +69,8 @@ import org.zkoss.zul.Row;
 import org.zkoss.zul.RowRenderer;
 import org.zkoss.zul.RowRendererExt;
 import org.zkoss.zul.impl.XulElement;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  * Row renderer for GridTab grid.
@@ -516,6 +519,7 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 		row.appendChild(cell);
 		
 		Boolean isActive = null;
+		Boolean isDocStatusProcessed = null;
 		int colIndex = -1;
 		for (int i = 0; i < columnCount; i++) {
 			if (editors.get(gridPanelFields[i]) == null) {
@@ -549,6 +553,19 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 				if (currentValues[i] != null) {
 					if ("true".equalsIgnoreCase(currentValues[i].toString())) {
 						isActive = Boolean.TRUE;
+					}
+				}
+			}
+			
+			if (STDSysConfig.iGridTabInactiveStyleByDocStatus(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())))
+			{
+				if ("DocStatus".equals(gridPanelFields[i].getColumnName())) {
+					isDocStatusProcessed = Boolean.FALSE;
+					if (currentValues[i] != null) {
+						if (DocAction.STATUS_Completed.equalsIgnoreCase(currentValues[i].toString())
+								|| DocAction.STATUS_Closed.equalsIgnoreCase(currentValues[i].toString())) {
+							isDocStatusProcessed = Boolean.TRUE;
+						}
 					}
 				}
 			}
@@ -610,10 +627,23 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 				}
 			}
 		}
-		if (isActive != null && !isActive.booleanValue()) {
+		if (STDSysConfig.iGridTabInactiveStyleByDocStatus(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())))
+		{
+			if (isDocStatusProcessed == null) {
+				Object DocStatusValue = gridTab.getValue(rowIndex, "DocStatus");
+				if (DocStatusValue != null) {
+					if (STDSysConfig.iGridTabInactiveStyleDocStatus(DocStatusValue.toString())) {					
+						isDocStatusProcessed = Boolean.TRUE;
+					} else {
+						isDocStatusProcessed = Boolean.FALSE;
+					}
+				}
+			}
+		}
+		if ((isActive != null && !isActive.booleanValue()) || (isDocStatusProcessed != null && isDocStatusProcessed.booleanValue())) {
 			LayoutUtils.addSclass("grid-inactive-row", row);
 		}
-
+		
 	}
 
 	/**
@@ -664,7 +694,20 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 				isActive = Boolean.FALSE;
 			}
 		}
-		if (isActive != null && !isActive.booleanValue()) {
+		Boolean isDocStatusProcessed = null;
+		if (STDSysConfig.iGridTabInactiveStyleByDocStatus(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())))
+		{
+			Object DocStatusValue = gridTab.getValue(currentRowIndex, "DocStatus");
+			if (DocStatusValue != null) {
+				if (STDSysConfig.iGridTabInactiveStyleDocStatus(DocStatusValue.toString())) {					
+					isDocStatusProcessed = Boolean.TRUE;
+				} else {
+					isDocStatusProcessed = Boolean.FALSE;
+				}
+			}
+		}
+		
+		if ((isActive != null && !isActive.booleanValue()) || (isDocStatusProcessed != null && isDocStatusProcessed.booleanValue())) {
 			script = "jq('#"+row.getUuid()+"').addClass('grid-inactive-row').siblings().removeClass('highlight')";
 		}
 		

@@ -827,5 +827,23 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LS_ALLOW_DIFFERENT_ORDERTYPE, false, AD_Client_ID, AD_Org_ID);
 	}
 	
+	public static final String LS_GRIDTAB_INACTIVE_STYLE_BY_DOCSTATUS = "LS_GRIDTAB_INACTIVE_STYLE_BY_DOCSTATUS";
+
+	public static boolean iGridTabInactiveStyleByDocStatus(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_GRIDTAB_INACTIVE_STYLE_BY_DOCSTATUS, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static boolean iGridTabInactiveStyleDocStatus(String DocStatus)
+	{
+		if (Util.isEmpty(DocStatus))
+			return false;
+		if (DocAction.STATUS_Completed.equalsIgnoreCase(DocStatus)
+			|| DocAction.STATUS_Closed.equalsIgnoreCase(DocStatus)
+			|| DocAction.STATUS_Voided.equalsIgnoreCase(DocStatus))
+			return true;
+		
+		return false;
+	}
 	//LS END
 }
