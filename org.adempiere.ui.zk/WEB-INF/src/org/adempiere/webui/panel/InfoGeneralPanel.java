@@ -211,6 +211,14 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 		ZKUpdateUtil.setHeight(layout, "100%");
         layout.setStyle("position: relative");
         this.appendChild(layout);
+        
+        //LS 
+ 		if (STDSysConfig.isInfoWindowLoadAllPageRecords(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx()))) {
+ 			contentPanel.setAttribute("org.zkoss.zul.listbox.rod", true);
+ 			contentPanel.setAttribute("org.zkoss.zul.listbox.initRodSize", pageSize); //no of records loaded initially
+ //      contentPanel.setAttribute("org.zkoss.zul.listbox.preloadSize", 200);  //no of records loaded after scrolling
+ 		}
+         //LS end
 
         North north = new North();
         layout.appendChild(north);
