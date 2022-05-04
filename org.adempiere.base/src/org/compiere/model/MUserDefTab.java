@@ -46,9 +46,9 @@ public class MUserDefTab extends X_AD_UserDef_Tab
 	private static final String Q_USERDEFTAB = 
 			" select u.*, COALESCE(t.name,u.name) name_t, COALESCE(t.description,u.description) description_t, COALESCE(t.help,u.help) help_t" +
 			" from AD_UserDef_Win w inner join AD_UserDef_Tab u on (w.AD_UserDef_Win_ID = u.AD_UserDef_Win_ID)" +
-			"	left outer join AD_UserDef_Tab_Trl t on (u.AD_UserDef_Tab_ID = t.AD_UserDef_Tab_ID)" +
+			"	left outer join AD_UserDef_Tab_Trl t on (u.AD_UserDef_Tab_ID = t.AD_UserDef_Tab_ID and t.AD_Language = ?)" +
 			" where u.AD_Tab_ID = ? and u.isActive = 'Y' and w.isActive = 'Y'" + // AD_Tab_ID			
-			"  and (t.AD_Language = ? or t.AD_Language IS NULL)" + // Language
+//			"  and (t.AD_Language = ? or t.AD_Language IS NULL)" + // Language
 			"  and (w.ad_client_id = 0 or w.ad_client_id = ?) " + // AD_Client_ID
 			"  and (w.ad_org_id = 0 or w.ad_org_id = ?) " + // AD_Org_ID
 			"  and (w.ad_role_id is null or w.ad_role_id = ?) " + // AD_Role_ID
@@ -167,8 +167,8 @@ public class MUserDefTab extends X_AD_UserDef_Tab
 		
 		try
 		{
-			pstmt.setInt(1, AD_Tab_ID);
-			pstmt.setString(2, Env.getAD_Language(ctx));
+			pstmt.setString(1, Env.getAD_Language(ctx));
+			pstmt.setInt(2, AD_Tab_ID);
 			pstmt.setInt(3, AD_Client_ID);
 			pstmt.setInt(4, AD_Org_ID);
 			pstmt.setInt(5, AD_Role_ID);

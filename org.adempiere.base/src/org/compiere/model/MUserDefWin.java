@@ -44,9 +44,9 @@ public class MUserDefWin extends X_AD_UserDef_Win
 	
 	private static final String Q_USERDEFWIN = 
 			" select u.*, COALESCE(t.name,u.name) name_t, COALESCE(t.description,u.description) description_t, COALESCE(t.help,u.help) help_t" +
-	        " from AD_UserDef_Win u left outer join AD_UserDef_Win_Trl t on (u.AD_UserDef_Win_ID = t.AD_UserDef_Win_ID)" +
+	        " from AD_UserDef_Win u left outer join AD_UserDef_Win_Trl t on (u.AD_UserDef_Win_ID = t.AD_UserDef_Win_ID and t.AD_Language = ?)" +
 			" where u.ad_window_id = ? and u.isActive = 'Y'" + // AD_Window_ID
-	        "  and (t.AD_Language = ? or t.AD_Language IS NULL)" + // Language
+	        //"  and (t.AD_Language = ? or t.AD_Language IS NULL)" + // Language
 			"  and (u.ad_client_id = 0 or u.ad_client_id = ?) " + // AD_Client_ID
 			"  and (u.ad_org_id = 0 or u.ad_org_id = ?) " + // AD_Org_ID
 			"	and (u.ad_role_id is null or u.ad_role_id = ?) " + // AD_Role_ID
@@ -257,8 +257,8 @@ public class MUserDefWin extends X_AD_UserDef_Win
 		
 		try
 		{
-			pstmt.setInt(1, window_ID);
-			pstmt.setString(2, Env.getAD_Language(ctx));
+			pstmt.setString(1, Env.getAD_Language(ctx));
+			pstmt.setInt(2, window_ID);
 			pstmt.setInt(3, AD_Client_ID);
 			pstmt.setInt(4, AD_Org_ID);
 			pstmt.setInt(5, AD_Role_ID);

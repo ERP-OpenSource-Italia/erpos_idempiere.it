@@ -52,14 +52,14 @@ public class MUserDefField extends X_AD_UserDef_Field
 		" select u.*, COALESCE(t.name,u.name) name_t, COALESCE(t.description,u.description) description_t, COALESCE(t.help,u.help) help_t, COALESCE(t.placeholder,u.placeholder) placeholder_t" +
 		" from AD_UserDef_Win w inner join AD_UserDef_Tab tb on (w.AD_UserDef_Win_ID = tb.AD_UserDef_Win_ID)" +
 		"   inner join AD_UserDef_Field u on (u.AD_UserDef_Tab_ID = tb.AD_UserDef_Tab_ID) " +
-		"	left outer join AD_UserDef_Field_Trl t on (u.AD_UserDef_Field_ID = t.AD_UserDef_Field_ID)" +
+		"	left outer join AD_UserDef_Field_Trl t on (u.AD_UserDef_Field_ID = t.AD_UserDef_Field_ID and t.AD_Language = ?)" +
 		" where u.AD_Field_ID IN (SELECT AD_Field.AD_Field_ID FROM AD_Field " +
 								  " INNER JOIN AD_Tab on AD_Tab.AD_Tab_ID = AD_Field.AD_Tab_ID " +
 								  "  WHERE AD_Tab.AD_Window_ID = ? " +
 								  "  AND AD_Tab.IsActive='Y'" +
 								  "  AND AD_Field.IsActive='Y') " +
 	    "  and u.isActive = 'Y' and tb.isActive = 'Y' and w.isActive = 'Y'" + // AD_Field_ID			
-		"  and (t.AD_Language = ? or t.AD_Language IS NULL)" + // Language
+//		"  and (t.AD_Language = ? or t.AD_Language IS NULL)" + // Language
 		"  and (w.ad_client_id = 0 or w.ad_client_id = ?) " + // AD_Client_ID
 		"  and (w.ad_org_id = 0 or w.ad_org_id = ?) " + // AD_Org_ID
 		"  and (w.ad_role_id is null or w.ad_role_id = ?) " + // AD_Role_ID
@@ -198,8 +198,8 @@ public class MUserDefField extends X_AD_UserDef_Field
 		
 		try
 		{
-			pstmt.setInt(1, AD_Window_ID);
-			pstmt.setString(2, Env.getAD_Language(ctx));
+			pstmt.setString(1, Env.getAD_Language(ctx));
+			pstmt.setInt(2, AD_Window_ID);
 			pstmt.setInt(3, AD_Client_ID);
 			pstmt.setInt(4, AD_Org_ID);
 			pstmt.setInt(5, AD_Role_ID);
