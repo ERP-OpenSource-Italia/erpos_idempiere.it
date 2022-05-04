@@ -845,5 +845,13 @@ public class STDSysConfig
 		
 		return false;
 	}
+	
+	private static final String LS_EXPORT_ACTION_EXTENSION_ITEM_SELECTED = "LS_EXPORT_ACTION_EXTENSION_ITEM_SELECTED";
+	private static final int LS_EXPORT_ACTION_EXTENSION_ITEM_SELECTED_DEFAULT = 0;
+
+	public static int getExportActionExtensionItemSelected(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getIntValue(LS_EXPORT_ACTION_EXTENSION_ITEM_SELECTED, LS_EXPORT_ACTION_EXTENSION_ITEM_SELECTED_DEFAULT, AD_Client_ID, AD_Org_ID);
+	}
 	//LS END
 }

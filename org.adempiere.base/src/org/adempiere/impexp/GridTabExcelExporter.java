@@ -35,7 +35,7 @@ import org.compiere.util.Msg;
  */
 public class GridTabExcelExporter extends AbstractExcelExporter implements IGridTabExporter
 {
-	private GridTab m_tab = null;
+	protected GridTab m_tab = null;
 
 	public GridTabExcelExporter()
 	{
@@ -128,9 +128,9 @@ public class GridTabExcelExporter extends AbstractExcelExporter implements IGrid
 		return m_tab.getCurrentRow();
 	}
 
-	private HashMap<String, MLookup> m_buttonLookups = new HashMap<String, MLookup>();
+	protected HashMap<String, MLookup> m_buttonLookups = new HashMap<String, MLookup>();
 
-	private MLookup getButtonLookup(GridField mField)
+	protected MLookup getButtonLookup(GridField mField)
 	{
 		MLookup lookup = m_buttonLookups.get(mField.getColumnName());
 		if (lookup != null)

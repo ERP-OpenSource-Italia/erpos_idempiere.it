@@ -24,8 +24,10 @@ import java.util.Set;
 import org.adempiere.base.IGridTabExporter;
 import org.adempiere.base.equinox.EquinoxExtensionLocator;
 import org.adempiere.exceptions.AdempiereException;
+import org.adempiere.impexp.AbstractExcelExporter;
 import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.LayoutUtils;
+import org.adempiere.webui.adwindow.ADTabpanel;
 import org.adempiere.webui.adwindow.AbstractADWindowContent;
 import org.adempiere.webui.adwindow.IADTabbox;
 import org.adempiere.webui.adwindow.IADTabpanel;
@@ -55,6 +57,8 @@ import org.zkoss.zul.Filedownload;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Vbox;
 import org.zkoss.zul.Vlayout;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *
@@ -122,7 +126,7 @@ public class ExportAction implements EventListener<Event>
 				cboType.appendItem(entry.getKey() + " - " + entry.getValue(), entry.getKey());
 			}
 
-			cboType.setSelectedIndex(0);
+			cboType.setSelectedIndex(STDSysConfig.getExportActionExtensionItemSelected(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())));
 			cboType.addActionListener(this);
 
 			Vbox vb = new Vbox();
@@ -158,7 +162,9 @@ public class ExportAction implements EventListener<Event>
 			rows.appendChild(row);
 			row.appendChild(new Space());
 			chkCurrentRow.setLabel(Msg.getMsg(Env.getCtx(), "ExportCurrentRowOnly"));
-			chkCurrentRow.setSelected(true);
+			//LS if in grid view mode, flag N, else Y
+			boolean isGrid = ((ADTabpanel) panel.getADTab().getSelectedTabpanel()).isGridView();
+			chkCurrentRow.setSelected(isGrid == false);
 			row.appendChild(chkCurrentRow);
 
 			selectionTabRow = new Row();
@@ -326,6 +332,12 @@ public class ExportAction implements EventListener<Event>
 				if (chkSeletionTab.isChecked()){
 					childs.add((GridTab)chkSeletionTab.getAttribute("tabBinding"));
 				}
+			}
+			
+			if (exporter instanceof AbstractExcelExporter)
+			{
+				boolean isGrid = ((ADTabpanel) panel.getADTab().getSelectedTabpanel()).isGridView();
+				((AbstractExcelExporter) exporter).setGridView(isGrid);
 			}
 			
 			exporter.export(panel.getActiveGridTab(), childs, currentRowOnly,file,indxDetailSelected);

@@ -544,4 +544,15 @@ public abstract class AbstractExcelExporter
 		m_workbook = workbook;
 		export(null);
 	}
+	
+	//LS
+	protected boolean isGridView = false;
+	public boolean isGridView() {
+		return isGridView;
+	}
+	public void setGridView(boolean isGridView) {
+		this.isGridView = isGridView;
+	}
+	//LS end
+	
 }
