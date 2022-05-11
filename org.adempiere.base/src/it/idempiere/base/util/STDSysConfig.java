@@ -749,4 +749,11 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(GRIDTAB_ONNEW_FORCE_SINGLEROW, false, AD_Client_ID, AD_Org_ID);
 	}
+	
+	public static final String LS_ZK_DISABLE_HEADER_COLLAPSE_BTN = "LS_ZK_DISABLE_HEADER_COLLAPSE_BTN"; 
+	
+	public static boolean isLSZKDisableHeaderCollapseBtn()
+	{
+		return MSysConfig.getBooleanValue(LS_ZK_DISABLE_HEADER_COLLAPSE_BTN, false, 0, 0);
+	}
 }

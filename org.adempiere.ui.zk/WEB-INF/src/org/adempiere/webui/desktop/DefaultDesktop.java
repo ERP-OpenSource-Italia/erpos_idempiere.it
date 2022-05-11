@@ -110,6 +110,8 @@ import org.zkoss.zul.Image;
 import org.zkoss.zul.Popup;
 import org.zkoss.zul.West;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *
  * Default desktop implementation.
@@ -428,10 +430,13 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	        showHeader.setVisible(false);
 	        
 	        max = new ToolBarButton();
-	        toolbar.appendChild(max);
-	        max.setImage(ThemeManager.getThemeResource(IMAGES_UPARROW_PNG));
-	        max.addEventListener(Events.ON_CLICK, this);
-	        max.setSclass("window-container-toolbar-btn");
+	        if (STDSysConfig.isLSZKDisableHeaderCollapseBtn() == false)
+	        {
+		        toolbar.appendChild(max);
+		        max.setImage(ThemeManager.getThemeResource(IMAGES_UPARROW_PNG));
+		       	max.addEventListener(Events.ON_CLICK, this);
+		        max.setSclass("window-container-toolbar-btn");
+	        }
 		}
         
         contextHelp = new ToolBarButton();
