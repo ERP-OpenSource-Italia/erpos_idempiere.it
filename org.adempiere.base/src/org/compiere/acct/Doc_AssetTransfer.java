@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 
+import org.compiere.model.I_A_Asset;
 import org.compiere.model.MAccount;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MAssetTransfer;
@@ -14,6 +15,8 @@ import org.compiere.util.Env;
 
 /**
  * @author Anca Bradau www.arhipac.ro
+ * 
+ * @author Silvano Trinchero, FreePath srl (www.freepath.it)
  *
  */
 public class Doc_AssetTransfer extends Doc 
@@ -52,27 +55,42 @@ public class Doc_AssetTransfer extends Doc
 		MDepreciationWorkfile wk = getAssetWorkfile();	
 	    //MDepreciationExp exp = getExpense();
 		
+		// F3P: added dimensions to created lines
+		I_A_Asset asset = assetTr.getA_Asset();
+		
 		ArrayList<Fact> facts = new ArrayList<Fact>();
 		Fact fact = new Fact(this, as, assetTr.getPostingType());
 		facts.add(fact);
+		
+		setC_Currency_ID(as.getC_Currency_ID()); //F3P: from adempiere
 		//
 		// Change Asset Account
 		if (assetTr.getA_Asset_New_Acct() != assetTr.getA_Asset_Acct())
 		{
-			MAccount dr = MAccount.get(getCtx(), assetTr.getA_Asset_New_Acct());  
-			MAccount cr = MAccount.get(getCtx(), assetTr.getA_Asset_Acct());
-			FactUtil.createSimpleOperation(fact, null, dr, cr, as.getC_Currency_ID(),
+			MAccount dr = MAccount.get(getCtx(), getTrxName(), assetTr.getA_Asset_New_Acct());  
+			MAccount cr = MAccount.get(getCtx(), getTrxName(), assetTr.getA_Asset_Acct());
+			FactLine[] lines = FactUtil.createSimpleOperation(fact, null, dr, cr, as.getC_Currency_ID(),
 					wk.getA_Asset_Cost(), false);
+			
+			// F3P: added dimensions to created lines
+			AssetFactUtil.setFactLineDimensions(lines[0], asset);
+			AssetFactUtil.setFactLineDimensions(lines[1], asset);
+			//F3P: end
 		}
 		//
 		// Change Asset Accum. Depr. Account
 		if (assetTr.getA_Accumdepreciation_New_Acct() != assetTr.getA_Accumdepreciation_Acct())
 		{
-			MAccount cr = MAccount.get(getCtx(), assetTr.getA_Accumdepreciation_New_Acct());  
-			MAccount dr = MAccount.get(getCtx(), assetTr.getA_Accumdepreciation_Acct());
-			FactUtil.createSimpleOperation(fact, null, dr, cr, as.getC_Currency_ID(),
+			MAccount cr = MAccount.get(getCtx(), getTrxName(), assetTr.getA_Accumdepreciation_New_Acct());  
+			MAccount dr = MAccount.get(getCtx(), getTrxName(), assetTr.getA_Accumdepreciation_Acct());
+			FactLine[] lines = FactUtil.createSimpleOperation(fact, null, dr, cr, as.getC_Currency_ID(),
 					wk.getA_Accumulated_Depr(), false);
 			        //exp.getA_Accumulated_Depr(), false);
+			
+			// F3P: added dimensions to created lines 
+			AssetFactUtil.setFactLineDimensions(lines[0], asset);
+			AssetFactUtil.setFactLineDimensions(lines[1], asset);
+			//F3P: end 
 		}
 		//
 		return facts;

@@ -59,6 +59,7 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
 import org.zkoss.zhtml.Table;
 import org.zkoss.zhtml.Td;
 import org.zkoss.zhtml.Text;
@@ -76,6 +77,8 @@ import org.zkoss.zul.Label;
 import org.zkoss.zul.North;
 import org.zkoss.zul.South;
 
+import it.idempiere.base.util.STDUtils;
+
 /**
  * Generate custom form window
  * 
@@ -90,7 +93,7 @@ public class WGenForm extends ADForm implements EventListener<Event>, WTableMode
 	private GenForm genForm;
 	
 	/**	Logger			*/
-	private static final CLogger log = CLogger.getCLogger(WGenForm.class);
+	private static CLogger log = CLogger.getCLogger(WGenForm.class);
 	//
 	private Tabbox tabbedPane = new Tabbox();
 	private Borderlayout selPanel = new Borderlayout();
@@ -342,6 +345,12 @@ public class WGenForm extends ADForm implements EventListener<Event>, WTableMode
 			worker.run();     //  complete tasks in unlockUI / generateShipments_complete						
 		} finally{						
 			unlockUI();
+			
+			if(genForm != null && genForm.getTrx() != null)
+			{
+				genForm.getTrx().commit();
+				genForm.getTrx().close();
+			}
 		}
 	}
 	
@@ -391,20 +400,30 @@ public class WGenForm extends ADForm implements EventListener<Event>, WTableMode
 	
 	public void onAfterProcess()
 	{
-		//	OK to print
-		FDialog.ask(getWindowNo(), this, genForm.getAskPrintMsg(), new Callback<Boolean>() {
+		if(genForm.getZoomOnTableName() != null) // F3P: zoom instead of print
+		{
+			String tableName = genForm.getZoomOnTableName(); 
 			
-			@Override
-			public void onCallback(Boolean result) 
+			MQuery	mQuery = new MQuery(tableName);
+			mQuery.addRestriction(tableName + "_ID IN " + STDUtils.buildSqlINClauseString(m_ids));
+			AEnv.zoom(mQuery);
+		}
+		else if(Util.isEmpty(genForm.getAskPrintMsg(), true) == false) // F3P: if no message is provided, we dont want to ask anything
+		{
+			//	OK to print
+			FDialog.ask(getWindowNo(), this, genForm.getAskPrintMsg(), new Callback<Boolean>() 
 			{
-				if (result) 
+				@Override
+				public void onCallback(Boolean result) 
 				{
-					Clients.showBusy("Processing...");
-					Clients.response(new AuEcho(WGenForm.this, "onPrint", null));
+					if (result) 
+					{
+						Clients.showBusy("Processing...");
+						Clients.response(new AuEcho(WGenForm.this, "onPrint", null));
+					}
 				}
-				
-			}
-		});
+			});
+		}//F3P End
 	}
 	
 	public void onPrint() 

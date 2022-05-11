@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.logging.Level;
 
+import org.compiere.model.I_C_Order;
 import org.compiere.model.MCurrency;
 import org.compiere.model.MInOut;
 import org.compiere.model.MInOutLine;
@@ -29,6 +30,7 @@ import org.compiere.model.MInvoicePaySchedule;
 import org.compiere.model.MOrder;
 import org.compiere.model.MOrderPaySchedule;
 import org.compiere.model.PO;
+import org.compiere.util.DB;
 import org.compiere.util.Env;
  
 /**
@@ -88,12 +90,45 @@ public class InOutCreateInvoice extends SvrProcess
 		
 		MInvoice invoice = new MInvoice (ship, null);
 		// Should not override pricelist for RMA
-		if (p_M_PriceList_ID != 0 && ship.getM_RMA_ID() == 0)
-			invoice.setM_PriceList_ID(p_M_PriceList_ID);
+		int M_PriceList_ID = 0;
+		
+		if (p_M_PriceList_ID != 0)
+		{
+			M_PriceList_ID = p_M_PriceList_ID;
+		}
+			
+		/*If the parameter is not configured and there is an RMA assigned to the return, take the price list from the C_Order (InOut-->RMA-->RMA_Line-->InOut_Line-->OrderLine-->Order)
+		 *else if the RMA is not there it is always taken from the C_Order without going through the RMA (InOut-->Order)*/
+			
+		/* If M_PriceList_ID parameter is configured use to generate invoice	*/
+		
+		if (ship.getM_RMA_ID() > 0 && M_PriceList_ID == 0)
+		{
+			M_PriceList_ID = DB.getSQLValue(get_TrxName(), "SELECT o.M_PRICELIST_ID "
+				+ "FROM M_InOut ior "
+				+ "JOIN M_RMA rma ON ior.m_rma_id = rma.m_rma_id "
+				+ "JOIN M_RMALINE rmal ON rma.M_rma_ID = rmal.m_rma_id "
+				+ "JOIN M_InOutline iol ON rmal.M_InoutLine_ID = iol.M_InoutLine_ID "
+				+ "JOIN M_Inout io ON iol.M_Inout_ID = io.M_Inout_ID "
+				+ "JOIN C_Order o ON io.C_ORder_ID = o.C_Order_ID "
+				+" WHERE rma.M_RMA_ID=? "
+				+ "fetch first 1 rows only ", ship.getM_RMA_ID());
+			
+			invoice.setC_Currency_ID(ship.getC_Currency_ID());
+		}
+		
+		if (ship.getC_Order_ID() > 0 && M_PriceList_ID ==0)
+		{
+			I_C_Order order = ship.getC_Order();
+			M_PriceList_ID = order.getM_PriceList_ID();
+		}
+		
+		invoice.setM_PriceList_ID(M_PriceList_ID);
+		
 		if (p_InvoiceDocumentNo != null && p_InvoiceDocumentNo.length() > 0)
 			invoice.setDocumentNo(p_InvoiceDocumentNo);
-		if (!invoice.save())
-			throw new IllegalArgumentException("Cannot save Invoice");
+		invoice.saveEx();
+
 		MInOutLine[] shipLines = ship.getLines(false);
 		for (int i = 0; i < shipLines.length; i++)
 		{

@@ -8,9 +8,11 @@ import java.util.logging.Level;
 
 import org.adempiere.exceptions.FillMandatoryException;
 import org.compiere.acct.Fact;
+import org.compiere.model.I_C_InvoiceLine;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MAssetAddition;
 import org.compiere.model.MAssetDisposed;
+import org.compiere.model.MAssetGroup;
 import org.compiere.model.MClient;
 import org.compiere.model.MInvoice;
 import org.compiere.model.MInvoiceLine;
@@ -22,6 +24,7 @@ import org.compiere.model.SetGetModel;
 import org.compiere.model.SetGetUtil;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.idempiere.fa.exceptions.AssetInvoiceWithMixedLines_LRO;
 import org.idempiere.fa.exceptions.AssetProductStockedException;
 
 
@@ -29,6 +32,8 @@ import org.idempiere.fa.exceptions.AssetProductStockedException;
 /**
  * Fixed Assets Model Validator
  * @author Teo_Sarca, SC ARHIPAC SERVICE SRL
+ * 
+ * @author Silvano Trinchero, FreePath srl (www.freepath.it)
  *
  */
 public class ModelValidator
@@ -55,7 +60,11 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 		engine.addModelChange(MInvoiceLine.Table_Name, this);		
 		engine.addDocValidate(MInvoice.Table_Name, this);
 		engine.addModelChange(MMatchInv.Table_Name, this);
+		
+		//F3P: from adempiere
+		engine.addModelChange(MAssetAddition.Table_Name, this);
 		//
+//		engine.addFactsValidate(MDepreciationEntry.Table_Name, this);
 	}
 
 	public String login(int AD_Org_ID, int AD_Role_ID, int AD_User_ID)
@@ -90,23 +99,43 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 		{
 			modelChange_InvoiceLine(SetGetUtil.wrap(po), type);
 		}
+		//
+		// F3P: Asset addition
+		else if(po instanceof MAssetAddition 
+				&& (TYPE_BEFORE_NEW == type || po.is_ValueChanged(MAssetAddition.COLUMNNAME_A_SourceType)))
+		{
+			MAssetAddition mAddition = (MAssetAddition)po;
+			
+			if(mAddition.getM_Product_ID() <= 0 &&
+					mAddition.getC_InvoiceLine_ID() > 0 &&
+					MAssetAddition.A_SOURCETYPE_Invoice.equals(mAddition.getA_SourceType()))
+			{
+				I_C_InvoiceLine	mInvLine = mAddition.getC_InvoiceLine();
+				mAddition.setM_Product_ID(mInvLine.getM_Product_ID());
+			}			
+		}
 		return null;
 		
 	}
 
 	public String docValidate(PO po, int timing)
 	{
-			
 		if (log.isLoggable(Level.INFO)) log.info(po.get_TableName() + " Timing: " + timing);
 		String result = null;
 		
 		// TABLE C_Invoice
 		String tableName = po.get_TableName();
 		if(tableName.equals(MInvoice.Table_Name)){
+			// Invoice - Validate Fixed Assets Invoice (LRO)
+			if (timing==TIMING_AFTER_PREPARE)
+			{
+				MInvoice invoice = (MInvoice)po;
+				validateFixedAssetsInvoice_LRO(invoice);
+			}
 			
 			if(timing==TIMING_AFTER_COMPLETE){
 				MInvoice mi = (MInvoice)po;
-				if (mi.isSOTrx()) {
+				if (mi.isSOTrx() && mi.isReversal() == false) {
 					MInvoiceLine[] mils = mi.getLines();
 					for (MInvoiceLine mil: mils) {
 						if (mil.isA_CreateAsset() && !mil.isA_Processed()) {
@@ -126,13 +155,15 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 	 * @param m model 
 	 * @param changeType set when called from model validator (See TYPE_*); else -1, when called from callout
 	 */
-	public void modelChange_InvoiceLine(SetGetModel m, int changeType) {
+	public static void modelChange_InvoiceLine(SetGetModel m, int changeType) {
 		//
 		// Set Asset Related Fields:
 		if (-1 == changeType || TYPE_BEFORE_NEW == changeType || TYPE_BEFORE_CHANGE == changeType) {
 			int invoice_id = SetGetUtil.get_AttrValueAsInt(m, MInvoiceLine.COLUMNNAME_C_Invoice_ID);
 			@SuppressWarnings("unused")
-			boolean isSOTrx = DB.isSOTrx(MInvoice.Table_Name, MInvoice.COLUMNNAME_C_Invoice_ID+"="+invoice_id);
+			// boolean isSOTrx = DB.isSOTrx(MInvoice.Table_Name, MInvoice.COLUMNNAME_C_Invoice_ID+"="+invoice_id);
+			String soTrx = DB.getSQLValueStringEx(m.get_TrxName(), "SELECT IsSoTrx FROM C_Invoice WHERE C_Invoice_ID = ?", invoice_id);
+			boolean isSOTrx = soTrx.equals("Y") ? true:false;
 			boolean isAsset = false;
 			/* comment by @win
 			boolean isFixedAsset = false;
@@ -154,27 +185,40 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 			*/
 			int product_id = SetGetUtil.get_AttrValueAsInt(m, MInvoiceLine.COLUMNNAME_M_Product_ID);
 			if (product_id > 0) {
-				MProduct prod = MProduct.get(m.getCtx(), product_id);
+				MProduct prod = MProduct.get(m.getCtx(), product_id);				
 				isAsset = (prod != null && prod.get_ID() > 0 && prod.isCreateAsset());
 				assetGroup_ID = prod!=null ? prod.getA_Asset_Group_ID() : 0;
+				
+				if(assetGroup_ID == 0) // F3P: should never happen, but in case no asset group = no asset
+					isAsset = false;
+				
+				if(isAsset) // F3P: For invoices, we are interested only on asset of type 'fixed asset'
+				{
+					MAssetGroup ag = MAssetGroup.get(m.getCtx(), prod.getA_Asset_Group_ID());					
+					isAsset = ag.isFixedAsset();					
+				}
 			}
 				
 			// end modification by @win
 				
-			m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_CreateAsset, isAsset);
 			if (isAsset) {
-				m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_Asset_Group_ID, assetGroup_ID);
-				/* comment by @win
-				m.set_AttrValue(MInvoiceLine.COLUMNNAME_IsFixedAssetInvoice, isFixedAsset);
-				*/
+				if(!isSOTrx)	// F3P: Not needed for SOTrx invoices
+				{
+					m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_Asset_Group_ID, assetGroup_ID);
+					m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_CapvsExp, MInvoiceLine.A_CAPVSEXP_Capital);
+				}
 				m.set_AttrValue("IsFixedAssetInvoice", isAsset);
 				m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_CreateAsset, "Y");
 				
 			}
 			else {
-				m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_Asset_Group_ID, null);
-				m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_Asset_ID, null);
-				m.set_AttrValue("IsFixedAssetInvoice", false);
+				if(!isSOTrx)
+				{
+					m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_CreateAsset, isAsset);
+					m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_Asset_Group_ID, null);
+					m.set_AttrValue(MInvoiceLine.COLUMNNAME_A_Asset_ID, null);
+					m.set_AttrValue("IsFixedAssetInvoice", false);
+				}
 			}
 			//
 			// Validate persistent object: 
@@ -193,7 +237,7 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 				//
 				// Check Product - fixed assets products shouldn't be stocked (but inventory objects are allowed)
 				MProduct product = line.getProduct();
-				if (product.isStocked() && line.isFixedAssetInvoice()) {
+				if (product.isStocked() && line.get_ValueAsBoolean("IsFixedAssetInvoice")) {
 					throw new AssetProductStockedException(product);
 				}
 			}
@@ -214,8 +258,48 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 			DB.executeUpdateEx(sql, new Object[]{invoice_id}, m.get_TrxName());
 		}
 	}
+	
+	/**
+	 * Check if is a valid fixed asset related invoice (LRO)
+	 * @param invoice
+	 */
+	private void validateFixedAssetsInvoice_LRO(MInvoice invoice)
+	{
+		if (invoice.get_ValueAsBoolean("IsFixedAssetInvoice"))
+		{
+			boolean hasFixedAssetLines = false;
+			boolean hasNormalLines = false;
+			for (MInvoiceLine line : invoice.getLines())
+			{
+				if (line.get_ValueAsBoolean("IsFixedAssetInvoice"))
+				{
+					hasFixedAssetLines = true;
+				}
+				else if (line.getM_Product_ID() > 0)
+				{
+					MProduct product = MProduct.get(line.getCtx(), line.getM_Product_ID());
+					if (product.isItem())
+					{
+						// Only items are forbiden for FA invoices because in Romania these should use
+						// V_Liability vendor account and not V_Liability_FixedAssets vendor account
+						hasNormalLines = true;
+					}
+				}
+				//
+				// No mixed lines are allowed
+				if (hasFixedAssetLines && hasNormalLines)
+				{
+					throw new AssetInvoiceWithMixedLines_LRO();
+				}
+			}
+		}
+	}
 
+	
+
+	
 	public String factsValidate(MAcctSchema schema, List<Fact> facts, PO po) {
+		// TODO: implement it
 		return null;
 	}
 }

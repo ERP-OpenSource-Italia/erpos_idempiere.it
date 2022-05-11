@@ -24,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.adempiere.util.FeedbackContainer;
 import org.adempiere.util.IProcessUI;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MPInstancePara;
@@ -31,7 +32,6 @@ import org.compiere.model.MProcess;
 import org.compiere.model.MSession;
 import org.compiere.model.PO;
 import org.compiere.model.Query;
-import org.compiere.util.CLogger;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Ini;
@@ -51,9 +51,7 @@ public class ProcessInfo implements Serializable
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -4648764346588157872L;
-
-	private static final CLogger logger = CLogger.getCLogger(ProcessInfo.class);
+	private static final long serialVersionUID = -4600747909096993053L;
 
 	/**
 	 *  Constructor
@@ -141,7 +139,7 @@ public class ProcessInfo implements Serializable
 	private File 			    m_pdf_report = null;
 	
 	/**	Record IDs				*/
-	private List <Integer>		m_Record_IDs = null;
+	private int[]				m_Record_IDs;
 
 	/** Export					*/
 	private boolean				m_export = false;
@@ -151,6 +149,8 @@ public class ProcessInfo implements Serializable
 	
 	/**	Export File				*/
 	private File				m_exportFile = null;
+	
+	private FeedbackContainer m_feedbackContainer = null;
 
 	/** Row count */
 	private int m_rowCount;
@@ -162,6 +162,9 @@ public class ProcessInfo implements Serializable
 	private boolean isSummary = false;
 	
 	private int languageID = 0;
+	
+	//F3P: windowno for dialog
+	private int	m_windowNo = 0;
 	
 	public int getLanguageID() {
 		return languageID;
@@ -836,12 +839,12 @@ public class ProcessInfo implements Serializable
 		m_exportFile = exportFile;
 	}
 	
-	public List<Integer> getRecord_IDs()
+	public int[] getRecord_IDs()
 	{
 		return m_Record_IDs;
 	}
 	
-	public void setRecord_IDs(List<Integer> Record_IDs)
+	public void setRecord_IDs(int[] Record_IDs)
 	{
 		m_Record_IDs = Record_IDs;
 	}
@@ -873,6 +876,28 @@ public class ProcessInfo implements Serializable
 		this.m_PDFfileName = fileName;
 	}
 	
+	//F3P: add windowNo for dialog
+	public void setWindowNo(int windowNo)
+	{
+		m_windowNo = windowNo;
+	}
+	
+	public int getWindowNo()
+	{
+		return m_windowNo;
+	}
+		
+	//Managed feedback container
+	public FeedbackContainer getFeedbackContainer(){
+		return m_feedbackContainer;
+	}
+	
+	public void setFeedbackContainer(FeedbackContainer feedbackContainer){
+		this.m_feedbackContainer = feedbackContainer;
+	}
+
+	//F3P end
+	
 	/**
 	 * Validates to inform a user running again a process that is already in execution.
 	 * @return true if the same process is already running
@@ -888,11 +913,25 @@ public class ProcessInfo implements Serializable
 		if (lastRebootDate == null)
 			return false;
 		
-		List<MPInstance> processInstanceList = new Query(Env.getCtx(), MPInstance.Table_Name, " AD_Process_ID=? AND AD_User_ID=? AND IsProcessing='Y' AND record_ID = ? AND Created > ? ", null)
-				.setParameters(getAD_Process_ID(), getAD_User_ID(), getRecord_ID(), lastRebootDate)
-				.setClient_ID()
-				.setOnlyActiveRecords(true)
-				.list();
+		List<MPInstance> processInstanceList = null;
+		
+		if(lastRebootDate == null)
+		{
+			processInstanceList = new Query(Env.getCtx(), MPInstance.Table_Name, " AD_Process_ID=? AND AD_User_ID=? AND IsProcessing='Y' AND record_ID = ?  ", null)
+					.setParameters(getAD_Process_ID(), getAD_User_ID(), getRecord_ID())
+					.setClient_ID()
+					.setOnlyActiveRecords(true)
+					.list();
+		}
+		else
+		{
+			processInstanceList = new Query(Env.getCtx(), MPInstance.Table_Name, " AD_Process_ID=? AND AD_User_ID=? AND IsProcessing='Y' AND record_ID = ? AND Created > ? ", null)
+					.setParameters(getAD_Process_ID(), getAD_User_ID(), getRecord_ID(), lastRebootDate)
+					.setClient_ID()
+					.setOnlyActiveRecords(true)
+					.list();
+		}
+		
 		
 		if (processInstanceList == null || processInstanceList.isEmpty())
 			return false;
@@ -901,6 +940,7 @@ public class ProcessInfo implements Serializable
 		if (multipleExecutions.equals(MProcess.ALLOWMULTIPLEEXECUTION_DisallowMultipleExecutions)) 
 			return true;
 		
+		//LS not working for scheduler and webservice
 		//Disallow multiple executions with the same params
 		if (multipleExecutions.equals(MProcess.ALLOWMULTIPLEEXECUTION_DisallowMultipleExecutionsWithTheSameParameters)) {
 			for (MPInstance instance : processInstanceList) {

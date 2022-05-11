@@ -95,7 +95,16 @@ public class MProductPO extends X_M_Product_PO
 	@Override
 	protected boolean beforeSave(boolean newRecord) 
 	{
-		if (isActive() && isCurrentVendor())
+		if ((newRecord && isActive() && isCurrentVendor()) || 
+				(!newRecord &&
+						(
+								(is_ValueChanged("IsActive") && isActive()) // now active
+								|| (is_ValueChanged("IsCurrentVendor") && isCurrentVendor()) // now current vendor
+								|| is_ValueChanged("C_BPartner_ID")
+								|| is_ValueChanged("M_Product_ID") 
+						)
+				)
+			) 
 		{
 			int cnt = DB.getSQLValue(get_TrxName(),
 							"SELECT COUNT(*) FROM M_Product_PO WHERE IsActive='Y' AND IsCurrentVendor='Y' AND C_BPartner_ID!=? AND M_Product_ID=?",

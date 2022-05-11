@@ -17,6 +17,7 @@
 package org.compiere.acct;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.logging.Level;
 
@@ -24,6 +25,7 @@ import org.compiere.model.MAccount;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MCharge;
 import org.compiere.model.MCostDetail;
+import org.compiere.model.MCurrency;
 import org.compiere.model.MProduct;
 import org.compiere.model.PO;
 import org.compiere.model.ProductCost;
@@ -63,7 +65,7 @@ public class DocLine
 	/** Parent					*/
 	private Doc					m_doc = null;
 	/**	 Log					*/
-	protected transient CLogger	log = CLogger.getCLogger(getClass());
+	protected CLogger			log = CLogger.getCLogger(getClass());
 
 	/** Qty                     */
 	private BigDecimal	 		m_qty = null;
@@ -115,7 +117,6 @@ public class DocLine
 	private int					m_C_ConversionType_ID = -1;
 	/** Period						*/
 	private int					m_C_Period_ID = -1;
-	private BigDecimal 			m_currencyRate = null;
 
 	/**
 	 *  Get Currency
@@ -167,16 +168,6 @@ public class DocLine
 	{
 		m_C_ConversionType_ID = C_ConversionType_ID;
 	}	//	setC_ConversionType_ID
-	
-	public BigDecimal getCurrencyRate()
-	{
-		return m_currencyRate;
-	}
-	
-	protected void setCurrencyRate(BigDecimal currencyRate) 
-	{
-		m_currencyRate = currencyRate;
-	}
 	
 	/**
 	 *  Set Amount (DR)
@@ -284,7 +275,18 @@ public class DocLine
 		m_LineNetAmt =  LineNetAmt == null ? Env.ZERO : LineNetAmt;
 
 		if (PriceList != null && Qty != null)
-			m_ListAmt = PriceList.multiply(Qty);
+		{			
+			BigDecimal listAmt = PriceList.multiply(Qty);
+			
+			int C_Currency_ID = getC_Currency_ID();
+			if(C_Currency_ID > 0)
+			{
+				int precision = MCurrency.getStdPrecision(p_po.getCtx(), C_Currency_ID);				
+				listAmt = listAmt.setScale(precision,  RoundingMode.HALF_UP);
+			}
+			
+			m_ListAmt = listAmt;
+		}
 		if (m_ListAmt.compareTo(Env.ZERO) == 0)
 			m_ListAmt = m_LineNetAmt;
 		m_DiscountAmt = m_ListAmt.subtract(m_LineNetAmt);
@@ -312,6 +314,15 @@ public class DocLine
 	{
 		return m_ListAmt;
 	}   //  getListAmount
+	
+	/**
+	 *  Line Net Amount
+	 *  @return net amount
+	 */
+	public BigDecimal getNetAmount()
+	{
+		return m_LineNetAmt;
+	}   //  getNetAmount
 
 	/**
 	 * 	Set Line Net Amt Difference
@@ -453,7 +464,7 @@ public class DocLine
 	 * 	Get Charge
 	 * 	@return C_Charge_ID
 	 */
-	protected int getC_Charge_ID()
+	public int getC_Charge_ID()	// Angelo Dabala' (genied) changed to public
 	{
 		int index = p_po.get_ColumnIndex("C_Charge_ID");
 		if (index != -1)
@@ -476,14 +487,14 @@ public class DocLine
 		int C_Charge_ID = getC_Charge_ID();
 		if (C_Charge_ID == 0)
 			return null;
-		return MCharge.getAccount(C_Charge_ID, as);
+		return MCharge.getAccount(C_Charge_ID, as, p_po.get_TrxName()); //F3P add trx
 	}   //  getChargeAccount
 
 	/**
 	 * 	Get Period
 	 * 	@return C_Period_ID
 	 */
-	protected int getC_Period_ID()
+	public int getC_Period_ID()	// Angelo Dabala' (genied) changed to public
 	{
 		if (m_C_Period_ID == -1)
 		{
@@ -504,7 +515,7 @@ public class DocLine
 	 * 	Set C_Period_ID
 	 *	@param C_Period_ID id
 	 */
-	protected void setC_Period_ID (int C_Period_ID)
+	public void setC_Period_ID (int C_Period_ID) // F3P: moved to public, sometime its needed to set it directly
 	{
 		m_C_Period_ID = C_Period_ID;
 	}	//	setC_Period_ID

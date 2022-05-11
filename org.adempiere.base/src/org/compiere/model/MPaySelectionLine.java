@@ -1,4 +1,3 @@
-/******************************************************************************
  * Product: Adempiere ERP & CRM Smart Business Solution                       *
  * Copyright (C) 1999-2006 ComPiere, Inc. All Rights Reserved.                *
  * This program is free software; you can redistribute it and/or modify it    *
@@ -22,7 +21,6 @@ import java.util.Properties;
 
 import org.compiere.util.DB;
 import org.compiere.util.Env;
-import org.compiere.util.Msg;
 
 /**
  *	Payment Selection Line Model
@@ -144,12 +142,8 @@ public class MPaySelectionLine extends X_C_PaySelectionLine
 	 */
 	protected boolean beforeSave (boolean newRecord)
 	{
-		MPaySelection parent = new MPaySelection(getCtx(), getC_PaySelection_ID(), get_TrxName());
-		if (newRecord && parent.isProcessed()) {
-			log.saveError("ParentComplete", Msg.translate(getCtx(), "C_PaySelection_ID"));
-			return false;
-		}
-		setDifferenceAmt(getOpenAmt().subtract(getPayAmt()).subtract(getDiscountAmt()).subtract(getWriteOffAmt()));
+		//F3P: difference amt already calculated
+		//setDifferenceAmt(getOpenAmt().subtract(getPayAmt()).subtract(getDiscountAmt()));
 		return true;
 	}	//	beforeSave
 	

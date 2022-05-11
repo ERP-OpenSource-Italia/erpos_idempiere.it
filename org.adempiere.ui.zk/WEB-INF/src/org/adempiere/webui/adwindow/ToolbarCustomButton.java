@@ -55,7 +55,17 @@ public class ToolbarCustomButton implements EventListener<Event>, Evaluatee {
 			if (action != null) {
 				action.execute(ADWindow.get(windowNo));
 			}
+	
+	private IAction getAction()
+	{
+		IAction action = null;
+		
+		IServiceHolder<IAction> serviceHolder = Actions.getAction(actionId);
+		if (serviceHolder != null) {
+			action = serviceHolder.getService();
 		}
+			
+		return action;
 	}
 
 	@Override
@@ -85,7 +95,20 @@ public class ToolbarCustomButton implements EventListener<Event>, Evaluatee {
 		
 		String displayLogic = mToolbarButton.getDisplayLogic();
 		if (displayLogic == null || displayLogic.trim().length() == 0)
+		{
+			// F3P: If we have no logic, just check visibily via IAction2
+			
+			IAction action = getAction();
+			
+			if(action instanceof IAction2)
+			{
+				IAction2 act2 = (IAction2)action;
+				boolean visible = act2.isVisible(ADWindow.get(windowNo));
+				toolbarButton.setVisible(visible);
+			}
+			
 			return;
+		}
 
 		boolean visible = true;
 		if (displayLogic.startsWith("@SQL=")) {
@@ -101,10 +124,25 @@ public class ToolbarCustomButton implements EventListener<Event>, Evaluatee {
 		}else {
 			visible = Evaluator.evaluateLogic(this, displayLogic);	
 		}
+		
+		if(visible) // F3P: if the action is IAction2, we 'and' IAction2 visibility too
+		{
+			IAction action = getAction();
+			
+			if(action instanceof IAction2)
+			{
+				IAction2 act2 = (IAction2)action;
+				visible = act2.isVisible(ADWindow.get(windowNo));
+			}
+		}	
 
 		toolbarButton.setVisible(visible);
 	}
 	
+	public void dynamicDisplay() 
+	{
+		dynamicDisplay(-1);
+	}
 	public Toolbarbutton getToolbarbutton() {
 		return toolbarButton;
 	}

@@ -20,9 +20,9 @@ import java.io.File;
 import java.util.logging.Level;
 
 import org.compiere.model.MClient;
+import org.compiere.model.MStore;
 import org.compiere.util.Env;
 import org.compiere.util.Ini;
-import org.compiere.util.Util;
 
 /**
  *	Client EMail Test
@@ -67,9 +67,18 @@ public class EMailTest extends SvrProcess
 				documentDir = ".";
 			File file = new File (documentDir);
 			if (file.exists() && file.isDirectory())
-				addLog(0, null, null, "Found Directory: " + documentDir);
+				addLog(0, null, null, "Found Directory: " + client.getDocumentDir());
 			else
-				addLog(0, null, null, "Not Found Directory: " + documentDir);
+				addLog(0, null, null, "Not Found Directory: " + client.getDocumentDir());
+		}
+
+		MStore[] wstores = MStore.getOfClient(client);
+		for (int i = 0; i < wstores.length; i++)
+		{
+			MStore store = wstores[i];
+			String test = store.testEMail();
+			msglog = new StringBuilder().append(store.getName()).append(": ").append(test);
+			addLog(0, null, null, msglog.toString());
 		}
 		
 		return Util.isEmpty(clientTest) ? "OK" : ("@Error@ " + clientTest);

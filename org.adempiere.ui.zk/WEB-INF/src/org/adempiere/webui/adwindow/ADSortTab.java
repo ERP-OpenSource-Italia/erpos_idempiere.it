@@ -411,6 +411,17 @@ public class ADSortTab extends Panel implements IADTabpanel
 			sql.append(" WHERE 1=?");
 		}
 
+		// F3P: use sql where
+		String tabWhereClause = gridTab.getWhereClause(); 
+		
+		if(Util.isEmpty(tabWhereClause) == false)
+		{
+			tabWhereClause = Env.parseContext(Env.getCtx(), m_WindowNo, gridTab.getTabNo(), tabWhereClause, false);
+			sql.append(" AND ").append(tabWhereClause);
+		}
+		
+		// F3P end
+
 		int reportView_ID = Env.getContextAsInt(Env.getCtx(), m_WindowNo, "AD_ReportView_ID");
 		if ("AD_PrintFormatItem".equals(m_TableName) && reportView_ID > 0) {
 			sql.append(" AND (t.AD_Column_ID IN (SELECT AD_Column_ID FROM AD_ReportView_Column WHERE AD_ReportView_ID=")
@@ -429,6 +440,13 @@ public class ADSortTab extends Panel implements IADTabpanel
 		sql.append("3,2");				//	t.SeqNo, tt.Name
 		//FR [ 2826406 ]
 		int ID = 0;
+		//LS non vengono usati quelli del gridTab->m_ParentColumnName è la colonna chiave della tabella
+		if(gridTab.getLinkColumnName().length() >0)
+		{
+			ID = Env.getContextAsInt(Env.getCtx(), m_WindowNo, gridTab.getLinkColumnName());
+		}
+		else
+		//FR [ 2826406 ] 
 		if(m_ParentColumnName != null)
 		{	
 			ID = Env.getContextAsInt(Env.getCtx(), m_WindowNo, m_ParentColumnName);

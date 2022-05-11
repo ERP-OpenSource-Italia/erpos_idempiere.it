@@ -31,15 +31,12 @@ import java.util.logging.Level;
 
 import javax.swing.JOptionPane;
 
-import org.adempiere.exceptions.DBException;
 import org.compiere.Adempiere;
 import org.compiere.db.CConnection;
 import org.compiere.model.I_M_Warehouse;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MClientInfo;
 import org.compiere.model.MCountry;
-import org.compiere.model.MMFARegisteredDevice;
-import org.compiere.model.MMFARegistration;
 import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MSystem;
@@ -48,8 +45,9 @@ import org.compiere.model.MTree_Base;
 import org.compiere.model.MUser;
 import org.compiere.model.MUserPreference;
 import org.compiere.model.ModelValidationEngine;
-import org.compiere.model.PO;
 import org.compiere.model.Query;
+
+
 
 
 /**
@@ -314,7 +312,7 @@ public class Login
 			}
 		} 
 		else{
-			StringBuilder sql = new StringBuilder("SELECT AD_User.AD_User_ID ").append(" FROM AD_User ");
+			StringBuffer sql = new StringBuffer("SELECT AD_User.AD_User_ID ").append(" FROM AD_User ");
 			sql.append(" WHERE ").append(userNameCol).append("=?");
 			sql.append(" AND AD_User.IsActive='Y'").append(" AND EXISTS (SELECT * FROM AD_Client c WHERE AD_User.AD_Client_ID=c.AD_Client_ID AND c.IsActive='Y')");
 
@@ -349,7 +347,7 @@ public class Login
 		}
 
 		if(authenticated){	
-			StringBuilder sql = new StringBuilder("SELECT AD_User.AD_User_ID, r.AD_Role_ID,r.Name")
+			StringBuffer sql = new StringBuffer("SELECT AD_User.AD_User_ID, r.AD_Role_ID,r.Name")
 			.append(" FROM AD_User ")
 			.append(" INNER JOIN AD_User_Roles ur ON (AD_User.AD_User_ID=ur.AD_User_ID AND ur.IsActive='Y')")
 			.append(" INNER JOIN AD_Role r ON (ur.AD_Role_ID=r.AD_Role_ID AND r.IsActive='Y') ");
@@ -843,7 +841,10 @@ public class Login
 		Ini.setProperty(Ini.P_PRINTER, printerName);
 		
 		//	Load Role Info
-		MRole.getDefault(m_ctx, false);	
+		MRole.getDefault(m_ctx, true);
+		
+		// Call ModelValidators beforeLoadPreferences
+		ModelValidationEngine.get().beforeLoadPreferences(m_ctx);
 
 		//	Other
 		loadUserPreferences();
@@ -1003,7 +1004,7 @@ public class Login
 			rs = null; pstmt = null;
 		}
 		//	Country
-		Env.setContext(m_ctx, "#C_Country_ID", MCountry.getDefault().getC_Country_ID());
+		Env.setContext(m_ctx, "#C_Country_ID", MCountry.getDefault(m_ctx).getC_Country_ID());
 		// Call ModelValidators afterLoadPreferences - teo_sarca FR [ 1670025 ]
 		ModelValidationEngine.get().afterLoadPreferences(m_ctx);
 		return retValue;
@@ -1046,6 +1047,11 @@ public class Login
 		{
 			log.log(Level.SEVERE, TableName + " (" + sql + ")", e);
 			return;
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
 		}
 		//	Set Context Value
 		if (value != null && value.length() != 0)
@@ -1238,7 +1244,7 @@ public class Login
 	}	//	getPrincipal
 
 	public KeyNamePair[] getClients(String app_user, String app_pwd) {
-		return getClients(app_user, app_pwd, null);
+		return getClients(app_user, app_pwd, null, null);
 	}
 
 	/**
@@ -1249,7 +1255,7 @@ public class Login
 	 *  @param roleTypes comma separated list of the role types allowed to login (NULL can be added)
 	 *  @return client array or null if in error.
 	 */
-	public KeyNamePair[] getClients(String app_user, String app_pwd, String roleTypes) {
+	public KeyNamePair[] getClients(String app_user, String app_pwd, String roleTypes, String sIPAddress) {
 		if (log.isLoggable(Level.INFO)) log.info("User=" + app_user);
 
 		if (Util.isEmpty(app_user))
@@ -1449,29 +1455,39 @@ public class Login
 		}
 		if (clientList.size() > 0)
 			authenticated=true;
-
+		
+		
 		if (authenticated) {
-			if (Ini.isClient())
-			{
-				if (MSystem.isSwingRememberUserAllowed())
-					Ini.setProperty(Ini.P_UID, app_user);
-				else
-					Ini.setProperty(Ini.P_UID, "");
-				if (Ini.isPropertyBool(Ini.P_STORE_PWD) && MSystem.isSwingRememberPasswordAllowed())
-					Ini.setProperty(Ini.P_PWD, app_pwd);
-
-			}
-			retValue = new KeyNamePair[clientList.size()];
-			clientList.toArray(retValue);
-			if (log.isLoggable(Level.FINE)) log.fine("User=" + app_user + " - roles #" + retValue.length);
 			
-			for (MUser user : users) 
+			//CHECK IP se sysconfig Y
+			if(checkAccesFromIP(users, sIPAddress))
 			{
-				user.setFailedLoginCount(0);
-				user.setDateLastLogin(new Timestamp(now));
-				Env.setContext(Env.getCtx(), "#AD_Client_ID", user.getAD_Client_ID());
-				if (!user.save())
-					log.severe("Failed to update user record with date last login (" + user.getName() + " / clientID = " + user.getAD_Client_ID() + ")");
+				if (Ini.isClient())
+				{
+					if (MSystem.isSwingRememberUserAllowed())
+						Ini.setProperty(Ini.P_UID, app_user);
+					else
+						Ini.setProperty(Ini.P_UID, "");
+					if (Ini.isPropertyBool(Ini.P_STORE_PWD) && MSystem.isSwingRememberPasswordAllowed())
+						Ini.setProperty(Ini.P_PWD, app_pwd);
+
+				}
+				retValue = new KeyNamePair[clientList.size()];
+				clientList.toArray(retValue);
+				if (log.isLoggable(Level.FINE)) log.fine("User=" + app_user + " - roles #" + retValue.length);
+
+				for (MUser user : users) 
+				{
+					user.setFailedLoginCount(0);
+					user.setDateLastLogin(new Timestamp(now));
+					Env.setContext(Env.getCtx(), "#AD_Client_ID", user.getAD_Client_ID());
+					if (!user.save())
+						log.severe("Failed to update user record with date last login (" + user.getName() + " / clientID = " + user.getAD_Client_ID() + ")");
+				}
+			}
+			else 
+			{
+				loginErrMsg = Msg.getMsg(m_ctx,"FailedLogin", true);
 			}
 		}
 		else if (validButLocked)
@@ -1533,6 +1549,84 @@ public class Login
 		return retValue;
 	}
 
+	private static final String sqlOK = "SELECT lit_checkIPRange(?,IP_Address,IP_Address_To) FROM AD_UserLogin "
+					+ " WHERE AD_User_ID = ? AND isActive='Y' ",
+			sqlKO = "SELECT lit_checkIPRange(?,IP_Address,IP_Address_To) FROM AD_UserLogin "
+					+ " WHERE AD_User_ID <> ? AND isActive='Y' AND lit_checkIPRange(?,IP_Address,IP_Address_To) = 'Y' ";
+	private boolean checkAccesFromIP(List<MUser> users, String sIPAddress) {
+		boolean addressOk = false;
+		if(MSysConfig.getBooleanValue(MSysConfig.LIT_LOGIN_BY_IP, false) 
+				&& sIPAddress != null)
+		{
+			PreparedStatement st = null;
+			ResultSet rs = null;
+			try
+			{
+				boolean param = false;
+				for(MUser user : users)
+				{
+					st = DB.prepareStatement(sqlOK,null);
+					st.setString(1, sIPAddress);
+					st.setInt(2, user.getAD_User_ID());
+					
+					rs= st.executeQuery();
+					while(rs.next())
+					{
+						param = true;
+						if(rs.getString(1).equalsIgnoreCase("Y"))
+						{
+							addressOk = true;
+							break;
+						}
+					}					
+					DB.close(rs, st);
+					if(addressOk == true)
+						break;
+				}
+
+				//LS: Non c'è una parametrizzazione per l'utente controllo gli altri
+				if(param == false) 
+				{
+					addressOk = true;
+
+					for(MUser user : users)
+					{
+						st = DB.prepareStatement(sqlKO,null);
+						st.setString(1, sIPAddress);
+						st.setInt(2, user.getAD_User_ID());
+						st.setString(3, sIPAddress);
+
+						rs= st.executeQuery();
+						while(rs.next())
+						{
+							if(rs.getString(1).equalsIgnoreCase("Y"))
+							{
+								addressOk = false;
+								break;
+							}
+						}					
+						DB.close(rs, st);
+						if(addressOk == false)
+							break;
+					}	
+				}
+			}
+			catch(SQLException e)
+			{
+				addressOk = false;
+			}
+			finally {
+				DB.close(rs, st);
+			}
+		}
+		else
+		{
+			addressOk = true;
+		}
+		
+		return addressOk;
+	}
+
 	public KeyNamePair[] getRoles(String app_user, KeyNamePair client) {
 		return getRoles(app_user, client, null);
 	}
@@ -1552,7 +1646,7 @@ public class Login
 		String whereRoleType = MRole.getWhereRoleType(roleTypes, "r");
 		ArrayList<KeyNamePair> rolesList = new ArrayList<KeyNamePair>();
 		KeyNamePair[] retValue = null;
-		StringBuilder sql = new StringBuilder("SELECT u.AD_User_ID, r.AD_Role_ID,r.Name ")
+		StringBuffer sql = new StringBuffer("SELECT u.AD_User_ID, r.AD_Role_ID,r.Name ")
 			.append("FROM AD_User u")
 			.append(" INNER JOIN AD_User_Roles ur ON (u.AD_User_ID=ur.AD_User_ID AND ur.IsActive='Y')")
 			.append(" INNER JOIN AD_Role r ON (ur.AD_Role_ID=r.AD_Role_ID AND r.IsActive='Y') ");
@@ -1668,7 +1762,7 @@ public class Login
 		}
 		return retValue;		
 	}
-
+	
 	/**
 	 * Validate if MFA is required taking into account the registerCookie and the IPAddress
 	 * @param registerCookie

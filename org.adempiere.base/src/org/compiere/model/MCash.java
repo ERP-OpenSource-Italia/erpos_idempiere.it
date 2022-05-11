@@ -33,6 +33,8 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 
+import it.idempiere.base.model.LITMCashLine;
+
 /**
  *	Cash Journal Model
  *	
@@ -195,7 +197,8 @@ public class MCash extends X_C_Cash implements DocAction
 		{
 			setStatementDate (today);	
 			setDateAcct (today);
-			StringBuilder name = new StringBuilder(DisplayType.getDateFormat(DisplayType.Date).format(today))
+			//LS formato data in lingua
+			StringBuilder name = new StringBuilder(DisplayType.getDateFormat(DisplayType.Date, Env.getLanguage(cb.getCtx())).format(today))
 				.append(" ").append(cb.getName());
 			setName (name.toString());
 		}
@@ -237,7 +240,7 @@ public class MCash extends X_C_Cash implements DocAction
 	public MCashBook getCashBook()
 	{
 		if (m_book == null)
-			m_book = MCashBook.getCopy(getCtx(), getC_CashBook_ID(), get_TrxName());
+			m_book = MCashBook.get(getCtx(), getC_CashBook_ID());
 		return m_book;
 	}	//	getCashBook
 	
@@ -457,11 +460,68 @@ public class MCash extends X_C_Cash implements DocAction
 		//
 		if (log.isLoggable(Level.INFO)) log.info(toString());
 		
-		MCashLine[] lines = getLines(false);
+		//F3P spostato in localizzazione italiana - CashValidator 
+		/*
+		 * MCashLine[] lines = getLines(false);
 		for (int i = 0; i < lines.length; i++)
 		{
 			MCashLine line = lines[i];
-			if (MCashLine.CASHTYPE_Invoice.equals(line.getCashType()))
+			// Angelo Dabala' (genied) prepayment
+			if (MCashLine.CASHTYPE_Invoice.equals(line.getCashType()) 
+					&& LITMCashLine.isPrepayment(line))
+			{
+				MOrder order = PO.get(getCtx(), MOrder.Table_Name, LITMCashLine.getC_Order_ID(line), get_TrxName()); 
+				if (   !MOrder.DOCSTATUS_Completed.equals(order.getDocStatus())
+						&& !MOrder.DOCSTATUS_Closed.equals(order.getDocStatus())
+						&& !MOrder.DOCSTATUS_Reversed.equals(order.getDocStatus())
+						&& !MOrder.DOCSTATUS_Voided.equals(order.getDocStatus())
+						)
+				{
+					m_processMsg = "@Line@ "+line.getLine()+": @InvoiceCreateDocNotCompleted@";
+					return DocAction.STATUS_Invalid;
+				}
+				MPayment pay = PO.create(getCtx(), MPayment.Table_Name, get_TrxName());
+				pay.setAD_Org_ID(getAD_Org_ID());
+				String documentNo = getName();
+				pay.setDocumentNo(documentNo);
+				pay.setR_PnRef(documentNo);
+				pay.setTrxType(MPayment.TRXTYPE_Sales);
+				pay.set_ValueNoCheck("TenderType", "X"); // Cash
+				//
+				//Modification for cash payment - Posterita
+				pay.setC_CashBook_ID(getC_CashBook_ID());
+				//End of modification - Posterita
+				
+				pay.setC_BPartner_ID(line.get_ValueAsInt("C_BPartner_ID"));
+				pay.setC_Order_ID(line.get_ValueAsInt("C_Order_ID"));
+				pay.setIsPrepayment(line.get_ValueAsBoolean("IsPrepayment"));
+				pay.setIsReceipt(order.isSOTrx());
+				pay.setIsReconciled(true);
+				pay.setC_BankAccount_ID(line.getC_BankAccount_ID());
+				pay.setC_DocType_ID(order.isSOTrx());	//	Receipt(+)/Payment(-)
+				pay.setDateTrx(getStatementDate());
+				pay.setDateAcct(getDateAcct());
+				pay.setAmount(line.getC_Currency_ID(), order.isSOTrx() ? line.getAmount() : line.getAmount().negate());
+				pay.setDescription(line.getDescription());
+				pay.setDocStatus(MPayment.DOCSTATUS_Closed);
+				pay.setDocAction(MPayment.DOCACTION_None);
+				pay.setPosted(false);
+				pay.setIsAllocated(false);	//	Manually Allocated later
+				pay.setProcessed(true);		
+				if (!pay.save())
+				{
+					m_processMsg = CLogger.retrieveErrorString("Could not create Payment");
+					return DocAction.STATUS_Invalid;
+				}
+				
+				line.setC_Payment_ID(pay.getC_Payment_ID());
+				if (!line.save())
+				{
+					m_processMsg = "Could not update Cash Line";
+					return DocAction.STATUS_Invalid;
+				}
+			}
+			else if (MCashLine.CASHTYPE_Invoice.equals(line.getCashType()))
 			{
 				// Check if the invoice is completed - teo_sarca BF [ 1894524 ]
 				MInvoice invoice = line.getInvoice();
@@ -488,7 +548,7 @@ public class MCash extends X_C_Cash implements DocAction
 				}
 				//	Allocation Line
 				MAllocationLine aLine = new MAllocationLine (hdr, line.getAmount(),
-					line.getDiscountAmt(), line.getWriteOffAmt(), Env.ZERO);
+					line.getDiscountAmt(), line.getWriteOffAmt(), LITMCashLine.getOverUnderAmt(line));//from adempiere set OverUnderAmt
 				aLine.setC_Invoice_ID(line.getC_Invoice_ID());
 				aLine.setC_CashLine_ID(line.getC_CashLine_ID());
 				if (!aLine.save())
@@ -546,6 +606,7 @@ public class MCash extends X_C_Cash implements DocAction
 				}
 			}
 		}
+		 */
 		
 		//	User Validation
 		String valid = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_AFTER_COMPLETE);
@@ -623,14 +684,26 @@ public class MCash extends X_C_Cash implements DocAction
 			BigDecimal oldAmount = cashline.getAmount();
 			BigDecimal oldDiscount = cashline.getDiscountAmt();
 			BigDecimal oldWriteOff = cashline.getWriteOffAmt();
+			BigDecimal oldOverUnderAmt = LITMCashLine.getOverUnderAmt(cashline);//from adempiere
 			cashline.setAmount(Env.ZERO);
 			cashline.setDiscountAmt(Env.ZERO);
 			cashline.setWriteOffAmt(Env.ZERO);
+			LITMCashLine.setOverUnderAmt(cashline, Env.ZERO);//from adempiere
 			StringBuilder msgadd = new StringBuilder().append(Msg.getMsg(getCtx(), "Voided"))
 				.append(" (Amount=").append(oldAmount).append(", Discount=").append(oldDiscount)
-				.append(", WriteOff=").append(oldWriteOff).append(", )");
+				.append(", WriteOff=").append(oldWriteOff)
+				.append(", OverUnderAmt=").append(oldOverUnderAmt).append(", )");//from adempiere
 			cashline.addDescription(msgadd.toString());
-			if (MCashLine.CASHTYPE_BankAccountTransfer.equals(cashline.getCashType()))
+			
+			//From adempiere
+			boolean prepayment = false;
+			if (MCashLine.CASHTYPE_Invoice.equals(cashline.getCashType())
+					&& LITMCashLine.isPrepayment(cashline))
+			{
+				prepayment = true;
+			}
+			//From adempiere end
+			if (MCashLine.CASHTYPE_BankAccountTransfer.equals(cashline.getCashType()) || prepayment) //From adempiere add prepayment
 			{
 				if (cashline.getC_Payment_ID() == 0)
 					throw new IllegalStateException("Cannot reverse payment");

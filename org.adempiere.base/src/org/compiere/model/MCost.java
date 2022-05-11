@@ -39,6 +39,8 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  * 	Product Cost Model
  *
@@ -213,6 +215,17 @@ public class MCost extends X_M_Cost
 		{
 			if (zeroCostsOK)
 				return Env.ZERO;
+			
+			// F3P: re-enabled seed cost
+			
+			if(STDSysConfig.isCostSeedEnabled(as.getAD_Client_ID(), Org_ID))
+			{
+				materialCostEach = getSeedCosts(product, M_ASI_ID,
+						as, Org_ID, costingMethod, C_OrderLine_ID);
+				
+				if(materialCostEach==null)
+					materialCostEach = Env.ZERO;
+			}			
 		}
 
 		//	Material Costs
@@ -424,7 +437,7 @@ public class MCost extends X_M_Cost
 	protected static BigDecimal getSeedCostFromPriceList(MProduct product,
 			MAcctSchema as, int orgID) {
 		String sql = "SELECT pp.PriceList, pp.PriceStd FROM M_ProductPrice pp" +
-				" INNER JOIN M_PriceList_Version plv ON (pp.M_PriceList_Version_ID = plv.M_PriceList_Version_ID AND plv.ValidFrom <= trunc(getDate()))" +
+				" INNER JOIN M_PriceList_Version plv ON (pp.M_PriceList_Version_ID = plv.M_PriceList_Version_ID AND plv.ValidFrom <= trunc(sysdate))" +
 				" INNER JOIN M_PriceList pl ON (plv.M_PriceList_ID = pl.M_PriceList_ID AND pl.IsSOPriceList = 'N')" +
 				" WHERE pp.AD_Client_ID = ? AND pp.AD_Org_ID IN (0, ?) AND pp.M_Product_ID = ? AND pp.PriceList > 0 AND pp.IsActive = 'Y' " +
 				" ORDER BY pp.AD_Org_ID Desc, plv.ValidFrom Desc";
@@ -464,7 +477,7 @@ public class MCost extends X_M_Cost
 		int M_ASI_ID, int AD_Org_ID, int C_Currency_ID)
 	{
 		BigDecimal retValue = null;
-		StringBuilder sql = new StringBuilder("SELECT currencyConvertInvoice(i.C_Invoice_ID, ?, il.PriceActual, i.DateAcct) ")
+		StringBuilder sql = new StringBuilder("SELECT currencyConvert(il.PriceActual, i.C_Currency_ID, ?, i.DateAcct, i.C_ConversionType_ID, il.AD_Client_ID, il.AD_Org_ID) ")
 			// ,il.PriceActual, il.QtyInvoiced, i.DateInvoiced, il.Line
 			.append("FROM C_InvoiceLine il ")
 			.append(" INNER JOIN C_Invoice i ON (il.C_Invoice_ID=i.C_Invoice_ID) ")
@@ -1499,17 +1512,20 @@ public class MCost extends X_M_Cost
 	public void add (BigDecimal amt, BigDecimal qty)
 	{
 		MCostElement costElement = (MCostElement) getM_CostElement();
+		BigDecimal currentQty = getCurrentQty().add(qty);
 		if (costElement.isAveragePO() || costElement.isAverageInvoice()) 
 		{
-			if (getCurrentQty().add(qty).signum() < 0)
+			if (currentQty.signum() < 0)
 			{
-				throw new AverageCostingNegativeQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()+", Trx Qty="+qty
-						+ ", CostElement="+costElement.getName()+", Schema="+getC_AcctSchema().getName());
+				currentQty = Env.ZERO;
+//				throw new AverageCostingNegativeQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()+", Trx Qty="+qty
+//						+ ", CostElement="+costElement.getName()+", Schema="+getC_AcctSchema().getName());
 			}
 		}
+		
 		setCumulatedAmt(getCumulatedAmt().add(amt));
 		setCumulatedQty(getCumulatedQty().add(qty));
-		setCurrentQty(getCurrentQty().add(qty));
+		setCurrentQty(currentQty);
 	}	//	add
 
 	/**
@@ -1529,18 +1545,19 @@ public class MCost extends X_M_Cost
 		//can't do cost adjustment if there's no stock left
 		if (qty.signum() == 0 && getCurrentQty().signum() <= 0)
 		{
-			throw new AverageCostingZeroQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()+", Trx Qty="+qty
-					+", CostElement="+getM_CostElement().getName()+", Schema="+getC_AcctSchema().getName());
+			setCurrentQty(Env.ZERO);
+//			throw new AverageCostingZeroQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()+", Trx Qty="+qty
+//					+", CostElement="+getM_CostElement().getName()+", Schema="+getC_AcctSchema().getName());
 		}
 		
 		if (getCurrentQty().add(qty).signum() < 0)
 		{
-			throw new AverageCostingNegativeQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()+", Trx Qty="+qty
-					+", CostElement="+getM_CostElement().getName()+", Schema="+getC_AcctSchema().getName());
+//			throw new AverageCostingNegativeQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()+", Trx Qty="+qty
+//					+", CostElement="+getM_CostElement().getName()+", Schema="+getC_AcctSchema().getName());
 		}
 				
 		BigDecimal sumQty = getCurrentQty().add(qty);
-		if (sumQty.signum() != 0)
+		if (sumQty.signum() > 0)
 		{
 			BigDecimal oldSum = getCurrentCostPrice().multiply(getCurrentQty());
 			BigDecimal oldCost = oldSum.divide(sumQty, 12, RoundingMode.HALF_UP);
@@ -1552,10 +1569,14 @@ public class MCost extends X_M_Cost
 			}
 			setCurrentCostPrice(cost);
 		}
+		else 
+		{
+			sumQty= Env.ZERO;
+		}
 		//
 		setCumulatedAmt(getCumulatedAmt().add(amt));
 		setCumulatedQty(getCumulatedQty().add(qty));
-		setCurrentQty(getCurrentQty().add(qty));
+		setCurrentQty(sumQty);
 	}	//	setWeightedAverage
 
 	/**
@@ -1642,7 +1663,7 @@ public class MCost extends X_M_Cost
 		int M_CostElement_ID = getM_CostElement_ID();
 		if (M_CostElement_ID == 0)
 			return null;
-		return MCostElement.getCopy(getCtx(), M_CostElement_ID, get_TrxName());
+		return MCostElement.get(getCtx(), M_CostElement_ID);
 	}	//	getCostElement
 
 	/**
@@ -1713,8 +1734,9 @@ public class MCost extends X_M_Cost
 		{
 			if (getCurrentQty().signum() < 0)
 			{
-				throw new AverageCostingNegativeQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()
-						+", CostElement="+getM_CostElement().getName()+", Schema="+getC_AcctSchema().getName());
+				setCurrentQty(Env.ZERO);
+//				throw new AverageCostingNegativeQtyException("Product(ID)="+getM_Product_ID()+", Current Qty="+getCurrentQty()
+//						+", CostElement="+getM_CostElement().getName()+", Schema="+getC_AcctSchema().getName());
 			}
 		}
 		
@@ -1739,8 +1761,9 @@ public class MCost extends X_M_Cost
 		{
 			if (CurrentQty.signum() < 0)
 			{
-				throw new AverageCostingNegativeQtyException("Product="+getM_Product().getName()+", Current Qty="+getCurrentQty()+", New Current Qty="+CurrentQty
-						+", CostElement="+ce.getName()+", Schema="+getC_AcctSchema().getName());
+				CurrentQty= Env.ZERO;
+//				throw new AverageCostingNegativeQtyException("Product="+getM_Product().getName()+", Current Qty="+getCurrentQty()+", New Current Qty="+CurrentQty
+//						+", CostElement="+ce.getName()+", Schema="+getC_AcctSchema().getName());
 			}
 		}
 		super.setCurrentQty(CurrentQty);

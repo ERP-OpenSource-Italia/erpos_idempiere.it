@@ -62,9 +62,11 @@ public class InventoryCountCreate extends SvrProcess
 	/** Delete Parameter			*/
 	private boolean		p_DeleteOld = false;
 	
+	private Timestamp p_MovementDate = null;
 	/** Inventory Line				*/
 	private MInventoryLine	m_line = null; 
 	private Timestamp oldDateMPolicy = null;
+	
 	
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -91,6 +93,8 @@ public class InventoryCountCreate extends SvrProcess
 				p_InventoryCountSetZero = "Z".equals(para[i].getParameter());
 			else if (name.equals("DeleteOld"))
 				p_DeleteOld = "Y".equals(para[i].getParameter());
+			else if (name.equals("MovementDate"))
+				p_MovementDate = para[i].getParameterAsTimestamp();
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -126,7 +130,7 @@ public class InventoryCountCreate extends SvrProcess
 			if (log.isLoggable(Level.FINE)) log.fine("doIt - Deleted MA #" + no1);
 			//End of Added Line
 			
-			StringBuilder sql = new StringBuilder("DELETE FROM M_InventoryLine WHERE Processed='N' ")
+			StringBuilder sql = new StringBuilder("DELETE M_InventoryLine WHERE Processed='N' ")
 				.append("AND M_Inventory_ID=").append(p_M_Inventory_ID);
 			int no = DB.executeUpdate(sql.toString(), get_TrxName());
 			if (log.isLoggable(Level.FINE)) log.fine("doIt - Deleted #" + no);
@@ -138,10 +142,10 @@ public class InventoryCountCreate extends SvrProcess
 			StringBuilder sql = new StringBuilder("INSERT INTO M_StorageOnHand ");
 								sql.append("(AD_Client_ID, AD_Org_ID, IsActive, Created, CreatedBy, Updated, UpdatedBy,");
 								sql.append(" M_Locator_ID, M_Product_ID, M_AttributeSetInstance_ID,");
-								sql.append(" QtyOnHand, DateLastInventory, DateMaterialPolicy, M_StorageOnHand_UU) ");
-								sql.append("SELECT l.AD_CLIENT_ID, l.AD_ORG_ID, 'Y', getDate(), 0,getDate(), 0,");
+								sql.append(" QtyOnHand, DateLastInventory) ");
+								sql.append("SELECT l.AD_CLIENT_ID, l.AD_ORG_ID, 'Y', SysDate, 0,SysDate, 0,");
 								sql.append(" l.M_Locator_ID, p.M_Product_ID, 0,");
-								sql.append(" 0,null,trunc(getdate()),generate_uuid() ");
+								sql.append(" 0,null ");
 								sql.append("FROM M_Locator l");
 								sql.append(" INNER JOIN M_Product p ON (l.AD_Client_ID=p.AD_Client_ID) ");
 								sql.append("WHERE l.M_Warehouse_ID=");
@@ -220,9 +224,19 @@ public class InventoryCountCreate extends SvrProcess
 				int M_Product_ID = rs.getInt(1);
 				int M_Locator_ID = rs.getInt(2);
 				int M_AttributeSetInstance_ID = rs.getInt(3);
-				BigDecimal QtyOnHand = rs.getBigDecimal(4);
-				if (QtyOnHand == null)
-					QtyOnHand = Env.ZERO;
+				BigDecimal QtyOnHand = null;
+				
+				if(p_MovementDate != null) {
+					String sqlGDate = " SELECT sum(mt.movementqty) as giacenza " + 
+							" FROM m_transaction mt "
+							+ " WHERE mt.M_Product_ID = ? AND mt.M_Locator_ID = ? AND mt.movementdate <=  ?";
+					if(M_AttributeSetInstance_ID > 0) {
+						sqlGDate = sqlGDate + " AND M_AttributeSetInstance_ID = " + M_AttributeSetInstance_ID;
+					}
+					QtyOnHand = DB.getSQLValueBD(get_TrxName(), sqlGDate, M_Product_ID,M_Locator_ID,p_MovementDate);
+				}else {
+				QtyOnHand = rs.getBigDecimal(4);
+				}
 				int M_AttributeSet_ID = rs.getInt(5);
 				
 				Timestamp dateMpolicy = rs.getTimestamp(6);
@@ -280,10 +294,12 @@ public class InventoryCountCreate extends SvrProcess
 		if (QtyOnHand.signum() == 0)
 			M_AttributeSetInstance_ID = 0;
 
+		
 		// TODO???? This is not working --- must create one line and multiple MA
 		if (m_line != null 
 			&& m_line.getM_Locator_ID() == M_Locator_ID
-			&& m_line.getM_Product_ID() == M_Product_ID)
+			&& m_line.getM_Product_ID() == M_Product_ID
+			&& m_line.getM_AttributeSetInstance_ID() == M_AttributeSetInstance_ID)
 		{
 			if (QtyOnHand.signum() == 0)
 				return 0;
@@ -303,7 +319,7 @@ public class InventoryCountCreate extends SvrProcess
 				if (!ma.save())
 					log.warning("Could not save " + ma);
 			}
-			m_line.setM_AttributeSetInstance_ID(0);
+			//m_line.setM_AttributeSetInstance_ID(0);
 			m_line.setQtyBook(m_line.getQtyBook().add(QtyOnHand));
 			m_line.setQtyCount(m_line.getQtyCount().add(QtyOnHand));
 			m_line.saveEx();

@@ -19,9 +19,7 @@ package org.compiere.model;
 import java.io.File;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Hashtable;
 import java.util.List;
@@ -33,10 +31,10 @@ import org.adempiere.base.Core;
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.BPartnerNoBillToAddressException;
 import org.adempiere.exceptions.BPartnerNoShipToAddressException;
-import org.adempiere.exceptions.DBException;
 import org.adempiere.exceptions.FillMandatoryException;
 import org.adempiere.model.ITaxProvider;
 import org.adempiere.process.SalesOrderRateInquiryProcess;
+import org.adempiere.util.FeedbackContainer;
 import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.DocAction;
@@ -49,6 +47,13 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 import org.compiere.util.Util;
+
+import it.idempiere.base.model.LITMBPartner;
+import it.idempiere.base.model.LITMBPartnerLocation;
+import it.idempiere.base.model.LITMOrderLine;
+import it.idempiere.base.util.BaseMessages;
+import it.idempiere.base.util.STDSysConfig;
+import it.idempiere.base.util.STDUtils;
 
 
 /**
@@ -139,11 +144,8 @@ public class MOrder extends X_C_Order implements DocAction
 		//
 		if (!to.save(trxName))
 			throw new IllegalStateException("Could not create Order");
-		if (counter){
-			// save to other counter document can re-get refer document  
+		if (counter)
 			from.setRef_Order_ID(to.getC_Order_ID());
-			from.saveEx();
-		}
 
 		if (to.copyLinesFrom(from, counter, copyASI) == 0)
 			throw new IllegalStateException("Could not create Order Lines");
@@ -170,12 +172,16 @@ public class MOrder extends X_C_Order implements DocAction
 			setDocStatus(DOCSTATUS_Drafted);
 			setDocAction (DOCACTION_Prepare);
 			//
-			setDeliveryRule (DELIVERYRULE_Availability);
-			setFreightCostRule (FREIGHTCOSTRULE_FreightIncluded);
-			setInvoiceRule (INVOICERULE_Immediate);
-			setPaymentRule(PAYMENTRULE_OnCredit);
+			
+			// F3P: moved in before save, and filled with BP data if still empty 
+			
+			// setDeliveryRule (DELIVERYRULE_Availability);
+			// setFreightCostRule (FREIGHTCOSTRULE_FreightIncluded);
+			// setInvoiceRule (INVOICERULE_Immediate);
+			// setPaymentRule(PAYMENTRULE_OnCredit);
 			setPriorityRule (PRIORITYRULE_Medium);
-			setDeliveryViaRule (DELIVERYVIARULE_Pickup);
+			// setDeliveryViaRule (DELIVERYVIARULE_Pickup);
+			
 			//
 			setIsDiscountPrinted (false);
 			setIsSelected (false);
@@ -196,8 +202,11 @@ public class MOrder extends X_C_Order implements DocAction
 			setProcessing(false);
 			setPosted(false);
 
-			setDateAcct (new Timestamp(System.currentTimeMillis()));
-			setDatePromised (new Timestamp(System.currentTimeMillis()));
+			
+			// F3P: moved in before save, and filled with BP data if still empty 
+			
+//			setDateAcct (new Timestamp(System.currentTimeMillis()));
+//			setDatePromised (new Timestamp(System.currentTimeMillis()));
 			setDateOrdered (new Timestamp(System.currentTimeMillis()));
 
 			setFreightAmt (Env.ZERO);
@@ -220,6 +229,9 @@ public class MOrder extends X_C_Order implements DocAction
 		setAD_Org_ID(project.getAD_Org_ID());
 		setC_Campaign_ID(project.getC_Campaign_ID());
 		setSalesRep_ID(project.getSalesRep_ID());
+		//F3P set also POReference
+		
+		setPOReference(project.getPOReference());
 		//
 		setC_Project_ID(project.getC_Project_ID());
 		setDescription(project.getName());
@@ -267,6 +279,10 @@ public class MOrder extends X_C_Order implements DocAction
 	protected MOrderTax[] 	m_taxes = null;
 	/** Force Creation of order		*/
 	protected boolean			m_forceCreation = false;
+	
+	// F3P: is lines operation  in progress ?
+	private boolean linesOperationInProgress = false;
+
 	
 	/**
 	 * 	Overwrite Client/Org if required
@@ -396,10 +412,9 @@ public class MOrder extends X_C_Order implements DocAction
 		String sql = "SELECT C_DocType_ID FROM C_DocType "
 			+ "WHERE AD_Client_ID=? AND AD_Org_ID IN (0," + getAD_Org_ID()
 			+ ") AND DocSubTypeSO=? "
-			+ " AND IsSOTrx=? "
 			+ " AND IsActive='Y' "
 			+ "ORDER BY AD_Org_ID DESC, IsDefault DESC";
-		int C_DocType_ID = DB.getSQLValue(null, sql, getAD_Client_ID(), DocSubTypeSO_x, isSOTrx() ? "Y" : "N");
+		int C_DocType_ID = DB.getSQLValue(null, sql, getAD_Client_ID(), DocSubTypeSO_x);
 		if (C_DocType_ID <= 0)
 			log.severe ("Not found for AD_Client_ID=" + getAD_Client_ID () + ", SubType=" + DocSubTypeSO_x);
 		else
@@ -474,7 +489,15 @@ public class MOrder extends X_C_Order implements DocAction
 		ss = bp.getInvoiceRule();
 		if (ss != null)
 			setInvoiceRule(ss);
-		ss = bp.getPaymentRule();
+		// F3P: read correct PaymentRule
+		// ss = bp.getPaymentRule();
+		
+		if (isSOTrx())
+			ss = bp.getPaymentRule();
+		else
+			ss = bp.getPaymentRulePO();
+		
+		// F3P end
 		if (ss != null)
 			setPaymentRule(ss);
 		//	Sales Rep
@@ -512,8 +535,71 @@ public class MOrder extends X_C_Order implements DocAction
 
 		//	Set Contact
 		MUser[] contacts = bp.getContacts(false);
+		// F3P: replaced with selection of right contact
+		/*
 		if (contacts != null && contacts.length == 1)
 			setAD_User_ID(contacts[0].getAD_User_ID());
+		*/
+		
+		int AD_User_ID = -1,
+			Bill_User_ID = -1;
+		
+		for(int i=0; i < contacts.length; i++)
+		{
+			MUser contact = contacts[i];
+			
+			if(contact.getC_BPartner_Location_ID() == getC_BPartner_Location_ID())
+			{
+				AD_User_ID = contact.getAD_User_ID();
+				break;
+			}
+		}
+		
+		// No specific contact found ? choose first
+		
+		if(AD_User_ID <= 0 && contacts.length > 0)
+			AD_User_ID = contacts[0].getAD_User_ID();
+		
+		if(getBill_Location_ID() > 0)
+		{
+			MBPartner	mBillBP = null; 
+				
+			if(getBill_BPartner_ID() > 0)
+				mBillBP = MBPartner.get(getCtx(), getBill_BPartner_ID());
+			else
+				mBillBP = bp;
+				
+			MUser			billContacts[] = mBillBP.getContacts(false);
+			
+			for(int i=0; i < billContacts.length; i++)
+			{
+				MUser contact = billContacts[i];
+				
+				if(contact.getC_BPartner_Location_ID() == getBill_Location_ID())
+				{
+					Bill_User_ID = contact.getAD_User_ID();
+					break;
+				}
+			}
+			
+			// No specific contact found ? choose first
+			
+			if(AD_User_ID <= 0 && billContacts.length > 0)
+				AD_User_ID = billContacts[0].getAD_User_ID();			
+		}
+		
+		if(AD_User_ID > 0)
+			setAD_User_ID(AD_User_ID);
+		
+		if(Bill_User_ID > 0)
+			setBill_User_ID(Bill_User_ID);
+		
+		// F3P: Set freightcostrule
+		
+		if(bp.getFreightCostRule() != null)
+			setFreightCostRule(bp.getFreightCostRule());
+		
+		// F3P end
 	}	//	setBPartner
 
 
@@ -534,6 +620,14 @@ public class MOrder extends X_C_Order implements DocAction
 		{
 			MOrderLine line = new MOrderLine (this);
 			PO.copyValues(fromLines[i], line, getAD_Client_ID(), getAD_Org_ID());
+			
+			// F3P: price is list is not allowed to be copied, when generating counter document we need to manually copy it
+			
+			if(counter)
+			{
+				line.setPriceList(fromLines[i].getPriceList());
+			}
+			
 			line.setC_Order_ID(getC_Order_ID());
 			//
 			line.setQtyDelivered(Env.ZERO);
@@ -545,6 +639,30 @@ public class MOrder extends X_C_Order implements DocAction
 			//
 			line.setOrder(this);
 			line.set_ValueNoCheck ("C_OrderLine_ID", I_ZERO);	//	new
+			
+			// F3P: ri-calcoliamo qty ordered, altrimenti la copia da ordine chiuso e' errata
+			if(counter == false)
+			{
+				if(line.getM_Product_ID() > 0)
+				{					
+					MProduct mProduct = MProduct.get(line.getCtx(), line.getM_Product_ID()); 
+					
+					if(line.getC_UOM_ID() != mProduct.getC_UOM_ID())
+					{						
+						BigDecimal qtyOrdered = MUOMConversion.convertProductFrom (getCtx(), line.getM_Product_ID(),
+								line.getC_UOM_ID(), line.getQtyEntered());
+						
+						line.setQtyOrdered(qtyOrdered);
+					}
+					else
+						line.setQtyOrdered(line.getQtyEntered());
+				}
+				else
+				{
+					line.setQtyOrdered(line.getQtyEntered());
+				}
+			}
+				
 			//	References
 			if (!copyASI)
 			{
@@ -585,7 +703,7 @@ public class MOrder extends X_C_Order implements DocAction
 	 */
 	public String toString ()
 	{
-		StringBuilder sb = new StringBuilder ("MOrder[")
+		StringBuffer sb = new StringBuffer ("MOrder[")
 			.append(get_ID()).append("-").append(getDocumentNo())
 			.append(",IsSOTrx=").append(isSOTrx())
 			.append(",C_DocType_ID=").append(getC_DocType_ID())
@@ -938,7 +1056,7 @@ public class MOrder extends X_C_Order implements DocAction
 	 *	@return save
 	 */
 	protected boolean beforeSave (boolean newRecord)
-	{
+	{		
 		//	Client/Org Check
 		if (getAD_Org_ID() == 0)
 		{
@@ -1009,6 +1127,102 @@ public class MOrder extends X_C_Order implements DocAction
 		}
 		if (getBill_Location_ID() == 0)
 			setBill_Location_ID(getC_BPartner_Location_ID());
+		
+		// F3P: check if BP-dependant values removed from constructor are still empty (we need BP set, so as soon as is initialized)
+		
+		if(newRecord)
+		{
+			boolean setBPFlags = false; // IF we set at least one value, we reset to flags to BP value (admittedly borderline behaviour)
+			MBPartner bPartner = null;
+			MBPartner billBPartner = null;
+			
+			if(getDeliveryRule() == null)
+			{
+				if(bPartner == null)
+					bPartner = MBPartner.get(getCtx(), getC_BPartner_ID());
+				
+				if(bPartner.getDeliveryRule() != null)
+					setDeliveryRule(bPartner.getDeliveryRule());
+				else
+					setDeliveryRule(DELIVERYRULE_Availability);				
+				
+				setBPFlags = true;
+			}
+			
+			if(getFreightCostRule() == null)
+			{
+				if(bPartner == null)
+					bPartner = MBPartner.get(getCtx(), getC_BPartner_ID());
+				
+				if(bPartner.getFreightCostRule() != null)
+					setFreightCostRule(bPartner.getFreightCostRule());
+				else
+					setFreightCostRule(FREIGHTCOSTRULE_FreightIncluded);
+					
+				setBPFlags = true;
+			}
+			
+			if(getDeliveryViaRule() == null)
+			{
+				if(bPartner == null)
+					bPartner = MBPartner.get(getCtx(), getC_BPartner_ID());
+				
+				if(bPartner.getDeliveryViaRule() != null)
+					setDeliveryViaRule(bPartner.getDeliveryViaRule());
+				else
+					setDeliveryViaRule(DELIVERYVIARULE_Pickup);
+				
+				setBPFlags = true;
+			}			
+			
+			if(getInvoiceRule() == null)
+			{
+				if(billBPartner == null)
+					billBPartner = MBPartner.get(getCtx(), getBill_BPartner_ID());
+				
+				if(billBPartner.getInvoiceRule() != null)
+					setInvoiceRule(billBPartner.getInvoiceRule());
+				else
+					setInvoiceRule(INVOICERULE_Immediate);
+				
+				setBPFlags = true;
+			}
+
+			if(getPaymentRule() == null)
+			{
+				if(billBPartner == null)
+					billBPartner = MBPartner.get(getCtx(), getBill_BPartner_ID());
+				
+				if(billBPartner.getPaymentRule() != null)
+					setPaymentRule(billBPartner.getPaymentRule());
+				else
+					setPaymentRule(PAYMENTRULE_OnCredit);
+				
+				setBPFlags = true;
+			}
+			
+			if(setBPFlags)
+			{
+				if(bPartner == null)
+					bPartner = MBPartner.get(getCtx(), getC_BPartner_ID());
+				
+				if(billBPartner == null)
+					billBPartner = MBPartner.get(getCtx(), getBill_BPartner_ID());
+				
+				setIsDiscountPrinted(billBPartner.isDiscountPrinted());
+				setSendEMail(bPartner.isSendEMail());
+			}
+			
+			// Dates
+			
+			if(getDateAcct() == null)
+				setDateAcct(getDateOrdered());
+			
+			if(getDatePromised() == null)
+				setDatePromised(getDateOrdered());
+		}
+		
+		// F3P end
 
 		//	Default Price List
 		if (getM_PriceList_ID() == 0)
@@ -1074,8 +1288,9 @@ public class MOrder extends X_C_Order implements DocAction
 			}
 			if (is_ValueChanged(COLUMNNAME_DateOrdered)) {
 				if (previousdt.isOverwriteDateOnComplete()) {
-					log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeProcessedDate"));
-					return false; 
+					
+						log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeProcessedDate"));
+						return false;
 				}
 			}
 		}
@@ -1092,20 +1307,16 @@ public class MOrder extends X_C_Order implements DocAction
 					MPriceList pList =  MPriceList.get(getCtx(), getM_PriceList_ID(), null);
 					MPriceListVersion plOld = pList.getPriceListVersion((Timestamp)get_ValueOld(COLUMNNAME_DateOrdered));
 					MPriceListVersion plNew = pList.getPriceListVersion((Timestamp)get_Value(COLUMNNAME_DateOrdered));
-					if (plNew == null || !plNew.equals(plOld)) {
-						log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeDateOrdered"));
-						return false;
+					if (plNew == null || !plNew.equals(plOld)) 
+					{
+						if(STDSysConfig.isChangeDateAndPriceList(getAD_Client_ID(),getAD_Org_ID()) == false)
+						{
+							log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeDateOrdered"));
+							return false;
+						}
 					}
 				}
 			}
-		}
-
-		// IDEMPIERE-4318 Validation - Prepay Order must not allow Cash payment rule
-		MDocType dt = MDocType.get(getCtx(), getC_DocTypeTarget_ID());
-		if (   MDocType.DOCSUBTYPESO_PrepayOrder.equals(dt.getDocSubTypeSO())
-			&& PAYMENTRULE_Cash.equals(getPaymentRule())) {
-			log.saveError("Error", Msg.parseTranslation(getCtx(), "@Invalid@ @PaymentRule@"));
-			return false;
 		}
 
 		if (! recursiveCall && (!newRecord && is_ValueChanged(COLUMNNAME_C_PaymentTerm_ID))) {
@@ -1270,10 +1481,24 @@ public class MOrder extends X_C_Order implements DocAction
 	 */
 	public String prepareIt()
 	{
+//		Lines
+			MOrderLine[] lines = getLines(true, MOrderLine.COLUMNNAME_M_Product_ID);
+			if (lines.length == 0)
+			{
+				m_processMsg = "@NoLines@";
+				return DocAction.STATUS_Invalid;
+			}
+			
 		if (log.isLoggable(Level.INFO)) log.info(toString());
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_BEFORE_PREPARE);
 		if (m_processMsg != null)
 			return DocAction.STATUS_Invalid;
+		/**
+		 * LS: get modified lines
+		 * Needed if at least one validator has added/deleted/changed lines and had recreated the cache
+		 */
+		lines = getLines();
+		
 		MDocType dt = MDocType.get(getCtx(), getC_DocTypeTarget_ID());
 
 		//	Std Period open?
@@ -1285,26 +1510,20 @@ public class MOrder extends X_C_Order implements DocAction
 		
 		if (isSOTrx() && getDeliveryViaRule().equals(DELIVERYVIARULE_Shipper))
 		{
-			if (getM_Shipper_ID() == 0)
-			{
-				m_processMsg = "@FillMandatory@" + Msg.getElement(getCtx(), COLUMNNAME_M_Shipper_ID);
-				return DocAction.STATUS_Invalid;
-			}
+//			if (getM_Shipper_ID() == 0)
+//			{
+//				m_processMsg = "@FillMandatory@" + Msg.getElement(getCtx(), COLUMNNAME_M_Shipper_ID);
+//				return DocAction.STATUS_Invalid;
+//			}
 			
 			if (!calculateFreightCharge())
 				return DocAction.STATUS_Invalid;
 		}
 
-		//	Lines
-		MOrderLine[] lines = getLines(true, MOrderLine.COLUMNNAME_M_Product_ID);
-		if (lines.length == 0)
-		{
-			m_processMsg = "@NoLines@";
-			return DocAction.STATUS_Invalid;
-		}
+		
 				
 		// Bug 1564431
-		if (MOrder.DELIVERYRULE_CompleteOrder.equals(getDeliveryRule()) )
+		if (getDeliveryRule() != null && getDeliveryRule().equals(MOrder.DELIVERYRULE_CompleteOrder)) 
 		{
 			for (int i = 0; i < lines.length; i++) 
 			{
@@ -1313,11 +1532,6 @@ public class MOrder extends X_C_Order implements DocAction
 				if (product != null && product.isExcludeAutoDelivery())
 				{
 					m_processMsg = "@M_Product_ID@ "+product.getValue()+" @IsExcludeAutoDelivery@";
-					return DocAction.STATUS_Invalid;
-				}
-				if (line.getDatePromised() != null && !line.getDatePromised().equals(getDatePromised()))
-				{
-					m_processMsg = "@Line@ " + line.getLine() + " - @Invalid@ @DatePromised@";
 					return DocAction.STATUS_Invalid;
 				}
 			}
@@ -1400,8 +1614,8 @@ public class MOrder extends X_C_Order implements DocAction
 			return DocAction.STATUS_Invalid;
 		}
 		
-		if (   getGrandTotal().signum() != 0
-			&& (PAYMENTRULE_OnCredit.equals(getPaymentRule()) || PAYMENTRULE_DirectDebit.equals(getPaymentRule())))
+		if (   getGrandTotal().signum() != 0)
+		// && (PAYMENTRULE_OnCredit.equals(getPaymentRule()) || PAYMENTRULE_DirectDebit.equals(getPaymentRule()))) F3P: removed filter that not generate payschedule
 		{
 			if (!createPaySchedule())
 			{
@@ -1417,7 +1631,8 @@ public class MOrder extends X_C_Order implements DocAction
 		}
 		
 		//	Credit Check
-		if (isSOTrx())
+		if (isSOTrx()
+				&& MSysConfig.getBooleanValue(MSysConfig.LIT_ORDER_CHECK_CREDIT_AS_WARNING, false, getAD_Client_ID(), getAD_Org_ID()) == false)
 		{
 			if (   MDocType.DOCSUBTYPESO_POSOrder.equals(dt.getDocSubTypeSO())
 					&& PAYMENTRULE_Cash.equals(getPaymentRule())
@@ -1425,6 +1640,9 @@ public class MOrder extends X_C_Order implements DocAction
 				// ignore -- don't validate for Cash POS Orders depending on sysconfig parameter
 			} else if (MDocType.DOCSUBTYPESO_PrepayOrder.equals(dt.getDocSubTypeSO())
 					&& !MSysConfig.getBooleanValue(MSysConfig.CHECK_CREDIT_ON_PREPAY_ORDER, true, getAD_Client_ID(), getAD_Org_ID())) {
+				// ignore -- don't validate Prepay Orders depending on sysconfig parameter
+			} else if ((MDocType.DOCSUBTYPESO_Proposal.equals(dt.getDocSubTypeSO()) || MDocType.DOCSUBTYPESO_Quotation.equals(dt.getDocSubTypeSO()))
+					&& !MSysConfig.getBooleanValue(MSysConfig.CHECK_CREDIT_ON_PROPOSAL_ORDER, true, getAD_Client_ID(), getAD_Org_ID())) {
 				// ignore -- don't validate Prepay Orders depending on sysconfig parameter
 			} else {
 				MBPartner bp = new MBPartner (getCtx(), getBill_BPartner_ID(), get_TrxName()); // bill bp is guaranteed on beforeSave
@@ -1435,14 +1653,14 @@ public class MOrder extends X_C_Order implements DocAction
 					if (MBPartner.SOCREDITSTATUS_CreditStop.equals(bp.getSOCreditStatus()))
 					{
 						m_processMsg = "@BPartnerCreditStop@ - @TotalOpenBalance@=" 
-								+ bp.getTotalOpenBalance()
+								+ LITMBPartner.getTotalOpenBalanceDB(bp,true)
 								+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 						return DocAction.STATUS_Invalid;
 					}
 					if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus()))
 					{
 						m_processMsg = "@BPartnerCreditHold@ - @TotalOpenBalance@=" 
-								+ bp.getTotalOpenBalance() 
+								+ LITMBPartner.getTotalOpenBalanceDB(bp,true)
 								+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 						return DocAction.STATUS_Invalid;
 					}
@@ -1452,7 +1670,7 @@ public class MOrder extends X_C_Order implements DocAction
 					if (MBPartner.SOCREDITSTATUS_CreditHold.equals(bp.getSOCreditStatus(grandTotal)))
 					{
 						m_processMsg = "@BPartnerOverOCreditHold@ - @TotalOpenBalance@=" 
-								+ bp.getTotalOpenBalance() + ", @GrandTotal@=" + grandTotal
+								+ LITMBPartner.getTotalOpenBalanceDB(bp,true) + ", @GrandTotal@=" + grandTotal
 								+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 						return DocAction.STATUS_Invalid;
 					}
@@ -1463,6 +1681,17 @@ public class MOrder extends X_C_Order implements DocAction
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_AFTER_PREPARE);
 		if (m_processMsg != null)
 			return DocAction.STATUS_Invalid;
+		
+		// F3P: check gathered feedback
+		
+		StringBuilder info = new StringBuilder();
+		
+		if(FeedbackContainer.getCurrent() != null)
+		{
+			FeedbackContainer.getCurrent().appendInfoFeedback(info);
+		}
+		
+		m_processMsg = info.toString();
 		
 		m_justPrepared = true;
 	//	if (!DOCACTION_Complete.equals(getDocAction()))		don't set for just prepare 
@@ -1497,7 +1726,8 @@ public class MOrder extends X_C_Order implements DocAction
 			}
 		}
 		
-		if (getFreightCostRule().equals(FREIGHTCOSTRULE_FreightIncluded))
+		if (getFreightCostRule().equals(FREIGHTCOSTRULE_FreightIncluded) || 
+				(getFreightCostRule().equals(FREIGHTCOSTRULE_FixPrice) && getFreightAmt().signum() == 0))  // F3P: dont generate zero-amount freight charge, and remove if existing
 		{
 			if (freightLine != null)
 			{
@@ -1514,23 +1744,26 @@ public class MOrder extends X_C_Order implements DocAction
 		}
 		else if (getFreightCostRule().equals(FREIGHTCOSTRULE_FixPrice))
 		{
-			if (freightLine == null)
+			if(getFreightAmt().signum() != 0)
 			{
-				freightLine = new MOrderLine(this);
-			
-				if (ci.getC_ChargeFreight_ID() > 0)
-					freightLine.setC_Charge_ID(ci.getC_ChargeFreight_ID());
-				else if (ci.getM_ProductFreight_ID() > 0)
-					freightLine.setM_Product_ID(ci.getM_ProductFreight_ID());
-				else
-					throw new AdempiereException("Product or Charge for Freight is not defined at Client window > Client Info tab");
+				if (freightLine == null)
+				{
+					freightLine = new MOrderLine(this);
+				
+					if (ci.getC_ChargeFreight_ID() > 0)
+						freightLine.setC_Charge_ID(ci.getC_ChargeFreight_ID());
+					else if (ci.getM_ProductFreight_ID() > 0)
+						freightLine.setM_Product_ID(ci.getM_ProductFreight_ID());
+					else
+						throw new AdempiereException("Product or Charge for Freight is not defined at Client window > Client Info tab");
+				}
+				
+				freightLine.setC_BPartner_Location_ID(getC_BPartner_Location_ID());
+				freightLine.setM_Shipper_ID(getM_Shipper_ID());
+				freightLine.setQty(BigDecimal.ONE);
+				freightLine.setPrice(getFreightAmt());
+				freightLine.saveEx();
 			}
-			
-			freightLine.setC_BPartner_Location_ID(getC_BPartner_Location_ID());
-			freightLine.setM_Shipper_ID(getM_Shipper_ID());
-			freightLine.setQty(BigDecimal.ONE);
-			freightLine.setPrice(getFreightAmt());
-			freightLine.saveEx();
 		}
 		else if (getFreightCostRule().equals(FREIGHTCOSTRULE_Calculated))
 		{
@@ -1553,9 +1786,7 @@ public class MOrder extends X_C_Order implements DocAction
 				else if (ol.getM_Product_ID() > 0)
 				{
 					MProduct product = new MProduct(getCtx(), ol.getM_Product_ID(), get_TrxName());
-					if (product.isService())
-						continue;
-
+					
 					BigDecimal weight = product.getWeight();
 					if (weight == null || weight.compareTo(BigDecimal.ZERO) == 0)
 					{
@@ -1614,10 +1845,40 @@ public class MOrder extends X_C_Order implements DocAction
 	 */
 	protected boolean explodeBOM()
 	{
+		// F3P: dobbiamo esplodere i servizi ?
+		String sExplodeBOM = STDSysConfig.getIsExplodeBOMService(getAD_Client_ID(), getAD_Org_ID());
+		
+		if(sExplodeBOM.equals("X"))
+		{
+			return false;
+		}
+				
 		boolean retValue = false;
-		String where = "AND IsActive='Y' AND EXISTS "
-			+ "(SELECT * FROM M_Product p WHERE C_OrderLine.M_Product_ID=p.M_Product_ID"
-			+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')";
+		
+		// F3P: esplosione bom
+		// String where = "AND IsActive='Y' AND EXISTS "
+		//		+ "(SELECT * FROM M_Product p WHERE C_OrderLine.M_Product_ID=p.M_Product_ID"
+		//		+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')";
+				
+		boolean bExplodeBOM = (sExplodeBOM == null || sExplodeBOM.equals("Y"));
+		String where = null;
+		
+		if(bExplodeBOM)
+		{
+			where = "AND IsActive='Y' AND EXISTS "
+					+ "(SELECT * FROM M_Product p WHERE C_OrderLine.M_Product_ID=p.M_Product_ID"
+					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')"
+					+ " AND NOT EXISTS (SELECT b.C_OrderLine_ID From C_OrderLine b WHERE b.BOM_Orderline_ID = C_OrderLine.C_OrderLine_ID)";
+		}
+		else
+		{
+			where = "AND IsActive='Y' AND EXISTS "
+					+ "(SELECT * FROM M_Product p WHERE C_OrderLine.M_Product_ID=p.M_Product_ID"
+					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N' and p.ProductType='I')"
+					+ " AND NOT EXISTS (SELECT b.C_OrderLine_ID From C_OrderLine b WHERE b.BOM_Orderline_ID = C_OrderLine.C_OrderLine_ID)";	// F3P: aggiunta verifica che sia di tipo 'item'
+		}
+		
+		//F3P end		
 		//
 		String sql = "SELECT COUNT(*) FROM C_OrderLine "
 			+ "WHERE C_Order_ID=? " + where; 
@@ -1667,17 +1928,31 @@ public class MOrder extends X_C_Order implements DocAction
 					if (bom.getDescription() != null)
 						newLine.setDescription(bom.getDescription());
 					newLine.setPrice();
+					
+					LITMOrderLine.setBOM_OrderLine_ID(newLine, line.getC_OrderLine_ID());
+
 					newLine.saveEx(get_TrxName());
 				}
+
+				if(STDSysConfig.isShareDiscountToBomLine(line.getAD_Client_ID(),line.getAD_Org_ID()))
+				{
+					sharePriceToBomOrderLine(line);
+				}
 				
-				//	Convert into Comment Line
-				line.setM_Product_ID (0);
-				line.setM_AttributeSetInstance_ID (0);
-				line.setPrice (Env.ZERO);
-				line.setPriceLimit (Env.ZERO);
-				line.setPriceList (Env.ZERO);
-				line.setLineNetAmt (Env.ZERO);
-				line.setFreightAmt (Env.ZERO);
+				
+				if(STDSysConfig.isOverwriteDataWhenExplodeBOM(line.getAD_Client_ID(),line.getAD_Org_ID()))
+				{
+					//	Convert into Comment Line
+					line.setM_Product_ID (0);
+					line.setM_AttributeSetInstance_ID (0);
+					line.setPrice (Env.ZERO);
+					line.setPriceLimit (Env.ZERO);
+					line.setDiscount(Env.ONEHUNDRED);
+					//line.setPriceList (Env.ZERO);
+					
+					line.setLineNetAmt (Env.ZERO);
+					line.setFreightAmt (Env.ZERO);
+				}
 				//
 				String description = product.getName ();
 				if (product.getDescription () != null)
@@ -1685,6 +1960,9 @@ public class MOrder extends X_C_Order implements DocAction
 				if (line.getDescription () != null)
 					description += " " + line.getDescription ();
 				line.setDescription (description);
+				
+				LITMOrderLine.setBOM_Product_ID(line, product.getM_Product_ID());
+				
 				line.saveEx(get_TrxName());
 			}	//	for all lines with BOM
 
@@ -1695,6 +1973,101 @@ public class MOrder extends X_C_Order implements DocAction
 		return retValue;
 	}	//	explodeBOM
 
+	public static void sharePriceToBomOrderLine(MOrderLine line) 
+	{
+		Query mQuery = new Query(line.getCtx(), MOrderLine.Table_Name,"BOM_OrderLine_ID = ?", line.get_TrxName());
+		mQuery.setParameters(line.getC_OrderLine_ID());
+		List<MOrderLine> lOrderLines = mQuery.list();
+		
+		sharePriceToBomOrderLine(line,lOrderLines,"BOM_OrderLine_ID",true);
+	}
+	
+	/**
+	 * Exclude parent line from list Order lines
+	 * @param line
+	 * @param lOrderLines
+	 */
+	public static void sharePriceToBomOrderLine(MOrderLine line,List<MOrderLine> lOrderLines,String columnname,boolean setDiff) 
+	{
+		if(lOrderLines.isEmpty() == false)
+		{
+			BigDecimal sumPriceEnteredLine = DB.getSQLValueBD(line.get_TrxName(),"SELECT SUM(PriceEntered*qtyEntered) FROM C_OrderLine WHERE "+columnname+" = ?",line.getC_OrderLine_ID());
+			MOrder mOrder = line.getParent();
+			int precision = mOrder.getM_PriceList().getPricePrecision();
+			
+			BigDecimal priceOrderlineBom = line.getPriceEntered();
+			BigDecimal noParts = line.getQtyEntered();
+			
+			BigDecimal maxPrice = Env.ZERO;
+			int C_OrderLine_IDToSetDiff = 0; 
+			
+			sumPriceEnteredLine = sumPriceEnteredLine.divide(noParts,precision,RoundingMode.HALF_UP);
+			
+			BigDecimal conversion = priceOrderlineBom.divide(sumPriceEnteredLine,10,RoundingMode.HALF_UP);
+			BigDecimal sumPriceTotal = Env.ZERO;
+			
+			for(MOrderLine orderLineToModifyPrice : lOrderLines)
+			{
+				BigDecimal qtyRef = orderLineToModifyPrice.getQtyEntered().divide(noParts,10,RoundingMode.HALF_UP);
+				
+				BigDecimal priceEnteredLine = orderLineToModifyPrice.getPriceEntered().multiply(conversion).multiply(qtyRef);
+				BigDecimal priceForAllParts = priceEnteredLine.divide(qtyRef,precision,RoundingMode.HALF_UP);
+				
+				orderLineToModifyPrice.setPriceEntered(priceForAllParts);
+				
+				BigDecimal PriceActual = MUOMConversion.convertProductTo (mOrder.getCtx(), orderLineToModifyPrice.getM_Product_ID(),
+						orderLineToModifyPrice.getC_UOM_ID(), priceForAllParts, precision);
+				
+				orderLineToModifyPrice.setPriceActual(PriceActual);
+				
+				BigDecimal discount = orderLineToModifyPrice.getPriceList().subtract(priceForAllParts)
+						.multiply(Env.ONEHUNDRED)
+						.divide(orderLineToModifyPrice.getPriceList(), precision, RoundingMode.HALF_UP);
+				
+				orderLineToModifyPrice.setDiscount(discount);
+				
+				orderLineToModifyPrice.saveEx();
+				
+				BigDecimal priceTotal = priceForAllParts.multiply(qtyRef);
+				sumPriceTotal = sumPriceTotal.add(priceTotal);
+				
+				if(qtyRef.compareTo(Env.ONE) == 0 && setDiff)
+				{
+					if(maxPrice.compareTo(priceTotal) < 0)
+					{
+						maxPrice = priceTotal;
+						C_OrderLine_IDToSetDiff = orderLineToModifyPrice.getC_OrderLine_ID();
+					}
+				}
+			}
+			
+			if(setDiff && C_OrderLine_IDToSetDiff > 0)
+			{
+				BigDecimal diff = priceOrderlineBom.subtract(sumPriceTotal);
+				
+				MOrderLine lOrderLinesToAddPrice = PO.get(line.getCtx(), MOrderLine.Table_Name, C_OrderLine_IDToSetDiff, line.get_TrxName());
+
+				BigDecimal priceEnteredWithDiff = lOrderLinesToAddPrice.getPriceEntered().add(diff);
+				lOrderLinesToAddPrice.setPriceEntered(priceEnteredWithDiff);
+				
+				BigDecimal PriceActual = MUOMConversion.convertProductTo (mOrder.getCtx(), lOrderLinesToAddPrice.getM_Product_ID(),
+						lOrderLinesToAddPrice.getC_UOM_ID(), priceEnteredWithDiff, precision);
+				
+				lOrderLinesToAddPrice.setPriceActual(PriceActual);
+				
+				BigDecimal discount = lOrderLinesToAddPrice.getPriceList().subtract(priceEnteredWithDiff)
+						.multiply(Env.ONEHUNDRED)
+						.divide(lOrderLinesToAddPrice.getPriceList(), precision,RoundingMode.HALF_UP);
+				
+				lOrderLinesToAddPrice.setDiscount(discount);
+				
+				lOrderLinesToAddPrice.saveEx();
+			}
+			
+			
+		}
+	}
+
 
 	/**
 	 * 	Reserve Inventory.
@@ -1703,7 +2076,8 @@ public class MOrder extends X_C_Order implements DocAction
 	 * 	@param lines order lines (ordered by M_Product_ID for deadlock prevention)
 	 * 	@return true if (un) reserved
 	 */
-	protected boolean reserveStock (MDocType dt, MOrderLine[] lines)
+	
+	protected boolean reserveStock (MDocType dt, MOrderLine[] lines, boolean bSaveLines) // F3P: added flag and compatibility function to check wether to save line
 	{
 		if (dt == null)
 			dt = MDocType.get(getCtx(), getC_DocType_ID());
@@ -1745,6 +2119,15 @@ public class MOrder extends X_C_Order implements DocAction
 			BigDecimal difference = target
 				.subtract(line.getQtyReserved())
 				.subtract(line.getQtyDelivered()); 
+						
+			// F3P: sign of newReserved must be coherent with sign of getOrdered, else we must cap it to zero ( reserved - difference = 0) 
+			
+			BigDecimal newReserved = line.getQtyReserved().add(difference);
+			
+			if(line.getQtyOrdered().signum() != newReserved.signum())
+				difference = line.getQtyReserved().negate();
+			
+			// F3P end
 
 			if (difference.signum() == 0 || line.getQtyOrdered().signum() < 0)
 			{
@@ -1784,8 +2167,12 @@ public class MOrder extends X_C_Order implements DocAction
 				}	//	stocked
 				//	update line
 				line.setQtyReserved(line.getQtyReserved().add(difference));
-				if (!line.save(get_TrxName()))
-					return false;
+				
+				if(bSaveLines)
+				{
+					if (!line.save(get_TrxName()))
+						return false;
+				}
 				//
 				Volume = Volume.add(product.getVolume().multiply(line.getQtyOrdered()));
 				Weight = Weight.add(product.getWeight().multiply(line.getQtyOrdered()));
@@ -1796,7 +2183,13 @@ public class MOrder extends X_C_Order implements DocAction
 		setWeight(Weight);
 		return true;
 	}	//	reserveStock
+	
+	protected boolean reserveStock (MDocType dt, MOrderLine[] lines) // F3P: added flag and compatibility function to check wether to save line
+	{
+		return reserveStock (dt, lines, true);
+	}
 
+	
 	/**
 	 * 	Calculate Tax and Total
 	 * 	@return true if tax total calculated
@@ -1805,7 +2198,7 @@ public class MOrder extends X_C_Order implements DocAction
 	{
 		log.fine("");
 		//	Delete Taxes
-		DB.executeUpdateEx("DELETE FROM C_OrderTax WHERE C_Order_ID=" + getC_Order_ID(), get_TrxName());
+		DB.executeUpdateEx("DELETE C_OrderTax WHERE C_Order_ID=" + getC_Order_ID(), get_TrxName());
 		m_taxes = null;
 		
 		MTaxProvider[] providers = getTaxProviders();
@@ -1826,7 +2219,7 @@ public class MOrder extends X_C_Order implements DocAction
 	 * 	(Re) Create Pay Schedule
 	 *	@return true if valid schedule
 	 */
-	protected boolean createPaySchedule()
+	public boolean createPaySchedule()
 	{
 		if (getC_PaymentTerm_ID() == 0)
 			return false;
@@ -1939,13 +2332,20 @@ public class MOrder extends X_C_Order implements DocAction
 		if (log.isLoggable(Level.INFO)) log.info(toString());
 		StringBuilder info = new StringBuilder();
 		
-		boolean realTimePOS = MSysConfig.getBooleanValue(MSysConfig.REAL_TIME_POS, false , getAD_Client_ID());
-		
-		// Counter Documents
-		// move by IDEMPIERE-2216
+		//	Counter Documents
 		MOrder counter = createCounterDoc();
 		if (counter != null)
+		{
 			info.append(" - @CounterDoc@: @Order@=").append(counter.getDocumentNo());
+		
+			setRef_Order_ID(counter.getC_Order_ID());
+			saveEx(get_TrxName());
+		}
+		
+		boolean realTimePOS = MSysConfig.getBooleanValue(MSysConfig.REAL_TIME_POS, false , getAD_Client_ID());
+		
+		//F3P: Check this variable before create the reverse for onCreditOrder,warehouseOrder or POSOrder
+		boolean bCreateReversal = STDSysConfig.isOrderCreateReverse(getAD_Client_ID(), getAD_Org_ID());
 		
 		//	Create SO Shipment - Force Shipment
 		MInOut shipment = null;
@@ -1954,20 +2354,24 @@ public class MOrder extends X_C_Order implements DocAction
 			|| MDocType.DOCSUBTYPESO_POSOrder.equals(DocSubTypeSO)			//	(W)alkIn(R)eceipt
 			|| MDocType.DOCSUBTYPESO_PrepayOrder.equals(DocSubTypeSO)) 
 		{
-			if (!DELIVERYRULE_Force.equals(getDeliveryRule()))
-			{
-				MWarehouse wh = new MWarehouse (getCtx(), getM_Warehouse_ID(), get_TrxName());
-				if (!wh.isDisallowNegativeInv())
-					setDeliveryRule(DELIVERYRULE_Force);
+			//F3P: Manage createReversal flag, but create the shipment the first time
+			if(bCreateReversal || !STDUtils.hasCompletedShipment(this))
+			{			
+				if (!DELIVERYRULE_Force.equals(getDeliveryRule()))
+				{
+					MWarehouse wh = new MWarehouse (getCtx(), getM_Warehouse_ID(), get_TrxName());
+					if (!wh.isDisallowNegativeInv())
+						setDeliveryRule(DELIVERYRULE_Force);
+				}
+				//
+				shipment = createShipment (dt, realTimePOS ? null : getDateOrdered());
+				if (shipment == null)
+					return DocAction.STATUS_Invalid;
+				info.append("@M_InOut_ID@: ").append(shipment.getDocumentNo());
+				String msg = shipment.getProcessMsg();
+				if (msg != null && msg.length() > 0)
+					info.append(" (").append(msg).append(")");
 			}
-			//
-			shipment = createShipment (dt, realTimePOS ? null : getDateOrdered());
-			if (shipment == null)
-				return DocAction.STATUS_Invalid;
-			info.append("@M_InOut_ID@: ").append(shipment.getDocumentNo());
-			String msg = shipment.getProcessMsg();
-			if (msg != null && msg.length() > 0)
-				info.append(" (").append(msg).append(")");
 		}	//	Shipment
 		
 
@@ -1976,13 +2380,17 @@ public class MOrder extends X_C_Order implements DocAction
 			|| MDocType.DOCSUBTYPESO_OnCreditOrder.equals(DocSubTypeSO) 	
 			|| MDocType.DOCSUBTYPESO_PrepayOrder.equals(DocSubTypeSO)) 
 		{
-			MInvoice invoice = createInvoice (dt, shipment, realTimePOS ? null : getDateOrdered());
-			if (invoice == null)
-				return DocAction.STATUS_Invalid;
-			info.append(" - @C_Invoice_ID@: ").append(invoice.getDocumentNo());
-			String msg = invoice.getProcessMsg();
-			if (msg != null && msg.length() > 0)
-				info.append(" (").append(msg).append(")");
+			//F3P: Manage createReversal flag, but create the shipment the first time
+			if(bCreateReversal || !STDUtils.hasCompletedInvoice(this))
+			{	
+				MInvoice invoice = createInvoice (dt, shipment, realTimePOS ? null : getDateOrdered());
+				if (invoice == null)
+					return DocAction.STATUS_Invalid;
+				info.append(" - @C_Invoice_ID@: ").append(invoice.getDocumentNo());
+				String msg = invoice.getProcessMsg();
+				if (msg != null && msg.length() > 0)
+					info.append(" (").append(msg).append(")");
+			}
 		}	//	Invoice
 		
 		String msg = createPOSPayments();
@@ -2011,6 +2419,13 @@ public class MOrder extends X_C_Order implements DocAction
 				m_processMsg = error;
 				return DocAction.STATUS_Invalid;
 			}
+		}		
+		
+		// F3P: check gathered feedback
+		
+		if(FeedbackContainer.getCurrent() != null)
+		{
+			FeedbackContainer.getCurrent().appendInfoFeedback(info);
 		}
 
 		setProcessed(true);	
@@ -2050,12 +2465,12 @@ public class MOrder extends X_C_Order implements DocAction
 		MInvoice lastInvoice = invoices[0];
 		BigDecimal grandTotal = lastInvoice.getGrandTotal();
 		
-		List<MPOSPayment> pps = new Query(this.getCtx(), MPOSPayment.Table_Name, "C_Order_ID=?", this.get_TrxName())
+		List<X_C_POSPayment> pps = new Query(this.getCtx(), X_C_POSPayment.Table_Name, "C_Order_ID=?", this.get_TrxName())
 			.setParameters(this.getC_Order_ID())
 			.setOnlyActiveRecords(true)
 			.list();
 		BigDecimal totalPOSPayments = Env.ZERO; 
-		for (MPOSPayment pp : pps) {
+		for (X_C_POSPayment pp : pps) {
 			totalPOSPayments = totalPOSPayments.add(pp.getPayAmt());
 		}
 		if (totalPOSPayments.compareTo(grandTotal) != 0)
@@ -2069,7 +2484,7 @@ public class MOrder extends X_C_Order implements DocAction
 		if (ba == null)
 			return "@NoAccountOrgCurrency@";
 		
-		MDocType[] doctypes = MDocType.getOfDocBaseType(this.getCtx(), MDocType.DOCBASETYPE_ARReceipt);
+		MDocType[] doctypes = MDocType.getOfDocBaseType(this.getCtx(), MDocType.DOCBASETYPE_ARReceipt,getAD_Org_ID());
 		if (doctypes == null || doctypes.length == 0)
 			return "No document type for AR Receipt";
 		MDocType doctype = null;
@@ -2084,7 +2499,7 @@ public class MOrder extends X_C_Order implements DocAction
 
 		// Create a payment for each non-guarantee record
 		// associate the payment id and mark the record as processed
-		for (MPOSPayment pp : pps) {
+		for (X_C_POSPayment pp : pps) {
 			X_C_POSTenderType  tt = new X_C_POSTenderType (getCtx(),pp.getC_POSTenderType_ID(), get_TrxName());
 			if (tt.isGuarantee())
 				continue;
@@ -2179,6 +2594,16 @@ public class MOrder extends X_C_Order implements DocAction
 	{
 		if (log.isLoggable(Level.INFO)) log.info("For " + dt);
 		MInOut shipment = new MInOut (this, dt.getC_DocTypeShipment_ID(), movementDate);
+		
+		String DocSubTypeSO = dt.getDocSubTypeSO();
+		
+		if((MDocType.DOCSUBTYPESO_WarehouseOrder.equals(DocSubTypeSO) 
+				&& STDSysConfig.isCopyDocNoFromWhOrderToInout(getAD_Client_ID(),getAD_Org_ID()))// F3P: align document no of inout
+			|| STDSysConfig.isCopyDocNoFromOrderToInout(getAD_Client_ID(),getAD_Org_ID())) //LS: align document no of inout also for other order subtypes
+		{
+			shipment.setDocumentNo(getDocumentNo());
+		}		
+		
 	//	shipment.setDateAcct(getDateAcct());
 		if (!shipment.save(get_TrxName()))
 		{
@@ -2194,10 +2619,6 @@ public class MOrder extends X_C_Order implements DocAction
 			MInOutLine ioLine = new MInOutLine(shipment);
 			//	Qty = Ordered - Delivered
 			BigDecimal MovementQty = oLine.getQtyOrdered().subtract(oLine.getQtyDelivered()); 
-			if (MovementQty.signum() == 0 && getProcessedOn().signum() != 0) {
-				// do not create lines with qty = 0 when the order is reactivated and completed again
-				continue;
-			}
 			//	Location
 			int M_Locator_ID = MStorageOnHand.getM_Locator_ID (oLine.getM_Warehouse_ID(), 
 					oLine.getM_Product_ID(), oLine.getM_AttributeSetInstance_ID(), 
@@ -2244,6 +2665,12 @@ public class MOrder extends X_C_Order implements DocAction
 	{
 		if (log.isLoggable(Level.INFO)) log.info(dt.toString());
 		MInvoice invoice = new MInvoice (this, dt.getC_DocTypeInvoice_ID(), invoiceDate);
+		
+		if(STDSysConfig.isCopyDocNoFromOrderToInvoice(getAD_Client_ID(),getAD_Org_ID())) // F3P: align document no of inout
+		{
+			invoice.setDocumentNo(getDocumentNo());
+		}	
+		
 		if (!invoice.save(get_TrxName()))
 		{
 			m_processMsg = "Could not create Invoice";
@@ -2354,7 +2781,7 @@ public class MOrder extends X_C_Order implements DocAction
 			return null;
 		//	Business Partner needs to be linked to Org
 		MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), get_TrxName());
-		int counterAD_Org_ID = bp.getAD_OrgBP_ID(); 
+		int counterAD_Org_ID = bp.getAD_OrgBP_ID_Int(); 
 		if (counterAD_Org_ID == 0)
 			return null;
 		
@@ -2364,7 +2791,7 @@ public class MOrder extends X_C_Order implements DocAction
 
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
-		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID());
+		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID(), counterAD_Org_ID);  // F3P: added counter org for doc type
 		if (counterDT != null)
 		{
 			if (log.isLoggable(Level.FINE)) log.fine(counterDT.toString());
@@ -2374,7 +2801,7 @@ public class MOrder extends X_C_Order implements DocAction
 		}
 		else	//	indirect
 		{
-			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID());
+			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID);  // F3P: added counter org for doc type
 			if (log.isLoggable(Level.FINE)) log.fine("Indirect C_DocTypeTarget_ID=" + C_DocTypeTarget_ID);
 			if (C_DocTypeTarget_ID <= 0)
 				return null;
@@ -2385,6 +2812,40 @@ public class MOrder extends X_C_Order implements DocAction
 		//
 		counter.setAD_Org_ID(counterAD_Org_ID);
 		counter.setM_Warehouse_ID(counterOrgInfo.getM_Warehouse_ID());
+		
+		// F3P: set as reference
+		counter.setPOReference(getDocumentNo());
+		
+		// F3P: set adresses
+		
+		MBPartnerLocation ShipBPLoc = LITMBPartnerLocation.getCounterDocShipLocation(getCtx(), counterBP, get_TrxName());
+		MBPartnerLocation BillBPLoc = LITMBPartnerLocation.getCounterDocBillLocation(getCtx(), counterBP, get_TrxName());
+		
+		if(ShipBPLoc == null)
+		{
+			StringBuilder sbErr = new StringBuilder("@C_BPartner_Location_ID@ @mandatory@: ");
+			sbErr.append(counterBP.getName())
+				.append(" (")
+				.append(counterBP.getValue())
+				.append(")");
+			
+			throw new AdempiereException("@C_BPartner_Location_ID@ @mandatory@: " + counterBP.getName() + " (" + counterBP.getValue());
+		}
+		
+		if(BillBPLoc == null)
+		{
+			StringBuilder sbErr = new StringBuilder("@C_BPartner_Location_ID@ @mandatory@: ");
+			sbErr.append(counterBP.getName())
+				.append(" (")
+				.append(counterBP.getValue())
+				.append(")");
+			
+			throw new AdempiereException("@Bill_Location_ID@ @mandatory@: " + counterBP.getName() + " (" + counterBP.getValue());
+		}
+		
+		counter.setC_BPartner_Location_ID(ShipBPLoc.getC_BPartner_Location_ID());
+		counter.setBill_Location_ID(BillBPLoc.getC_BPartner_Location_ID());
+		
 		//
 //		counter.setBPartner(counterBP); // was set on copyFrom
 		counter.setDatePromised(getDatePromised());		// default is date ordered 
@@ -2398,11 +2859,13 @@ public class MOrder extends X_C_Order implements DocAction
 		{
 			MOrderLine counterLine = counterLines[i];
 			counterLine.setOrder(counter);	//	copies header values (BP, etc.)
-			counterLine.setTax();
+			//counterLine.setPrice(); F3P Fix not recalculate price for counter document
+			counterLine.setAD_Org_ID(counterAD_Org_ID);
+			//counterLine.setTax(); F3P Fix not recalculate tax for counter document
 			counterLine.saveEx(get_TrxName());
 		}
 		if (log.isLoggable(Level.FINE)) log.fine(counter.toString());
-		
+				
 		//	Document Action
 		if (counterDT != null)
 		{
@@ -2621,13 +3084,6 @@ public class MOrder extends X_C_Order implements DocAction
 		
 		setProcessed(true);
 		setDocAction(DOCACTION_None);
-
-		// IDEMPIERE-966 thanks to Hideaki Hagiwara
-		if (!calculateTaxTotal()) {
-			m_processMsg = Msg.getMsg(p_ctx,"Error calculating tax");
-			return false;
-		}
-
 		// After Close
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_CLOSE);
 		if (m_processMsg != null)
@@ -2738,10 +3194,30 @@ public class MOrder extends X_C_Order implements DocAction
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_BEFORE_REACTIVATE);
 		if (m_processMsg != null)
 			return false;	
-		
+				
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		String DocSubTypeSO = dt.getDocSubTypeSO();
 		
+		//	Replace Prepay with POS to revert all doc
+		if (MDocType.DOCSUBTYPESO_PrepayOrder.equals (DocSubTypeSO))
+		{
+			MDocType newDT = null;
+			MDocType[] dts = MDocType.getOfClient (getCtx());
+			for (int i = 0; i < dts.length; i++)
+			{
+				MDocType type = dts[i];
+				if (MDocType.DOCSUBTYPESO_PrepayOrder.equals(type.getDocSubTypeSO()))
+				{
+					if (type.isDefault() || newDT == null)
+						newDT = type;
+				}
+			}
+			if (newDT == null)
+				return false;
+			else
+				setC_DocType_ID (newDT.getC_DocType_ID());
+		}
+
 		//	PO - just re-open
 		if (!isSOTrx()) {
 			if (log.isLoggable(Level.INFO)) log.info("Existing documents not modified - " + dt);
@@ -2750,8 +3226,22 @@ public class MOrder extends X_C_Order implements DocAction
 			|| MDocType.DOCSUBTYPESO_WarehouseOrder.equals(DocSubTypeSO)	//	(W)illCall(P)ickup	
 			|| MDocType.DOCSUBTYPESO_POSOrder.equals(DocSubTypeSO))			//	(W)alkIn(R)eceipt
 		{
-			if (!createReversals())
-				return false;
+			//F3P: Check this variable before create the reverse for onCreditOrder,warehouseOrder or POSOrder
+			if(STDSysConfig.isOrderCreateReverse(getAD_Client_ID(), getAD_Org_ID()))
+			{
+				if (!createReversals())
+					return false;
+			}
+			//F3P: check if prevent re-open when exist invoices or shipments
+			else if(STDSysConfig.isCheckRelDocOnReopenOrder(getAD_Client_ID(), getAD_Org_ID()))
+			{
+				if(getShipments().length > 0 || 
+					(MDocType.DOCSUBTYPESO_WarehouseOrder.equals(DocSubTypeSO) == false && getInvoices().length > 0))
+				{
+					m_processMsg = Msg.getMsg(getCtx(), BaseMessages.MSG_ERR_EXISTING_REL_DOCS);
+					return false;
+				}
+			}
 		}
 		else
 		{
@@ -2820,7 +3310,7 @@ public class MOrder extends X_C_Order implements DocAction
 	}	//	getApprovalAmt
 	
 	//AZ Goodwill
-	protected String deleteMatchPOCostDetail(MOrderLine line)
+	public String deleteMatchPOCostDetail(MOrderLine line)
 	{
 		// Get Account Schemas to delete MCostDetail
 		MAcctSchema[] acctschemas = MAcctSchema.getClientAcctSchema(getCtx(), getAD_Client_ID());
@@ -3002,62 +3492,67 @@ public class MOrder extends X_C_Order implements DocAction
 	{
 		return getC_DocType_ID() > 0 ? getC_DocType_ID() : getC_DocTypeTarget_ID();
 	}
-
-	/**
-	 * 
-	 * @return payment amount for order (prepayment + invoice payment)
-	 */
-	public BigDecimal getPaymentAmt()
+	
+	// F3P: operations in progress flag
+	
+	public boolean isLinesOpInProgress()
 	{
-		BigDecimal orderPaid = null;
-		String sql = "SELECT SUM(currencyconvertpayment(p.c_payment_id, o.c_currency_id, p.PayAmt+p.DiscountAmt+p.WriteOffAmt, null) "
-				+ " - paymentallocated(p.c_payment_id, o.c_currency_id) "
-				+ " * (CASE WHEN p.IsReceipt='Y' THEN 1 ELSE -1 END)) "
-				+ "FROM C_Payment p "
-				+ "INNER JOIN C_Order o ON (p.C_Order_ID=o.C_Order_ID) "
-				+ "WHERE p.C_Order_ID=? AND p.AD_Client_ID=? "
-				+ "AND p.IsActive='Y' AND p.DocStatus IN ('CO','CL') ";
-				
-		try (PreparedStatement pstmt = DB.prepareStatement(sql, get_TrxName());)
-		{			
-			pstmt.setInt(1, getC_Order_ID());
-			pstmt.setInt(2, getAD_Client_ID());
-			ResultSet rs = pstmt.executeQuery();
-			if (rs.next())
-			{
-				orderPaid = rs.getBigDecimal(1);
-			}
-		}
-		catch (SQLException e)
-		{
-			throw new DBException(e, sql);
-		}
-		
-		BigDecimal invoicePaid = null;
-		sql = "SELECT SUM(invoicepaid(i.c_invoice_id, o.c_currency_id, 1)) "
-				+ "FROM C_Invoice i "
-				+ "INNER JOIN C_Order o ON (i.C_Order_ID=o.C_Order_ID) "
-				+ "WHERE i.C_Order_ID=? AND i.AD_Client_ID=? "
-				+ "AND i.IsActive='Y' AND i.DocStatus IN ('CO','CL') ";
-				
-		try (PreparedStatement pstmt = DB.prepareStatement(sql, get_TrxName());)
-		{			
-			pstmt.setInt(1, getC_Order_ID());
-			pstmt.setInt(2, getAD_Client_ID());
-			ResultSet rs = pstmt.executeQuery();
-			if (rs.next())
-			{
-				invoicePaid = rs.getBigDecimal(1);
-			}
-		}
-		catch (SQLException e)
-		{
-			throw new DBException(e, sql);
-		}
-		
-		BigDecimal retValue = orderPaid != null ? orderPaid : BigDecimal.ZERO;
-		if (invoicePaid != null)
-			retValue = retValue.add(invoicePaid);
-		return retValue;
+		return linesOperationInProgress;
 	}
+	
+	// TODO: should add a new event ?
+
+	public void setLinesOpInProgress(boolean inProgress)
+	{
+		this.linesOperationInProgress = inProgress;
+	}	
+	
+	public void regenTaxLines()
+	{
+		// Delete Taxes
+		StringBuilder msgdb = new StringBuilder("DELETE C_OrderTax WHERE C_Order_ID=").append(getC_Order_ID());
+		DB.executeUpdateEx(msgdb.toString(), get_TrxName());
+			
+		Query qTaxes = new Query(getCtx(), MTax.Table_Name, "C_Tax_ID in (SELECT l.C_Tax_ID FROM C_OrderLine l WHERE l.C_Order_ID = ?)",get_TrxName());
+		qTaxes.setParameters(getC_Order_ID());
+		List<MTax> taxes = qTaxes.list();
+		
+		for(MTax tax:taxes)
+		{
+			// Need one invoice line for every tax to use the tax provider
+			/*
+			Query qOrderLine = new Query(getCtx(), MOrderLine.Table_Name, "C_Tax_ID = ? and C_Order_ID = ?",get_TrxName());
+			qOrderLine.setParameters(tax.getC_Tax_ID(), getC_Order_ID());
+			
+			MOrderLine line = qOrderLine.first();
+			*/
+			MTaxProvider provider = new MTaxProvider(tax.getCtx(), tax.getC_TaxProvider_ID(), tax.get_TrxName());
+			ITaxProvider calculator = Core.getTaxProvider(provider);
+			if (calculator == null)
+				throw new AdempiereException(Msg.getMsg(getCtx(), "TaxNoProvider"));
+	    
+			// calculator.recalculateTax(provider, line, true);
+			calculator.calculateOrderTaxTotal(provider, this);
+		}
+	}
+	
+	// F3P: operation in progress flag
+	
+	public boolean tryUpdateLineReservation(MOrderLine line)
+	{
+		boolean updated = false;
+		
+		if(getDocStatus().equals(DOCSTATUS_InProgress) || getDocStatus().equals(DOCSTATUS_Completed))
+		{
+			MDocType 		dt = MDocType.get(getCtx(), getC_DocTypeTarget_ID());
+			MOrderLine	mLines[] = {line};
+			updated = reserveStock(dt, mLines, false);
+		}
+		else
+			log.warning("Wrong state for reservation update");
+		
+		return updated;
+	}
+	
+
 }	//	MOrder

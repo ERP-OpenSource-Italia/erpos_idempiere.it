@@ -247,6 +247,11 @@ public class MDepreciation extends X_A_Depreciation implements ImmutablePOSuppor
 		{
 			retValue = apply_ARH_ZERO(assetwk, assetAcct, A_Current_Period, Accum_Dep);
 		}
+		// F3P: table method
+		else if(depreciationType.equalsIgnoreCase("TAB"))
+		{
+			retValue = applyF3P_Table(assetwk, assetAcct, A_Current_Period, Accum_Dep);
+		}
 		else
 		{
 			throw new AssetNotSupportedException(COLUMNNAME_DepreciationType, depreciationType);
@@ -520,12 +525,14 @@ public class MDepreciation extends X_A_Depreciation implements ImmutablePOSuppor
 		return assetExp;
 	}
 
+	/* F3P 
 	public int getFixMonthOffset() {
 		// IDEMPIERE-197 Stabilize Fixed Assets
 		// MDepreciationWorkfile is requiring this missing column
 		// TODO: Adding this method to compile correctly and future research
 		return 0;
 	}
+	*/
 	
 	@Override
 	public MDepreciation markImmutable() {
@@ -536,4 +543,211 @@ public class MDepreciation extends X_A_Depreciation implements ImmutablePOSuppor
 		return this;
 	}
 
+	/** Calculate depreciation based on a table (A_Depreciation_Table_Header and A_Depreciation_Table_Detail)
+	 * 
+	 * @param wk	Dep. Workfile
+	 * @param assetAcct	Asset Accounting
+	 * @param A_Current_Period	Current period
+	 * @param Accum_Dep	Accumulated depreciation
+	 */
+	
+	// F3P: added table method
+	
+	protected BigDecimal applyF3P_Table(MDepreciationWorkfile wk, MAssetAcct assetAcct, int A_Current_Period,BigDecimal Accum_Dep)
+	{
+		MDepreciationTableHeader			tableHeader = null;
+		BigDecimal										retValue = null;
+		String												sTableRateType = null;
+		I_A_Depreciation_Table_Detail	detail = null;
+		boolean												bReturnAsDelta = false;
+		
+		if(wk.isFiscal())		
+			tableHeader = MDepreciationTableHeader.get(getCtx(), assetAcct.getA_Depreciation_Table_Hdr_F_ID());
+		else
+			tableHeader = MDepreciationTableHeader.get(getCtx(), assetAcct.getA_Depreciation_Table_Header_ID());
+		
+		if(tableHeader == null)
+		{
+			throw new AdempiereException("@not.found@ @A_Depreciation_Table_Header_ID@");
+		}
+		
+		if(tableHeader.getA_Term().equals(X_A_Depreciation_Table_Header.A_TERM_Period))
+		{
+			detail = tableHeader.getDetailByPeriod(A_Current_Period, get_TrxName());
+			retValue = wk.getA_Asset_Cost();
+		}
+		else if(tableHeader.getA_Term().equals(X_A_Depreciation_Table_Header.A_TERM_Yearly))
+		{
+			Timestamp dateAcct = wk.getAcctDateForDepreciationPeriod(A_Current_Period);
+			int iDepreciationPeriod = (TimeUtil.getCalendar(dateAcct).get(Calendar.MONTH)) + 1;
+
+			if(iDepreciationPeriod == tableHeader.getF3P_Depreciation_Period())
+			{
+				//Calendar	calStart = TimeUtil.getCalendar(wk.getAsset(false).getAssetServiceDate()),
+				//					calEnd = TimeUtil.getCalendar(dateAcct);
+				
+				//F3P: Fix per anno fiscale diverso dall'anno solare
+				Timestamp assetServiceDate = wk.getAsset(false).getAssetServiceDate();
+				
+				if(assetServiceDate == null)
+					throw new AdempiereException("@" + MAsset.COLUMNNAME_AssetServiceDate + "@: @NotValid@");
+				
+				MPeriod periodStart = MPeriod.get(getCtx(), assetServiceDate, getAD_Org_ID(), wk.get_TrxName());
+				MPeriod periodEnd = MPeriod.get(getCtx(), dateAcct, getAD_Org_ID(), wk.get_TrxName());
+				if(periodStart == null)
+				{
+					throw new AdempiereException("Fiscal period for date " + new SimpleDateFormat("dd/MM/yyyy").format(assetServiceDate) + " does not exist.");
+				}
+				if(periodEnd == null)
+				{
+					throw new AdempiereException("Fiscal period for date " + new SimpleDateFormat("dd/MM/yyyy").format(dateAcct) + " does not exist.");
+				}
+				
+				int iPeriod = Integer.valueOf(periodEnd.getC_Year().getFiscalYear()) - Integer.valueOf(periodStart.getC_Year().getFiscalYear());
+				//
+				
+				if(iPeriod == tableHeader.getGreatestPeriod())	// Last Period, calculate value by difference.
+				{
+					bReturnAsDelta = true;
+					retValue = wk.getActualCost().subtract(Accum_Dep);
+				}
+				else
+				{
+					detail = tableHeader.getDetailByPeriod(iPeriod, get_TrxName());
+					
+					if(detail != null)
+						retValue = wk.getA_Asset_Cost();						
+				}				
+			}			
+		}
+		else
+			throw new AssetNotImplementedException(tableHeader.getA_Term());
+			
+		// If we have a value, apply rate as value or as a percentage
+		
+		if(retValue != null && detail != null) // If the detail is still valid, we use it to adjust the final value
+		{
+			sTableRateType = detail.getA_Table_Rate_Type();
+		
+			if(sTableRateType == null)
+				sTableRateType = tableHeader.getA_Table_Rate_Type();
+			
+			if(sTableRateType.equals(X_A_Depreciation_Table_Header.A_TABLE_RATE_TYPE_Amount))
+			{
+				retValue = detail.getA_Depreciation_Rate();
+			}
+			else if(sTableRateType.equals(X_A_Depreciation_Table_Header.A_TABLE_RATE_TYPE_Rate))
+			{
+				retValue = retValue.multiply(detail.getA_Depreciation_Rate()); 
+			}				
+		}
+		
+		// F3P: check depreciation value to avoid having negative last value
+		
+		if(retValue != null && retValue.signum() > 0)
+		{
+			BigDecimal bdTotalDep = Accum_Dep.add(retValue);
+			BigDecimal bdNextRemaining = wk.getActualCost().subtract(bdTotalDep);
+
+			
+			/* Dont generate less then one values for last line
+			 * 			
+			
+			if(bdNextRemaining.signum() == 0)
+			{
+				if(bReturnAsDelta == false)	 // F3P: calculated as delta, remaining will be zero
+				{
+					retValue = Env.ZERO;
+				}
+			}
+			else 
+*/			
+			if(bdNextRemaining.signum() < 0 || bdNextRemaining.compareTo(BigDecimal.ONE) <= 0)	// Dont generate less then one values for last line
+			{
+				retValue = retValue.add(bdNextRemaining);
+			}
+		}
+		
+		if(retValue != null && retValue.signum() < 0) // F3P: should not happen... but we NEED to avoid negative delta values
+		{
+			retValue = Env.ZERO;
+		}
+		
+		return retValue;
+	}
+	
+	// F3P: added to manage obtaining descrition for new expense. Description will be parsed
+	
+	public static String	TAB_ASSETDEPRDESC = "AssetDepreciationDescription_TAB";
+	
+	public static String getDefaultDeprExpDescription()
+	{
+		return "@AssetDepreciationAmt@";
+	}
+	
+	public String getDeprExpDescription(MDepreciationWorkfile assetwk,int PeriodNo,Timestamp dateAcct)
+	{
+		String sDescription = getDefaultDeprExpDescription();
+		String depreciationType = getDepreciationType();
+		
+		// F3P: table method
+		if(depreciationType.equalsIgnoreCase("TAB"))
+		{
+			sDescription = getDeprExpDescriptionF3P_Table(assetwk,PeriodNo,dateAcct);
+		}
+		
+		return sDescription;
+	}
+	
+	private String getDeprExpDescriptionF3P_Table(MDepreciationWorkfile assetwk,int PeriodNo,Timestamp dateAcct)
+	{
+		String												sDescription = getDefaultDeprExpDescription();
+		
+		MDepreciationTableHeader			tableHeader = null;
+		I_A_Depreciation_Table_Detail	detail = null;
+		MAssetAcct										assetAcct = assetwk.getA_AssetAcct(dateAcct, assetwk.get_TrxName());
+		
+		if(assetwk.isFiscal())		
+			tableHeader = MDepreciationTableHeader.get(getCtx(), assetAcct.getA_Depreciation_Table_Hdr_F_ID());
+		else
+			tableHeader = MDepreciationTableHeader.get(getCtx(), assetAcct.getA_Depreciation_Table_Header_ID());
+		
+		if(tableHeader == null)
+		{
+			throw new AdempiereException("@not.found@ @A_Depreciation_Table_Header_ID@");
+		}
+		
+		if(tableHeader.getA_Term().equals(X_A_Depreciation_Table_Header.A_TERM_Period))
+		{
+			detail = tableHeader.getDetailByPeriod(PeriodNo,assetwk.get_TrxName());
+			
+			if(detail != null)
+			{
+				sDescription = Msg.getMsg(assetwk.getCtx(), TAB_ASSETDEPRDESC, new Object[]{tableHeader.getDescription(),PeriodNo,dateAcct});
+			}
+		}
+		else if(tableHeader.getA_Term().equals(X_A_Depreciation_Table_Header.A_TERM_Yearly))
+		{
+			Timestamp dateAcctWk = assetwk.getAcctDateForDepreciationPeriod(PeriodNo);
+			int				iDepreciationPeriod = (TimeUtil.getCalendar(dateAcctWk).get(Calendar.MONTH)) + 1;
+
+			if(iDepreciationPeriod == tableHeader.getF3P_Depreciation_Period())
+			{
+				//F3P: Fix per anno fiscale diverso dall'anno solare
+				MPeriod periodStart = MPeriod.get(getCtx(), assetwk.getAsset(true).getAssetServiceDate(), getAD_Org_ID());
+				MPeriod periodEnd = MPeriod.get(getCtx(), dateAcct, getAD_Org_ID());
+				if(periodStart == null)
+					throw new AdempiereException("Fiscal period for date " + new SimpleDateFormat("dd/MM/yyyy").format(assetwk.getAsset(false).getAssetServiceDate()) + " does not exist.");
+				if(periodEnd == null)
+					throw new AdempiereException("Fiscal period for date " + new SimpleDateFormat("dd/MM/yyyy").format(dateAcct) + " does not exist.");
+				
+				int iPeriod = Integer.valueOf(periodEnd.getC_Year().getFiscalYear()) - Integer.valueOf(periodStart.getC_Year().getFiscalYear());
+				iPeriod++; // starts from 1
+			
+				sDescription = Msg.getMsg(assetwk.getCtx(), TAB_ASSETDEPRDESC, new Object[]{tableHeader.getDescription(),iPeriod,dateAcct});
+			}
+		}
+		
+		return sDescription;
+	}
 }

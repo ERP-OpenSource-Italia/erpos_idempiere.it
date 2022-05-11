@@ -41,11 +41,14 @@ import org.compiere.model.MInvoiceLine;
 import org.compiere.model.MLandedCostAllocation;
 import org.compiere.model.MOrderLandedCostAllocation;
 import org.compiere.model.MTax;
+import org.compiere.model.PO;
 import org.compiere.model.ProductCost;
 import org.compiere.model.X_M_Cost;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Trx;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *  Post Invoice Documents.
@@ -85,7 +88,7 @@ public class Doc_Invoice extends Doc
 	 *  Load Specific Document Details
 	 *  @return error message or null
 	 */
-	protected String loadDocumentDetails ()
+	public String loadDocumentDetails ()
 	{
 		MInvoice invoice = (MInvoice)getPO();
 		setDateDoc(invoice.getDateInvoiced());
@@ -166,7 +169,7 @@ public class Doc_Invoice extends Doc
 			MInvoiceLine line = lines[i];
 			if (line.isDescription())
 				continue;
-			DocLine docLine = new DocLine(line, this);
+			DocLine docLine = createDocLine(line, this);
 			//	Qty
 			BigDecimal Qty = line.getQtyInvoiced();
 			boolean cm = getDocumentType().equals(DOCTYPE_ARCredit)
@@ -182,8 +185,29 @@ public class Doc_Invoice extends Doc
 				MTax tax = MTax.get(getCtx(), C_Tax_ID);
 				if (!tax.isZeroTax())
 				{
-					BigDecimal LineNetAmtTax = tax.calculateTax(LineNetAmt, true, getStdPrecision());
+					//LS added compatibility with variable used onBeforeSave of MInvLine here in patches
+					//if variable = Y, TaxAmt could be != from tax.calculateTax, so must not be recaltulated
+					BigDecimal LineNetAmtTax = BigDecimal.ZERO;
+					boolean isSOTrx = invoice.isSOTrx();
+					
+					boolean unforcedVat = STDSysConfig
+							.isIsSoVatInvoiceUnforced(this.getAD_Client_ID(),
+									this.getAD_Org_ID());
+					// like onBeforeSave on MInvoiceLine, recalculate TaxAmt
+					// only if == 0 or Customer + variable == false
+					if (line.getTaxAmt().compareTo(Env.ZERO) == 0  || 
+							(isSOTrx && unforcedVat == false))
+					{
+						LineNetAmtTax = tax.calculateTax(LineNetAmt, true, getStdPrecision());
+					} 
+					else 
+					{
+						LineNetAmtTax = line.getTaxAmt();
+					}
+					//LS end
+					
 					if (log.isLoggable(Level.FINE)) log.fine("LineNetAmt=" + LineNetAmt + " - Tax=" + LineNetAmtTax);
+					
 					LineNetAmt = LineNetAmt.subtract(LineNetAmtTax);
 
 					if (tax.isSummary()) {
@@ -221,7 +245,11 @@ public class Doc_Invoice extends Doc
 						}
 					}
 					
-					BigDecimal PriceListTax = tax.calculateTax(PriceList, true, getStdPrecision());
+					//FIX if pricelist has precision > currency.precision, PriceListTax is rounded and new PriceList result wrong
+					//and the difference is put as discount [see docLine.setAmount()] which is wrong (
+					//Now pricelist calculated is coherent with the normal situation of NO tax incl.
+//					BigDecimal PriceListTax = tax.calculateTax(PriceList, true, getStdPrecision());
+					BigDecimal PriceListTax = tax.calculateTax(PriceList, true, invoice.getM_PriceList().getPricePrecision());
 					PriceList = PriceList.subtract(PriceListTax);
 				}
 			}	//	correct included Tax
@@ -383,7 +411,7 @@ public class Doc_Invoice extends Doc
 				amt = m_taxes[i].getAmount();
 				if (amt != null && amt.signum() != 0)
 				{
-					FactLine tl = fact.createLine(null, m_taxes[i].getAccount(DocTax.ACCTTYPE_TaxDue, as),
+					FactLine tl = fact.createLine(null, m_taxes[i].getAccount(DocTax.ACCTTYPE_TaxDue, as, getTrxName()),
 						getC_Currency_ID(), null, amt);
 					if (tl != null)
 						tl.setC_Tax_ID(m_taxes[i].getC_Tax_ID());
@@ -418,9 +446,7 @@ public class Doc_Invoice extends Doc
 
 			//  Receivables     DR
 			int receivables_ID = getValidCombination_ID(Doc.ACCTTYPE_C_Receivable, as);
-			// Deprecated IDEMPIERE-362
-			// int receivablesServices_ID = getValidCombination_ID (Doc.ACCTTYPE_C_Receivable_Services, as);
-			int receivablesServices_ID = receivables_ID;
+			int receivablesServices_ID = getValidCombination_ID (Doc.ACCTTYPE_C_Receivable_Services, as);
 			if (m_allLinesItem || !as.isPostServices()
 				|| receivables_ID == receivablesServices_ID)
 			{
@@ -433,10 +459,10 @@ public class Doc_Invoice extends Doc
 				grossAmt = Env.ZERO;
 			}
 			if (grossAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), receivables_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), receivables_ID),
 					getC_Currency_ID(), grossAmt, null);
 			if (serviceAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), receivablesServices_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), receivablesServices_ID),
 					getC_Currency_ID(), serviceAmt, null);
 
 			//  Set Locations
@@ -467,7 +493,7 @@ public class Doc_Invoice extends Doc
 				amt = m_taxes[i].getAmount();
 				if (amt != null && amt.signum() != 0)
 				{
-					FactLine tl = fact.createLine(null, m_taxes[i].getAccount(DocTax.ACCTTYPE_TaxDue, as),
+					FactLine tl = fact.createLine(null, m_taxes[i].getAccount(DocTax.ACCTTYPE_TaxDue, as, getTrxName()),
 						getC_Currency_ID(), amt, null);
 					if (tl != null)
 						tl.setC_Tax_ID(m_taxes[i].getC_Tax_ID());
@@ -515,10 +541,10 @@ public class Doc_Invoice extends Doc
 				grossAmt = Env.ZERO;
 			}
 			if (grossAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), receivables_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), receivables_ID),
 					getC_Currency_ID(), null, grossAmt);
 			if (serviceAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), receivablesServices_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), receivablesServices_ID),
 					getC_Currency_ID(), null, serviceAmt);
 
 			//  Set Locations
@@ -545,7 +571,7 @@ public class Doc_Invoice extends Doc
 			//  TaxCredit       DR
 			for (int i = 0; i < m_taxes.length; i++)
 			{
-				FactLine tl = fact.createLine(null, m_taxes[i].getAccount(m_taxes[i].getAPTaxType(), as),
+				FactLine tl = fact.createLine(null, m_taxes[i].getAccount(m_taxes[i].getAPTaxType(), as, getTrxName()),
 					getC_Currency_ID(), m_taxes[i].getAmount(), null);
 				if (tl != null)
 					tl.setC_Tax_ID(m_taxes[i].getC_Tax_ID());
@@ -608,9 +634,7 @@ public class Doc_Invoice extends Doc
 
 			//  Liability               CR
 			int payables_ID = getValidCombination_ID (Doc.ACCTTYPE_V_Liability, as);
-			// Deprecated IDEMPIERE-362
-			// int payablesServices_ID = getValidCombination_ID (Doc.ACCTTYPE_V_Liability_Services, as);
-			int payablesServices_ID = payables_ID;
+			int payablesServices_ID = getValidCombination_ID (Doc.ACCTTYPE_V_Liability_Services, as);
 			if (m_allLinesItem || !as.isPostServices()
 				|| payables_ID == payablesServices_ID)
 			{
@@ -623,10 +647,10 @@ public class Doc_Invoice extends Doc
 				grossAmt = Env.ZERO;
 			}
 			if (grossAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), payables_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), payables_ID),
 					getC_Currency_ID(), null, grossAmt);
 			if (serviceAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), payablesServices_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), payablesServices_ID),
 					getC_Currency_ID(), null, serviceAmt);
 
 			//  Set Locations
@@ -654,7 +678,7 @@ public class Doc_Invoice extends Doc
 			//  TaxCredit               CR
 			for (int i = 0; i < m_taxes.length; i++)
 			{
-				FactLine tl = fact.createLine (null, m_taxes[i].getAccount(m_taxes[i].getAPTaxType(), as),
+				FactLine tl = fact.createLine (null, m_taxes[i].getAccount(m_taxes[i].getAPTaxType(), as, getTrxName()),
 					getC_Currency_ID(), null, m_taxes[i].getAmount());
 				if (tl != null)
 					tl.setC_Tax_ID(m_taxes[i].getC_Tax_ID());
@@ -730,10 +754,10 @@ public class Doc_Invoice extends Doc
 				grossAmt = Env.ZERO;
 			}
 			if (grossAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), payables_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), payables_ID),
 					getC_Currency_ID(), grossAmt, null);
 			if (serviceAmt.signum() != 0)
-				fact.createLine(null, MAccount.get(getCtx(), payablesServices_ID),
+				fact.createLine(null, MAccount.get(getCtx(), getTrxName(), payablesServices_ID),
 					getC_Currency_ID(), serviceAmt, null);
 
 			//  Set Locations
@@ -833,10 +857,10 @@ public class Doc_Invoice extends Doc
 			}
 			FactLine tl = null;
 			if (payables)
-				tl = fact.createLine (null, m_taxes[i].getAccount(m_taxes[i].getAPTaxType(), as),
+				tl = fact.createLine (null, m_taxes[i].getAccount(m_taxes[i].getAPTaxType(), as, getTrxName()),
 					getC_Currency_ID(), amt, amt2);
 			else
-				tl = fact.createLine (null, m_taxes[i].getAccount(DocTax.ACCTTYPE_TaxDue, as),
+				tl = fact.createLine (null, m_taxes[i].getAccount(DocTax.ACCTTYPE_TaxDue, as, getTrxName()),
 					getC_Currency_ID(), amt2, amt);
 			if (tl != null)
 				tl.setC_Tax_ID(m_taxes[i].getC_Tax_ID());
@@ -1144,7 +1168,7 @@ public class Doc_Invoice extends Doc
 			"UPDATE M_Product_PO po ")
 			 .append("SET PriceLastInv = ")
 			//	select
-			.append("(SELECT currencyConvertInvoice(i.C_Invoice_ID,po.C_Currency_ID,il.PriceActual,i.DateInvoiced) ")
+			.append("(SELECT currencyConvert(il.PriceActual,i.C_Currency_ID,po.C_Currency_ID,i.DateInvoiced,i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) ")
 			.append("FROM C_Invoice i, C_InvoiceLine il ")
 			.append("WHERE i.C_Invoice_ID=il.C_Invoice_ID")
 			.append(" AND po.M_Product_ID=il.M_Product_ID AND po.C_BPartner_ID=i.C_BPartner_ID");
@@ -1171,7 +1195,18 @@ public class Doc_Invoice extends Doc
 		int no = DB.executeUpdate(sql.toString(), getTrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Updated=" + no);
 	}	//	updateProductPO
-
+	
+	/**Create DocLine
+	 * Added method to be able to customize the standard DocLine methods
+	 * without changing the rest of the code of the Doc_Invoice
+	 * @param po
+	 * @param doc
+	 * @return new DocLine(po,doc)
+	 */
+	protected DocLine createDocLine(PO po, Doc doc){
+		return new DocLine(po,doc);
+	}
+	
 	@Override
 	public BigDecimal getCurrencyRate() {
 		if (getC_Currency_ID() == getAcctSchema().getC_Currency_ID())

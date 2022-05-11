@@ -125,14 +125,17 @@ public class PaySelectionCreateFrom extends SvrProcess
 
 		StringBuilder sql = new StringBuilder("SELECT C_Invoice_ID,") // 1
 			//	Open
-				.append(" currencyConvertInvoice(i.C_Invoice_ID")
-				.append(",?,invoiceOpen(i.C_Invoice_ID, i.C_InvoicePaySchedule_ID), ?) AS PayAmt,")	//	##1/2 Currency_To,PayDate
+			.append(" currencyConvert(invoiceOpen(i.C_Invoice_ID, i.C_InvoicePaySchedule_ID)")
+				.append(",i.C_Currency_ID, ?,?, i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS PayAmt,")	//	2 ##p1/p2 Currency_To,PayDate
 			//	Discount
-				.append(" currencyConvertInvoice(i.C_Invoice_ID")	 
-				.append(",?,invoiceDiscount(i.C_Invoice_ID,?,i.C_InvoicePaySchedule_ID),?) AS DiscountAmt,")	//	##3/4/5 Currency_To,PayDate,PayDate
+			.append(" currencyConvert(invoiceDiscount(i.C_Invoice_ID,?,i.C_InvoicePaySchedule_ID)")	//	##p3 PayDate
+				.append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS DiscountAmt,")	//	3 ##p4/p5 Currency_To,PayDate
 			.append(" PaymentRule, IsSOTrx, ") // 4..5
 			.append(" currencyConvert(invoiceWriteOff(i.C_Invoice_ID) ")
-			    .append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS WriteOffAmt ")	//	6 ##p6/p7 Currency_To,PayDate
+			    .append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID,i.AD_Client_ID,i.AD_Org_ID) AS WriteOffAmt, ")	//	6 ##p6/p7 Currency_To,PayDate
+			.append(" currencyConvert(invoiceOpenNetAmt(i.C_Invoice_ID,i.C_InvoicePaySchedule_ID)-") // F3P: aggiunte clausole per aperto - ritenuta
+					.append("invoiceDiscount(i.C_Invoice_ID,?,i.C_InvoicePaySchedule_ID)") // F3P: p8 PayDate
+					.append(",i.C_Currency_ID, ?,?,i.C_ConversionType_ID, i.AD_Client_ID,i.AD_Org_ID) AS LITPayAmt ") // F3P: p8/p9 Currency_To,PayDate
 			.append("FROM C_Invoice_v i ");
 		
 		StringBuilder sqlWhere = new StringBuilder("WHERE ");
@@ -146,8 +149,21 @@ public class PaySelectionCreateFrom extends SvrProcess
 			.append(" AND NOT EXISTS (SELECT * FROM C_PaySelectionLine psl")
 						.append(" INNER JOIN C_PaySelectionCheck psc ON (psl.C_PaySelectionCheck_ID=psc.C_PaySelectionCheck_ID)")
 						.append(" LEFT OUTER JOIN C_Payment pmt ON (pmt.C_Payment_ID=psc.C_Payment_ID)")
+/**LS 
+ * 
+ * ATTENZIONE:
+ * Utilizza PNG_Journal e PNG_JournalLine per tenere conto dei pagamanti in più rate
+ * 
+ * Non utilizzare in installazioni in cui non è presente erpos
+ * 
+ * Modifica presente anche in PaySelect.java
+ */
+						.append(" LEFT OUTER JOIN PNG_JournalLine jl ON (jl.PNG_JournalLine_ID=psc.PNG_JournalLine_ID)")
+						.append(" LEFT OUTER JOIN PNG_Journal j ON (j.PNG_Journal_ID=jl.PNG_Journal_ID)")
 						.append(" WHERE i.C_Invoice_ID=psl.C_Invoice_ID AND psl.IsActive='Y'")
-						.append(" AND (pmt.DocStatus IS NULL OR pmt.DocStatus NOT IN ('VO','RE')) )")
+						.append(" AND (psc.PNG_JournalLine_ID is null and (pmt.DocStatus IS NULL OR pmt.DocStatus NOT IN ('VO','RE')))")
+						.append(" AND (psc.C_Payment_ID is null and (j.DocStatus IS NULL OR j.DocStatus NOT IN ('VO','RE'))) )")
+						.append(" AND invoiceOpenNetAmt(i.C_Invoice_ID,i.C_InvoicePaySchedule_ID) <> 0") 
 			//	Don't generate again invoices already on this payment selection 
 			.append(" AND i.C_Invoice_ID NOT IN (SELECT psl.C_Invoice_ID FROM C_PaySelectionLine psl WHERE psl.C_PaySelection_ID=?)"); //	##p9
 		//	Disputed
@@ -223,18 +239,31 @@ public class PaySelectionCreateFrom extends SvrProcess
 		sql.append(sqlWhere.toString());
 		//
 		int lines = 0;
-		int C_CurrencyTo_ID = psel.getC_Currency_ID();		
-		try (PreparedStatement pstmt = DB.prepareStatement (sql.toString(), get_TrxName());)
-		{			
+		int C_CurrencyTo_ID = psel.getC_Currency_ID();
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		try
+		{
+			pstmt = DB.prepareStatement (sql.toString(), get_TrxName());
 			int index = 1;
 			pstmt.setInt (index++, C_CurrencyTo_ID);
 			pstmt.setTimestamp(index++, psel.getPayDate());
 			//
-			pstmt.setInt (index++, C_CurrencyTo_ID);
-			pstmt.setTimestamp(index++, psel.getPayDate());
 			pstmt.setTimestamp(index++, psel.getPayDate());
 			pstmt.setInt (index++, C_CurrencyTo_ID);
 			pstmt.setTimestamp(index++, psel.getPayDate());
+			pstmt.setInt (index++, C_CurrencyTo_ID);
+			pstmt.setTimestamp(index++, psel.getPayDate());
+			
+			// F3P: aggiunti 3 nuovi parametri
+			
+			pstmt.setTimestamp (index++, psel.getPayDate());
+			pstmt.setInt (index++, C_CurrencyTo_ID);
+			pstmt.setTimestamp(index++, psel.getPayDate());
+			
+			// end
+
+			
 			//
 			pstmt.setInt(index++, psel.getAD_Client_ID());
 			pstmt.setInt(index++, p_C_PaySelection_ID);
@@ -264,7 +293,7 @@ public class PaySelectionCreateFrom extends SvrProcess
 					pstmt.setInt (index++, p_C_BP_Group_ID);
 			}
 			//
-			ResultSet rs = pstmt.executeQuery ();
+			rs = pstmt.executeQuery ();
 			while (rs.next ())
 			{
 				int C_Invoice_ID = rs.getInt(1);
@@ -282,8 +311,21 @@ public class PaySelectionCreateFrom extends SvrProcess
 				//
 				lines++;
 				MPaySelectionLine pselLine = new MPaySelectionLine (psel, lines*10, PaymentRule);
+				
+				BigDecimal litPayAmt = rs.getBigDecimal("LITPayAmt"); // F3P: ultima colonna, non altera gli altri andici. Payamt comprensivo di withholding
+				
+				// F3P: adeguiamo il writeoff considerando anche il valore con withholding				
+				// pselLine.setInvoice (C_Invoice_ID, isSOTrx,
+				//	PayAmt, PayAmt.subtract(DiscountAmt).subtract(WriteOffAmt), DiscountAmt, WriteOffAmt);
+				
+				if(litPayAmt.compareTo(PayAmt) != 0)
+					WriteOffAmt = PayAmt.subtract(litPayAmt);
+					
 				pselLine.setInvoice (C_Invoice_ID, isSOTrx,
-					PayAmt, PayAmt.subtract(DiscountAmt).subtract(WriteOffAmt), DiscountAmt, WriteOffAmt);
+						PayAmt, litPayAmt, DiscountAmt, WriteOffAmt);
+					
+				// F3P end				
+				
 				if (!pselLine.save())
 				{
 					throw new IllegalStateException ("Cannot save MPaySelectionLine");
@@ -297,6 +339,12 @@ public class PaySelectionCreateFrom extends SvrProcess
 		catch (Exception e)
 		{
 			throw new AdempiereException(e);
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null;
+			pstmt = null;
 		}
 		StringBuilder msgreturn = new StringBuilder("@C_PaySelectionLine_ID@  - #").append(lines);
 		return msgreturn.toString();

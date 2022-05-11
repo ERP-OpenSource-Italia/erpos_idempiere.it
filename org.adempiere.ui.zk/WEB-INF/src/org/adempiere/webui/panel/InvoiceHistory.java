@@ -72,11 +72,15 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 	 *	@param M_Product_ID product
 	 *	@param M_Warehouse_ID warehouse
 	 *	@param M_AttributeSetInstance_ID ASI
+	 *  @param showPrices show prices ?
 	 */
 	public InvoiceHistory (Window parent, 
-		int C_BPartner_ID, int M_Product_ID, int M_Warehouse_ID, int M_AttributeSetInstance_ID)
+		int C_BPartner_ID, int M_Product_ID, int M_Warehouse_ID, int M_AttributeSetInstance_ID, boolean showPrices)
 	{
 		super();
+		
+		this.m_showPriceHistory = showPrices;
+		
 		setTitle(Msg.getMsg(Env.getCtx(), "PriceHistory"));
 		if (log.isLoggable(Level.CONFIG)) log.config("C_BPartner_ID=" + C_BPartner_ID
 			+ ", M_Product_ID=" + M_Product_ID
@@ -101,6 +105,20 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 		if (parent instanceof InfoProductWindow)
 			showDetailATP = ((InfoProductWindow)parent).isShowDetailATP();
 	}	//	InvoiceHistory
+	
+	/** Compatibilty constructor
+	 * 
+	 *	@param C_BPartner_ID partner
+	 *	@param M_Product_ID product
+	 *	@param M_Warehouse_ID warehouse
+	 *	@param M_AttributeSetInstance_ID ASI
+	 * 
+	 */
+	public InvoiceHistory (Window parent, 
+			int C_BPartner_ID, int M_Product_ID, int M_Warehouse_ID, int M_AttributeSetInstance_ID)
+	{
+		this(parent,C_BPartner_ID,M_Product_ID,M_Warehouse_ID,M_AttributeSetInstance_ID, true);
+	}
 
 	private int		m_C_BPartner_ID;
 	private int		m_M_Product_ID;
@@ -108,7 +126,7 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 	private int		m_M_AttributeSetInstance_ID;
 	
 	/**	Logger			*/
-	private static final CLogger log = CLogger.getCLogger(InvoiceHistory.class);
+	private static CLogger log = CLogger.getCLogger(InvoiceHistory.class);
 
 	private Label 			label = new Label();
 	//
@@ -135,6 +153,9 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 	private WListbox 		m_tableAtp = ListboxFactory.newDataTable();
 	private ListModelTable 	m_modelAtp = null;
 	
+	// F3P: added to manage price visibility based on price list version visibility
+	private boolean m_showPriceHistory = true;
+	
 	/**
 	 *	Ststic Init
 	 */
@@ -148,7 +169,9 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 		Tabpanels tabpanels = new Tabpanels();
 		tabbox.appendChild(tabpanels);
 		
-		tabs.appendChild(new Tab(Msg.getMsg(Env.getCtx(), "PriceHistory")));
+		if(m_showPriceHistory) // F3P: conditionally add prices
+			tabs.appendChild(new Tab(Msg.getMsg(Env.getCtx(), "PriceHistory")));
+		
 		tabs.appendChild(new Tab(Msg.translate(Env.getCtx(), "QtyReserved")));
 		tabs.appendChild(new Tab(Msg.translate(Env.getCtx(), "QtyOrdered")));
 		tabs.appendChild(new Tab(Msg.getMsg(Env.getCtx(), "QtyUnconfirmed")));
@@ -156,9 +179,12 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 		if (m_M_Product_ID != 0)
 			tabs.appendChild(new Tab(Msg.getMsg(Env.getCtx(), "ATP")));
 		
-		ZKUpdateUtil.setHeight(pricePane, "100%");
-		pricePane.appendChild(m_tablePrice);
-		tabpanels.appendChild(pricePane);
+		if(m_showPriceHistory) // F3P: conditionally add prices
+		{
+			ZKUpdateUtil.setHeight(pricePane, "100%");
+			pricePane.appendChild(m_tablePrice);
+			tabpanels.appendChild(pricePane);
+		}
 		
 		ZKUpdateUtil.setHeight(reservedPane, "100%");
 		reservedPane.appendChild(m_tableReserved);
@@ -228,6 +254,11 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 	 */
 	private boolean dynInit()
 	{
+		if(m_showPriceHistory == false) // F3P: added to manage price visibility based on price list version visibility
+		{
+			initReservedOrderedTab(true);
+			return true;
+		}
 		//	Header
 		Vector<String> columnNames = new Vector<String>();
 		columnNames.add(Msg.translate(Env.getCtx(), m_C_BPartner_ID == 0 ? "C_BPartner_ID" : "M_Product_ID"));
@@ -335,24 +366,31 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 				Vector<Object> line = new Vector<Object>(6);
 				//	0-Name, 1-PriceActual, 2-QtyInvoiced, 3-Discount, 4-DocumentNo, 5-DateInvoiced
 				line.add(rs.getString(1));      //  Name
-				line.add(rs.getBigDecimal(2));  //	Price
+				
+				if(m_showPriceHistory) // F3P: conditionally add price
+					line.add(rs.getBigDecimal(2));  //	Price
+				
 				line.add(rs.getString(3));  //	Currency
 				line.add(Double.valueOf(rs.getDouble(5)));      //  Qty
-				BigDecimal discountBD = rs.getBigDecimal(9);
-				if (discountBD == null) {
-					double priceList = rs.getDouble(4);
-					double priceActual = rs.getDouble(2);
-					if (priceList != 0) {
-						discountBD = BigDecimal.valueOf((priceList - priceActual)/priceList * 100);
-						// Rounding:
-						int precision = MPriceList.getStandardPrecision(Env.getCtx(), rs.getInt(10));
-						if (discountBD.scale() > precision)
-							discountBD = discountBD.setScale(precision, RoundingMode.HALF_UP);
+				
+				if(m_showPriceHistory) // F3P: conditionally add price
+				{
+					BigDecimal discountBD = rs.getBigDecimal(9);
+					if (discountBD == null) {
+						double priceList = rs.getDouble(4);
+						double priceActual = rs.getDouble(2);
+						if (priceList != 0) {
+							discountBD = BigDecimal.valueOf((priceList - priceActual)/priceList * 100);
+							// Rounding:
+							int precision = MPriceList.getStandardPrecision(Env.getCtx(), rs.getInt(10));
+							if (discountBD.scale() > precision)
+								discountBD = discountBD.setScale(precision, RoundingMode.HALF_UP);
+						}
+						else
+							discountBD = Env.ZERO;
 					}
-					else
-						discountBD = Env.ZERO;
+					line.add(discountBD);  //  Discount
 				}
-				line.add(discountBD);  //  Discount
 				line.add(rs.getString(7));      //  DocNo
 				line.add(rs.getTimestamp(6));   //  Date
 				line.add(rs.getString(8));		//	Org/Warehouse
@@ -391,13 +429,18 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 			dispose();
 		else if(component instanceof Tab)
 		{
-			if (tabbox.getSelectedIndex() == 1)
+			int tabOffset = 0; // // F3P: introduced to keep proper indexes even if prices are hidden
+			
+			if(m_showPriceHistory == false)
+				tabOffset = 1;
+			
+			if (tabbox.getSelectedIndex() == 1 - tabOffset)
 				initReservedOrderedTab(true);
-			else if (tabbox.getSelectedIndex() == 2)
+			else if (tabbox.getSelectedIndex() == 2 - tabOffset)
 				initReservedOrderedTab(false);
-			else if (tabbox.getSelectedIndex() == 3)
+			else if (tabbox.getSelectedIndex() == 3 - tabOffset)
 				initUnconfirmedTab();
-			else if (tabbox.getSelectedIndex() == 4)
+			else if (tabbox.getSelectedIndex() == 4 - tabOffset)
 				initAtpTab();
 		}
 	}
@@ -413,14 +456,20 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 			return;
 		if (!reserved && m_modelOrdered != null)
 			return;
-			
+		
 		//	Header
 		Vector<String> columnNames = new Vector<String>();
 		columnNames.add(Msg.translate(Env.getCtx(), m_C_BPartner_ID == 0 ? "C_BPartner_ID" : "M_Product_ID"));
-		columnNames.add(Msg.translate(Env.getCtx(), "PriceActual"));
+		
+		if(m_showPriceHistory) // f3P: conditionally remove prices columns 
+			columnNames.add(Msg.translate(Env.getCtx(), "PriceActual"));
+		
 		columnNames.add(Msg.translate(Env.getCtx(), "C_Currency_ID"));
 		columnNames.add(Msg.translate(Env.getCtx(), reserved ? "QtyReserved" : "QtyOrdered"));
-		columnNames.add(Msg.translate(Env.getCtx(), "Discount"));
+		
+		if(m_showPriceHistory)
+			columnNames.add(Msg.translate(Env.getCtx(), "Discount"));
+		
 		columnNames.add(Msg.translate(Env.getCtx(), "DocumentNo"));
 		columnNames.add(Msg.translate(Env.getCtx(), "DateOrdered"));
 		columnNames.add(Msg.translate(Env.getCtx(), "M_Warehouse_ID"));
@@ -469,31 +518,43 @@ public class InvoiceHistory extends Window implements EventListener<Event>
 		{
 			m_modelReserved = new ListModelTable(data);
 			m_tableReserved.setData(m_modelReserved, columnNames);
+			
+			int col=0; // F3P: replaced fixed col with incremental one
 			//
-			m_tableReserved.setColumnClass(0, String.class, true);      //  Product/Partner
-			m_tableReserved.setColumnClass(1, BigDecimal.class, true);  //  Price
-			m_tableReserved.setColumnClass(2, String.class, true);  	 //  Currency
-			m_tableReserved.setColumnClass(3, Double.class, true);      //  Quantity
-			m_tableReserved.setColumnClass(4, BigDecimal.class, true);  //  Discount (%)
-			m_tableReserved.setColumnClass(5, String.class, true);      //  DocNo
-			m_tableReserved.setColumnClass(6, Timestamp.class, true);   //  Date
-			m_tableReserved.setColumnClass(7, String.class, true);   	  //  Warehouse
+			m_tableReserved.setColumnClass(col++, String.class, true);      //  Product/Partner
+			
+			if(m_showPriceHistory) // f3P: conditionally remove prices columns
+				m_tableReserved.setColumnClass(col++, BigDecimal.class, true);  //  Price
+			m_tableReserved.setColumnClass(col++, String.class, true);  	 //  Currency
+			m_tableReserved.setColumnClass(col++, Double.class, true);      //  Quantity
+			if(m_showPriceHistory)
+				m_tableReserved.setColumnClass(col++, BigDecimal.class, true);  //  Discount (%)
+			m_tableReserved.setColumnClass(col++, String.class, true);      //  DocNo
+			m_tableReserved.setColumnClass(col++, Timestamp.class, true);   //  Date
+			m_tableReserved.setColumnClass(col++, String.class, true);   	  //  Warehouse
 			//
 			m_tableReserved.autoSize();
 		}
 		else
 		{
+			int col=0; // F3P: replaced fixed col with incremental one
+			
 			m_modelOrdered = new ListModelTable(data);
 			m_tableOrdered.setData(m_modelOrdered, columnNames);
 			//
-			m_tableOrdered.setColumnClass(0, String.class, true);      //  Product/Partner
-			m_tableOrdered.setColumnClass(1, BigDecimal.class, true);  //  Price
-			m_tableOrdered.setColumnClass(2, String.class, true);  	 //  Currency
-			m_tableOrdered.setColumnClass(3, Double.class, true);      //  Quantity
-			m_tableOrdered.setColumnClass(4, BigDecimal.class, true);  //  Discount (%)
-			m_tableOrdered.setColumnClass(5, String.class, true);      //  DocNo
-			m_tableOrdered.setColumnClass(6, Timestamp.class, true);   //  Date
-			m_tableOrdered.setColumnClass(7, String.class, true);   	  //  Warehouse
+			m_tableOrdered.setColumnClass(col++, String.class, true);      //  Product/Partner
+			
+			if(m_showPriceHistory) // f3P: conditionally remove prices columns
+				m_tableOrdered.setColumnClass(col++, BigDecimal.class, true);  //  Price
+			m_tableOrdered.setColumnClass(col++, String.class, true);  	 //  Currency
+			m_tableOrdered.setColumnClass(col++, Double.class, true);      //  Quantity
+			
+			if(m_showPriceHistory) // f3P: conditionally remove prices columns
+				m_tableOrdered.setColumnClass(col++, BigDecimal.class, true);  //  Discount (%)
+			
+			m_tableOrdered.setColumnClass(col++, String.class, true);      //  DocNo
+			m_tableOrdered.setColumnClass(col++, Timestamp.class, true);   //  Date
+			m_tableOrdered.setColumnClass(col++, String.class, true);   	  //  Warehouse
 			//
 			m_tableOrdered.autoSize();
 		}

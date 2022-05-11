@@ -20,7 +20,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -49,6 +51,8 @@ import org.compiere.util.ValueNamePair;
 
 public class PaySelect
 {
+	private static final DateFormat NAME_DATE_FORMAT = new SimpleDateFormat("dd/MM/yyyy (HH:mm:ss)");
+	
 	/** @todo withholding */
 
 	/**	Window No			*/
@@ -68,10 +72,8 @@ public class PaySelect
 	public boolean         m_isLocked = false;
 	/** Payment Selection		*/
 	public MPaySelection	m_ps = null;
-	/** one-To-one payment per invoice */
-	public boolean			m_isOnePaymentPerInvoice	= false;
 	/**	Logger			*/
-	public static final CLogger log = CLogger.getCLogger(PaySelect.class);
+	public static CLogger log = CLogger.getCLogger(PaySelect.class);
 
 	public ArrayList<BankInfo> getBankAccountData()
 	{
@@ -207,11 +209,11 @@ public class PaySelect
 		 *
 		SELECT i.C_Invoice_ID, i.DateInvoiced+p.NetDays AS DateDue,
 		bp.Name, i.DocumentNo, c.ISO_Code, i.GrandTotal,
-		paymentTermDiscount(i.GrandTotal, i.C_PaymentTerm_ID, i.DateInvoiced, getDate()) AS Discount,
-		getDate()-paymentTermDueDays(i.C_PaymentTerm_ID,i.DateInvoiced) AS DiscountDate,
-		i.GrandTotal-paymentTermDiscount(i.GrandTotal,i.C_PaymentTerm_ID,i.DateInvoiced,getDate()) AS DueAmount,
-		currencyConvert(i.GrandTotal-paymentTermDiscount(i.GrandTotal,i.C_PaymentTerm_ID,i.DateInvoiced,getDate(),null),
-			i.C_Currency_ID,xx100,getDate()) AS PayAmt
+		paymentTermDiscount(i.GrandTotal, i.C_PaymentTerm_ID, i.DateInvoiced, SysDate) AS Discount,
+		SysDate-paymentTermDueDays(i.C_PaymentTerm_ID,i.DateInvoiced) AS DiscountDate,
+		i.GrandTotal-paymentTermDiscount(i.GrandTotal,i.C_PaymentTerm_ID,i.DateInvoiced,SysDate) AS DueAmount,
+		currencyConvert(i.GrandTotal-paymentTermDiscount(i.GrandTotal,i.C_PaymentTerm_ID,i.DateInvoiced,SysDate,null),
+			i.C_Currency_ID,xx100,SysDate) AS PayAmt
 		FROM C_Invoice_v i, C_BPartner bp, C_Currency c, C_PaymentTerm p
 		WHERE i.IsSOTrx='N'
 		AND i.C_BPartner_ID=bp.C_BPartner_ID
@@ -227,14 +229,19 @@ public class PaySelect
 			new ColumnInfo(Msg.translate(ctx, "DueDate"), "i.DueDate AS DateDue", Timestamp.class, true, true, null),
 			new ColumnInfo(Msg.translate(ctx, "C_BPartner_ID"), "bp.Name", KeyNamePair.class, true, false, "i.C_BPartner_ID"),
 			new ColumnInfo(Msg.translate(ctx, "DocumentNo"), "i.DocumentNo", String.class),
+			new ColumnInfo(Msg.translate(ctx, "DateInvoiced"), "i.dateInvoiced", Timestamp.class), //F3P
 			new ColumnInfo(Msg.translate(ctx, "C_Currency_ID"), "c.ISO_Code", KeyNamePair.class, true, false, "i.C_Currency_ID"),
 			// 5..10
 			new ColumnInfo(Msg.translate(ctx, "GrandTotal"), "i.GrandTotal", BigDecimal.class),
 			new ColumnInfo(Msg.translate(ctx, "DiscountAmt"), "currencyConvert(invoiceDiscount(i.C_Invoice_ID,?,i.C_InvoicePaySchedule_ID),i.C_Currency_ID, ?,?,i.C_ConversionType_ID, i.AD_Client_ID,i.AD_Org_ID)", BigDecimal.class),
 			new ColumnInfo(Msg.translate(ctx, "WriteOffAmt"), "currencyConvert(invoiceWriteOff(i.C_Invoice_ID),i.C_Currency_ID, ?,?,i.C_ConversionType_ID, i.AD_Client_ID,i.AD_Org_ID)", BigDecimal.class),
 			new ColumnInfo(Msg.getMsg(ctx, "DiscountDate"), "COALESCE((SELECT discountdate from C_InvoicePaySchedule ips WHERE ips.C_InvoicePaySchedule_ID=i.C_InvoicePaySchedule_ID),i.DateInvoiced+p.DiscountDays+p.GraceDays) AS DiscountDate", Timestamp.class),
-			new ColumnInfo(Msg.getMsg(ctx, "AmountDue"), "currencyConvertInvoice(i.C_Invoice_ID,?,invoiceOpen(i.C_Invoice_ID,i.C_InvoicePaySchedule_ID),?) AS AmountDue", BigDecimal.class),
-			new ColumnInfo(Msg.getMsg(ctx, "AmountPay"), "currencyConvertInvoice(i.C_Invoice_ID,?,invoiceOpen(i.C_Invoice_ID,i.C_InvoicePaySchedule_ID)-invoiceDiscount(i.C_Invoice_ID,?,i.C_InvoicePaySchedule_ID),?) AS AmountPay", BigDecimal.class)
+			new ColumnInfo(Msg.getMsg(ctx, "AmountDue"), "currencyConvert(invoiceOpen(i.C_Invoice_ID,i.C_InvoicePaySchedule_ID),i.C_Currency_ID, ?,?,i.C_ConversionType_ID, i.AD_Client_ID,i.AD_Org_ID) AS AmountDue", BigDecimal.class),
+			//F3P: manage witholding and discount as separate column
+			//new ColumnInfo(Msg.getMsg(ctx, "AmountPay"), "currencyConvert(invoiceOpen(i.C_Invoice_ID,i.C_InvoicePaySchedule_ID)-invoiceDiscount(i.C_Invoice_ID,?,i.C_InvoicePaySchedule_ID),i.C_Currency_ID, ?,?,i.C_ConversionType_ID, i.AD_Client_ID,i.AD_Org_ID) AS AmountPay", BigDecimal.class)
+			new ColumnInfo(Msg.getMsg(ctx, "AmountPay"), "currencyConvert(invoiceOpenNetAmt(i.C_Invoice_ID,i.C_InvoicePaySchedule_ID)-paymentTermDiscount(i.GrandTotal,i.C_Currency_ID,i.C_PaymentTerm_ID,i.DateInvoiced, ?),i.C_Currency_ID, ?,?,i.C_ConversionType_ID, i.AD_Client_ID,i.AD_Org_ID)", BigDecimal.class),
+			new ColumnInfo(Msg.getMsg(ctx, "Discount"), "currencyConvert(paymentTermDiscount(i.GrandTotal,i.C_Currency_ID,i.C_PaymentTerm_ID,i.DateInvoiced, ?),i.C_Currency_ID, ?,?,i.C_ConversionType_ID, i.AD_Client_ID,i.AD_Org_ID)", BigDecimal.class)
+
 			},
 			//	FROM
 			"C_Invoice_v i"
@@ -243,15 +250,29 @@ public class PaySelect
 			+ " INNER JOIN C_PaymentTerm p ON (i.C_PaymentTerm_ID=p.C_PaymentTerm_ID)",
 			//	WHERE
 			"i.IsSOTrx=? AND IsPaid='N'"
-			+ " AND invoiceOpenToDate(i.C_Invoice_ID, i.C_InvoicePaySchedule_ID, SysDate) != 0" //Check that AmountDue <> 0
+			+ " AND invoiceOpen(i.C_Invoice_ID, i.C_InvoicePaySchedule_ID) != 0" //Check that AmountDue <> 0
 			//	Different Payment Selection
-			+ " AND (i.C_InvoicePaySchedule_ID > 0 OR NOT EXISTS (SELECT * FROM C_PaySelectionLine psl"
+			+ " AND NOT EXISTS (SELECT * FROM C_PaySelectionLine psl"
 			+                 " INNER JOIN C_PaySelectionCheck psc ON (psl.C_PaySelectionCheck_ID=psc.C_PaySelectionCheck_ID)"
 			+                 " LEFT OUTER JOIN C_Payment pmt ON (pmt.C_Payment_ID=psc.C_Payment_ID)"
+/**LS
+ * 
+ * ATTENZIONE:
+ * Utilizza PNG_Journal e PNG_JournalLine per tenere conto dei pagamanti in più rate
+ * 
+ * Non utilizzare in installazioni in cui non è presente erpos
+ * 
+ * Modifica presente anche in PaySelectionCreateFrom.java
+ */
+			+                 " LEFT OUTER JOIN PNG_JournalLine jl ON (jl.PNG_JournalLine_ID=psc.PNG_JournalLine_ID)"
+			+                 " LEFT OUTER JOIN PNG_Journal j ON (j.PNG_Journal_ID=jl.PNG_Journal_ID)"
 			+                 " WHERE i.C_Invoice_ID=psl.C_Invoice_ID AND psl.IsActive='Y'"
-			+				  " AND (pmt.DocStatus IS NULL OR pmt.DocStatus NOT IN ('VO','RE')) ))"
+			+				  " AND (psc.PNG_JournalLine_ID is null and (pmt.DocStatus IS NULL OR pmt.DocStatus NOT IN ('VO','RE')) )"
+			+				  " AND (psc.C_Payment_ID is null and (j.DocStatus IS NULL OR j.DocStatus NOT IN ('VO','RE')))"
+			+ 				  ")"
 			+ " AND i.DocStatus IN ('CO','CL')"
-			+ " AND i.AD_Client_ID=?",	//	additional where & order in loadTableInfo()
+			+ " AND i.AD_Client_ID=?"	//	additional where & order in loadTableInfo()
+			+ " AND invoiceOpenNetAmt(i.C_Invoice_ID,i.C_InvoicePaySchedule_ID) <> 0", //F3P: gestione pagamento in piu tranches
 			true, "i");
 	}   //  dynInit
 
@@ -314,6 +335,12 @@ public class PaySelect
 		String sql = m_sql;
 		//  Parameters
 		String isSOTrx = "N";
+		//F3P: use this field as filter for query
+		if (paymentRule != null)
+		{
+			sql += " AND i.PaymentRule='" + paymentRule.getValue() + "'";
+		}
+		
 		if (paymentRule != null && X_C_Order.PAYMENTRULE_DirectDebit.equals(paymentRule.getValue()))
 		{
 			isSOTrx = "Y";
@@ -370,9 +397,14 @@ public class PaySelect
 			pstmt.setTimestamp(index++, payDate);
 			pstmt.setInt(index++, bi.C_Currency_ID);	//	DueAmt
 			pstmt.setTimestamp(index++, payDate);
-			pstmt.setInt(index++, bi.C_Currency_ID);
 			pstmt.setTimestamp(index++, payDate);		//	PayAmt
+			pstmt.setInt(index++, bi.C_Currency_ID);
 			pstmt.setTimestamp(index++, payDate);
+			//F3P: added column
+			pstmt.setTimestamp(index++, payDate);		//	discount
+			pstmt.setInt(index++, bi.C_Currency_ID);
+			pstmt.setTimestamp(index++, payDate);
+			//F3P: End			
 			pstmt.setString(index++, isSOTrx);			//	IsSOTrx
 			pstmt.setInt(index++, m_AD_Client_ID);		//	Client
 			if (onlyDue)
@@ -426,7 +458,7 @@ public class PaySelect
 			IDColumn id = (IDColumn)miniTable.getValueAt(i, 0);
 			if (id.isSelected())
 			{
-				BigDecimal amt = (BigDecimal)miniTable.getValueAt(i, 9);
+				BigDecimal amt = (BigDecimal)miniTable.getValueAt(i, 9 +1 ); // F3P: aggiunta data fattura col 4, quindi offset di 1
 				if (amt != null)
 					invoiceAmt = invoiceAmt.add(amt);
 				m_noSelected++;
@@ -464,11 +496,12 @@ public class PaySelect
 			m_ps = new MPaySelection(Env.getCtx(), 0, trxName);
 			m_ps.setName (Msg.getMsg(Env.getCtx(), "VPaySelect")
 					+ " - " + paymentRule.getName()
-					+ " - " + payDate);
+//					+ " - " + payDate); F3P: format date
+					+ " - " + NAME_DATE_FORMAT.format(payDate));
+					
 			m_ps.setPayDate (payDate);
 			m_ps.setC_BankAccount_ID(bi.C_BankAccount_ID);
 			m_ps.setIsApproved(true);
-			m_ps.setIsOnePaymentPerInvoice(m_isOnePaymentPerInvoice);
 			m_ps.saveEx();
 			if (log.isLoggable(Level.CONFIG)) log.config(m_ps.toString());
 
@@ -483,10 +516,11 @@ public class PaySelect
 					line += 10;
 					MPaySelectionLine psl = new MPaySelectionLine (m_ps, line, PaymentRule);
 					int C_Invoice_ID = id.getRecord_ID().intValue();
-					BigDecimal OpenAmt = (BigDecimal)miniTable.getValueAt(i, 9);
-					BigDecimal DiscountAmt = (BigDecimal)miniTable.getValueAt(i, 6);
-					BigDecimal WriteOffAmt = (BigDecimal)miniTable.getValueAt(i, 7);
-					BigDecimal PayAmt = (BigDecimal)miniTable.getValueAt(i, 10);
+					BigDecimal OpenAmt = (BigDecimal)miniTable.getValueAt(i, 9 +1 ); // F3P: aggiunta data fattura col 4, quindi offset di 1
+					// BigDecimal DiscountAmt = (BigDecimal)miniTable.getValueAt(i, 6+1); // F3P: aggiunta data fattura col 4, quindi offset di 1
+					BigDecimal DiscountAmt = (BigDecimal)miniTable.getValueAt(i, 11+1); // F3P: Utilizzata nuova colonna
+					BigDecimal WriteOffAmt = (BigDecimal)miniTable.getValueAt(i, 7+1); // F3P: aggiunta data fattura col 4, quindi offset di 1
+					BigDecimal PayAmt = (BigDecimal)miniTable.getValueAt(i, 10 +1);  // F3P: aggiunta data fattura col 4, quindi offset di 1
 					boolean isSOTrx = false;
 					if (paymentRule != null && X_C_Order.PAYMENTRULE_DirectDebit.equals(paymentRule.getValue()))
 						isSOTrx = true;

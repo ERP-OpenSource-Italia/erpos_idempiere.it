@@ -25,9 +25,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 
-import org.adempiere.base.Core;
+import org.adempiere.base.IPaymentExporterFactory;
+import org.adempiere.base.Service;
 import org.compiere.model.MLookupFactory;
 import org.compiere.model.MLookupInfo;
 import org.compiere.model.MPaySelectionCheck;
@@ -55,7 +57,7 @@ public class PayPrint {
 	/** Payment Batch		*/
 	public MPaymentBatch	m_batch = null; 
 	/**	Logger			*/
-	public static final CLogger log = CLogger.getCLogger(PayPrint.class);
+	public static CLogger log = CLogger.getCLogger(PayPrint.class);
 	
 	public String bank;
 	public String currency;
@@ -250,7 +252,15 @@ public class PayPrint {
 		}
 		try
 		{
-			m_PaymentExport = Core.getPaymentExporter(m_PaymentExportClass);			
+			List<IPaymentExporterFactory> factories = Service.locator().list(IPaymentExporterFactory.class).getServices();
+			if (factories != null && !factories.isEmpty()) {
+				for(IPaymentExporterFactory factory : factories) {
+					m_PaymentExport = factory.newPaymentExporterInstance(m_PaymentExportClass);
+					if (m_PaymentExport != null)
+						break;
+				}
+			}
+			
 			if (m_PaymentExport == null)
 			{
 				Class<?> clazz = Class.forName (m_PaymentExportClass);

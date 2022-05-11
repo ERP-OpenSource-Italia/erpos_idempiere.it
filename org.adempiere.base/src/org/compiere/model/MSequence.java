@@ -307,7 +307,14 @@ public class MSequence extends X_AD_Sequence
 		return getDocumentNoFromSeq(seq, trxName, po);
 	}	//	getDocumentNo
 
+	
+	// F3P: added sForcedDateColumn and compatibility function
+	
 	public static String getDocumentNoFromSeq(MSequence seq, String trxName, PO po) {
+		return getDocumentNoFromSeq(seq,trxName, po, null);
+	}
+
+	public static String getDocumentNoFromSeq(MSequence seq, String trxName, PO po, String sForcedDateColumn) {
 		//	Check AdempiereSys
 		boolean adempiereSys = false;
 		if (Ini.isClient()) 
@@ -334,6 +341,18 @@ public class MSequence extends X_AD_Sequence
 		String prefix = seq.getPrefix();
 		String suffix = seq.getSuffix();
 		String decimalPattern = seq.getDecimalPattern();
+
+		// F3P: Do we have a forced date column ? if so, ignore dateColumn from db
+		
+		String sBackupDateColumn = null;
+		
+		if(sForcedDateColumn != null)
+		{
+			sBackupDateColumn = dateColumn;
+			dateColumn = sForcedDateColumn;			
+		}
+		
+		// F3P: end
 
 		String selectSQL = null;
 		if (isStartNewYear || isUseOrgLevel) {
@@ -376,7 +395,13 @@ public class MSequence extends X_AD_Sequence
 		if (!DB.isOracle() && !DB.isPostgreSQL())
 			selectSQL = DB.getDatabase().convertStatement(selectSQL);
 		Connection conn = null;
-		Trx trx = trxName == null ? null : Trx.get(trxName, true);
+		
+		Trx trx = null;
+		
+		if(LITMSequence.isUseTrxNew(seq) == false)
+		{
+			trx = trxName == null ? null : Trx.get(trxName, true);
+		}
 		//
 		
 		String calendarYearMonth = NoYearNorMonth;
@@ -504,11 +529,16 @@ public class MSequence extends X_AD_Sequence
 		}
 		catch (Exception e)
 		{
+			//fin acg: errore piu' parlante, indico la sequenza
+			String name = "";
+			if(seq.getName() != null)
+				name = seq.getName();
+			
 			s_log.log(Level.SEVERE, "(DocType) [" + trxName + "]", e);
 			if (DBException.isTimeout(e))
-				throw new AdempiereException("GenerateDocumentNoTimeOut", e);
+				throw new AdempiereException("GenerateDocumentNoTimeOut" + " - Sequenza " + name, e);
 			else
-				throw new AdempiereException("GenerateDocumentNoError", e);
+				throw new AdempiereException("GenerateDocumentNoError"  + " - Sequenza " + name, e);
 		}
 		finally
 		{
@@ -534,6 +564,15 @@ public class MSequence extends X_AD_Sequence
 		//	create DocumentNo
 		StringBuilder doc = new StringBuilder();
 		if (prefix != null && prefix.length() > 0) {
+			
+			if(sBackupDateColumn != null && sForcedDateColumn != null) // F3P: Do we have both a dateColumn from db (backup), and a forced one ? if so replace it
+			{
+				if(prefix.indexOf(sBackupDateColumn) >= 0)
+				{
+					prefix = prefix.replaceAll(Pattern.quote(sBackupDateColumn), sForcedDateColumn);
+				}
+			}
+			
 			String prefixValue = Env.parseVariable(prefix, po, trxName, false);
 			if (!Util.isEmpty(prefixValue))
 				doc.append(prefixValue);
@@ -545,6 +584,15 @@ public class MSequence extends X_AD_Sequence
 			doc.append(next);
 
 		if (suffix != null && suffix.length() > 0) {
+			
+			if(sBackupDateColumn != null && sForcedDateColumn != null) // F3P: Do we have both a dateColumn from db (backup), and a forced one ? if so replace it
+			{
+				if(suffix.indexOf(sBackupDateColumn) >= 0)
+				{
+					suffix = suffix.replaceAll(Pattern.quote(sBackupDateColumn), sForcedDateColumn);
+				}
+			}
+			
 			String suffixValue = Env.parseVariable(suffix, po, trxName, false);
 			if (!Util.isEmpty(suffixValue))
 				doc.append(suffixValue);

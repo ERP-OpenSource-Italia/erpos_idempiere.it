@@ -42,6 +42,7 @@ public interface ITheme {
 	//logo
 	public static final String LOGIN_LOGO_IMAGE = "/images/login-logo.png";
 	public static final String HEADER_LOGO_IMAGE = "/images/header-logo.png";
+	public static final String HEADER_LOGO_TESTINSTALLATION_IMAGE = "/images/header-logo-testinst.png"; // F3P: added test server role logo
 	public static final String BROWSER_ICON_IMAGE= "/images/icon.png";
 
 	//stylesheet url

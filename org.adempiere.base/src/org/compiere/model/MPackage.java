@@ -163,10 +163,10 @@ public class MPackage extends X_M_Package
 			MMatchPO[] mos = MMatchPO.getInOut(getCtx(), shipment.getM_InOut_ID(), get_TrxName());
 			for (MMatchPO mo : mos)
 			{
-				MOrderLine ol = new MOrderLine(getCtx(), mo.getC_OrderLine_ID(), get_TrxName());
+				MOrderLine ol = PO.get(getCtx(),MOrderLine.Table_Name, mo.getC_OrderLine_ID(), get_TrxName());
 				if (ol.getC_Order_ID() > 0)
 				{
-					order = new MOrder(getCtx(), ol.getC_Order_ID(), get_TrxName());
+					order = PO.get(getCtx(),MOrder.Table_Name, ol.getC_Order_ID(), get_TrxName());
 					break;
 				}
 			}

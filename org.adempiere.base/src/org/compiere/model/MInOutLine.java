@@ -22,12 +22,15 @@ import java.sql.ResultSet;
 import java.util.List;
 import java.util.Properties;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.FillMandatoryException;
 import org.adempiere.exceptions.WarehouseLocatorConflictException;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  * 	InOut Line
@@ -152,6 +155,19 @@ public class MInOutLine extends X_M_InOutLine
 	private int				m_M_Warehouse_ID = 0;
 	/** Parent					*/
 	private MInOut			m_parent = null;
+	
+	
+	// F3P: added to keep cache, like parent
+	
+	private MOrderLine m_orderLine = null;
+	
+	// F3P: added setHeaderInfo, inspired by MOrderLine.setHeaderInfo
+	
+	public void setHeaderInfo(MInOut inOut)
+	{
+		m_parent = inOut;
+		m_M_Warehouse_ID = inOut.getM_Warehouse_ID();		
+	}
 
 	/**
 	 * 	Get Parent
@@ -173,6 +189,22 @@ public class MInOutLine extends X_M_InOutLine
 	 */
 	public void setOrderLine (MOrderLine oLine, int M_Locator_ID, BigDecimal Qty)
 	{
+		setOrderLine(oLine, M_Locator_ID, Qty, false);
+	}	//	setOrderLine
+
+	/**
+	 * 	Set Order Line.
+	 * 	Does not set Quantity!
+	 *	@param oLine order line
+	 *	@param M_Locator_ID locator
+	 * 	@param Qty used only to find suitable locator
+	 *  @param Force locator on inoutline even if prd is not item
+	 */
+	public void setOrderLine (MOrderLine oLine, int M_Locator_ID, BigDecimal Qty, boolean forceLocatorNoItem)
+	{
+		// F3P: keep cache
+		m_orderLine = oLine;
+		
 		setC_OrderLine_ID(oLine.getC_OrderLine_ID());
 		setLine(oLine.getLine());
 		setC_UOM_ID(oLine.getC_UOM_ID());
@@ -188,7 +220,7 @@ public class MInOutLine extends X_M_InOutLine
 			setM_Product_ID(oLine.getM_Product_ID());
 			setM_AttributeSetInstance_ID(oLine.getM_AttributeSetInstance_ID());
 			//
-			if (product.isItem())
+			if (product.isItem() || forceLocatorNoItem)
 			{
 				if (M_Locator_ID == 0)
 					setM_Locator_ID(Qty);	//	requires warehouse, product, asi
@@ -211,7 +243,7 @@ public class MInOutLine extends X_M_InOutLine
 		setUser1_ID(oLine.getUser1_ID());
 		setUser2_ID(oLine.getUser2_ID());
 	}	//	setOrderLine
-
+	
 	/**
 	 * 	Set Invoice Line.
 	 * 	Does not set Quantity!
@@ -510,39 +542,10 @@ public class MInOutLine extends X_M_InOutLine
 	protected boolean beforeSave (boolean newRecord)
 	{
 		log.fine("");
-		if (newRecord && getParent().isProcessed()) {
-			log.saveError("ParentComplete", Msg.translate(getCtx(), "M_InOut_ID"));
+		if (newRecord && getParent().isComplete() && STDSysConfig.isBlockAddInOutLineCompleted()) {
+			log.saveError("ParentComplete", Msg.translate(getCtx(), "M_InOutLine"));
+			
 			return false;
-		}
-		if (getParent().pendingConfirmations()) {
-			if (  newRecord ||
-				(is_ValueChanged(COLUMNNAME_MovementQty) && !is_ValueChanged(COLUMNNAME_TargetQty))) {
-
-				if (getMovementQty().signum() == 0)
-				{
-					String docAction = getParent().getDocAction();
-					String docStatus = getParent().getDocStatus();
-					if (   MInOut.DOCACTION_Void.equals(docAction)
-						&& (   MInOut.DOCSTATUS_Drafted.equals(docStatus)
-							|| MInOut.DOCSTATUS_Invalid.equals(docStatus)
-							|| MInOut.DOCSTATUS_InProgress.equals(docStatus)
-							|| MInOut.DOCSTATUS_Approved.equals(docStatus)
-							|| MInOut.DOCSTATUS_NotApproved.equals(docStatus)
-						   )
-						)
-					{
-						// OK to save qty=0 when voiding
-					} else if (   MInOut.DOCACTION_Complete.equals(docAction)
-							   && MInOut.DOCSTATUS_InProgress.equals(docStatus))
-					{
-						// IDEMPIERE-2624 Cant confirm 0 qty on Movement Confirmation
-						// zero allowed in this case (action Complete and status In Progress)
-					} else {
-						log.saveError("SaveError", Msg.parseTranslation(getCtx(), "@Open@: @M_InOutConfirm_ID@"));
-						return false;
-					}
-				}
-			}
 		}
 		// Locator is mandatory if no charge is defined - teo_sarca BF [ 2757978 ]
 		if(getProduct() != null && MProduct.PRODUCTTYPE_Item.equals(getProduct().getProductType()))
@@ -580,8 +583,16 @@ public class MInOutLine extends X_M_InOutLine
 		{
 			if (getParent().isSOTrx())
 			{
-				log.saveError("FillMandatory", Msg.translate(getCtx(), "C_Order_ID"));
-				return false;
+				// F3P: if its a C+ return, check if allowed to have no value
+				
+				boolean isAllowedCPlus = getParent().getMovementType().equals(MInOut.MOVEMENTTYPE_CustomerReturns) 
+											&& STDSysConfig.isAllowCPLUSRetursWORma(getAD_Client_ID(),getAD_Org_ID());
+				
+				if(isAllowedCPlus == false)
+				{
+					log.saveError("FillMandatory", Msg.translate(getCtx(), "C_Order_ID"));
+					return false;
+				}
 			}
 		}
 
@@ -589,7 +600,8 @@ public class MInOutLine extends X_M_InOutLine
 		if (getM_Locator_ID() > 0)
 		{
 			MLocator locator = MLocator.get(getCtx(), getM_Locator_ID());
-			if (getM_Warehouse_ID() != locator.getM_Warehouse_ID())
+			if (getM_Warehouse_ID() != locator.getM_Warehouse_ID() 
+					&& !STDSysConfig.isInOutDocTypeInWarehouseLocatorCheckSkipList(getParent().getC_DocType_ID(), getAD_Client_ID(), getAD_Org_ID())) // F3P: is this inout doctype in skip list for this check ? 
 			{
 				throw new WarehouseLocatorConflictException(
 						MWarehouse.get(getCtx(), getM_Warehouse_ID()),
@@ -609,17 +621,21 @@ public class MInOutLine extends X_M_InOutLine
 	        }
 	        
 		}
-		I_M_AttributeSet attributeset = null;
-		if (getM_Product_ID() > 0)
-			attributeset = MProduct.get(getCtx(), getM_Product_ID()).getM_AttributeSet();
-		boolean isAutoGenerateLot = false;
-		if (attributeset != null)
-			isAutoGenerateLot = attributeset.isAutoGenerateLot();
-		if (getReversalLine_ID() == 0 && !getParent().isSOTrx() && !getParent().getMovementType().equals(MInOut.MOVEMENTTYPE_VendorReturns) && isAutoGenerateLot
-				&& getM_AttributeSetInstance_ID() == 0)
+		
+		if (STDSysConfig.isAutoGenerateASIOnDocPrepare(getAD_Client_ID(), getAD_Org_ID()) == false)
 		{
-			MAttributeSetInstance asi = MAttributeSetInstance.generateLot(getCtx(), (MProduct)getM_Product(), get_TrxName());
-			setM_AttributeSetInstance_ID(asi.getM_AttributeSetInstance_ID());
+			I_M_AttributeSet attributeset = null;
+			if (getM_Product_ID() > 0)
+				attributeset = MProduct.get(getCtx(), getM_Product_ID()).getM_AttributeSet();
+			boolean isAutoGenerateLot = false;
+			if (attributeset != null)
+				isAutoGenerateLot = attributeset.isAutoGenerateLot();
+			if (getReversalLine_ID() == 0 && !getParent().isSOTrx() && !getParent().getMovementType().equals(MInOut.MOVEMENTTYPE_VendorReturns) && isAutoGenerateLot
+					&& getM_AttributeSetInstance_ID() == 0)
+			{
+				MAttributeSetInstance asi = MAttributeSetInstance.generateLot(getCtx(), (MProduct)getM_Product(), this, get_TrxName());
+				setM_AttributeSetInstance_ID(asi.getM_AttributeSetInstance_ID());
+			}
 		}
 	//	if (getC_Charge_ID() == 0 && getM_Product_ID() == 0)
 	//		;
@@ -663,9 +679,58 @@ public class MInOutLine extends X_M_InOutLine
 			}
 		}
 		
+		// F3P propagate qty on confirm line
+		
+		if(newRecord == false)
+		{
+			if(is_ValueChanged(MInOutLine.COLUMNNAME_MovementQty))
+			{
+				int M_InOutLineConfirm_ID = getInOutLineConfirm_ID();
+				
+				if(M_InOutLineConfirm_ID > 0)
+				{
+					MInOutLineConfirm iocl = PO.get(getCtx(),MInOutLineConfirm.Table_Name, M_InOutLineConfirm_ID, get_TrxName());
+					
+					if(iocl.isProcessed() == true)
+					{
+						StringBuilder sb = new StringBuilder();
+						
+						sb.append( Msg.translate(Env.getLanguage(getCtx()), "completed"))
+						.append(Msg.translate(Env.getLanguage(getCtx()), MInOutConfirm.COLUMNNAME_M_InOutConfirm_ID));
+
+						throw new AdempiereException(sb.toString());
+					}
+					else
+					{
+						iocl.setInOutLine(this);
+						iocl.saveEx(get_TrxName());
+					}
+				}
+			}
+		}
+		
+		//F3P end
+		
 		return true;
 	}	//	beforeSave
 
+	//F3P get InOutLineConfirm_ID
+	
+	protected int getInOutLineConfirm_ID()
+	{
+		int iM_InOutLineConfirm_ID = 0;
+		
+		Query qM = new Query(getCtx(), MInOutLineConfirm.Table_Name, 
+				MInOutLineConfirm.COLUMNNAME_M_InOutLine_ID + " = ?", get_TrxName());
+		qM.setParameters(getM_InOutLine_ID());	
+		
+		iM_InOutLineConfirm_ID = qM.firstId();
+		
+		return iM_InOutLineConfirm_ID;
+	}
+	
+	//f3P end
+	
 	/**
 	 * 	Before Delete
 	 *	@return true if drafted
@@ -673,11 +738,28 @@ public class MInOutLine extends X_M_InOutLine
 	protected boolean beforeDelete ()
 	{
 		if (! getParent().getDocStatus().equals(MInOut.DOCSTATUS_Drafted)) {
-			log.saveError("Error", Msg.getMsg(getCtx(), "CannotDelete"));
-			return false;
+		
+		//F3P
+		// Delete package lines
+		
+		Query qPackageLines = new Query(getCtx(),MPackageLine.Table_Name,
+				MPackageLine.COLUMNNAME_M_InOutLine_ID + " = ?", get_TrxName());
+		qPackageLines.setParameters(getM_InOutLine_ID());
+		List<MPackageLine> lstPackageLines = qPackageLines.list();
+		
+		for(MPackageLine mPackageLine:lstPackageLines)
+		{
+			mPackageLine.deleteEx(true);
 		}
-		if (getParent().pendingConfirmations()) {
-			log.saveError("DeleteError", Msg.parseTranslation(getCtx(), "@Open@: @M_InOutConfirm_ID@"));
+		
+		if (getParent().getDocStatus().equals(MInOut.DOCSTATUS_InProgress) || 
+				getParent().getDocStatus().equals(MInOut.DOCSTATUS_Invalid))
+		{
+			return true;
+		}
+		
+		//F3P:End
+			log.saveError("Error", Msg.getMsg(getCtx(), "CannotDelete"));
 			return false;
 		}
 		// IDEMPIERE-3391 Not possible to delete a line in the Material Receipt window
@@ -769,6 +851,25 @@ public class MInOutLine extends X_M_InOutLine
 
 		// inout has orderline and both has the same UOM
 		return true;
+	}
+	
+	
+	 // F3P: keep caches
+	@Override
+	public void setC_OrderLine_ID(int C_OrderLine_ID)
+	{
+		if(m_orderLine != null && m_orderLine.getC_OrderLine_ID() != C_OrderLine_ID)
+			m_orderLine = null;
+		
+		super.setC_OrderLine_ID(C_OrderLine_ID);
+	}
+
+	public MOrderLine getOrderLine()
+	{
+		if(m_orderLine == null && getC_OrderLine_ID() > 0)			
+			m_orderLine = PO.get(getCtx(), MOrderLine.Table_Name, getC_OrderLine_ID(), get_TrxName());
+		
+		return m_orderLine;
 	}
 
 }	//	MInOutLine

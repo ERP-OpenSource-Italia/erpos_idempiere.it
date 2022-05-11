@@ -930,6 +930,27 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 				for (WEditor comp : editors)
 				{
 					comp.updateStyle();
+					/*
+					// F3P: integrated ui behaviour and refresh if not cacheable
+					
+					if(comp instanceof WTableDirEditor && comp.getGridField() != null)
+					{
+						Lookup lk = comp.getGridField().getLookup();
+						if(lk != null && UIBehaviour.isLookupCacheable(lk, null) == false)
+							((WTableDirEditor)comp).actionRefresh();
+					}
+					else if(comp instanceof WSearchEditor && comp.getGridField() != null)
+					{
+						Lookup lk = comp.getGridField().getLookup();
+						if(lk != null && UIBehaviour.isLookupCacheable(lk, null) == false)
+						{
+  						WSearchEditor se = (WSearchEditor)comp;	              						
+  						se.setValue(se.getValue()); // Equivalente a actionRefreh()
+						}
+					}
+					
+					// F3P end
+					*/
 				}
                 return;
             }
@@ -954,7 +975,27 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
                         comp.setReadWrite(false);
                     }
                     else
-                    {
+                    {/*
+            					// F3P: integrated ui behaviour and refresh if not cacheable
+            					
+            					if(comp instanceof WTableDirEditor)
+            					{
+            						Lookup lk = comp.getGridField().getLookup();
+            						if(lk != null && UIBehaviour.isLookupCacheable(lk, null) == false)
+            							((WTableDirEditor)comp).actionRefresh();
+            					}
+            					else if(comp instanceof WSearchEditor)
+            					{
+            						Lookup lk = comp.getGridField().getLookup();
+            						if(lk != null && UIBehaviour.isLookupCacheable(lk, null) == false)
+            						{
+              						WSearchEditor se = (WSearchEditor)comp;	              						
+              						se.setValue(se.getValue()); // Equivalente a actionRefreh()
+            						}
+            					}
+            					
+            					// F3P end*/
+            					                    	
                         boolean rw = mField.isEditable(true);   //  r/w - check Context
                         if (rw && !comp.isReadWrite()) // IDEMPIERE-3421 - if it was read-only the list can contain direct values
                         	mField.refreshLookup();
@@ -2128,4 +2169,23 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 		
 		return hasQuickForm;
 	}
+	
+	/*
+	
+	// F3P: method to minimize detail tab
+	public void minimizeTabDetail()
+	{
+		onSouthEvent(SouthEvent.CLOSE);
+		formContainer.getSouth().setOpen(false);
+	}
+	
+	// F3P: method to maximize detail tab
+	public void maximizeTabDetail()
+	{		
+		onSouthEvent(SouthEvent.OPEN);
+		formContainer.getSouth().setOpen(true);
+	}
+
+	
+	*/
 }

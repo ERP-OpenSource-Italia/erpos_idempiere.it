@@ -125,6 +125,12 @@ public class MOrgInfo extends X_AD_OrgInfo implements ImmutablePOSupport
 		super(ctx, rs, trxName);
 	}	//	MOrgInfo
 
+	
+	//F3P add constructor
+	public MOrgInfo(Properties ctx, int AD_OrgInfo_ID, String trxName) {
+		super(ctx, AD_OrgInfo_ID, trxName);
+	}
+
 	/**
 	 * 	Organization constructor
 	 *	@param org org

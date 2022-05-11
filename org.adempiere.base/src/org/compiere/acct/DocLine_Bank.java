@@ -46,7 +46,8 @@ public class DocLine_Bank extends DocLine
 		m_TrxAmt = line.getTrxAmt();
 		//
 		setDateDoc(line.getValutaDate());
-		setDateAcct(doc.getDateAcct());  // adaxa-pb use statement date
+		//LS: use DateAcct of the line 
+		//setDateAcct(doc.getDateAcct());  // adaxa-pb use statement date 
 		setC_BPartner_ID(line.getC_BPartner_ID());
 	}   //  DocLine_Bank
 

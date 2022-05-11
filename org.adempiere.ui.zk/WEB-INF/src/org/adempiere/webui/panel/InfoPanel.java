@@ -2719,5 +2719,292 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	public int getPageSize() {
 		return pageSize;
 	}
+	
+	// F3P: run via process info
+	
+	public void setRunViaProcessInfo(ProcessInfo pi)
+	{
+		m_runViaProcessInfo = pi;
+	}
+	
+	public ProcessInfo getRunViaProcessInfo()
+	{
+		return m_runViaProcessInfo;
+	}
+	
+	public Collection<KeyNamePair> getAdditionalDBSelectedKeys(Collection<KeyNamePair> selectedKeys)
+	{
+		return null; // Void default impl		
+	}
+	
+	/** Clears the db records used by immediate edit
+	 * 
+	 * @param recordID -1 to clear all rows
+	 */
+	protected void clearImmediateSaveEditDB(int recordID)
+	{
+		if(editAD_Pinstance_ID > 0)
+		{
+			if(recordID >= 0)
+			{
+				Object params[] = {editAD_Pinstance_ID, recordID};
+				
+				if(hasImmediatePersistEdit)
+					DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ? AND T_Selection_ID = ?", params, null);
+			}
+			else
+			{
+				Object params[] = {editAD_Pinstance_ID};
+				
+				if(hasImmediatePersistEdit)
+					DB.executeUpdateEx("DELETE FROM T_Selection_InfoWindow WHERE AD_Pinstance_ID = ?", params, null);
+				
+				if(isImmediateSaveSelection)
+					DB.executeUpdateEx("DELETE FROM T_Selection WHERE AD_Pinstance_ID = ?", params, null);
+			}
+		}
+	}	
+	
+	protected void createOrUpdateImmediateEditDB(final int recordID, final String columnName, final Object value)
+	{
+		if(editAD_Pinstance_ID < 0)
+			return;
+		
+		List<Object> valueParams = appendTSelectionInfoWindowValueParams(value, new ArrayList<>());		
+				
+		Trx.run(new TrxRunnable() {
+			
+			@Override
+			public void run(String trxName) 
+			{
+				List<Object> updateParams = new ArrayList<>(valueParams);
+				updateParams.add(editAD_Pinstance_ID);
+				updateParams.add(recordID);
+				updateParams.add(columnName);
+
+				int updatedNo = DB.executeUpdateEx(UPDATE_TSELECTION_IW, updateParams.toArray(), trxName);
+				
+				if(updatedNo == 0)
+				{
+					List<Object> insertParams = new ArrayList<>();
+					insertParams.add(editAD_Pinstance_ID);
+					insertParams.add(recordID);
+					insertParams.add(columnName);
+					insertParams.addAll(valueParams);
+					
+					DB.executeUpdateEx(INSERT_TSELECTION_IW, insertParams.toArray(), trxName);
+				}				
+			}
+		});
+	}
+	
+	protected void initStatusBarAndInfo()
+	{
+		if(m_infoWindowID > 0)
+		{
+			m_statusLine = MStatusLine.getSL(m_infoWindowID);
+			m_quickInfoLines = MStatusLine.getStatusLinesWidget(m_infoWindowID);
+			
+			if(m_quickInfoLines != null && m_quickInfoLines.length == 0)
+				m_quickInfoLines = null;
+			
+			if(m_statusLine != null || m_quickInfoLines != null)
+			{
+				m_WindowNoStatusLine = SessionManager.getAppDesktop().registerWindow(this);
+			}
+		}
+	}
+	
+	// F3P: fill context before running process 
+	
+	/** Get full ctx from selected rows, including parameters, selected main row, selected row of active embedded tab.
+	 *   This is the order applied, in case of conflicting columns with different values, they are overridden by later ones:
+	 *   
+	 *   1. parameters
+	 *   2. main content row (for mutliselection, the last clicked, if selected, is used. If its not selected, the first selected is used)
+	 *   3. selected embedded row
+	 *
+	 * @param WindowNo
+	 * @param ctx
+	 * @return
+	 */
+	public Properties getFullCtxFromSelectedRows(int WindowNo, Properties ctx)
+	{
+		// 1 & 2: Parameters and selected active row
+		
+		int selectedRow = -1;
+		
+		// *** Context from main content		
+		
+		
+		if(mainContentRowUsedInSubcontent >= 0)
+			selectedRow = mainContentRowUsedInSubcontent;
+		
+		if(selectedRow < 0)
+			selectedRow = contentPanel.getSelectedIndex();
+						
+		if(selectedRow >= 0)			
+			getRowAndParamsAsCtx(selectedRow, -1, null, WindowNo, Env.getCtx());
+		else
+		{
+			resetTableCtx(contentPanel, WindowNo, Env.getCtx());
+			getRowAndParamsAsCtx(-1, -1, null, WindowNo, Env.getCtx()); // Only parameters
+		}		
+			
+		return ctx;
+	}
+	
+	/** Get row and params ctx. IF row is < 0, only params are used
+	 * 
+	 * @param row current row, ignored if < 0
+	 * @param editingColumn
+	 * @param editingValue
+	 * @return
+	 */
+	public Properties getRowAndParamsAsCtx(int row, int editingColumn, Object editingValue)
+	{
+		Properties ctx = new Properties(Env.getCtx()); // Allow session values
+		return getRowAndParamsAsCtx(row, editingColumn, editingValue, 0, ctx);
+	}
+	
+	/** Get row and params ctx. IF row is < 0, only params are used
+	 * 
+	 * @param row
+	 * @param editingColumn
+	 * @param editingValue
+	 * @param WindowNo
+	 * @param ctx
+	 * @return
+	 */
+	public Properties getRowAndParamsAsCtx(int row, int editingColumn, Object editingValue, int WindowNo, Properties ctx)
+	{		
+		if (row >= 0)
+			getTableRowAsCtx(contentPanel, row, editingColumn, editingValue, WindowNo, ctx);
+		return ctx;
+	}
+	
+	public Properties getTableRowAsCtx(WListbox table, int row, int editingColumn, Object editingValue, int WindowNo, Properties ctx)
+	{
+		ListModelTable model = table.getModel();
+		ColumnInfo[] layout = table.getLayout(); 
+		
+		for(int i=0; i < layout.length; i++)			
+		{			
+			String column = layout[i].getColumnName();
+			
+			if(column == null)
+				column = layout[i].getGridField().getColumnName();
+					
+			Object val = null;
+			
+			if(i != editingColumn)
+				val = model.getValueAt(row, i);
+			else
+				val = editingValue;
+			
+			// Get id from 'complex' types
+			
+			if(val != null)
+			{				
+				if(val instanceof IDColumn)
+				{
+					IDColumn idc = (IDColumn)val;
+					val = idc.getRecord_ID();
+				}
+				else if(val instanceof KeyNamePair)
+				{
+					KeyNamePair knp = (KeyNamePair)val;
+					val = knp.getKey();
+				}
+								
+				if(val instanceof Integer)
+					Env.setContext(ctx, WindowNo, column, (Integer)val);
+				else if(val instanceof Timestamp)
+					Env.setContext(ctx, WindowNo, column, (Timestamp)val);
+				else if(val instanceof Boolean)
+					Env.setContext(ctx, WindowNo, column, (Boolean)val);
+				else
+					Env.setContext(ctx, WindowNo, column, val.toString());
+			}
+			else
+			{
+				Env.setContext(ctx, WindowNo, column, (String)null);
+			}
+		}
+		
+		return ctx;		
+	}
+	
+	public void resetTableCtx(WListbox table, int WindowNo, Properties ctx)
+	{
+		ColumnInfo[] layout = table.getLayout(); 
+		
+		for(int i=0; i < layout.length; i++)			
+		{			
+			String column = layout[i].getColumnName();
+			
+			if(column == null)
+				column = layout[i].getGridField().getColumnName();
+			
+			Env.setContext(ctx, WindowNo, column, (String)null);
+		}
+	}
+	
+	protected void updateStatusBarAndInfo()
+	{
+		if(m_WindowNoStatusLine > 0)
+		{	
+			Properties ctx = Env.getCtx();
+			Env.clearWinContext(m_WindowNoStatusLine);
+			getFullCtxFromSelectedRows(m_WindowNoStatusLine,ctx);
+			
+			if(getRunViaProcessInfo() != null)
+			{
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_AD_PINSTANCE_ID, getRunViaProcessInfo().getAD_PInstance_ID());
+			}
+			else
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_AD_PINSTANCE_ID, 0);
+			
+			if(editAD_Pinstance_ID > 0)
+			{
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID, editAD_Pinstance_ID);
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID_Compat, editAD_Pinstance_ID);
+			}
+			else
+			{
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID, 0);
+				Env.setContext(ctx, m_WindowNoStatusLine, CTX_EDIT_AD_PINSTANCE_ID_Compat, 0);
+			}
+				
+			if(m_statusLine != null)
+			{
+				setStatusLine(null, false);
+			}
+			
+			if(m_quickInfoLines != null)
+				renderQuickInfo();
+		}
+	}
+	
+	public void renderQuickInfo() 
+	{
+		StringBuilder lines = new StringBuilder();
+		for (MStatusLine wl : m_quickInfoLines)
+		{
+			String line = wl.parseLine(m_WindowNoStatusLine);
+			if (line != null) {
+				lines.append(line).append("<br>");
+			}
+		}
+		
+		m_lastRenderedQuickInfo = null;
+		
+		if (lines.length() > 0)
+			m_lastRenderedQuickInfo = lines.toString();
+		
+		IDesktop desktop = SessionManager.getAppDesktop();
+		desktop.updateHelpQuickInfo(m_lastRenderedQuickInfo);			
+	}	
+	
 }	//	Info
 

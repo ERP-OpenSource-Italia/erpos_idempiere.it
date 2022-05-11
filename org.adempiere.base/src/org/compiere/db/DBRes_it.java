@@ -22,17 +22,18 @@ import java.util.ListResourceBundle;
  *  Connection Resource Strings
  *
  *  @author     Alessandro Riolo 
+ *  @author     Angelo Dabala' (genied) nectosoft - translation fixes 
  *  @version    $Id: DBRes_it.java,v 1.2 2006/07/30 00:55:13 jjanke Exp $
  */
 public class DBRes_it extends ListResourceBundle
 {
 	/** Data        */
 	static final Object[][] contents = new String[][]{
-	  { "CConnectionDialog",  "Connessione a Adempiere" },
+	  { "CConnectionDialog",  "Connessione ad Adempiere" }, //Angelo Dabala' (genied) nectosoft
 	  { "Name",               "Nome" },
 	  { "AppsHost",           "Host dell'Applicativo" },
 	  { "AppsPort",           "Porta dell'Applicativo" }, 
-	  { "TestApps",           "Applicazione di Test" },
+	  { "TestApps",           "Test del Server Applicativo" }, //Angelo Dabala' (genied) nectosoft
 	  { "DBHost",             "Host del Database" },
 	  { "DBPort",             "Porta del Database" },
 	  { "DBName",             "Nome del Database" },
@@ -40,10 +41,10 @@ public class DBRes_it extends ListResourceBundle
 	  { "ViaFirewall",        "via Firewall" },
 	  { "FWHost",             "Host del Firewall" },
 	  { "FWPort",             "Porta del Firewall" },
-	  { "TestConnection",     "Database di Test" },
+	  { "TestConnection",     "Test del Database" }, //Angelo Dabala' (genied) nectosoft
 	  { "Type",               "Tipo di Database" },
 	  { "BequeathConnection", "Connessione Dedicata" },
-	  { "Overwrite",          "Sovrascri" }, 
+	  { "Overwrite",          "Sovrascrivi" },  //Angelo Dabala' (genied) nectosoft
 		{ "ConnectionProfile",	"Connection" },
 		{ "LAN",		 		"LAN" },
 		{ "TerminalServer",		"Terminal Server" },

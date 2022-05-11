@@ -33,7 +33,7 @@ import org.compiere.util.Trace;
  *  Product Price Calculations
  *
  *  @author Jorg Janke
- *  @version $Id: MProductPricing.java,v 1.2 2006/07/30 00:51:02 jjanke Exp $
+ *  @version $Id: MProductPricing.java,v 1.2 2006/07/30 00:51:02 jjanke Exp $m_isSOTrx
  */
 public class MProductPricing extends AbstractProductPricing
 {
@@ -78,31 +78,35 @@ public class MProductPricing extends AbstractProductPricing
 		checkVendorBreak();
 	}
 	
-	private void checkVendorBreak() {
+	// F3P: Reduce access to allow overriding
+	
+	protected void checkVendorBreak() {
 		int thereAreVendorBreakRecords = DB.getSQLValue(trxName, 
 				"SELECT count(M_Product_ID) FROM M_ProductPriceVendorBreak WHERE M_Product_ID=? AND (C_BPartner_ID=? OR C_BPartner_ID is NULL)",
 				m_M_Product_ID, m_C_BPartner_ID);
 		m_useVendorBreak = thereAreVendorBreakRecords > 0;
 	}
+	
+	// F3P: moved to protected to improve overridability
 
 	/** Precision -1 = no rounding		*/
-	private int		 	m_precision = -1;
+	protected int		 	m_precision = -1;
 	
 	
-	private boolean 	m_calculated = false;
-	private boolean 	m_vendorbreak = false;
-	private boolean 	m_useVendorBreak;
-	private Boolean		m_found = null;
+	protected boolean 	m_calculated = false;
+	protected boolean 	m_vendorbreak = false;
+	protected boolean 	m_useVendorBreak;
+	protected Boolean		m_found = null;
 	
-	private BigDecimal 	m_PriceList = Env.ZERO;
-	private BigDecimal 	m_PriceStd = Env.ZERO;
-	private BigDecimal 	m_PriceLimit = Env.ZERO;
-	private int 		m_C_Currency_ID = 0;
-	private boolean		m_enforcePriceLimit = false;
-	private int 		m_C_UOM_ID = 0;
-	private int 		m_M_Product_Category_ID;
-	private boolean		m_discountSchema = false;
-	private boolean		m_isTaxIncluded = false;
+	protected BigDecimal 	m_PriceList = Env.ZERO;
+	protected BigDecimal 	m_PriceStd = Env.ZERO;
+	protected BigDecimal 	m_PriceLimit = Env.ZERO;
+	protected int 		m_C_Currency_ID = 0;
+	protected boolean		m_enforcePriceLimit = false;
+	protected int 		m_C_UOM_ID = 0;
+	protected int 		m_M_Product_Category_ID;
+	protected boolean		m_discountSchema = false;
+	protected boolean		m_isTaxIncluded = false;
 
 	/**	Logger			*/
 	protected CLogger	log = CLogger.getCLogger(getClass());
@@ -732,7 +736,10 @@ public class MProductPricing extends AbstractProductPricing
 	/**
 	 * 	Set Base Info (UOM)
 	 */
-	private void setBaseInfo()
+	
+	// F3P: from private to protected to allow overridability
+	
+	protected void setBaseInfo()
 	{
 		if (m_M_Product_ID == 0)
 			return;
@@ -800,7 +807,7 @@ public class MProductPricing extends AbstractProductPricing
 		if (M_DiscountSchema_ID == 0)
 			return;
 		
-		MDiscountSchema sd = MDiscountSchema.get(M_DiscountSchema_ID);	//	not correct
+		MDiscountSchema sd = MDiscountSchema.get(Env.getCtx(), M_DiscountSchema_ID);	//	not correct
 		if (sd.get_ID() == 0 || (MDiscountSchema.DISCOUNTTYPE_Breaks.equals(sd.getDiscountType()) && !MDiscountSchema.CUMULATIVELEVEL_Line.equals(sd.getCumulativeLevel())))
 			return;
 		//
@@ -818,7 +825,7 @@ public class MProductPricing extends AbstractProductPricing
 	public BigDecimal getDiscount()
 	{
 		BigDecimal Discount = Env.ZERO;
-		if (m_PriceList.compareTo(Env.ZERO) != 0)
+		if (m_PriceList.intValue() != 0)
 			Discount = BigDecimal.valueOf((m_PriceList.doubleValue() - m_PriceStd.doubleValue())
 				/ m_PriceList.doubleValue() * 100.0);
 		if (Discount.scale() > 2)
@@ -870,7 +877,10 @@ public class MProductPricing extends AbstractProductPricing
 	/**
 	 * 	Set Precision.
 	 */
-	private void setPrecision ()
+	
+	// F3P: from private to procted to improve overridability
+	
+	protected void setPrecision ()	
 	{
 		if (m_M_PriceList_ID != 0)
 			m_precision = MPriceList.getPricePrecision(Env.getCtx(), getM_PriceList_ID());

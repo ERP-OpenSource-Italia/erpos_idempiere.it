@@ -84,6 +84,8 @@ public class RfQCreateSO extends SvrProcess
 		MBPartner bp = new MBPartner (getCtx(), rfq.getC_BPartner_ID(), get_TrxName());
 		
 		MOrder order = new MOrder (getCtx(), 0, get_TrxName());
+		// Angelo Dabala' (genied) nectosoft: explicitly set client/org to avoid problems when user logged in with Org=* (0)
+		order.setClientOrg(rfq.getAD_Client_ID(), rfq.getAD_Org_ID());
 		order.setIsSOTrx(true);
 		if (p_C_DocType_ID != 0)
 			order.setC_DocTypeTarget_ID(p_C_DocType_ID);

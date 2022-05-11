@@ -10,6 +10,10 @@ import java.sql.Timestamp;
 import java.util.Properties;
 
 import org.adempiere.exceptions.AdempiereException;
+import org.compiere.model.MDocType;
+import org.compiere.model.MPeriod;
+import org.compiere.model.ModelValidationEngine;
+import org.compiere.model.ModelValidator;
 import org.compiere.process.DocAction;
 import org.compiere.process.DocumentEngine;
 import org.compiere.util.Env;
@@ -68,11 +72,13 @@ implements DocAction
 		// test if asset is already Depreciated
 		MDepreciationWorkfile assetwk = MDepreciationWorkfile.get(getCtx(), getA_Asset_ID(), getPostingType());
 		
+		//Cristiano Lazzaro (genied) : Controllo sbagliato!
+		/*
 		if (!assetwk.isDepreciated(getDateAcct()))
 		{	
 			throw new AdempiereException("Asset is not depreciated at this moment");
 			
-		}
+		}*/
 		
 		// test if Asset Cost and Accumulated Depreciation are changed 
 		if (assetwk.getA_Asset_Cost().equals(getA_Asset_Cost_Change()) 
@@ -88,17 +94,21 @@ implements DocAction
 			throw new AdempiereException("It has changed the cost of Asset");  
 		}
 		
+		//Cristiano Lazzaro (genied) commented exception, It can be completed a revaluation on the same accumulated depreciation
+		/*
 		// test if Accumulated depreciation is changed
 		if (!assetwk.getA_Asset_Cost().equals(getA_Asset_Cost_Change()) 
 				&& assetwk.getA_Accumulated_Depr().equals(getA_Change_Acumulated_Depr()))
 		{
 			throw new AdempiereException("It has changed the cumulative depreciation");  
 		}
-	
+		
+		//Cristiano Lazzaro (genied) commented
 	    if (!isLastDepreciated(getDateAcct()))
 	    {
 	    	throw new AdempiereException("It can only review the last month processed");
 	    }
+	    */
 	    
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_AFTER_PREPARE);
 		if (m_processMsg != null)
@@ -114,7 +124,7 @@ implements DocAction
 	{
 		MDepreciationWorkfile assetwk = MDepreciationWorkfile.get(getCtx(), getA_Asset_ID(), getPostingType());
 		Timestamp lastActionDate = assetwk.getLastActionDate();
-		boolean isLastDepr = TimeUtil.getMonthLastDay(date).equals(lastActionDate);		
+		boolean isLastDepr = lastActionDate != null && TimeUtil.getMonthLastDay(date).equals(lastActionDate);	//F3P: from adempiere add lastActionDate != null	
 		return isLastDepr;
 		
 	}

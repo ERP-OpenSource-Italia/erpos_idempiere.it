@@ -48,7 +48,9 @@ public class MRMALine extends X_M_RMALine
 	 *	@param ctx context
 	 *	@param M_RMALine_ID id
 	 *	@param trxName transaction
+	 *  @deprecated Use  PO.get(Env.getCtx(), MRMALine.Table_Name, M_RMALine_ID, trxName) or PO.create(rma.getCtx(), MRMALine.Table_Name, rma.get_TrxName());
 	 */
+	@Deprecated
 	public MRMALine (Properties ctx, int M_RMALine_ID, String trxName)
 	{
 		super (ctx, M_RMALine_ID, trxName);
@@ -104,15 +106,15 @@ public class MRMALine extends X_M_RMALine
             {
                 MInvoiceLine invoiceLine = new MInvoiceLine(getCtx(), getInvoiceLineId(), get_TrxName());
                 precision = invoiceLine.getPrecision();
-                unitAmount = invoiceLine.getPriceActual();
+                unitAmount = invoiceLine.getPriceEntered();
                 originalQty = invoiceLine.getQtyInvoiced();
                 taxId = invoiceLine.getC_Tax_ID();
             }
             else if (m_ioLine.getC_OrderLine_ID() != 0)
             {
-                MOrderLine orderLine = new MOrderLine (getCtx(), m_ioLine.getC_OrderLine_ID(), get_TrxName());
+                MOrderLine orderLine = PO.get(getCtx(),MOrderLine.Table_Name, m_ioLine.getC_OrderLine_ID(), get_TrxName());
                 precision = orderLine.getPrecision();
-                unitAmount = orderLine.getPriceActual();
+                unitAmount = orderLine.getPriceEntered();
                 originalQty = orderLine.getQtyDelivered();
                 taxId = orderLine.getC_Tax_ID();
             }
@@ -121,70 +123,86 @@ public class MRMALine extends X_M_RMALine
                 throw new IllegalStateException("No Invoice/Order line found the Shipment/Receipt line associated");
             }
         }
-        else if (getC_Charge_ID() != 0)
+        else if(getParent().getShipment() != null)
         {
-            MCharge charge = MCharge.get(this.getCtx(), getC_Charge_ID());
-            unitAmount = charge.getChargeAmt();
-            
-            MInvoice invoice = getParent().getOriginalInvoice();
-    		if (invoice != null) 
-    			precision = invoice.getPrecision();
-    		else 
-    		{
-    			MOrder order = getParent().getOriginalOrder();
-    			if (order != null) 
-    				precision = order.getPrecision();
-    			else
-    				throw new IllegalStateException("No Invoice/Order found the Shipment/Receipt associated");
-    		}
-            
-            // Retrieve tax Exempt
-            String sql = "SELECT C_Tax_ID FROM C_Tax WHERE AD_Client_ID=? AND IsActive='Y' "
-                + "AND IsTaxExempt='Y' AND ValidFrom < getDate() ORDER BY IsDefault DESC";
-            
-            // Set tax for charge as exempt        
-            taxId = DB.getSQLValueEx(null, sql, Env.getAD_Client_ID(getCtx()));
-            m_ioLine = null;
-        }
-        else if (getM_Product_ID() != 0)
-        {
+	        if (getC_Charge_ID() > 0)
+	        {
+	            MCharge charge = MCharge.get(this.getCtx(), getC_Charge_ID());
+	            unitAmount = charge.getChargeAmt();
+	            
+	            MInvoice invoice = getParent().getOriginalInvoice();
+	    		if (invoice != null) 
+	    			precision = invoice.getPrecision();
+	    		else 
+	    		{
+	    			MOrder order = getParent().getOriginalOrder();
+	    			if (order != null) 
+	    				precision = order.getPrecision();
+	    			else
+	    				throw new IllegalStateException("No Invoice/Order found the Shipment/Receipt associated");
+	    		}
+	            
+	            // Retrieve tax Exempt
+	            String sql = "SELECT C_Tax_ID FROM C_Tax WHERE AD_Client_ID=? AND IsActive='Y' "
+	                + "AND IsTaxExempt='Y' AND ValidFrom < SYSDATE ORDER BY IsDefault DESC";
+	            
+	            // Set tax for charge as exempt        
+	            taxId = DB.getSQLValueEx(null, sql, Env.getAD_Client_ID(getCtx()));
+	            m_ioLine = null;
+	        }
+	        else if (getM_Product_ID() > 0)
+	        {
         	IProductPricing pp = Core.getProductPricing();
     		pp.setRMALine(this, get_TrxName());
-        	
-        	MInvoice invoice = getParent().getOriginalInvoice();
-        	if (invoice != null)
-        	{
-        		pp.setM_PriceList_ID(invoice.getM_PriceList_ID());
-        		pp.setPriceDate(invoice.getDateInvoiced());
-        		
-        		precision = invoice.getPrecision();
-        		taxId = Tax.get(getCtx(), getM_Product_ID(), getC_Charge_ID(), invoice.getDateInvoiced(), invoice.getDateInvoiced(),
-            			getAD_Org_ID(), getParent().getShipment().getM_Warehouse_ID(),
-            			invoice.getC_BPartner_Location_ID(),		//	should be bill to
-            			invoice.getC_BPartner_Location_ID(), getParent().isSOTrx(), get_TrxName());
+	        	
+	        	MInvoice invoice = getParent().getOriginalInvoice();
+	        	if (invoice != null)
+	        	{
+	        		pp.setM_PriceList_ID(invoice.getM_PriceList_ID());
+	        		pp.setPriceDate(invoice.getDateInvoiced());
+	        		
+	        		precision = invoice.getPrecision();
+	        		taxId = Tax.get(getCtx(), getM_Product_ID(), getC_Charge_ID(), invoice.getDateInvoiced(), invoice.getDateInvoiced(),
+	            			getAD_Org_ID(), getParent().getShipment().getM_Warehouse_ID(),
+	            			invoice.getC_BPartner_Location_ID(),		//	should be bill to
+	            			invoice.getC_BPartner_Location_ID(), getParent().isSOTrx(), get_TrxName());
+	        	}
+	        	else 
+	        	{
+	        		MOrder order = getParent().getOriginalOrder();
+	        		if (order != null)
+	        		{
+	        			pp.setM_PriceList_ID(order.getM_PriceList_ID());
+	        			pp.setPriceDate(order.getDateOrdered());
+	        			
+	        			precision = order.getPrecision();
+	        			taxId = Tax.get(getCtx(), getM_Product_ID(), getC_Charge_ID(), order.getDateOrdered(), order.getDateOrdered(),
+	                			getAD_Org_ID(), order.getM_Warehouse_ID(),
+	                			order.getC_BPartner_Location_ID(),		//	should be bill to
+	                			order.getC_BPartner_Location_ID(), getParent().isSOTrx(), get_TrxName());
+	        		}
+	            	else
+	            		throw new IllegalStateException("No Invoice/Order found the Shipment/Receipt associated");
+	        	}
+	        	
+	        	pp.calculatePrice();
+	        	unitAmount = pp.getPriceStd();
         	}
-        	else 
-        	{
-        		MOrder order = getParent().getOriginalOrder();
-        		if (order != null)
-        		{
-        			pp.setM_PriceList_ID(order.getM_PriceList_ID());
-        			pp.setPriceDate(order.getDateOrdered());
-        			
-        			precision = order.getPrecision();
-        			taxId = Tax.get(getCtx(), getM_Product_ID(), getC_Charge_ID(), order.getDateOrdered(), order.getDateOrdered(),
-                			getAD_Org_ID(), order.getM_Warehouse_ID(),
-                			order.getC_BPartner_Location_ID(),		//	should be bill to
-                			order.getC_BPartner_Location_ID(), getParent().isSOTrx(), get_TrxName());
-        		}
-            	else
-            		throw new IllegalStateException("No Invoice/Order found the Shipment/Receipt associated");
-        	}
-        	
-        	pp.calculatePrice();
-        	unitAmount = pp.getPriceStd();
-        	
         	m_ioLine = null;
+        }
+        else // F3P: precision from default currency
+        {
+        	int C_Currency_ID = Env.getContextAsInt(getCtx(), "$C_Currency_ID");
+        	
+        	if(C_Currency_ID < 1)
+        	{
+        		MClientInfo ci = MClientInfo.get(getCtx(), getAD_Client_ID());
+        		int C_AcctSchema1_ID = ci.getC_AcctSchema1_ID();
+        		MAcctSchema schema = MAcctSchema.get(getCtx(), C_AcctSchema1_ID);
+        		C_Currency_ID = schema.getC_Currency_ID();
+        	}
+        	
+        	precision = MCurrency.getStdPrecision(getCtx(), C_Currency_ID);
         }
     }
 	
@@ -267,18 +285,18 @@ public class MRMALine extends X_M_RMALine
     @Override
     protected boolean beforeSave(boolean newRecord)
     {
-		if (newRecord && getParent().isProcessed()) 
+		if (newRecord && getParent().isComplete()) 
 		{
-			log.saveError("ParentComplete", Msg.translate(getCtx(), "M_RMA_ID"));
+			log.saveError("ParentComplete", Msg.translate(getCtx(), "M_RMA"));
 			return false;
 		}
-        if (getM_InOutLine_ID() == 0 && getC_Charge_ID() == 0 && getM_Product_ID() == 0)
+        if (getM_InOutLine_ID() <= 0 && getC_Charge_ID() <= 0 && getM_Product_ID() <= 0)
         {
             log.saveError("FillShipLineOrProductOrCharge", "");
             return false;
         }
         
-        if (getM_Product_ID() != 0 && getC_Charge_ID() != 0)
+        if (getM_Product_ID() > 0 && getC_Charge_ID() > 0)
         {
             log.saveError("JustProductOrCharge", "");
             return false;
@@ -295,8 +313,9 @@ public class MRMALine extends X_M_RMALine
         	
             if (newRecord || is_ValueChanged(COLUMNNAME_M_InOutLine_ID))
             {
-                String whereClause = "M_RMA_ID=" + getM_RMA_ID() + " AND M_InOutLine_ID=" + getM_InOutLine_ID() + " AND M_RMALine_ID!=" + getM_RMALine_ID();
-
+                String whereClause = "M_RMA_ID=" + getM_RMA_ID() + " AND M_InOutLine_ID=" + getM_InOutLine_ID() + " AND M_RMALine_ID!=" + getM_RMALine_ID()
+                		+" AND A_Asset_ID="	+ get_ValueAsInt("A_Asset_ID");
+                
                 int lineIds[] = MRMALine.getAllIDs(MRMALine.Table_Name, whereClause, this.get_TrxName());
                 
                 if (lineIds.length > 0)
@@ -480,7 +499,7 @@ public class MRMALine extends X_M_RMALine
 	public MProduct getProduct()
 	{
 		if (m_product == null && getM_Product_ID() != 0)
-			m_product =  MProduct.getCopy(getCtx(), getM_Product_ID(), get_TrxName());
+			m_product =  MProduct.get (getCtx(), getM_Product_ID());
 		return m_product;
 	}
 	
@@ -491,12 +510,12 @@ public class MRMALine extends X_M_RMALine
 	public MCharge getCharge()
 	{
 		if (m_charge == null && getC_Charge_ID() != 0)
-			m_charge =  MCharge.getCopy(getCtx(), getC_Charge_ID(), get_TrxName());
+			m_charge =  MCharge.get (getCtx(), getC_Charge_ID());
 		return m_charge;
 	}
 	
 	/**
-	 * 	Get Tax (immutable)
+	 * 	Get Tax
 	 *	@return tax
 	 */
 	protected MTax getTax()

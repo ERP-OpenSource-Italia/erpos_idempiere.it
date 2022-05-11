@@ -33,6 +33,9 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Util;
 
+import it.idempiere.base.model.LITMReplenish;
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  * 	Inventory Storage Model
  *
@@ -286,6 +289,14 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		return getWarehouse(ctx, M_Warehouse_ID, M_Product_ID, M_AttributeSetInstance_ID, minGuaranteeDate, FiFo, positiveOnly, M_Locator_ID, trxName, forUpdate, 0);
 	}
 	
+	public static MStorageOnHand[] getWarehouse (Properties ctx, int M_Warehouse_ID, 
+			int M_Product_ID, int M_AttributeSetInstance_ID, Timestamp minGuaranteeDate,
+			boolean FiFo, boolean positiveOnly, int M_Locator_ID, String trxName, boolean forUpdate, int timeout)
+	{
+		return getWarehouse(ctx, M_Warehouse_ID, M_Product_ID, M_AttributeSetInstance_ID, minGuaranteeDate, FiFo, positiveOnly, M_Locator_ID, 
+				trxName, forUpdate, timeout, false);
+	}
+	
 	/**
 	 * 	Get Storage Info for Warehouse or locator
 	 *	@param ctx context
@@ -302,7 +313,7 @@ public class MStorageOnHand extends X_M_StorageOnHand
 	 */
 	public static MStorageOnHand[] getWarehouse (Properties ctx, int M_Warehouse_ID, 
 		int M_Product_ID, int M_AttributeSetInstance_ID, Timestamp minGuaranteeDate,
-		boolean FiFo, boolean positiveOnly, int M_Locator_ID, String trxName, boolean forUpdate, int timeout)
+		boolean FiFo, boolean positiveOnly, int M_Locator_ID, String trxName, boolean forUpdate, int timeout,boolean reverse)
 	{
 		if ((M_Warehouse_ID == 0 && M_Locator_ID == 0) || M_Product_ID == 0)
 			return new MStorageOnHand[0];
@@ -316,74 +327,150 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		String sql = "SELECT s.M_Product_ID,s.M_Locator_ID,s.M_AttributeSetInstance_ID,"
 			+ "s.AD_Client_ID,s.AD_Org_ID,s.IsActive,s.Created,s.CreatedBy,s.Updated,s.UpdatedBy,"
 			+ "s.QtyOnHand,s.DateLastInventory,s.M_StorageOnHand_UU,s.DateMaterialPolicy "
-			+ "FROM M_StorageOnHand s"
-			+ " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID) ";
+			+ " FROM (SELECT m_storageonhand.ad_client_id, "
+			+ "    m_storageonhand.ad_org_id, "
+			+ "    min(m_storageonhand.created) AS created, "
+			+ "    min(m_storageonhand.createdby) AS createdby, "
+			+ "    max(m_storageonhand.datelastinventory) AS datelastinventory, "
+			+ "    m_storageonhand.isactive, "
+			+ "    m_storageonhand.m_attributesetinstance_id, "
+			+ "    m_storageonhand.m_locator_id, "
+			+ "    m_storageonhand.m_product_id, "
+			+ "    sum(m_storageonhand.qtyonhand) AS qtyonhand, "
+			+ "    min(m_storageonhand.updated) AS updated, "
+			+ "    min(m_storageonhand.updatedby) AS updatedby, "
+			+ "    min(m_storageonhand.m_storageonhand_uu::text) AS m_storageonhand_uu, "
+			+ "    min(m_storageonhand.datematerialpolicy) AS datematerialpolicy ";
+			/** LS */
+			if(STDSysConfig.isStorageOnHandUseDateFirstMovement())
+			{
+				sql += "    , (select min (MovementDate) FROM M_Transaction t "
+						+ "		   WHERE t.M_Product_ID = m_storageonhand.M_product_ID "
+						+ "		   AND t.M_AttributesetInstance_ID = m_storageonhand.M_AttributesetInstance_ID "
+						+ "		   AND t.m_locator_id = m_storageonhand.m_locator_id "
+						+ "		   AND t.MovementQty>0 "
+						+ "		  ) AS datefirstmovement ";
+				
+				if(STDSysConfig.isStorageOnHandUseTransaction_ID())
+				{
+
+					sql += "    , (select min (M_Transaction_ID) FROM M_Transaction t "
+							+ "		   WHERE t.M_Product_ID = m_storageonhand.M_product_ID "
+							+ "		   AND t.M_AttributesetInstance_ID = m_storageonhand.M_AttributesetInstance_ID "
+							+ "		   AND t.m_locator_id = m_storageonhand.m_locator_id "
+							+ "		   AND t.MovementQty>0 "
+							+ "		  ) AS M_Transaction_ID ";
+				}
+			}
+			/** LS END */
+			sql += "   FROM m_storageonhand ";
+			
 		if (M_Locator_ID > 0)
-			sql += "WHERE l.M_Locator_ID = ?";
+			sql += "WHERE m_storageonhand.M_Locator_ID = ?";
 		else
-			sql += "WHERE l.M_Warehouse_ID=?";
-		sql += " AND s.M_Product_ID=?"
-			 + " AND COALESCE(s.M_AttributeSetInstance_ID,0)=? ";
-		if (positiveOnly)
-		{
-			sql += " AND s.QtyOnHand > 0 ";
-		}
-		else
-		{
-			sql += " AND s.QtyOnHand <> 0 ";
-		}
-		sql += "ORDER BY l.PriorityNo DESC, DateMaterialPolicy ";
-		if (!FiFo)
-			sql += " DESC, s.M_AttributeSetInstance_ID DESC ";
-		else
-			sql += ", s.M_AttributeSetInstance_ID ";
+			sql += "INNER JOIN M_Locator l ON (l.M_Locator_ID=m_storageonhand.M_Locator_ID) WHERE l.M_Warehouse_ID=?";
+		
+			sql += " AND m_storageonhand.M_Product_ID=?"
+				 + " AND COALESCE(m_storageonhand.M_AttributeSetInstance_ID,0)=? ";
+			
+			sql+= "  GROUP BY m_storageonhand.ad_client_id, m_storageonhand.ad_org_id, m_storageonhand.isactive, "
+			+ "		   m_storageonhand.m_attributesetinstance_id, m_storageonhand.m_locator_id, m_storageonhand.m_product_id "
+			+ "		) s "
+		    + " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID) ";
+			
+			
+			if(reverse == false)
+			{
+				if (positiveOnly)
+				{
+					sql += " WHERE s.QtyOnHand > 0 ";
+				}
+				else
+				{
+					sql += " WHERE s.QtyOnHand <> 0 ";
+				}
+			}
+			
+		
+		
+		sql+=getWarehouseOrderByClause(allAttributeInstances, false, FiFo);
 		//	All Attribute Set Instances
 		if (allAttributeInstances)
 		{
 			sql = "SELECT s.M_Product_ID,s.M_Locator_ID,s.M_AttributeSetInstance_ID,"
 				+ " s.AD_Client_ID,s.AD_Org_ID,s.IsActive,s.Created,s.CreatedBy,s.Updated,s.UpdatedBy,"
 				+ " s.QtyOnHand,s.DateLastInventory,s.M_StorageOnHand_UU,s.DateMaterialPolicy "
-				+ " FROM M_StorageOnHand s"
-				+ " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID)"
-				+ " LEFT OUTER JOIN M_AttributeSetInstance asi ON (s.M_AttributeSetInstance_ID=asi.M_AttributeSetInstance_ID) ";
+				+ " FROM (SELECT m_storageonhand.ad_client_id, "
+						+ "    m_storageonhand.ad_org_id, "
+						+ "    min(m_storageonhand.created) AS created, "
+						+ "    min(m_storageonhand.createdby) AS createdby, "
+						+ "    max(m_storageonhand.datelastinventory) AS datelastinventory, "
+						+ "    m_storageonhand.isactive, "
+						+ "    m_storageonhand.m_attributesetinstance_id, "
+						+ "    m_storageonhand.m_locator_id, "
+						+ "    m_storageonhand.m_product_id, "
+						+ "    sum(m_storageonhand.qtyonhand) AS qtyonhand, "
+						+ "    min(m_storageonhand.updated) AS updated, "
+						+ "    min(m_storageonhand.updatedby) AS updatedby, "
+						+ "    min(m_storageonhand.m_storageonhand_uu::text) AS m_storageonhand_uu, "
+						+ "    min(m_storageonhand.datematerialpolicy) AS datematerialpolicy ";
+						/** LS */
+						if(STDSysConfig.isStorageOnHandUseDateFirstMovement())
+						{
+							sql += "    , (select min (MovementDate) FROM M_Transaction t "
+									+ "		   WHERE t.M_Product_ID = m_storageonhand.M_product_ID "
+									+ "		   AND t.M_AttributesetInstance_ID = m_storageonhand.M_AttributesetInstance_ID "
+									+ "		   AND t.m_locator_id = m_storageonhand.m_locator_id "
+									+ "		   AND t.MovementQty>0 "
+									+ "		  ) AS datefirstmovement ";
+							
+							if(STDSysConfig.isStorageOnHandUseTransaction_ID())
+							{
+
+								sql += "    , (select min (M_Transaction_ID) FROM M_Transaction t "
+										+ "		   WHERE t.M_Product_ID = m_storageonhand.M_product_ID "
+										+ "		   AND t.M_AttributesetInstance_ID = m_storageonhand.M_AttributesetInstance_ID "
+										+ "		   AND t.m_locator_id = m_storageonhand.m_locator_id "
+										+ "		   AND t.MovementQty>0 "
+										+ "		  ) AS M_Transaction_ID ";
+							}
+						}
+						/** LS END */
+						sql +=  "   FROM m_storageonhand ";
+						
 			if (M_Locator_ID > 0)
-				sql += "WHERE l.M_Locator_ID = ?";
+				sql += "WHERE m_storageonhand.M_Locator_ID = ?";
 			else
-				sql += "WHERE l.M_Warehouse_ID=?";
-			sql += " AND s.M_Product_ID=? ";
-			if (positiveOnly)
-			{
-				sql += " AND s.QtyOnHand > 0 ";
-			}
-			else
-			{
-				sql += " AND s.QtyOnHand <> 0 ";
-			}
+				sql += "INNER JOIN M_Locator l ON (l.M_Locator_ID=m_storageonhand.M_Locator_ID) WHERE l.M_Warehouse_ID=?";
+			sql += " AND m_storageonhand.M_Product_ID=? ";
+			
+			
+			
+			sql+= "  GROUP BY m_storageonhand.ad_client_id, m_storageonhand.ad_org_id, m_storageonhand.isactive, "
+			+ "		   m_storageonhand.m_attributesetinstance_id, m_storageonhand.m_locator_id, m_storageonhand.m_product_id "
+			+ "		) s "
+			+ " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID)"
+			+ " LEFT OUTER JOIN M_AttributeSetInstance asi ON (s.M_AttributeSetInstance_ID=asi.M_AttributeSetInstance_ID) ";
 			
 			if (minGuaranteeDate != null)
 			{
 				sql += "AND (asi.GuaranteeDate IS NULL OR asi.GuaranteeDate>?) ";
 			}
 			
-			MProduct product = MProduct.get(Env.getCtx(), M_Product_ID);
-			
-			if(product.isUseGuaranteeDateForMPolicy()){
-				sql += "ORDER BY l.PriorityNo DESC, COALESCE(asi.GuaranteeDate,s.DateMaterialPolicy)";
-				if (!FiFo)
-					sql += " DESC, s.M_AttributeSetInstance_ID DESC ";
-				else
-					sql += ", s.M_AttributeSetInstance_ID ";
-			}
-			else
+			if(reverse == false)
 			{
-				sql += "ORDER BY l.PriorityNo DESC, l.M_Locator_ID, s.DateMaterialPolicy";
-				if (!FiFo)
-					sql += " DESC, s.M_AttributeSetInstance_ID DESC ";
+				if (positiveOnly)
+				{
+					sql += " WHERE s.QtyOnHand > 0 ";
+				}
 				else
-					sql += ", s.M_AttributeSetInstance_ID ";
+				{
+					sql += " WHERE s.QtyOnHand <> 0 ";
+				}
 			}
 			
-			sql += ", s.QtyOnHand DESC";
+			MProduct product = MProduct.get(Env.getCtx(), M_Product_ID);
+			sql+=getWarehouseOrderByClause(allAttributeInstances, product.isUseGuaranteeDateForMPolicy(), FiFo);
 		} 
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -492,16 +579,31 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		String sql = "SELECT s.M_Product_ID,s.M_Locator_ID,s.M_AttributeSetInstance_ID,"
 			+ "s.AD_Client_ID,s.AD_Org_ID,s.IsActive,s.Created,s.CreatedBy,s.Updated,s.UpdatedBy,"
 			+ "s.QtyOnHand,s.DateLastInventory,s.M_StorageOnHand_UU,s.DateMaterialPolicy "
-			+ "FROM M_StorageOnHand s"
-			+ " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID)"
-			+ " LEFT OUTER JOIN M_AttributeSetInstance asi ON (s.M_AttributeSetInstance_ID=asi.M_AttributeSetInstance_ID) ";
-		if (M_Locator_ID > 0)
-			sql += "WHERE l.M_Locator_ID = ?";
-		else
-			sql += "WHERE l.M_Warehouse_ID=?";
-		sql += " AND s.M_Product_ID=? "
-			+ " AND s.QtyOnHand < 0 ";
-		
+			+ "FROM (SELECT m_storageonhand.ad_client_id, "
+					+ "    m_storageonhand.ad_org_id, "
+					+ "    min(m_storageonhand.created) AS created, "
+					+ "    min(m_storageonhand.createdby) AS createdby, "
+					+ "    max(m_storageonhand.datelastinventory) AS datelastinventory, "
+					+ "    m_storageonhand.isactive, "
+					+ "    m_storageonhand.m_attributesetinstance_id, "
+					+ "    m_storageonhand.m_locator_id, "
+					+ "    m_storageonhand.m_product_id, "
+					+ "    sum(m_storageonhand.qtyonhand) AS qtyonhand, "
+					+ "    min(m_storageonhand.updated) AS updated, "
+					+ "    min(m_storageonhand.updatedby) AS updatedby, "
+					+ "    min(m_storageonhand.m_storageonhand_uu::text) AS m_storageonhand_uu, "
+					+ "    min(m_storageonhand.datematerialpolicy) AS datematerialpolicy "
+					+ "   FROM m_storageonhand "
+					+ " INNER JOIN M_Locator l ON (l.M_Locator_ID=m_storageonhand.M_Locator_ID)"
+					+ " LEFT OUTER JOIN M_AttributeSetInstance asi ON (m_storageonhand.M_AttributeSetInstance_ID=asi.M_AttributeSetInstance_ID) ";
+			
+			if (M_Locator_ID > 0)
+				sql += "WHERE m_storageonhand.M_Locator_ID = ?";
+			else
+				sql += "INNER JOIN M_Locator l ON (l.M_Locator_ID=m_storageonhand.M_Locator_ID) WHERE l.M_Warehouse_ID=?";
+			sql += " AND m_storageonhand.M_Product_ID=? "
+					+ " AND m_storageonhand.QtyOnHand < 0 ";
+			
 		if (minGuaranteeDate != null)
 		{
 			sql += "AND (asi.GuaranteeDate IS NULL OR asi.GuaranteeDate>?) ";
@@ -509,14 +611,21 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		
 		if (M_AttributeSetInstance_ID > 0)
 		{
-			sql += "AND s.M_AttributeSetInstance_ID=? ";
+			sql += "AND m_storageonhand.M_AttributeSetInstance_ID=? ";
 		}
 		else if (M_AttributeSetInstance_ID == 0)
 		{
-			sql += "AND (s.M_AttributeSetInstance_ID=0 OR s.M_AttributeSetInstance_ID IS NULL) ";
+			sql += "AND (m_storageonhand.M_AttributeSetInstance_ID=0 OR m_storageonhand.M_AttributeSetInstance_ID IS NULL) ";
 		}
 		
-		MProduct product = MProduct.get(Env.getCtx(), M_Product_ID, trxName);
+		sql+= "  GROUP BY m_storageonhand.ad_client_id, m_storageonhand.ad_org_id, m_storageonhand.isactive, "
+				+ "   m_storageonhand.m_attributesetinstance_id, m_storageonhand.m_locator_id, m_storageonhand.m_product_id "
+				+ ") s";
+				
+		sql += " INNER JOIN M_Locator l ON (l.M_Locator_ID=s.M_Locator_ID)"
+				+ " LEFT OUTER JOIN M_AttributeSetInstance asi ON (s.M_AttributeSetInstance_ID=asi.M_AttributeSetInstance_ID) ";
+		
+		MProduct product = MProduct.get(Env.getCtx(), M_Product_ID);
 		
 		if(product.isUseGuaranteeDateForMPolicy()){
 			sql += "ORDER BY l.PriorityNo DESC, " +
@@ -725,7 +834,7 @@ public class MStorageOnHand extends X_M_StorageOnHand
 	 * @param addition
 	 */
 	public void addQtyOnHand(BigDecimal addition) {
-		final String sql = "UPDATE M_StorageOnHand SET QtyOnHand=QtyOnHand+?, Updated=getDate(), UpdatedBy=? " +
+		final String sql = "UPDATE M_StorageOnHand SET QtyOnHand=QtyOnHand+?, Updated=SYSDATE, UpdatedBy=? " +
 				"WHERE M_Product_ID=? AND M_Locator_ID=? AND M_AttributeSetInstance_ID=? AND DateMaterialPolicy=?";
 		DB.executeUpdateEx(sql, 
 			new Object[] {addition, Env.getAD_User_ID(Env.getCtx()), getM_Product_ID(), getM_Locator_ID(), getM_AttributeSetInstance_ID(), getDateMaterialPolicy()}, 
@@ -733,7 +842,7 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		load(get_TrxName());
 		if (getQtyOnHand().signum() == -1) {
 			MWarehouse wh = MWarehouse.get(Env.getCtx(), getM_Warehouse_ID());
-			if (wh.isDisallowNegativeInv()) {
+			if (wh.isDisallowNegativeInv() || LITMReplenish.isDisallowNegativeInv(getM_Product_ID(), getM_Warehouse_ID(), get_TrxName())) {
 				throw new NegativeInventoryDisallowedException(getCtx(), getM_Warehouse_ID(), getM_Product_ID(), getM_AttributeSetInstance_ID(), getM_Locator_ID(),
 						getQtyOnHand().subtract(addition), addition.negate());
 			}
@@ -880,7 +989,7 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		if (newRecord || is_ValueChanged("QtyOnHand"))
 		{
 			MWarehouse wh = new MWarehouse(getCtx(), getM_Warehouse_ID(), get_TrxName());
-			if (wh.isDisallowNegativeInv())
+			if (wh.isDisallowNegativeInv()|| LITMReplenish.isDisallowNegativeInv(getM_Product_ID(), getM_Warehouse_ID(), get_TrxName()))
 			{
 				String sql = "SELECT SUM(QtyOnHand) "
 					+ "FROM M_StorageOnHand s"
@@ -1017,7 +1126,7 @@ public class MStorageOnHand extends X_M_StorageOnHand
 	 */
 	public String toString()
 	{
-		StringBuilder sb = new StringBuilder("MStorageOnHand[")
+		StringBuffer sb = new StringBuffer("MStorageOnHand[")
 			.append("M_Locator_ID=").append(getM_Locator_ID())
 			.append(",M_Product_ID=").append(getM_Product_ID())
 			.append(",M_AttributeSetInstance_ID=").append(getM_AttributeSetInstance_ID())
@@ -1114,4 +1223,62 @@ public class MStorageOnHand extends X_M_StorageOnHand
 		
 		return null;
 	}  //getDateMaterialPolicy
+	
+	
+	/**
+	 * 
+	 * ALIASES
+	 * M_Storage > s
+	 * M_AttributeSetInstance > asi
+	 * M_Locator > l
+	 */
+	public static String getWarehouseOrderByClause(boolean allAttributeInstances, boolean isUseGuaranteeDateForMPolicy, boolean FiFo) {
+		StringBuilder sql = new StringBuilder(" ORDER BY l.PriorityNo DESC, ");
+		
+		/** LS Gestione data primo movimento */
+		if(STDSysConfig.isStorageOnHandUseDateFirstMovement())
+		{
+			sql.append(" s.datefirstmovement ");
+			if(!FiFo)
+				sql.append(" DESC,");
+			else 
+				sql.append(" ,");
+			
+			if(STDSysConfig.isStorageOnHandUseTransaction_ID())
+			{
+				sql.append(" s.M_Transaction_ID ");
+				if(!FiFo)
+					sql.append(" DESC,");
+				else 
+					sql.append(" ,");
+			}
+		}
+		/** LS End*/
+		
+		if (allAttributeInstances) {
+
+			if (isUseGuaranteeDateForMPolicy) {
+				sql.append("COALESCE(asi.GuaranteeDate,s.DateMaterialPolicy)");
+			} else {
+				sql.append("s.DateMaterialPolicy");
+			}
+
+			if (!FiFo)
+				sql.append(" DESC, s.M_AttributeSetInstance_ID DESC ");
+			else
+				sql.append(", s.M_AttributeSetInstance_ID ");
+
+				sql.append(", s.QtyOnHand DESC");
+		} else {
+
+			sql.append(" DateMaterialPolicy ");
+			if (!FiFo)
+				sql.append(" DESC, s.M_AttributeSetInstance_ID DESC ");
+			else
+				sql.append(", s.M_AttributeSetInstance_ID ");
+		}
+
+		return sql.toString();
+	}
+	
 }	//	MStorageOnHand

@@ -18,7 +18,10 @@ import java.util.ArrayList;
 import org.compiere.minigrid.IMiniTable;
 import org.compiere.print.MPrintFormat;
 import org.compiere.process.ProcessInfo;
+import org.compiere.util.Env;
 import org.compiere.util.Trx;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  * Generate custom form base class
@@ -37,6 +40,9 @@ public abstract class GenForm
 	
 	/** User selection */
 	private ArrayList<Integer> selection = null;
+	
+	// F3P: zoom generated ids using this table (via mquery), instead of printing
+	private String zoomOnTableName = null;
 	
 	public void dynInit() throws Exception
 	{
@@ -68,6 +74,7 @@ public abstract class GenForm
 
 	public void setTrx(Trx trx) {
 		this.trx = trx;
+		trx.commit();
 	}
 
 	public ProcessInfo getProcessInfo() {
@@ -124,5 +131,34 @@ public abstract class GenForm
 
 	public void setAskPrintMsg(String askPrintMsg) {
 		this.askPrintMsg = askPrintMsg;
+	}
+	
+	// F3P: getter and setters
+	
+	public String getZoomOnTableName()
+	{
+		return zoomOnTableName;
+	}
+
+	public void setZoomOnTableName(String zoomOnTableName)
+	{
+		this.zoomOnTableName = zoomOnTableName;
+	}
+	
+	public static String getConfiguredDocAction()
+	{
+		String sDefaultDocAction = STDSysConfig.getDefaultDocAction(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())); 
+		
+		if(sDefaultDocAction != null)
+		{
+			sDefaultDocAction = sDefaultDocAction.trim();
+		}
+		
+		return sDefaultDocAction;
+	}
+	
+	public String getDefaultDocAction()
+	{
+		return GenForm.getConfiguredDocAction();
 	}
 }

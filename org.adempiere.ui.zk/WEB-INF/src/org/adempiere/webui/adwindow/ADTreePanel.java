@@ -15,12 +15,15 @@ package org.adempiere.webui.adwindow;
 
 
 import org.adempiere.webui.AdempiereWebUI;
+import org.adempiere.webui.component.ADTreeOnDropListener;
 import org.adempiere.webui.component.SimpleTreeModel;
 import org.adempiere.webui.component.ToolBarButton;
 import org.adempiere.webui.panel.TreeSearchPanel;
 import org.adempiere.webui.util.TreeUtils;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.model.MTree_Base;
+import org.compiere.model.MTree;
+import org.compiere.model.MTreeNode;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
@@ -126,6 +129,25 @@ public class ADTreePanel extends Panel implements EventListener<Event>
         
         this.addEventListener(ON_EXPAND_MENU_EVENT, this);
     }
+    
+    //F3P
+    public void createTree(int AD_Tree_ID, int windowNo) throws Exception
+    {
+    	MTree vTree = new MTree (Env.getCtx(), AD_Tree_ID, true, true, null);
+  		MTreeNode root = vTree.getRoot();
+  		
+  		SimpleTreeModel treeModel = SimpleTreeModel.createFrom(root);
+  		treeModel.setItemDraggable(true);
+  		treeModel.addOnDropEventListener(new ADTreeOnDropListener(tree, treeModel, vTree, windowNo));
+  		
+  		tree.setPageSize(-1);
+ 			tree.setTreeitemRenderer(treeModel);
+ 			tree.setModel(treeModel);
+ 			
+    	pnlSearch.initialise();
+    	expandOnCheck();
+    }
+    //F3P end
     
     /**
      * @param event

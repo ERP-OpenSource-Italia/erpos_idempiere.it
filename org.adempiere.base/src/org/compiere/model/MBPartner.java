@@ -21,15 +21,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
-import org.idempiere.cache.ImmutablePOSupport;
+
+import it.idempiere.base.model.LITMBPartner;
 
 /**
  *	Business Partner Model
@@ -49,7 +50,7 @@ public class MBPartner extends X_C_BPartner implements ImmutablePOSupport
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 2256035503713773448L;
+	private static final long serialVersionUID = -255154524310324997L;
 
 	/**
 	 * 	Get Empty Template Business Partner
@@ -94,6 +95,28 @@ public class MBPartner extends X_C_BPartner implements ImmutablePOSupport
 		}
 		return template;
 	}	//	getTemplate
+	
+	// F3P: bp cache, intended for read-only usage
+	
+	static private CCache<Integer,MBPartner>	s_cache = new CCache<Integer,MBPartner>(MBPartner.Table_Name, 200);
+	
+	public static MBPartner getReadonlyNoVirtualCols(Properties ctx, int C_BPartner_ID)
+	{
+		MBPartner retValue = (MBPartner)s_cache.get(C_BPartner_ID);
+		if (retValue == null)
+		{
+			final String whereClause = "C_BPartner_ID=? AND AD_Client_ID=?";
+			retValue = new Query(ctx,Table_Name,whereClause, null)
+									.setParameters(C_BPartner_ID,Env.getAD_Client_ID(ctx))
+									.setNoVirtualColumn(true)
+									.firstOnly();
+			
+			s_cache.put(C_BPartner_ID, retValue);
+		}
+		
+		return retValue; 
+	}
+
 
 	/**
 	 * 	Get Cash Trx Business Partner
@@ -361,7 +384,7 @@ public class MBPartner extends X_C_BPartner implements ImmutablePOSupport
 		this.m_primaryAD_User_ID = copy.m_primaryAD_User_ID;
 		this.m_group = copy.m_group != null ? new MBPGroup(ctx, copy.m_group, trxName) : null;
 	}
-
+	
 	/** Users							*/
 	protected MUser[]				m_contacts = null;
 	/** Addressed						*/
@@ -611,6 +634,19 @@ public class MBPartner extends X_C_BPartner implements ImmutablePOSupport
 		super.setClientOrg(AD_Client_ID, AD_Org_ID);
 	}	//	setClientOrg
 
+	/**
+	 * 	Set Linked Organization.
+	 * 	(is Button)
+	 *	@param AD_OrgBP_ID 
+	 */
+	public void setAD_OrgBP_ID (int AD_OrgBP_ID)
+	{
+		if (AD_OrgBP_ID == 0)
+			super.setAD_OrgBP_ID (null);
+		else
+			super.set_Value("AD_OrgBP_ID", AD_OrgBP_ID);
+	}	//	setAD_OrgBP_ID
+	
 	/** 
 	 * 	Get Linked Organization.
 	 * 	(is Button)
@@ -621,7 +657,19 @@ public class MBPartner extends X_C_BPartner implements ImmutablePOSupport
 	 */
 	public int getAD_OrgBP_ID_Int() 
 	{
-		return getAD_OrgBP_ID();
+		String org = super.getAD_OrgBP_ID();
+		if (org == null)
+			return 0;
+		int AD_OrgBP_ID = 0;
+		try
+		{
+			AD_OrgBP_ID = Integer.parseInt (org);
+		}
+		catch (Exception ex)
+		{
+			log.log(Level.SEVERE, org, ex);
+		}
+		return AD_OrgBP_ID;
 	}	//	getAD_OrgBP_ID_Int
 
 	/**
@@ -710,7 +758,13 @@ public class MBPartner extends X_C_BPartner implements ImmutablePOSupport
 	 */
 	public void setTotalOpenBalance ()
 	{
-		log.info("");
+		// LS use new function is customer
+		if (isCustomer()) {
+			LITMBPartner.setTotalOpenBalanceDB(this, false, get_TrxName());
+			return;
+		}
+		// LS end
+				
 		BigDecimal SO_CreditUsed = null;
 		BigDecimal TotalOpenBalance = null;
 		//AZ Goodwill -> BF2041226 : only count completed/closed docs.
@@ -725,7 +779,8 @@ public class MBPartner extends X_C_BPartner implements ImmutablePOSupport
 				+ "WHERE p.C_BPartner_ID=bp.C_BPartner_ID AND p.IsAllocated='N'"
 				+ " AND p.C_Charge_ID IS NULL AND p.DocStatus IN ('CO','CL')),0) "
 			+ "FROM C_BPartner bp "
-			+ "WHERE C_BPartner_ID=?";		
+			+ "WHERE C_BPartner_ID=?";	
+		
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try

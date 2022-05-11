@@ -105,8 +105,11 @@ public class CalloutPaySelection extends CalloutEngine
 		BigDecimal DiscountAmt = Env.ZERO;
 		Boolean IsSOTrx = Boolean.FALSE;
 		String sql = "SELECT"
-			+ " currencyConvertInvoice("
-				+ "i.C_Invoice_ID, ba.C_Currency_ID, invoiceOpen(i.C_Invoice_ID, 0), i.DateInvoiced),"
+			//+ " currencyConvertInvoice("
+			//	+ "i.C_Invoice_ID, ba.C_Currency_ID, invoiceOpen(i.C_Invoice_ID, 0), i.DateInvoiced),"
+			+ " currencyConvert("
+				+ "invoiceOpen(i.C_Invoice_ID, 0)"
+				+ ", i.C_Currency_ID,ba.C_Currency_ID, i.DateInvoiced, i.C_ConversionType_ID, i.AD_Client_ID, i.AD_Org_ID),"
 			+ " currencyConvert("
 			    + "paymentTermDiscount(i.GrandTotal,i.C_Currency_ID,i.C_PaymentTerm_ID,i.DateInvoiced, ?)"
 			    + ", i.C_Currency_ID, ba.C_Currency_ID, i.DateInvoiced, i.C_ConversionType_ID, i.AD_Client_ID, i.AD_Org_ID)"
@@ -144,6 +147,9 @@ public class CalloutPaySelection extends CalloutEngine
 		mTab.setValue("DiscountAmt", DiscountAmt);
 		mTab.setValue("DifferenceAmt", Env.ZERO);
 		mTab.setValue("IsSOTrx", IsSOTrx);
+		
+		mTab.setValue("OverUnderAmt", BigDecimal.ZERO);	//F3P:from genied adempiere
+		
 		return "";
 	}	//	PaySel_Invoice
 

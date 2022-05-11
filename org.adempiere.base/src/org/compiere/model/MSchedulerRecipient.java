@@ -98,4 +98,30 @@ public class MSchedulerRecipient extends X_AD_SchedulerRecipient implements Immu
 		return this;
 	}
 
+	public static final String COLUMNNAME_LS_EmailType = "LS_EmailType";
+	
+	public void setLS_EmailType (String LS_EmailType)
+	{
+		set_Value (COLUMNNAME_LS_EmailType, LS_EmailType);
+	}
+
+	public String getLS_EmailType () 
+	{
+		return (String)get_Value(COLUMNNAME_LS_EmailType);
+	}
+	
+	public boolean isLogError()
+	{
+		return getLS_EmailType().equals("A") || getLS_EmailType().equals("E");
+	}
+	
+	public boolean isLogProcess()
+	{
+		return getLS_EmailType().equals("A") || getLS_EmailType().equals("P");
+	}
+	
+	public boolean isLogAll()
+	{
+		return getLS_EmailType().equals("A");
+	}
 }	//	MSchedulerRecipient

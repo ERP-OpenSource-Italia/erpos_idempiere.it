@@ -114,12 +114,12 @@ public class ImportConversionRate extends SvrProcess
 		if (p_ValidFrom != null)
 			sql.append(" ValidFrom = COALESCE (ValidFrom,").append (DB.TO_DATE(p_ValidFrom)).append ("),");
 		else
-			sql.append(" ValidFrom = COALESCE (ValidFrom,getDate()),");
+			sql.append(" ValidFrom = COALESCE (ValidFrom,SysDate),");
 		sql.append(" CreateReciprocalRate = COALESCE (CreateReciprocalRate,'").append (p_CreateReciprocalRate ? "Y" : "N").append ("'),")
 			.append(" IsActive = COALESCE (IsActive, 'Y'),")
-			.append(" Created = COALESCE (Created, getDate()),")
+			.append(" Created = COALESCE (Created, SysDate),")
 			.append(" CreatedBy = COALESCE (CreatedBy, 0),")
-			.append(" Updated = COALESCE (Updated, getDate()),")
+			.append(" Updated = COALESCE (Updated, SysDate),")
 			.append(" UpdatedBy = ").append(getAD_User_ID()).append(",")
 			.append(" I_ErrorMsg = ' ',")
 			.append(" Processed = 'N',"	)
@@ -220,7 +220,7 @@ public class ImportConversionRate extends SvrProcess
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid Rates =" + no);
-	//	sql = new StringBuilder ("UPDATE I_Conversion_Rate i "	//	Rate diff > 10%
+	//	sql = new StringBuffer ("UPDATE I_Conversion_Rate i "	//	Rate diff > 10%
 	//		+ "SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Inconsistent Rates='||(MultiplyRate - (1/DivideRate)) "
 	//		+ "WHERE ((MultiplyRate - (1/DivideRate)) > (MultiplyRate * .1))"
 	//		+ " AND I_IsImported<>'Y'").append (clientCheck);
@@ -285,7 +285,7 @@ public class ImportConversionRate extends SvrProcess
 
 		//	Set Error to indicator to not imported
 		sql = new StringBuilder ("UPDATE I_Conversion_Rate ")
-			.append("SET I_IsImported='N', Updated=getDate() ")
+			.append("SET I_IsImported='N', Updated=SysDate ")
 			.append("WHERE I_IsImported<>'Y'").append(clientCheck);
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		addLog (0, null, new BigDecimal (no), "@Errors@");

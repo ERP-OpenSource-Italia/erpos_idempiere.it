@@ -294,6 +294,10 @@ public class Process {
 			ProcessInfoUtil.setParameterFromDB(pi);
 			parameters = pi.getParameter();
 		}
+		
+		if(pi.isProcessRunning(null))
+			throw new AdempiereException("ProcessAlreadyRunning "+pi.getAD_Process_ID());
+		
 		for(DataField field : fields) {
 			if (isDataURI(field.getVal())) {
 				for(ProcessInfoParameter param : parameters) {
@@ -349,6 +353,9 @@ public class Process {
 	
 		if (process.isJavaProcess() && !jasperreport)
 		{
+			pInstance.setIsProcessing(true);
+			pInstance.saveEx();
+			
 			Trx trx = trxName == null ? Trx.get(Trx.createTrxName("WebPrc"), true) : Trx.get(trxName, true);
 			if (trxName == null)
 				trx.setDisplayName(Process.class.getName()+"_runProcess");
@@ -368,6 +375,9 @@ public class Process {
 			{
 				if (trxName == null)
 					trx.close();
+				
+				pInstance.setIsProcessing(false);
+				pInstance.saveEx();
 			}
 			if (!processOK || pi.isError())
 			{

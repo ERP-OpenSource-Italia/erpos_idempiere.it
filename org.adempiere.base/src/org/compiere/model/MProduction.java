@@ -26,12 +26,13 @@ public class MProduction extends X_M_Production implements DocAction {
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 6714776372370644208L;
+	private static final long serialVersionUID = -4650232602150964606L;
 
 	/**
 	 * 
 	 */
 	/** Log								*/
+	@SuppressWarnings("unused")
 	protected static CLogger		m_log = CLogger.getCLogger (MProduction.class);
 	protected int lineno;
 	protected int count;
@@ -184,7 +185,8 @@ public class MProduction extends X_M_Production implements DocAction {
 		
 		String sql = "SELECT pl.M_ProductionLine_ID "
 			+ "FROM M_ProductionLine pl "
-			+ "WHERE pl.M_Production_ID = ?";
+			+ "WHERE pl.M_Production_ID = ?"
+			+ "ORDER BY Line";
 		
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -254,13 +256,19 @@ public class MProduction extends X_M_Production implements DocAction {
 		
 		int M_Warehouse_ID = finishedLocator.getM_Warehouse_ID();
 		
+		int asi = 0;
+
 		// products used in production
 		String sql = "SELECT M_ProductBom_ID, BOMQty" + " FROM M_Product_BOM"
 				+ " WHERE M_Product_ID=" + finishedProduct.getM_Product_ID() + " ORDER BY Line";
-		
-		try (PreparedStatement pstmt = DB.prepareStatement(sql, get_TrxName());) {			
 
-			ResultSet rs = pstmt.executeQuery();
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+
+		try {
+			pstmt = DB.prepareStatement(sql, get_TrxName());
+
+			rs = pstmt.executeQuery();
 			while (rs.next()) {
 				
 				lineno = lineno + 10;
@@ -337,7 +345,6 @@ public class MProduction extends X_M_Production implements DocAction {
 						MProductionLine BOMLine = null;
 						int prevLoc = -1;
 						int previousAttribSet = -1;
-						int prevAsi = -1;
 						// Create lines from storage until qty is reached
 						for (int sl = 0; sl < storages.length; sl++) {
 
@@ -349,11 +356,11 @@ public class MProduction extends X_M_Production implements DocAction {
 
 								int loc = storages[sl].getM_Locator_ID();
 								int slASI = storages[sl].getM_AttributeSetInstance_ID();
-								int locAttribSet = new MAttributeSetInstance(getCtx(), slASI,
+								int locAttribSet = new MAttributeSetInstance(getCtx(), asi,
 										get_TrxName()).getM_AttributeSet_ID();
 
 								// roll up costing attributes if in the same locator
-								if (((locAttribSet == 0 && previousAttribSet == 0) || (slASI == prevAsi))
+								if (locAttribSet == 0 && previousAttribSet == 0
 										&& prevLoc == loc) {
 									BOMLine.setQtyUsed(BOMLine.getQtyUsed()
 											.add(lineQty));
@@ -378,7 +385,6 @@ public class MProduction extends X_M_Production implements DocAction {
 								}
 								prevLoc = loc;
 								previousAttribSet = locAttribSet;
-								prevAsi = slASI;
 								// enough ?
 								BOMMovementQty = BOMMovementQty.subtract(lineQty);
 								if (BOMMovementQty.signum() == 0)
@@ -426,6 +432,9 @@ public class MProduction extends X_M_Production implements DocAction {
 			} // for all bom products
 		} catch (Exception e) {
 			throw new AdempiereException("Failed to create production lines", e);
+		}
+		finally {
+			DB.close(rs, pstmt);
 		}
 
 		return count;
@@ -716,8 +725,11 @@ public class MProduction extends X_M_Production implements DocAction {
 		for (int i = 0; i < sLines.length; i++)
 		{		
 			//	We need to copy MA
+			// F3P: We need to copy ALL MA, they are created even for getM_AttributeSetInstance_ID() == 0 (this is different from other documents)
+			/*
 			if (sLines[i].getM_AttributeSetInstance_ID() == 0)
 			{
+			*/
 				MProductionLineMA mas[] = MProductionLineMA.get(getCtx(), sLines[i].get_ID(), get_TrxName());
 				for (int j = 0; j < mas.length; j++)
 				{
@@ -726,7 +738,9 @@ public class MProduction extends X_M_Production implements DocAction {
 						mas[j].getMovementQty().negate(),mas[j].getDateMaterialPolicy());
 					ma.saveEx(get_TrxName());					
 				}
+			/*
 			}
+			*/
 		}
 
 		if (!reversal.processIt(DocAction.ACTION_Complete))

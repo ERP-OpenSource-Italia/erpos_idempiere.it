@@ -158,7 +158,11 @@ public class FactAcctReset extends SvrProcess
 		int invalid = DB.executeUpdate(sql, get_TrxName());
 		//
 		if (unlocked + invalid != 0)
+		{
 			if (log.isLoggable(Level.FINE)) log.fine(TableName + " - Unlocked=" + unlocked + " - Invalid=" + invalid);
+			addLog(TableName + " - Unlocked=" + unlocked + " - Invalid=" + invalid);
+		}
+			
 		m_countReset += unlocked + invalid; 
 	}	//	reset
 
@@ -240,6 +244,10 @@ public class FactAcctReset extends SvrProcess
 			docBaseType = "= '" + MPeriodControl.DOCBASETYPE_Payroll+ "'";
 		else if (AD_Table_ID == X_PP_Cost_Collector.Table_ID)
 			docBaseType = "= '" + MPeriodControl.DOCBASETYPE_ManufacturingCostCollector+ "'";
+		else
+			docBaseType = "= '" + MPeriodControl.DOCBASETYPE_GLDocument + "'";	// F3P: for custom documents, we check if its open for GLDocument
+		/* F3P: cannot happen anymore, see previous comment
+  		
 		//
 		if (docBaseType == null)
 		{
@@ -249,7 +257,7 @@ public class FactAcctReset extends SvrProcess
 			docBaseType = "";
 			return;
 		}
-		else
+		else*/
 			docBaseType = " AND pc.DocBaseType " + docBaseType;
 		
 		//	Doc

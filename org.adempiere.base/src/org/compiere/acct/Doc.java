@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.I_C_AllocationHdr;
 import org.compiere.model.I_C_BankStatement;
 import org.compiere.model.I_C_Cash;
@@ -47,7 +48,6 @@ import org.compiere.model.MMatchInv;
 import org.compiere.model.MMatchPO;
 import org.compiere.model.MNote;
 import org.compiere.model.MPeriod;
-import org.compiere.model.MRefList;
 import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.ModelValidator;
 import org.compiere.model.PO;
@@ -60,6 +60,8 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
+
+import it.idempiere.base.acct.AccountingPreCheck;
 
 /**
  *  Posting Document Root.
@@ -440,7 +442,8 @@ public abstract class Doc
 	private ArrayList<Fact>    	m_fact = null;
 
 	/** No Currency in Document Indicator (-1)	*/
-	protected static final int  NO_CURRENCY = -2;
+	//protected static final int  NO_CURRENCY = -2;
+	public static final int  NO_CURRENCY = -2;
 
 	/**	Actual Document Status  */
 	protected String			p_Status = null;
@@ -579,6 +582,17 @@ public abstract class Doc
 				trx.commit(); trx.close();
 				return "PeriodClosed";
 			}
+			
+			String validatorMsg = null;
+			// Call validator on before repost
+			validatorMsg = ModelValidationEngine.get().fireDocValidate(getPO(), ModelValidator.TIMING_BEFORE_REPOST);
+			if (validatorMsg != null) {
+				log.log(Level.SEVERE, toString() + " - " + validatorMsg);
+				unlock();
+				trx.commit(); trx.close();
+				return validatorMsg;
+			}
+			
 			//	delete it
 			deleteAcct();
 		}
@@ -671,8 +685,19 @@ public abstract class Doc
 			if (p_Error != null)
 				Text.append(" (").append(p_Error).append(")");
 			String cn = getClass().getName();
+			// F3P: getDocumentNo can throw exception
+			String sDocNo = null;
+			try
+			{
+				sDocNo = getDocumentNo();
+			}
+			catch(UnsupportedOperationException e)
+			{
+				sDocNo = "-";
+			}
+			// F3P: end
 			Text.append(" - ").append(cn.substring(cn.lastIndexOf('.')))
-			.append(" (").append(getDocumentType())
+				.append(" (").append(getDocumentType())
 			.append(" - " + Msg.getElement(Env.getCtx(),"DocumentNo") + "=").append(getDocumentNo())
 			.append(" - " + Msg.getElement(Env.getCtx(),"DateAcct") + "=").append(dateFormat.format(getDateAcct()))
 			.append(" - " + Msg.getMsg(Env.getCtx(),"Amount") + "=").append(numberFormat.format(getAmount()))
@@ -705,16 +730,54 @@ public abstract class Doc
 	 */
 	protected int deleteAcct()
 	{
-		StringBuilder sql = new StringBuilder ("DELETE FROM Fact_Acct WHERE AD_Table_ID=")
+		int no = 0;
+		
+		//F3P check if delete
+		if(isToDeleteAcct())
+		{
+			StringBuffer sql = new StringBuffer ("DELETE Fact_Acct WHERE AD_Table_ID=")
 			.append(get_Table_ID())
 			.append(" AND Record_ID=").append(p_po.get_ID())
 			.append(" AND C_AcctSchema_ID=").append(m_as.getC_AcctSchema_ID());
-		int no = DB.executeUpdate(sql.toString(), getTrxName());
-		if (no != 0)
-			if (log.isLoggable(Level.INFO)) log.info("deleted=" + no);
+			no = DB.executeUpdate(sql.toString(), getTrxName());
+			if (no != 0)
+				if (log.isLoggable(Level.INFO)) log.info("deleted=" + no);
+		}
 		return no;
 	}	//	deleteAcct
 
+	//F3P
+	private boolean isToDeleteAcct()
+	{
+		StringBuffer sql = new StringBuffer ("SELECT count(1) FROM Fact_Acct WHERE AD_Table_ID=")
+		.append(get_Table_ID())
+		.append(" AND Record_ID=").append(p_po.get_ID());
+		
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		int no = -1;
+		
+		try
+		{
+			pstmt = DB.prepareStatement(sql.toString(), getTrxName());
+			rs = pstmt.executeQuery();
+			if (rs.next())
+				no = rs.getInt(1);
+		}
+		catch (Exception e)
+		{
+			log.log(Level.SEVERE, sql.toString(), e);
+			throw new AdempiereException(e);
+		}
+		finally {
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
+		}
+		
+		log.info("Fact to delete: " + no + " ( " + sql.toString() + " - " + getTrxName() + " )" );
+		
+		return no > 0;
+	}//F3P end
 	/**
 	 *  Posting logic for Accounting Schema index
 	 *  @return posting status/error code
@@ -732,6 +795,17 @@ public abstract class Doc
 		//  rejectPeriodClosed
 		if (!isPeriodOpen())
 			return STATUS_PeriodClosed;
+		
+		// F3P: if the document is not accountable, due to italian-specific logic, consider it as posted, but without generating facts and triggering model validators
+		
+		boolean isLitPostable = AccountingPreCheck.isPostable(p_po, this, m_as, true);
+		
+		if(isLitPostable == false)
+		{
+			return STATUS_Posted;
+		}
+		
+		// F3P end		
 
 		//  createFacts
 		ArrayList<Fact> facts = createFacts (m_as);
@@ -744,6 +818,17 @@ public abstract class Doc
 			p_Error = validatorMsg;
 			return STATUS_Error;
 		}
+		
+		// F3P: if the document is not accountable, due to italian-specific logic, clear generated facts
+		
+		boolean isLitPostableAfter = AccountingPreCheck.isPostable(p_po, this, m_as, false);
+		
+		if(isLitPostableAfter == false)
+		{
+			facts.clear();
+		}
+		
+		// F3P end
 
 		for (int f = 0; f < facts.size(); f++)
 		{
@@ -1102,7 +1187,7 @@ public abstract class Doc
 				m_period = MPeriod.get(getCtx(), ii.intValue());
 		}
 		if (m_period == null)
-			m_period = MPeriod.get(getCtx(), getDateAcct(), getAD_Org_ID(), (String)null);
+			m_period = MPeriod.get(getCtx(), getDateAcct(), getAD_Org_ID(), m_trxName);
 		//	Is Period Open?
 		if (m_period != null
 			&& m_period.isOpen(getDocumentType(), getDateAcct()))
@@ -1228,9 +1313,9 @@ public abstract class Doc
 	/**	Account Type - Invoice - AP  */
 	public static final int 	ACCTTYPE_V_Liability    = 2;
 	/**	Account Type - Invoice - AP Service  */
-	public static final int 	ACCTTYPE_V_Liability_Services    = 3; // Deprecated IDEMPIERE-362
+	public static final int 	ACCTTYPE_V_Liability_Services    = 3;
 	/**	Account Type - Invoice - AR Service  */
-	public static final int 	ACCTTYPE_C_Receivable_Services   = 4; // Deprecated IDEMPIERE-362
+	public static final int 	ACCTTYPE_C_Receivable_Services   = 4;
 
 	/** Account Type - Payment - Unallocated */
 	public static final int     ACCTTYPE_UnallocatedCash = 10;
@@ -1284,7 +1369,13 @@ public abstract class Doc
 	public static final int     ACCTTYPE_CommitmentOffset = 111;
 	/** GL Accounts - Commitment Offset	Sales */
 	public static final int     ACCTTYPE_CommitmentOffsetSales = 112;
+	
+	// F3P: introdotta da genied ???
 
+	/**	Account Type - Order - SO Not Invoiced Receivable  */
+	public static final int     ACCTTYPE_NotInvoicedReceivable = 71;
+	/**	Account Type - Order - SO Not Invoiced Revenue  */
+	public static final int     ACCTTYPE_NotInvoicedRevenue = 72;
 
 	/**
 	 *	Get the Valid Combination id for Accounting Schema
@@ -1313,7 +1404,7 @@ public abstract class Doc
 			sql = "SELECT V_Liability_Acct FROM C_BP_Vendor_Acct WHERE C_BPartner_ID=? AND C_AcctSchema_ID=?";
 			para_1 = getC_BPartner_ID();
 		}
-		else if (AcctType == ACCTTYPE_V_Liability_Services) // Deprecated IDEMPIERE-362
+		else if (AcctType == ACCTTYPE_V_Liability_Services)
 		{
 			sql = "SELECT V_Liability_Services_Acct FROM C_BP_Vendor_Acct WHERE C_BPartner_ID=? AND C_AcctSchema_ID=?";
 			para_1 = getC_BPartner_ID();
@@ -1323,7 +1414,7 @@ public abstract class Doc
 			sql = "SELECT C_Receivable_Acct FROM C_BP_Customer_Acct WHERE C_BPartner_ID=? AND C_AcctSchema_ID=?";
 			para_1 = getC_BPartner_ID();
 		}
-		else if (AcctType == ACCTTYPE_C_Receivable_Services) // Deprecated IDEMPIERE-362
+		else if (AcctType == ACCTTYPE_C_Receivable_Services)
 		{
 			sql = "SELECT C_Receivable_Services_Acct FROM C_BP_Customer_Acct WHERE C_BPartner_ID=? AND C_AcctSchema_ID=?";
 			para_1 = getC_BPartner_ID();
@@ -1462,6 +1553,19 @@ public abstract class Doc
 			sql = "SELECT CommitmentOffsetSales_Acct FROM C_AcctSchema_GL WHERE C_AcctSchema_ID=?";
 			para_1 = -1;
 		}
+		// F3P: introdotta da Genied ???
+		else if (AcctType == ACCTTYPE_NotInvoicedReceivable)
+		{
+			sql = "SELECT NotInvoicedReceivables_Acct FROM C_BP_Group_Acct a, C_BPartner bp "
+				+ "WHERE a.C_BP_Group_ID=bp.C_BP_Group_ID AND bp.C_BPartner_ID=? AND a.C_AcctSchema_ID=?";
+			para_1 = getC_BPartner_ID();
+		}
+		else if (AcctType == ACCTTYPE_NotInvoicedRevenue)
+		{
+			sql = "SELECT NotInvoicedRevenue_Acct FROM C_BP_Group_Acct a, C_BPartner bp "
+				+ "WHERE a.C_BP_Group_ID=bp.C_BP_Group_ID AND bp.C_BPartner_ID=? AND a.C_AcctSchema_ID=?";
+			para_1 = getC_BPartner_ID();
+		}
 
 		else
 		{
@@ -1481,7 +1585,7 @@ public abstract class Doc
 		ResultSet rs = null;
 		try
 		{
-			pstmt = DB.prepareStatement(sql, null);
+			pstmt = DB.prepareStatement(sql, m_trxName); // F3P: add transaction
 			if (para_1 == -1)   //  GL Accounts
 				pstmt.setInt (1, as.getC_AcctSchema_ID());
 			else
@@ -1505,7 +1609,7 @@ public abstract class Doc
 		//	No account
 		if (Account_ID == 0)
 		{
-			log.warning("NO account Type="
+			log.severe ("NO account Type="
 				+ AcctType + ", Record=" + p_po.get_ID());
 			return 0;
 		}
@@ -1524,7 +1628,7 @@ public abstract class Doc
 		if (C_ValidCombination_ID == 0)
 			return null;
 		//	Return Account
-		MAccount acct = MAccount.get (as.getCtx(), C_ValidCombination_ID);
+		MAccount acct = MAccount.get (as.getCtx(), getTrxName(), C_ValidCombination_ID);
 		return acct;
 	}	//	getAccount
 
@@ -1712,8 +1816,8 @@ public abstract class Doc
 	}	//	getGL_Category_ID
 
 	/**
-	 * 	Get getGL_Budget_ID
-	 *	@return budget
+	 * 	Get GL_Category_ID
+	 *	@return category
 	 */
 	public int getGL_Budget_ID()
 	{
@@ -2337,4 +2441,12 @@ public abstract class Doc
 	public boolean isDeferPosting() {
 		return false;
 	}
+	
+	//F3P
+	public DocLine[] getDocLines()
+	{
+		return p_lines;
+	}
+	//F3P end
+	
 }   //  Doc

@@ -21,6 +21,7 @@ import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
 import java.util.Properties;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import org.compiere.util.CCache;
 import org.compiere.util.DB;
@@ -34,6 +35,11 @@ import org.compiere.util.Util;
  *	Cannot be cached as it holds PO/BPartner/User to parse
  *  @author Jorg Janke
  *  @version $Id: MMailText.java,v 1.3 2006/07/30 00:51:03 jjanke Exp $
+ *  
+ *  @author SVT
+ *  @author Silvano Trinchero, www.freepath.it
+ *		<li>ADEMPIERE-49 Customization of mail sent by request notifications
+ *			https://adempiere.atlassian.net/browse/ADEMPIERE-49
  */
 public class MMailText extends X_R_MailText
 {
@@ -42,6 +48,10 @@ public class MMailText extends X_R_MailText
 	 */
 	private static final long serialVersionUID = -6458808409321394821L;
 
+	//F3P: used by at-sign escaping
+	public static final String ESCAPE_AT = "_!_!_",
+			ESCAPE_AT_REGEX = Pattern.quote(ESCAPE_AT); 
+	
 	/**
 	 * 	Standard Constructor
 	 *	@param ctx context
@@ -89,7 +99,8 @@ public class MMailText extends X_R_MailText
 	 */
 	public String getMailText(boolean all)
 	{
-		translate();
+		if (m_MailText == null)
+			translate();
 		if (!all)
 			return parse(m_MailText);
 		//
@@ -111,8 +122,20 @@ public class MMailText extends X_R_MailText
 	 */
 	public String getMailText()
 	{
-		translate();
-		return parse (m_MailText);
+		return getMailText("@"); //F3P: at-sign escaping 
+	}	//	getMailText
+	
+	/**
+	 * 	Get parsed/translated Mail Text
+	 * 	@param atReplacement
+	 *	@return parsed/translated text
+	 */
+	//F3P: at-sign escaping 
+	public String getMailText(String atReplacement)
+	{
+		if (m_MailText == null)
+			translate();
+		return parse (m_MailText, atReplacement);
 	}	//	getMailText
 	
 	/**
@@ -121,27 +144,52 @@ public class MMailText extends X_R_MailText
 	 */
 	public String getMailText2()
 	{
-		translate();
-		return parse (m_MailText2);
+		return getMailText2("@"); //F3P: at-sign escaping
 	}	//	getMailText2
 
 	/**
 	 * 	Get parsed/translated Mail Text 2
+	 * 	@param atReplacement
+	 *	@return parsed/translated text
+	 */
+	//F3P: at-sign escaping 
+	public String getMailText2(String atReplacement)
+	{
+		if (m_MailText == null)
+			translate();
+		return parse (m_MailText2, atReplacement);
+	}	//	getMailText2
+	
+	/**
+	 * 	Get parsed/translated Mail Text 3
 	 *	@return parsed/translated text
 	 */
 	public String getMailText3()
 	{
-		translate();
-		return parse (m_MailText3);
+		return getMailText3("@"); //F3P: at-sign escaping
 	}	//	getMailText3
 
+	/**
+	 * 	Get parsed/translated Mail Text 3
+	 * 	@param atReplacement
+	 *	@return parsed/translated text
+	 */
+	//F3P: at-sign escaping 
+	public String getMailText3(String atReplacement)
+	{
+		if (m_MailText == null)
+			translate();
+		return parse (m_MailText3, atReplacement);
+	}	//	getMailText3
+	
 	/**
 	 * 	Get parsed/translated Mail Header
 	 *	@return parsed/translated text
 	 */
 	public String getMailHeader()
 	{
-		translate();
+		if (m_MailHeader == null)
+			translate();
 		return parse(m_MailHeader);
 	}	//	getMailHeader
 	
@@ -152,8 +200,25 @@ public class MMailText extends X_R_MailText
 	 */
 	protected String parse (String text)
 	{
+		return parse(text, "@");//F3P: at-sign escaping
+	}
+	
+	/**************************************************************************
+	 * 	Parse Text
+	 *	@param text text
+	 * 	@param atReplacement
+	 *	@return parsed text
+	 */
+	private String parse (String text, String atReplacement)
+	{
 		if (Util.isEmpty(text) || text.indexOf('@') == -1)
+		{
+			// F3P: unescape back to ESCAPE_AT -> at-sign
+			if(Util.isEmpty(text) == false)
+				text = text.replaceAll(ESCAPE_AT_REGEX, atReplacement);
+			
 			return text;
+		}
 		//	Parse User
 		text = parse (text, m_user);
 		//	Parse BP
@@ -161,10 +226,12 @@ public class MMailText extends X_R_MailText
 		//	Parse PO
 		text = parse (text, m_po);
 		//
+		// F3P: unescape back to ESCAPE_AT -> at-sign
+		text = text.replaceAll(ESCAPE_AT_REGEX, atReplacement);//we can't use at symbol here or adempiere will try to look for a context variable
 		return text;
 	}	//	parse
 	
-	/**
+/**
 	 * 	Parse text
 	 *	@param text text
 	 *	@param po object
@@ -212,7 +279,7 @@ public class MMailText extends X_R_MailText
 	protected String parseVariable (String variable, PO po)
 	{
 		if (variable.contains("<") && variable.contains(">")) { // IDEMPIERE-3096
-			return Env.parseVariable("@"+variable+"@", po, get_TrxName(), true);
+			return Env.parseVariable("@"+variable+"@", po, get_TrxName(), true, ESCAPE_AT);
 		}
 		// special default formatting cases for dates/times/boolean in mail text not covered by Env.parseVariable
 		int index = po.get_ColumnIndex(variable);
@@ -240,8 +307,12 @@ public class MMailText extends X_R_MailText
 			return "";
 		return value.toString();
 	}	//	translate
-	
+
 	/**
+		if (variable.contains("<") && variable.contains(">")) { // IDEMPIERE-3096
+			return Env.parseVariable("@"+variable+"@", po, get_TrxName(), true);
+		}
+		// special default formatting cases for dates/times/boolean in mail text not covered by Env.parseVariable
 	 * 	Set User for parse
 	 *	@param AD_User_ID user
 	 */

@@ -244,7 +244,9 @@ public class MInvoiceTax extends X_C_InvoiceTax
 				//
 				// phib [ 1702807 ]: manual tax should never be amended
 				// on line level taxes
-				if (!documentLevel && amt.signum() != 0 && !isSOTrx)	//	manually entered
+				//Cristiano Lazzaro (genied) - add system variable to avoid TaxAmt recalculations on invoice customers
+				boolean unforcedVat = STDSysConfig.isIsSoVatInvoiceUnforced(this.getAD_Client_ID(), this.getAD_Org_ID());
+				if (!documentLevel && amt.signum() != 0 && (!isSOTrx || unforcedVat == true))	//	manually entered
 					;
 				else if (documentLevel || baseAmt.signum() == 0)
 					amt = Env.ZERO;

@@ -19,7 +19,10 @@ package org.compiere.process;
 import java.util.logging.Level;
 
 import org.compiere.model.MMatchInv;
+import org.compiere.model.MMatchPO;
 import org.compiere.util.AdempiereUserError;
+import org.compiere.util.CLogger;
+import org.compiere.util.ValueNamePair;
 
 
 /**

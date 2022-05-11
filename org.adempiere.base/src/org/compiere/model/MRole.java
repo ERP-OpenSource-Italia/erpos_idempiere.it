@@ -2016,6 +2016,33 @@ public final class MRole extends X_AD_Role implements ImmutablePOSupport
 	}	//	getWorkflowAccess
 
 	
+	/** Get all role access rules for the given parameters
+	 * 
+	 * @see IRoleAccess
+	 * @return where clause
+	 */
+	
+	public String getAdditionalSQLRoleAccessConditions(String TableNameIn,AccessSqlParser.TableInfo[] ti, boolean fullyQualified, boolean rw, Boolean additionaRW,int AD_Column_ID)
+	{
+		List<IRoleAccess> rules = Service.locator().list(IRoleAccess.class).getServices();
+		StringBuilder	sbConditions = new StringBuilder(); 
+		
+		for(IRoleAccess rule:rules)
+		{
+			String sqlRule = rule.getSQLAccessCondition(this, TableNameIn, ti, fullyQualified, rw, additionaRW, AD_Column_ID);
+			
+			if(Util.isEmpty(sqlRule, true) == false)
+			{
+				sbConditions.append(" AND (").append(sqlRule).append(")");
+			}			
+		}
+		
+		if(sbConditions.length() > 0)
+			return sbConditions.toString();
+		
+		return null;
+	}	
+	
 	/*************************************************************************
 	 *	Appends where clause to SQL statement for Table
 	 *
@@ -2026,7 +2053,59 @@ public final class MRole extends X_AD_Role implements ImmutablePOSupport
 	 *	@return				updated SQL statement
 	 */
 	public String addAccessSQL (String SQL, String TableNameIn, 
-		boolean fullyQualified, boolean rw)
+		boolean fullyQualified, boolean rw, Boolean additionalAccessRW, int AD_Column_ID) // FIN (st): added rw condition for additional check, should it has a different meaning for additioanl rw.
+	
+		return addAccessSQL(SQL, TableNameIn, fullyQualified, rw, rw, -1);
+	}
+
+	/*************************************************************************
+	 *	Appends where clause to SQL statement for Table
+	 *
+	 *	@param SQL			existing SQL statement
+	 *	@param TableNameIn	Table Name or list of table names AAA, BBB or AAA a, BBB b
+	 *	@param fullyQualified	fullyQualified names
+	 *	@param rw			if false, includes System Data
+	 *  @param AD_Column_ID column for which we are checking access, -1 if not relevant
+	 *	@return				updated SQL statement
+	 */
+
+	public String addAccessSQL (String SQL, String TableNameIn, 
+			boolean fullyQualified, boolean rw, int AD_Column_ID)
+	{
+		return addAccessSQL(SQL, TableNameIn, fullyQualified, rw, rw, AD_Column_ID);
+	}
+
+	/*************************************************************************
+	 *	Appends where clause to SQL statement for Table
+	 *
+	 *	@param SQL			existing SQL statement
+	 *	@param TableNameIn	Table Name or list of table names AAA, BBB or AAA a, BBB b
+	 *	@param fullyQualified	fullyQualified names
+	 *	@param rw			if false, includes System Data
+	 *  @param additionalAccessRW rw condition for additional role access plugins.
+	 *	@return				updated SQL statement
+	 */
+
+	public String addAccessSQL (String SQL, String TableNameIn, 
+			boolean fullyQualified, boolean rw, Boolean additionalAccessRW)
+	{
+		return addAccessSQL(SQL, TableNameIn, fullyQualified, rw, additionalAccessRW, -1);
+	}
+	
+	/*************************************************************************
+	 *	Appends where clause to SQL statement for Table
+	 *
+	 *	@param SQL			existing SQL statement
+	 *	@param TableNameIn	Table Name or list of table names AAA, BBB or AAA a, BBB b
+	 *	@param fullyQualified	fullyQualified names
+	 *	@param rw			if false, includes System Data
+	 *  @param additionalAccessRW rw condition for additional role access plugins.
+	 *  @param AD_Column_ID column for which we are checking access, -1 if not relevant
+	 *	@return				updated SQL statement
+	 */
+	
+	public String addAccessSQL (String SQL, String TableNameIn, 
+		boolean fullyQualified, boolean rw, Boolean additionalAccessRW, int AD_Column_ID) // FIN (st): added rw condition for additional check, should it has a different meaning for additioanl rw.
 	{
 		StringBuilder retSQL = new StringBuilder();
 
@@ -2189,6 +2268,16 @@ public final class MRole extends X_AD_Role implements ImmutablePOSupport
 			whereColumnName = getDependentRecordWhereColumn (mainSql, columnName);
 		}	//	for all dependent records
 		retSQL.append(getDependentAccess(whereColumnName, includes, excludes));
+		
+		// Additional conditions
+		
+		String addtionalConditions = getAdditionalSQLRoleAccessConditions(tableName, ti, fullyQualified, rw, additionalAccessRW,AD_Column_ID);
+		
+		if(addtionalConditions != null)
+		{
+			retSQL.append(addtionalConditions);
+		}
+				
 		//
 		retSQL.append(orderBy);
 		if (log.isLoggable(Level.FINEST)) log.finest(retSQL.toString());

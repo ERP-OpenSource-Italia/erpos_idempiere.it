@@ -55,6 +55,7 @@ public class MRule extends X_AD_Rule implements ImmutablePOSupport
 	
 	public static final String SCRIPT_PREFIX = "@script:";
 
+	
 	/**
 	 * 	Get Rule from Cache (immutable)
 	 *	@param AD_Rule_ID id
@@ -64,6 +65,8 @@ public class MRule extends X_AD_Rule implements ImmutablePOSupport
 	{
 		return get(Env.getCtx(), AD_Rule_ID);
 	}
+	// F3P: added to support sql callouts
+	public static final String SQL_PREFIX = "@sql:";	
 	
 	/**
 	 * 	Get Rule from Cache (immutable)

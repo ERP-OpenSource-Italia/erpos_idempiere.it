@@ -27,6 +27,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.compiere.process.DocAction;
+import org.compiere.process.DocOptions;
 import org.compiere.process.DocumentEngine;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -42,7 +43,7 @@ import org.compiere.util.Msg;
  *			@see http://sourceforge.net/tracker2/?func=detail&atid=879335&aid=2520591&group_id=176962 
  *	@version $Id: MTimeExpense.java,v 1.4 2006/07/30 00:51:03 jjanke Exp $
  */
-public class MTimeExpense extends X_S_TimeExpense implements DocAction
+public class MTimeExpense extends X_S_TimeExpense implements DocAction, DocOptions //F3P:add docOptions
 {
 	/**
 	 * 
@@ -499,10 +500,41 @@ public class MTimeExpense extends X_S_TimeExpense implements DocAction
 	public boolean reActivateIt()
 	{
 		if (log.isLoggable(Level.INFO)) log.info("reActivateIt - " + toString());
+		
+		//F3P: Manage reactivation: check if lines are already invoiced. If yes, stop the process
+		MTimeExpenseLine[] lines = getLines();
+		for(MTimeExpenseLine line : lines)
+		{
+			if(line.getC_InvoiceLine_ID() > 0)
+			{
+				m_processMsg = Msg.getMsg(getCtx(), "CannotChangeCashGenInvoice");
+				break;
+			}
+		}
+		if(m_processMsg != null)
+			return false;
+		//F3P: End
+		
 		// Before reActivate
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_BEFORE_REACTIVATE);
 		if (m_processMsg != null)
 			return false;	
+		
+		for(MTimeExpenseLine line : lines)
+		{
+			line.setProcessed(false);
+			line.saveEx(get_TrxName());
+		}
+		
+		//F3P: Manage reactivation: delete fact_acct
+		MFactAcct.deleteEx(Table_ID, getS_TimeExpense_ID(), get_TrxName());
+		
+		// Change state
+		setDocStatus(DOCSTATUS_Drafted);
+		setDocAction(DOCACTION_Complete);
+		setIsApproved(false);
+		setProcessed(false);
+		//F3P: End
 		
 		// After reActivate
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_REACTIVATE);
@@ -510,7 +542,7 @@ public class MTimeExpense extends X_S_TimeExpense implements DocAction
 			return false;
 		
 	//	setProcessed(false);
-		return false;
+		return true; //F3P changed in true
 	}	//	reActivateIt
 	
 	
@@ -584,4 +616,16 @@ public class MTimeExpense extends X_S_TimeExpense implements DocAction
 			|| DOCSTATUS_Reversed.equals(ds);
 	}	//	isComplete
 	
+	//F3P: needed to manage reactivate state
+	@Override
+	public int customizeValidActions(String docStatus, Object processing, 
+			String orderType, String isSOTrx, int AD_Table_ID, String[] docAction, String[] options, int index)
+	{
+		if(docStatus.equals(DOCSTATUS_Completed))
+		{
+			options[index++] = ACTION_ReActivate;
+		}
+		
+		return index;
+	}
 }	//	MTimeExpense

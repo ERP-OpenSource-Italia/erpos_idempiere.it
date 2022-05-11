@@ -18,9 +18,7 @@ package org.compiere.model;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -29,6 +27,8 @@ import org.compiere.util.CCache;
 import org.compiere.util.CLogMgt;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
+
+import it.idempiere.base.model.LITMDistribution;
 
 /**
  *	GL Distribution Model
@@ -42,64 +42,53 @@ public class MDistribution extends X_GL_Distribution
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -5964912910470166735L;
+	private static final long serialVersionUID = 3782058638272715005L;
 
 	/**
 	 * 	Get Distribution for combination
 	 *	@param acct account (ValidCombination)
 	 *	@param PostingType only posting type
 	 *	@param C_DocType_ID only document type
-	 *	@param dateAcct date (to be tested with ValidFrom/ValidTo)
 	 *	@return array of distributions
 	 */
 	public static MDistribution[] get (MAccount acct,  
-		String PostingType, int C_DocType_ID, Timestamp dateAcct)
+		String PostingType, int C_DocType_ID)
 	{
 		return get (acct.getCtx(), acct.getC_AcctSchema_ID(), 
-			PostingType, C_DocType_ID, dateAcct,
+			PostingType, C_DocType_ID,
 			acct.getAD_Org_ID(), acct.getAccount_ID(),
 			acct.getM_Product_ID(), acct.getC_BPartner_ID(), acct.getC_Project_ID(),
 			acct.getC_Campaign_ID(), acct.getC_Activity_ID(), acct.getAD_OrgTrx_ID(),
 			acct.getC_SalesRegion_ID(), acct.getC_LocTo_ID(), acct.getC_LocFrom_ID(),
-			acct.getUser1_ID(), acct.getUser2_ID());
+			acct.getUser1_ID(), acct.getUser2_ID(),
+			acct.getUserElement1_ID(), acct.getUserElement2_ID());//F3P: added UserElement1_ID and UserElement2_ID
+	}	//	get
+	
+	/**
+	 * Get Distribution for combination
+	 * @param acct (ValidCombination)
+	 * @param PostingType only posting type
+	 * @param C_DocType_ID only document type
+	 * @param AD_Org_ID only document organization
+	 * @return array of distributions
+	 */
+	//F3P: variante utile per specificare l'AD_Org_ID da utilizzare
+	public static MDistribution[] get (MAccount acct,  
+			String PostingType, int C_DocType_ID, int AD_Org_ID) 
+	{
+		return get (acct.getCtx(), acct.getC_AcctSchema_ID(), 
+				PostingType, C_DocType_ID,
+				AD_Org_ID, acct.getAccount_ID(),
+				acct.getM_Product_ID(), acct.getC_BPartner_ID(), acct.getC_Project_ID(),
+				acct.getC_Campaign_ID(), acct.getC_Activity_ID(), acct.getAD_OrgTrx_ID(),
+				acct.getC_SalesRegion_ID(), acct.getC_LocTo_ID(), acct.getC_LocFrom_ID(),
+				acct.getUser1_ID(), acct.getUser2_ID(), 
+				acct.getUserElement1_ID(), acct.getUserElement2_ID());//F3P: added UserElement1_ID and UserElement2_ID
 	}	//	get
 
 	/**
 	 * 	Get Distributions for combination
-	 *	@param C_AcctSchema_ID schema
-	 *	@param PostingType posting type
-	 *	@param C_DocType_ID document type
-	 *	@param dateAcct date (to be tested with ValidFrom/ValidTo)
-	 *	@param AD_Org_ID org
-	 *	@param Account_ID account
-	 *	@param M_Product_ID product
-	 *	@param C_BPartner_ID partner
-	 *	@param C_Project_ID project
-	 *	@param C_Campaign_ID campaign
-	 *	@param C_Activity_ID activity
-	 *	@param AD_OrgTrx_ID trx org
-	 *	@param C_SalesRegion_ID
-	 *	@param C_LocTo_ID location to
-	 *	@param C_LocFrom_ID location from
-	 *	@param User1_ID user 1
-	 *	@param User2_ID user 2
-	 *	@return array of distributions or null
-	 */
-	public static MDistribution[] get (int C_AcctSchema_ID, 
-		String PostingType, int C_DocType_ID, Timestamp dateAcct,
-		int AD_Org_ID, int Account_ID,
-		int M_Product_ID, int C_BPartner_ID, int C_Project_ID,
-		int C_Campaign_ID, int C_Activity_ID, int AD_OrgTrx_ID,
-		int C_SalesRegion_ID, int C_LocTo_ID, int C_LocFrom_ID,
-		int User1_ID, int User2_ID)
-	{
-		return get(Env.getCtx(), C_AcctSchema_ID, PostingType, C_DocType_ID, dateAcct, AD_Org_ID, Account_ID, M_Product_ID, C_BPartner_ID, 
-				C_Project_ID, C_Campaign_ID, C_Activity_ID, AD_OrgTrx_ID, C_SalesRegion_ID, C_LocTo_ID, C_LocFrom_ID, User1_ID, User2_ID);
-	}
-	
-	/**
-	 * 	Get Distributions for combination
-	 *  @param ctx context
+	 *	@param ctx context
 	 *	@param C_AcctSchema_ID schema
 	 *	@param PostingType posting type
 	 *	@param C_DocType_ID document type
@@ -119,14 +108,54 @@ public class MDistribution extends X_GL_Distribution
 	 *	@return array of distributions or null
 	 */
 	public static MDistribution[] get (Properties ctx, int C_AcctSchema_ID, 
-		String PostingType, int C_DocType_ID, Timestamp dateAcct,
+		String PostingType, int C_DocType_ID,
 		int AD_Org_ID, int Account_ID,
 		int M_Product_ID, int C_BPartner_ID, int C_Project_ID,
 		int C_Campaign_ID, int C_Activity_ID, int AD_OrgTrx_ID,
 		int C_SalesRegion_ID, int C_LocTo_ID, int C_LocFrom_ID,
 		int User1_ID, int User2_ID)
 	{
-		MDistribution[] acctList = getAll();
+		return get (ctx, C_AcctSchema_ID, 
+				PostingType, C_DocType_ID,
+				AD_Org_ID, Account_ID,
+				M_Product_ID, C_BPartner_ID, C_Project_ID,
+				C_Campaign_ID, C_Activity_ID, AD_OrgTrx_ID,
+				C_SalesRegion_ID, C_LocTo_ID,  C_LocFrom_ID,
+				User1_ID, User2_ID, 0, 0);
+	}
+	
+	/**
+	 * 	Get Distributions for combination
+	 *	@param ctx context
+	 *	@param C_AcctSchema_ID schema
+	 *	@param PostingType posting type
+	 *	@param C_DocType_ID document type
+	 *	@param AD_Org_ID org
+	 *	@param Account_ID account
+	 *	@param M_Product_ID product
+	 *	@param C_BPartner_ID partner
+	 *	@param C_Project_ID project
+	 *	@param C_Campaign_ID campaign
+	 *	@param C_Activity_ID activity
+	 *	@param AD_OrgTrx_ID trx org
+	 *	@param C_SalesRegion_ID
+	 *	@param C_LocTo_ID location to
+	 *	@param C_LocFrom_ID location from
+	 *	@param User1_ID user 1
+	 *	@param User2_ID user 2
+	 *	@param UserElement1_ID
+	 *	@param UserElement2_ID
+	 *	@return array of distributions or null
+	 */
+	public static MDistribution[] get (Properties ctx, int C_AcctSchema_ID, 
+		String PostingType, int C_DocType_ID,
+		int AD_Org_ID, int Account_ID,
+		int M_Product_ID, int C_BPartner_ID, int C_Project_ID,
+		int C_Campaign_ID, int C_Activity_ID, int AD_OrgTrx_ID,
+		int C_SalesRegion_ID, int C_LocTo_ID, int C_LocFrom_ID,
+		int User1_ID, int User2_ID,int UserElement1_ID, int UserElement2_ID)//F3P: added UserElement1_ID and UserElement2_ID
+	{
+		MDistribution[] acctList = getAll(ctx);
 		if (acctList == null || acctList.length == 0)
 			return null;
 		//
@@ -139,18 +168,14 @@ public class MDistribution extends X_GL_Distribution
 			//	Mandatory Acct Schema
 			if (distribution.getC_AcctSchema_ID() != C_AcctSchema_ID)
 				continue;
-			//	Only Posting Type / DocType / ValidFrom / ValidTo
+			//	Only Posting Type / DocType
 			if (distribution.getPostingType() != null && !distribution.getPostingType().equals(PostingType))
 				continue;
 			if (distribution.getC_DocType_ID() != 0 && distribution.getC_DocType_ID() != C_DocType_ID)
 				continue;
-			if (distribution.getValidFrom() != null && distribution.getValidFrom().after(dateAcct))
-				continue;
-			if (distribution.getValidTo() != null && distribution.getValidTo().before(dateAcct))
-				continue;
 			
 			//	Optional Elements - "non-Any"
-			if (!distribution.isAnyOrg() && distribution.getOrg_ID() != AD_Org_ID)
+			if (!distribution.isAnyOrg() && distribution.getAD_Org_ID() != AD_Org_ID)
 				continue;
 			if (!distribution.isAnyAcct() && distribution.getAccount_ID() != Account_ID)
 				continue;
@@ -177,6 +202,11 @@ public class MDistribution extends X_GL_Distribution
 			if (!distribution.isAnyUser2() && distribution.getUser2_ID() != User2_ID)
 				continue;
 			//
+			if (!LITMDistribution.isAnyUserElement1(distribution) && LITMDistribution.getUserElement1_ID(distribution) != UserElement1_ID)//F3P
+				continue;
+			if (!LITMDistribution.isAnyUserElement2(distribution) && LITMDistribution.getUserElement2_ID(distribution) != UserElement2_ID)//F3P
+				continue;
+			
 			list.add (distribution);
 		}	//	 for all distributions with acct
 		//
@@ -187,7 +217,7 @@ public class MDistribution extends X_GL_Distribution
 	
 	/**
 	 * 	Get Distributions for Account
-	 *	@param ctx ignore
+	 *	@param ctx context
 	 *	@param Account_ID id
 	 *	@return array of distributions
 	 */
@@ -217,21 +247,19 @@ public class MDistribution extends X_GL_Distribution
 		List<MDistribution> list = new Query(ctx,I_GL_Distribution.Table_Name,whereClause,null)
 			.setClient_ID()
 			.setParameters(parameters)
-			.setOrderBy("SeqNo, GL_Distribution_ID")
 			.list();
 		//
 		retValue = new MDistribution[list.size ()];
-		retValue = list.toArray (retValue);
+		list.toArray (retValue);
 		s_accounts.put(key, retValue);
 		return retValue;
 	}	//	get
 	
 	/**
 	 * 	Get All Distributions
-	 *	@param ctx ignore
+	 *	@param ctx context
 	 *	@param Account_ID id
 	 *	@return array of distributions
-	 *  @deprecated
 	 */
 	public static MDistribution[] getAll (Properties ctx)
 	{
@@ -283,6 +311,9 @@ public class MDistribution extends X_GL_Distribution
 			setAnySalesRegion (true);	// Y
 			setAnyUser1 (true);	// Y
 			setAnyUser2 (true);	// Y
+
+			LITMDistribution.setAnyUserElement1 (this, true);	// F3P
+			LITMDistribution.setAnyUserElement2 (this, true);	// F3P
 			//
 			setIsValid (false);	// N
 			setPercentTotal (Env.ZERO);
@@ -412,6 +443,19 @@ public class MDistribution extends X_GL_Distribution
 		return retValue;
 	}	//	validate
 	
+	/**
+	 * 	Distribute Amount to Lines
+	 * 	@param acct account
+	 *	@param Amt amount
+	 * @param Qty 
+	 *	@param C_Currency_ID currency
+	 *@deprecated use trx
+	 */
+	@Deprecated
+	public void distribute (MAccount acct, BigDecimal Amt, BigDecimal Qty, int C_Currency_ID)
+	{
+		distribute(acct, Amt, Qty, C_Currency_ID, null);
+	}
 	
 	/**
 	 * 	Distribute Amount to Lines
@@ -419,8 +463,9 @@ public class MDistribution extends X_GL_Distribution
 	 *	@param Amt amount
 	 * @param Qty 
 	 *	@param C_Currency_ID currency
+	 *	@param  trxName
 	 */
-	public void distribute (MAccount acct, BigDecimal Amt, BigDecimal Qty, int C_Currency_ID)
+	public void distribute (MAccount acct, BigDecimal Amt, BigDecimal Qty, int C_Currency_ID, String trxName)
 	{
 		if (log.isLoggable(Level.INFO)) log.info("distribute - Amt=" + Amt + " - Qty=" + Qty + " - " + acct);
 		getLines(false);
@@ -494,7 +539,7 @@ public class MDistribution extends X_GL_Distribution
 			for (int i = 0; i < m_lines.length; i++)
 			{
 				if (m_lines[i].isActive())
-					if (log.isLoggable(Level.FINE)) log.fine("distribute = Amt=" + m_lines[i].getAmt() + " - " + m_lines[i].getAccount());
+					if (log.isLoggable(Level.FINE)) log.fine("distribute = Amt=" + m_lines[i].getAmt() + " - " + m_lines[i].getAccount(trxName));
 			}
 		}
 	}	//	distribute
@@ -534,7 +579,12 @@ public class MDistribution extends X_GL_Distribution
 			setUser1_ID(0);
 		if (isAnyUser2() && getUser2_ID() != 0)
 			setUser2_ID(0);
+		if (LITMDistribution.isAnyUserElement1(this) && LITMDistribution.getUserElement1_ID(this) != 0) //F3P
+			LITMDistribution.setUserElement1_ID(this, 0);
+		if (LITMDistribution.isAnyUserElement2(this) && LITMDistribution.getUserElement2_ID(this) != 0) //F3P
+			LITMDistribution.setUserElement2_ID(this, 0);
+		
 		return true;
 	}	//	beforeSave
-
+	
 }	//	MDistribution

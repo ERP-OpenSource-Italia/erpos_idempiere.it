@@ -19,6 +19,7 @@ package org.adempiere.webui.apps;
 import java.util.logging.Level;
 
 import org.adempiere.webui.ClientInfo;
+import org.adempiere.util.FeedbackContainer;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.Window;
 import org.adempiere.webui.event.DialogEvents;
@@ -54,19 +55,32 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 	private static final String ON_OK_ECHO = "onOkEcho";
 	
 	/**	Logger			*/
-	private static final CLogger log = CLogger.getCLogger(ProcessModalDialog.class);
+	private static CLogger log = CLogger.getCLogger(ProcessModalDialog.class);
 	//
 	private String orientation;
+	
+	/**
+	 * @param aProcess
+	 * @param WindowNo
+	 * @param pi
+	 * @param autoStart
+	 * @param feedbackContainer
+	 */
+	public ProcessModalDialog(int WindowNo, ProcessInfo pi, boolean autoStart)
+	{
+		this(null, WindowNo, pi, autoStart, null);
+	}	
 
 	/**
 	 * @param aProcess
 	 * @param WindowNo
 	 * @param pi
 	 * @param autoStart
+	 * @param feedbackContainer
 	 */
-	public ProcessModalDialog(int WindowNo, ProcessInfo pi, boolean autoStart)
+	public ProcessModalDialog(int WindowNo, ProcessInfo pi, boolean autoStart, FeedbackContainer feedbackContainer)
 	{
-		this(null, WindowNo, pi, autoStart);
+		this(null, WindowNo, pi, autoStart, feedbackContainer);
 	}
 	
 	/**
@@ -74,10 +88,26 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 	 * @param WindowNo
 	 * @param pi
 	 * @param autoStart
+	 * @param feedbackContainer
 	 */
 	public ProcessModalDialog(EventListener<Event> listener, int WindowNo, ProcessInfo pi, boolean autoStart)
 	{
+		this(listener, WindowNo, pi, autoStart, null);
+	}
+	
+	/**
+	 * @param aProcess
+	 * @param WindowNo
+	 * @param pi
+	 * @param autoStart
+	 * @param feedbackContainer
+	 */
+	public ProcessModalDialog(EventListener<Event> listener, int WindowNo, ProcessInfo pi, boolean autoStart, FeedbackContainer feedbackContainer)
+	{
 		super();
+		
+		if(feedbackContainer != null)
+			pi.setFeedbackContainer(feedbackContainer);
 		
 		if (listener != null) 
 		{
@@ -122,10 +152,32 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 		}
 		addEventListener(ON_OK_ECHO, this);
 	}
-
+	
+	/**
+	 * Dialog to start a process/report
+	 * @param WindowNo
+	 * @param AD_Process_ID
+	 * @param tableId
+	 * @param recordId
+	 * @param autoStart
+	 */
 	public ProcessModalDialog (int WindowNo, int AD_Process_ID, int tableId, int recordId, boolean autoStart)
 	{
-		this(null, WindowNo, AD_Process_ID, tableId, recordId, autoStart);
+		this(null, WindowNo, AD_Process_ID, tableId, recordId, autoStart, null);
+	}	
+
+	/**
+	 * Dialog to start a process/report
+	 * @param WindowNo
+	 * @param AD_Process_ID
+	 * @param tableId
+	 * @param recordId
+	 * @param autoStart
+	 * @param feedbackContainer
+	 */
+	public ProcessModalDialog (int WindowNo, int AD_Process_ID, int tableId, int recordId, boolean autoStart, FeedbackContainer feedbackContainer)
+	{
+		this(null, WindowNo, AD_Process_ID, tableId, recordId, autoStart, feedbackContainer);
 	}
 	
 	/**
@@ -138,7 +190,22 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 	 */
 	public ProcessModalDialog (EventListener<Event> listener, int WindowNo, int AD_Process_ID, int tableId, int recordId, boolean autoStart)
 	{
-		this(listener, WindowNo, new ProcessInfo("", AD_Process_ID, tableId, recordId), autoStart);
+		this(listener, WindowNo, new ProcessInfo("", AD_Process_ID, tableId, recordId), autoStart, null);
+	}	
+	
+	/**
+	 * Dialog to start a process/report
+	 * @param listenere
+	 * @param WindowNo
+	 * @param AD_Process_ID
+	 * @param tableId
+	 * @param recordId
+	 * @param autoStart
+	 * @param feedbackContainer
+	 */
+	public ProcessModalDialog (EventListener<Event> listener, int WindowNo, int AD_Process_ID, int tableId, int recordId, boolean autoStart, FeedbackContainer feedbackContainer)
+	{
+		this(listener, WindowNo, new ProcessInfo("", AD_Process_ID, tableId, recordId), autoStart, feedbackContainer);
 	}
 
 	/**
@@ -157,7 +224,7 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 			int WindowNo, int AD_Process_ID,
 			int tableId, int recordId, boolean autoStart)
 	{
-		this(WindowNo, AD_Process_ID, tableId, recordId, autoStart);
+		this(WindowNo, AD_Process_ID, tableId, recordId, autoStart,null);
 	}	//	ProcessDialog
 
 	/**

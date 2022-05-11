@@ -33,9 +33,9 @@ import org.zkoss.zk.ui.event.Events;
  */
 public class WInfoPAttributeEditor extends WEditor implements IWhereClauseEditor {
 
-	private String m_pAttributeWhere;
-	private Properties ctx;
-	private int windowNo;
+	protected String m_pAttributeWhere;	// F3P: to protected to allow overriding
+	protected Properties ctx;	// F3P: to protected to allow overriding
+	protected int windowNo;	// F3P: to protected to allow overriding
 
 	/**
 	 * @param comp

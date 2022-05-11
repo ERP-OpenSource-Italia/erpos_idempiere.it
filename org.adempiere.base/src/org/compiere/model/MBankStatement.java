@@ -25,6 +25,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.compiere.process.DocAction;
+import org.compiere.process.DocOptions;
 import org.compiere.process.DocumentEngine;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -47,7 +48,7 @@ import org.compiere.util.Msg;
 *  
 *   @version $Id: MBankStatement.java,v 1.3 2006/07/30 00:51:03 jjanke Exp $
 */
-public class MBankStatement extends X_C_BankStatement implements DocAction
+public class MBankStatement extends X_C_BankStatement implements DocAction,DocOptions // F3P: added DocOptions
 {
 	/**
 	 * 
@@ -180,7 +181,7 @@ public class MBankStatement extends X_C_BankStatement implements DocAction
 	 */
 	public MBankAccount getBankAccount()
 	{
-		return MBankAccount.getCopy(getCtx(), getC_BankAccount_ID(), (String)null);
+		return MBankAccount.get(getCtx(), getC_BankAccount_ID());
 	}	//	getBankAccount
 	
 	/**
@@ -584,11 +585,43 @@ public class MBankStatement extends X_C_BankStatement implements DocAction
 		if (m_processMsg != null)
 			return false;		
 		
+		//F3P: Restore Bank Account Balance
+		MBankAccount ba = getBankAccount();
+		ba.load(get_TrxName());
+		ba.setCurrentBalance(ba.getCurrentBalance().subtract(getStatementDifference()));
+		ba.saveEx();
+		
+		// F3P:	Set Payment as not reconciled
+		MBankStatementLine[] lines = getLines(false);
+		for (int i = 0; i < lines.length; i++)
+		{
+			MBankStatementLine line = lines[i];
+			if (line.getC_Payment_ID() != 0)
+			{
+				MPayment payment = new MPayment (getCtx(), line.getC_Payment_ID(), get_TrxName());
+				payment.setIsReconciled(false);
+				payment.saveEx(get_TrxName());
+			}
+		}
+		
+		// Delete accounting
+		
+		MFactAcct.deleteEx(Table_ID, getC_BankStatement_ID(), get_TrxName());
+		
+		// Change state
+		
+		setDocStatus(DOCSTATUS_Drafted);
+		setDocAction(DOCACTION_Complete);
+		setIsApproved(false);
+		setProcessed(false);
+		setPosted(false);
+		//F3P:end
+		
 		// After reActivate
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_REACTIVATE);
 		if (m_processMsg != null)
 			return false;		
-		return false;
+		return true;//F3P: porting adempiere return true
 	}	//	reActivateIt
 	
 	
@@ -661,4 +694,16 @@ public class MBankStatement extends X_C_BankStatement implements DocAction
 			|| DOCSTATUS_Reversed.equals(ds);
 	}	//	isComplete
 	
+	 // F3P: added DocOptions, needed to support reActivate 
+	@Override
+	public int customizeValidActions(String docStatus, Object processing, 
+			String orderType, String isSOTrx, int AD_Table_ID, String[] docAction, String[] options, int index)
+	{
+		if(docStatus.equals(DOCSTATUS_Completed))
+		{
+			options[index++] = ACTION_ReActivate;
+		}
+		
+		return index;
+	}
 }	//	MBankStatement

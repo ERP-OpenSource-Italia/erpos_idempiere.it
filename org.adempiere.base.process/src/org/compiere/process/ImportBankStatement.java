@@ -22,9 +22,13 @@ import java.sql.ResultSet;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.model.ImportValidator;
+import org.adempiere.process.ImportProcess;
+import org.compiere.model.I_C_BankStatement;
 import org.compiere.model.MBankAccount;
 import org.compiere.model.MBankStatement;
 import org.compiere.model.MBankStatementLine;
+import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.X_I_BankStatement;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -35,7 +39,7 @@ import org.compiere.util.Env;
  *	author Eldir Tomassen
  *	@version $Id: ImportBankStatement.java,v 1.2 2006/07/30 00:51:01 jjanke Exp $
  */
-public class ImportBankStatement extends SvrProcess
+public class ImportBankStatement extends SvrProcess implements ImportProcess
 {
 	/**	Client to be imported to		*/
 	private int				p_AD_Client_ID = 0;
@@ -86,14 +90,14 @@ public class ImportBankStatement extends SvrProcess
 		if (log.isLoggable(Level.INFO)) log.info(msglog.toString());
 		StringBuilder sql = null;
 		int no = 0;
-		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(p_AD_Client_ID);
+		String clientCheck = getWhereClause();
 
 		//	****	Prepare	****
 
 		//	Delete Old Imported
 		if (p_deleteOldImported)
 		{
-			sql = new StringBuilder ("DELETE FROM I_BankStatement ")
+			sql = new StringBuilder ("DELETE I_BankStatement ")
 				  .append("WHERE I_IsImported='Y'").append (clientCheck);
 			no = DB.executeUpdate(sql.toString(), get_TrxName());
 			if (log.isLoggable(Level.FINE)) log.fine("Delete Old Impored =" + no);
@@ -101,19 +105,22 @@ public class ImportBankStatement extends SvrProcess
 
 		//	Set Client, Org, IsActive, Created/Updated
 		sql = new StringBuilder ("UPDATE I_BankStatement ")
-			  .append("SET AD_Client_ID = CASE WHEN COALESCE(AD_Client_ID,0) = 0 THEN ").append (p_AD_Client_ID).append (" ELSE AD_Client_ID END,")
-			  .append(" AD_Org_ID = CASE WHEN COALESCE(AD_Org_ID,0) = 0 THEN ").append (p_AD_Org_ID).append (" ELSE AD_Org_ID END,");
+			  .append("SET AD_Client_ID = COALESCE (AD_Client_ID,").append (p_AD_Client_ID).append ("),")
+			  .append(" AD_Org_ID = COALESCE (AD_Org_ID,").append (p_AD_Org_ID).append ("),");
 		sql.append(" IsActive = COALESCE (IsActive, 'Y'),")
-			  .append(" Created = COALESCE (Created, getDate()),")
+			  .append(" Created = COALESCE (Created, SysDate),")
 			  .append(" CreatedBy = COALESCE (CreatedBy, 0),")
-			  .append(" Updated = COALESCE (Updated, getDate()),")
+			  .append(" Updated = COALESCE (Updated, SysDate),")
 			  .append(" UpdatedBy = COALESCE (UpdatedBy, 0),")
 			  .append(" I_ErrorMsg = ' ',")
 			  .append(" I_IsImported = 'N' ")
 			  .append("WHERE I_IsImported<>'Y' OR I_IsImported IS NULL OR AD_Client_ID IS NULL OR AD_Org_ID IS NULL OR AD_Client_ID=0 OR AD_Org_ID=0");
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info ("Reset=" + no);
+		
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_BEFORE_VALIDATE);
 
+		
 		sql = new StringBuilder ("UPDATE I_BankStatement o ")
 			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Org, '")
 			.append("WHERE (AD_Org_ID IS NULL OR AD_Org_ID=0")
@@ -142,6 +149,24 @@ public class ImportBankStatement extends SvrProcess
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Bank Account (With Routing No)=" + no);
+		
+		// F3P: aggiunto import charge, preso da ImportInvoice
+		//	Charge
+		sql = new StringBuilder("UPDATE I_BankStatement i "
+			  + "SET C_Charge_ID=(SELECT C_Charge_ID FROM C_Charge p"
+			  + " WHERE i.ChargeName=p.Name AND i.AD_Client_ID=p.AD_Client_ID) "
+			  + "WHERE C_Charge_ID IS NULL AND ChargeName IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set Charge=" + no);
+		sql = new StringBuilder ("UPDATE I_BankStatement "
+				  + "SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Charge, ' "
+				  + "WHERE C_Charge_ID IS NULL AND (ChargeName IS NOT NULL)"
+				  + " AND I_IsImported<>'Y'").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (no != 0){
+			log.warning ("Invalid Charge=" + no);
+		}
+		//
 		//
 		sql = new StringBuilder("UPDATE I_BankStatement i ") 
 		 	.append("SET C_BankAccount_ID=")
@@ -359,6 +384,8 @@ public class ImportBankStatement extends SvrProcess
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Duplicates=" + no);
 		
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);
+		
 		commitEx();
 		
 		//Import Bank Statement
@@ -383,7 +410,7 @@ public class ImportBankStatement extends SvrProcess
 				//	Get the bank account for the first statement
 				if (account == null)
 				{
-					account = new MBankAccount(m_ctx, imp.getC_BankAccount_ID(), get_TrxName());
+					account = MBankAccount.get (m_ctx, imp.getC_BankAccount_ID());
 					statement = null;
 					msglog = new StringBuilder("New Statement, Account=").append(account.getAccountNo());
 					if (log.isLoggable(Level.INFO)) log.info(msglog.toString());
@@ -391,7 +418,7 @@ public class ImportBankStatement extends SvrProcess
 				//	Create a new Bank Statement for every account
 				else if (account.getC_BankAccount_ID() != imp.getC_BankAccount_ID())
 				{
-					account = new MBankAccount(m_ctx, imp.getC_BankAccount_ID(), get_TrxName());
+					account = MBankAccount.get (m_ctx, imp.getC_BankAccount_ID());
 					statement = null;
 					msglog = new StringBuilder("New Statement, Account=").append(account.getAccountNo());
 					if (log.isLoggable(Level.INFO)) log.info(msglog.toString());
@@ -448,8 +475,13 @@ public class ImportBankStatement extends SvrProcess
 					statement.setDescription(imp.getDescription());
 					statement.setEftStatementReference(imp.getEftStatementReference());
 					statement.setEftStatementDate(imp.getEftStatementDate());
+					
+					ModelValidationEngine.get().fireImportValidate(this, imp, statement, ImportValidator.TIMING_BEFORE_IMPORT);
+
 					if (statement.save(get_TrxName()))
 					{
+						ModelValidationEngine.get().fireImportValidate(this, imp, statement, ImportValidator.TIMING_AFTER_IMPORT);
+
 						noInsert++;
 					}
 					lineNo = 10;
@@ -495,9 +527,13 @@ public class ImportBankStatement extends SvrProcess
 				line.setEftCurrency(imp.getEftCurrency());
 				line.setEftAmt(imp.getEftAmt());
 				
+				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_BEFORE_IMPORT);
+
 				//	Save statement line
 				if (line.save(get_TrxName()))
 				{
+					ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_AFTER_IMPORT);
+
 					imp.setC_BankStatement_ID(statement.getC_BankStatement_ID());
 					imp.setC_BankStatementLine_ID(line.getC_BankStatementLine_ID());
 					imp.setI_IsImported(true);
@@ -523,7 +559,7 @@ public class ImportBankStatement extends SvrProcess
 		
 		//	Set Error to indicator to not imported
 		sql = new StringBuilder ("UPDATE I_BankStatement ")
-			.append("SET I_IsImported='N', Updated=getDate() ")
+			.append("SET I_IsImported='N', Updated=SysDate ")
 			.append("WHERE I_IsImported<>'Y'").append(clientCheck);
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		addLog (0, null, new BigDecimal (no), "@Errors@");
@@ -533,5 +569,18 @@ public class ImportBankStatement extends SvrProcess
 		return "";
 
 	}	//	doIt
+
+
+	@Override
+	public String getImportTableName()
+	{
+		return X_I_BankStatement.Table_Name;
+	}
+
+
+	@Override
+	public String getWhereClause() {
+		return " AND AD_Client_ID="+p_AD_Client_ID+" ";
+	}
 
 }	//	ImportBankStatement

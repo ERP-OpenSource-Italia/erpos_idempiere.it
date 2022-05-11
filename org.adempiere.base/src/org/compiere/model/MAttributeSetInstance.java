@@ -29,6 +29,10 @@ import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.TimeUtil;
+import org.compiere.util.Util;
+
+import it.idempiere.base.model.LGSMAttributeSet;
+import it.idempiere.base.model.LGSMAttributeSetInstance;
 
 /**
  *  Product Attribute Set Instance
@@ -99,6 +103,52 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 		//
 		return retValue;
 	}	//	get
+	
+	public static MAttributeSetInstance get (Properties ctx, 
+			int M_AttributeSetInstance_ID, int M_Product_ID,String trxName)
+		{
+			MAttributeSetInstance retValue = null;
+			//	Load Instance if not 0
+			if (M_AttributeSetInstance_ID != 0)
+			{
+				if (s_log.isLoggable(Level.FINE)) s_log.fine("From M_AttributeSetInstance_ID=" + M_AttributeSetInstance_ID);
+				return new MAttributeSetInstance (ctx, M_AttributeSetInstance_ID, trxName);
+			}
+			//	Get new from Product
+			if (s_log.isLoggable(Level.FINE)) s_log.fine("From M_Product_ID=" + M_Product_ID);
+			if (M_Product_ID == 0)
+				return null;
+			String sql = "SELECT M_AttributeSet_ID, M_AttributeSetInstance_ID "
+				+ "FROM M_Product "
+				+ "WHERE M_Product_ID=?";
+			PreparedStatement pstmt = null;
+			ResultSet rs = null;
+			try
+			{
+				pstmt = DB.prepareStatement(sql, trxName);
+				pstmt.setInt(1, M_Product_ID);
+				rs = pstmt.executeQuery();
+				if (rs.next())
+				{
+					int M_AttributeSet_ID = rs.getInt(1);
+				//	M_AttributeSetInstance_ID = rs.getInt(2);	//	needed ?
+					//
+					retValue = new MAttributeSetInstance (ctx, 0, M_AttributeSet_ID, trxName);
+				}
+			}
+			catch (SQLException ex)
+			{
+				s_log.log(Level.SEVERE, sql, ex);
+				retValue = null;
+			}
+			finally
+			{
+				DB.close(rs, pstmt);
+				rs = null; pstmt = null;
+			}
+			//
+			return retValue;
+		}	//	get
 
 	private static CLogger		s_log = CLogger.getCLogger (MAttributeSetInstance.class);
 
@@ -260,31 +310,57 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 		return getGuaranteeDate();
 	}	//	getGuaranteeDate
 
+	//F3P: add trx
+	/**
+	 * 	Get Lot No
+	 * 	@param getNew if true create/set new lot
+	 * 	@param M_Product_ID product used if new
+	 *	@deprecated Please use {@link #getLot (boolean, int, String)}
+	 *	@return lot
+	 */
+	@Deprecated
+	public String getLot (boolean getNew, int M_Product_ID)
+	{
+		return getLot(getNew, M_Product_ID, null);
+	}
 	/**
 	 * 	Get Lot No
 	 * 	@param getNew if true create/set new lot
 	 * 	@param M_Product_ID product used if new
 	 *	@return lot
 	 */
-	public String getLot (boolean getNew, int M_Product_ID)
+	public String getLot (boolean getNew, int M_Product_ID, String trxName)
 	{
 		if (getNew)
-			createLot(M_Product_ID);
+			createLot(M_Product_ID, trxName);
 		return getLot();
 	}	//	getLot
-
+	
+	//F3P: add trx
+	/**
+	 * 	Create Lot
+	 * 	@param M_Product_ID product used if new
+	 *	@deprecated Please use {@link #createLot (int, String)}
+	 *	@return lot info
+	 */
+	@Deprecated
+	public KeyNamePair createLot (int M_Product_ID)
+	{
+		return createLot(M_Product_ID, null);
+	}
+	
 	/**
 	 * 	Create Lot
 	 * 	@param M_Product_ID product used if new
 	 *	@return lot info
 	 */
-	public KeyNamePair createLot (int M_Product_ID)
+	public KeyNamePair createLot (int M_Product_ID, String trxName)
 	{
 		KeyNamePair retValue = null;
 		int M_LotCtl_ID = getMAttributeSet().getM_LotCtl_ID();
 		if (M_LotCtl_ID != 0)
 		{
-			MLotCtl ctl = new MLotCtl (getCtx(), M_LotCtl_ID, null);
+			MLotCtl ctl = new MLotCtl (getCtx(), M_LotCtl_ID, trxName);
 			MLot lot = ctl.createLot(M_Product_ID);
 			setM_Lot_ID (lot.getM_Lot_ID());
 			setLot (lot.getName());
@@ -383,6 +459,7 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 		return false;
 	}
 	
+	//F3P: add lot
 	/**
 	 * Create & save a new ASI for given product.
 	 * Automatically creates Lot#, Serial# and Guarantee Date.
@@ -393,17 +470,36 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 	 */
 	public static MAttributeSetInstance create(Properties ctx, MProduct product, String trxName)
 	{
+		return create(ctx, product, trxName, null);	
+	}
+	/**
+	 * Create & save a new ASI for given product.
+	 * Automatically creates Lot#, Serial# and Guarantee Date.
+	 * @param ctx
+	 * @param product
+	 * @param trxName
+	 * @param lot
+	 * @return newly created ASI
+	 */
+	public static MAttributeSetInstance create(Properties ctx, MProduct product, String trxName, String lot)
+	{
 		MAttributeSetInstance asi = new MAttributeSetInstance(ctx, 0, trxName);
 		asi.setClientOrg(product.getAD_Client_ID(), 0);
 		asi.setM_AttributeSet_ID(product.getM_AttributeSet_ID());
 		// Create new Lot, Serial# and Guarantee Date
 		if (asi.getM_AttributeSet_ID() > 0)
 		{
-			asi.getLot(true, product.get_ID());
+			//F3P: add lot
+			if(Util.isEmpty(lot))
+				asi.getLot(true, product.get_ID(), trxName); //F3P: use trx
+			else
+				asi.setLot(lot);
+			//F3P: end
 			asi.getSerNo(true);
 			asi.getGuaranteeDate(true);
 		}
 		//
+		asi.setDescription();
 		asi.saveEx();
 		return asi;
 	}
@@ -415,16 +511,37 @@ public class MAttributeSetInstance extends X_M_AttributeSetInstance
 	 * @param product
 	 * @param trxName
 	 * @return newly created ASI
+	 * @deprecated use {@link #generateLot(Properties ctx, MProduct product, PO po, String trxName)} instead.
 	 */
+	@Deprecated
 	public static MAttributeSetInstance generateLot(Properties ctx, MProduct product, String trxName)
 	{
+		return generateLot(ctx, product, null, trxName);
+	}
+	
+	/**
+	 * AutoGerate & save a new ASI for given product.
+	 * Automatically creates Lot#
+	 * @param ctx
+	 * @param product
+	 * @param po
+	 * @param trxName
+	 * @return newly created ASI
+	 */
+	public static MAttributeSetInstance generateLot(Properties ctx, MProduct product, PO po, String trxName)
+	{
+		if (LGSMAttributeSet.getAD_Rule_ID((X_M_AttributeSet) product.getM_AttributeSet()) > 0)
+		{
+			return LGSMAttributeSetInstance.generateLot(ctx, product, po, trxName);			
+		}
+		
 		MAttributeSetInstance asi = new MAttributeSetInstance(ctx, 0, trxName);
 		asi.setClientOrg(product.getAD_Client_ID(), 0);
 		asi.setM_AttributeSet_ID(product.getM_AttributeSet_ID());
 		// Create new Lot
 		if (asi.getM_AttributeSet_ID() > 0)
 		{
-			asi.getLot(true, product.get_ID());
+			asi.getLot(true, product.get_ID(), trxName);  //F3P: use trx
 		}
 		//
 		asi.setDescription();

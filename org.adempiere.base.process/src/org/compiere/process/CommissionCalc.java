@@ -37,6 +37,9 @@ import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Language;
 
+import it.idempiere.base.model.LITMCommissionLine;
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *	Commission Calculation	
  *	
@@ -96,6 +99,8 @@ public class CommissionCalc extends SvrProcess
 		if (!comRun.save())
 			throw new AdempiereSystemError ("Could not save Commission Run");
 		
+		boolean isCommissionRuleMinorSequence = STDSysConfig.isCommissionRuleMinorSequence(m_com.getAD_Client_ID(), m_com.getAD_Org_ID());
+		
 		MCommissionLine[] lines = m_com.getLines();
 		for (int i = 0; i < lines.length; i++)
 		{
@@ -115,17 +120,20 @@ public class CommissionCalc extends SvrProcess
 						.append(" CASE WHEN h.GrandTotal <> 0 ")
 						.append("		THEN (l.QtyInvoiced*al.Amount/h.GrandTotal) ")
 						.append("		ELSE 0 END AS Qty,")
-						.append(" NULL, l.C_InvoiceLine_ID, p.DocumentNo||'_'||h.DocumentNo,")
+						.append(" NULL, l.C_InvoiceLine_ID, coalesce(p.DocumentNo,hdr.DocumentNo)||'_'||h.DocumentNo,")
 						.append(" COALESCE(prd.Value,l.Description), h.DateInvoiced ")
-						.append("FROM C_Payment p")
-						.append(" INNER JOIN C_AllocationLine al ON (p.C_Payment_ID=al.C_Payment_ID)")
+						.append("FROM C_AllocationLine al")
+						.append(" INNER JOIN C_AllocationHdr hdr ON (hdr.C_AllocationHdr_ID = al.C_AllocationHdr_ID)")
 						.append(" INNER JOIN C_Invoice h ON (al.C_Invoice_ID = h.C_Invoice_ID)")
 						.append(" INNER JOIN C_InvoiceLine l ON (h.C_Invoice_ID = l.C_Invoice_ID) ")
-						.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
-						.append("WHERE p.DocStatus IN ('CL','CO','RE')")
-						.append(" AND h.IsSOTrx='Y'")
-						.append(" AND p.AD_Client_ID = ?")
-						.append(" AND p.DateTrx BETWEEN ? AND ?");
+						.append(" INNER JOIN C_DocType dt ON (h.C_DocType_ID = dt.C_DocType_ID)")
+						.append(" LEFT OUTER JOIN C_Payment p ON (p.C_Payment_ID=al.C_Payment_ID)")
+						.append(isOnlyProductWhere(LITMCommissionLine.isOnlyProduct(lines[i]))) //F3P		  				
+						//.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
+						.append("WHERE hdr.DocStatus IN ('CL','CO','RE')")
+						.append(" AND h.IsSOTrx='Y' AND l.IsDescription = 'N'")
+						.append(" AND al.AD_Client_ID = ?")
+						.append(" AND COALESCE(p.DateTrx,hdr.DateTrx) BETWEEN ? AND ?");
 				}
 				else
 				{
@@ -135,14 +143,16 @@ public class CommissionCalc extends SvrProcess
 						.append(" SUM(CASE WHEN h.GrandTotal <> 0 ")
 						.append("		THEN l.QtyInvoiced*al.Amount/h.GrandTotal ELSE 0 END) AS Qty,")
 						.append(" NULL, NULL, NULL, NULL, MAX(h.DateInvoiced) ")
-						.append("FROM C_Payment p")
-						.append(" INNER JOIN C_AllocationLine al ON (p.C_Payment_ID=al.C_Payment_ID)")
+						.append("FROM C_AllocationLine al")
+						.append(" INNER JOIN C_AllocationHdr hdr ON (hdr.C_AllocationHdr_ID = al.C_AllocationHdr_ID)")
 						.append(" INNER JOIN C_Invoice h ON (al.C_Invoice_ID = h.C_Invoice_ID)")
 						.append(" INNER JOIN C_InvoiceLine l ON (h.C_Invoice_ID = l.C_Invoice_ID) ")
-						.append("WHERE p.DocStatus IN ('CL','CO','RE')")
-						.append(" AND h.IsSOTrx='Y'")
-						.append(" AND p.AD_Client_ID = ?")
-						.append(" AND p.DateTrx BETWEEN ? AND ?");
+						.append(" INNER JOIN C_DocType dt ON (h.C_DocType_ID = dt.C_DocType_ID)")
+						.append(" LEFT OUTER JOIN C_Payment p ON (p.C_Payment_ID=al.C_Payment_ID)")
+						.append("WHERE hdr.DocStatus IN ('CL','CO','RE')")
+						.append(" AND h.IsSOTrx='Y' AND l.IsDescription = 'N'")
+						.append(" AND al.AD_Client_ID = ?")
+						.append(" AND COALESCE(p.DateTrx,hdr.DateTrx) BETWEEN ? AND ?");
 				}
 			}
 			else if (MCommission.DOCBASISTYPE_Order.equals(m_com.getDocBasisType()))
@@ -154,7 +164,8 @@ public class CommissionCalc extends SvrProcess
 						.append(" COALESCE(prd.Value,l.Description),h.DateOrdered ")
 						.append("FROM C_Order h")
 						.append(" INNER JOIN C_OrderLine l ON (h.C_Order_ID = l.C_Order_ID)")
-						.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
+						.append(isOnlyProductWhere(LITMCommissionLine.isOnlyProduct(lines[i]))) //F3P
+						//.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
 						.append("WHERE h.DocStatus IN ('CL','CO')")
 						.append(" AND h.IsSOTrx='Y'")
 						.append(" AND h.AD_Client_ID = ?")
@@ -177,28 +188,39 @@ public class CommissionCalc extends SvrProcess
 			{
 				if (m_com.isListDetails())
 				{
-					sql.append("SELECT h.C_Currency_ID, l.LineNetAmt, l.QtyInvoiced, ")
-						.append("NULL, l.C_InvoiceLine_ID, h.DocumentNo,")
+					sql.append("SELECT h.C_Currency_ID, l.LineNetAmt * (CASE WHEN SUBSTR(dt.docbasetype,3,1 ) = 'C' THEN (-1.0) ELSE 1.0 END) AS LineNetAmt, ")
+						.append("l.QtyInvoiced * (CASE WHEN SUBSTR(dt.docbasetype,3,1 ) = 'C' THEN (-1.0) ELSE 1.0 END) AS QtyInvoiced, ")
 						.append(" COALESCE(prd.Value,l.Description),h.DateInvoiced ")
 						.append("FROM C_Invoice h")
+						.append(" INNER JOIN C_DocType dt ON (h.C_DocType_ID = dt.C_DocType_ID)")
 						.append(" INNER JOIN C_InvoiceLine l ON (h.C_Invoice_ID = l.C_Invoice_ID)")
-						.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
+						.append(" LEFT OUTER JOIN M_InOutLine il ON (il.M_InOutLine_ID = l.M_InOutLine_ID )")
+						.append(" LEFT OUTER JOIN M_InOut i ON (il.M_InOut_ID = i.M_InOut_ID )")
+						.append(" LEFT OUTER JOIN C_OrderLine ol ON (ol.C_OrderLine_ID = l.C_OrderLine_ID )")
+						.append(isOnlyProductWhere(LITMCommissionLine.isOnlyProduct(lines[i]))) //F3P
+						//.append(" LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ")
 						.append("WHERE h.DocStatus IN ('CL','CO','RE')")
 						.append(" AND h.IsSOTrx='Y'")
 						.append(" AND h.AD_Client_ID = ?")
-						.append(" AND h.DateInvoiced BETWEEN ? AND ?");
+						.append(" AND h.DateInvoiced BETWEEN ? AND ?")
+						.append(" AND l.IsDescription = 'N'");
 				}
 				else
 				{
-					sql.append("SELECT h.C_Currency_ID, SUM(l.LineNetAmt) AS Amt,")
-						.append(" SUM(l.QtyInvoiced) AS Qty, ")
+					sql.append("SELECT h.C_Currency_ID, SUM( l.LineNetAmt * (CASE WHEN SUBSTR(dt.docbasetype,3,1 ) = 'C' THEN (-1.0) ELSE 1.0 END) ) AS Amt,")
+						.append(" SUM(l.QtyInvoiced * (CASE WHEN SUBSTR(dt.docbasetype,3,1 ) = 'C' THEN (-1.0) ELSE 1.0 END)) AS Qty, ")
 						.append("NULL, NULL, NULL, NULL, MAX(h.DateInvoiced) ")
 						.append("FROM C_Invoice h")
+						.append(" INNER JOIN C_DocType dt ON (h.C_DocType_ID = dt.C_DocType_ID)")
 						.append(" INNER JOIN C_InvoiceLine l ON (h.C_Invoice_ID = l.C_Invoice_ID) ")
+						.append(" LEFT OUTER JOIN M_InOutLine il ON (il.M_InOutLine_ID = l.M_InOutLine_ID )")
+						.append(" LEFT OUTER JOIN M_InOut i ON (il.M_InOut_ID = i.M_InOut_ID )")
+						.append(" LEFT OUTER JOIN C_OrderLine ol ON (ol.C_OrderLine_ID = l.C_OrderLine_ID )")
 						.append("WHERE h.DocStatus IN ('CL','CO','RE')")
 						.append(" AND h.IsSOTrx='Y'")
 						.append(" AND h.AD_Client_ID = ?")
-						.append(" AND h.DateInvoiced BETWEEN ? AND ?");
+						.append(" AND h.DateInvoiced BETWEEN ? AND ?")
+						.append(" AND l.IsDescription = 'N'");
 				}
 			}
 			//	CommissionOrders/Invoices
@@ -230,10 +252,23 @@ public class CommissionCalc extends SvrProcess
 			if (lines[i].getC_BP_Group_ID() != 0)
 				sql.append(" AND h.C_BPartner_ID IN ")
 					.append("(SELECT C_BPartner_ID FROM C_BPartner WHERE C_BP_Group_ID=").append(lines[i].getC_BP_Group_ID()).append(")");
+			
 			//	Sales Region
-			if (lines[i].getC_SalesRegion_ID() != 0)
-				sql.append(" AND h.C_BPartner_Location_ID IN ")
-					.append("(SELECT C_BPartner_Location_ID FROM C_BPartner_Location WHERE C_SalesRegion_ID=").append(lines[i].getC_SalesRegion_ID()).append(")");
+			if((lines[i].getC_SalesRegion_ID() != 0))
+			{
+				if(isCommissionRuleMinorSequence &&
+						MCommission.DOCBASISTYPE_Order.equals(m_com.getDocBasisType()) == false )
+				{
+					sql.append(" AND COALESCE(i.C_BPartner_Location_ID,ol.C_BPartner_Location_ID) IN ")
+						.append("(SELECT C_BPartner_Location_ID FROM C_BPartner_Location WHERE C_SalesRegion_ID=").append(lines[i].getC_SalesRegion_ID()).append(")");
+				}
+				else
+				{
+					sql.append(" AND h.C_BPartner_Location_ID IN ")
+						.append("(SELECT C_BPartner_Location_ID FROM C_BPartner_Location WHERE C_SalesRegion_ID=").append(lines[i].getC_SalesRegion_ID()).append(")");
+				}
+			}
+			
 			//	Product
 			if (lines[i].getM_Product_ID() != 0)
 				sql.append(" AND l.M_Product_ID=").append(lines[i].getM_Product_ID());
@@ -253,6 +288,9 @@ public class CommissionCalc extends SvrProcess
 			createDetail(sql.toString(), comAmt);
 			comAmt.calculateCommission();
 			comAmt.saveEx();
+			
+			if(isCommissionRuleMinorSequence)
+				break;
 		}	//	for all commission lines
 		
 	//	comRun.updateFromAmt();
@@ -330,7 +368,7 @@ public class CommissionCalc extends SvrProcess
 		
 		/**
 		String sd = DB.TO_DATE(p_StartDate, true);
-		StringBuilder sql = new StringBuilder ("SELECT ");
+		StringBuffer sql = new StringBuffer ("SELECT ");
 		if (MCommission.FREQUENCYTYPE_Quarterly.equals(m_com.getFrequencyType()))
 			sql.append("TRUNC(").append(sd).append(", 'Q'), TRUNC(").append(sd).append("+92, 'Q')-1");
 		else if (MCommission.FREQUENCYTYPE_Weekly.equals(m_com.getFrequencyType()))
@@ -349,12 +387,15 @@ public class CommissionCalc extends SvrProcess
 	 */
 	private void createDetail (String sql, MCommissionAmt comAmt) throws Exception
 	{
-		try (PreparedStatement pstmt = DB.prepareStatement(sql, get_TrxName());)
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		try
 		{
+			pstmt = DB.prepareStatement(sql, get_TrxName());
 			pstmt.setInt(1, m_com.getAD_Client_ID());
 			pstmt.setTimestamp(2, p_StartDate);
 			pstmt.setTimestamp(3, m_EndDate);
-			ResultSet rs = pstmt.executeQuery();
+			rs = pstmt.executeQuery();
 			while (rs.next())
 			{
 				//	CommissionAmount, C_Currency_ID, Amt, Qty,
@@ -385,6 +426,21 @@ public class CommissionCalc extends SvrProcess
 		{
 			throw new AdempiereSystemError("System Error: " + e.getLocalizedMessage(), e);
 		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null; 
+			pstmt = null;
+		}
 	}	//	createDetail
+	
+	//F3P
+	public String isOnlyProductWhere(boolean isOnlyProduct)
+	{
+		if(!isOnlyProduct)
+			return " LEFT OUTER JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ";
+		else 
+			return " JOIN M_Product prd ON (l.M_Product_ID = prd.M_Product_ID) ";
+	}
 
 }	//	CommissionCalc

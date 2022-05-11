@@ -44,6 +44,11 @@ public class StandardTaxProvider implements ITaxProvider {
 		for (int i = 0; i < lines.length; i++)
 		{
 			MOrderLine line = lines[i];
+			
+			// F3P: skip description lines			
+			if(line.isDescription())
+				continue;
+			
 			totalLines = totalLines.add(line.getLineNetAmt());
 			Integer taxID = Integer.valueOf(line.getC_Tax_ID());
 			if (!taxList.contains(taxID))
@@ -96,6 +101,8 @@ public class StandardTaxProvider implements ITaxProvider {
 						grandTotal = grandTotal.add(taxAmt);
 				}
 				if (!oTax.delete(true, order.get_TrxName()))
+					return false;
+				if (!oTax.save(order.get_TrxName()))
 					return false;
 			}
 			else
@@ -172,6 +179,11 @@ public class StandardTaxProvider implements ITaxProvider {
 		for (int i = 0; i < lines.length; i++)
 		{
 			MInvoiceLine line = lines[i];
+			
+			// F3P: skip description lines			
+			if(line.isDescription())
+				continue;
+			
 			totalLines = totalLines.add(line.getLineNetAmt());
 			if (!taxList.contains(line.getC_Tax_ID()))
 			{
@@ -204,11 +216,26 @@ public class StandardTaxProvider implements ITaxProvider {
 			MTax tax = iTax.getTax();
 			if (tax.isSummary())
 			{
+				// F3P bug fix: rouding error, last child calculate by
+				// subtraction
+				BigDecimal prevTaxTotal = iTax.getTaxAmt(), newTaxTotal = BigDecimal.ZERO;
+				
 				MTax[] cTaxes = tax.getChildTaxes(false);	//	Multiple taxes
 				for (int j = 0; j < cTaxes.length; j++)
 				{
 					MTax cTax = cTaxes[j];
-					BigDecimal taxAmt = cTax.calculateTax(iTax.getTaxBaseAmt(), false, invoice.getPrecision());
+					
+					// F3P bug fix: rouding error, last child calculate by
+					// BigDecimal taxAmt = cTax.calculateTax(iTax.getTaxBaseAmt(), false, invoice.getPrecision());
+					BigDecimal taxAmt;
+					
+					if (j == cTaxes.length - 1) {
+						taxAmt = prevTaxTotal.subtract(newTaxTotal);
+					} else {
+						taxAmt = cTax.calculateTax(iTax.getTaxBaseAmt(), false, invoice.getPrecision());
+						newTaxTotal = newTaxTotal.add(taxAmt);
+					}
+					// F3P end					
 					//
 					MInvoiceTax newITax = new MInvoiceTax(invoice.getCtx(), 0, invoice.get_TrxName());
 					newITax.setClientOrg(invoice);
@@ -351,6 +378,8 @@ public class StandardTaxProvider implements ITaxProvider {
 						grandTotal = grandTotal.add(taxAmt);
 				}
 				if (!oTax.delete(true, rma.get_TrxName()))
+					return false;
+				if (!oTax.save(rma.get_TrxName()))
 					return false;
 			}
 			else

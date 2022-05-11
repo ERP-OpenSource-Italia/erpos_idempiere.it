@@ -177,9 +177,9 @@ public class ImportInventory extends SvrProcess implements ImportProcess
 		if (p_MovementDate != null)
 			sql.append(" MovementDate = COALESCE (MovementDate,").append (DB.TO_DATE(p_MovementDate)).append ("),");
 		sql.append(" IsActive = COALESCE (IsActive, 'Y'),")
-			  .append(" Created = COALESCE (Created, getDate()),")
+			  .append(" Created = COALESCE (Created, SysDate),")
 			  .append(" CreatedBy = COALESCE (CreatedBy, 0),")
-			  .append(" Updated = COALESCE (Updated, getDate()),")
+			  .append(" Updated = COALESCE (Updated, SysDate),")
 			  .append(" UpdatedBy = COALESCE (UpdatedBy, 0),")
 			  .append(" I_ErrorMsg = ' ',")
 			  .append(" M_Warehouse_ID = NULL,")	//	reset
@@ -351,9 +351,12 @@ public class ImportInventory extends SvrProcess implements ImportProcess
 		sql = new StringBuilder ("SELECT * FROM I_Inventory ")
 			.append("WHERE I_IsImported='N'").append (clientCheck)
 			.append(" ORDER BY M_Warehouse_ID, TRUNC(MovementDate), I_Inventory_ID");
-		try (PreparedStatement pstmt = DB.prepareStatement (sql.toString (), get_TrxName());)
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		try
 		{
-			ResultSet rs = pstmt.executeQuery ();
+			pstmt = DB.prepareStatement (sql.toString (), get_TrxName());
+			rs = pstmt.executeQuery ();
 			//
 			int x_M_Warehouse_ID = -1;
 			int x_C_DocType_ID = -1;
@@ -416,7 +419,7 @@ public class ImportInventory extends SvrProcess implements ImportProcess
 				//	Line
 				int M_AttributeSetInstance_ID = generateASI(product,imp);
 
-				MInventoryLine line = new MInventoryLine (inventory, 
+				MInventoryLine line = MInventoryLine.createMInventoryLinePO(inventory, 
 					imp.getM_Locator_ID(), imp.getM_Product_ID(), M_AttributeSetInstance_ID,
 					imp.getQtyBook(), imp.getQtyCount(), imp.getQtyInternalUse());
 				line.setDescription(imp.getDescription());
@@ -484,10 +487,15 @@ public class ImportInventory extends SvrProcess implements ImportProcess
 		{
 			throw new AdempiereException(e);
 		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
+		}
 
 		//	Set Error to indicator to not imported
 		sql = new StringBuilder ("UPDATE I_Inventory ")
-			.append("SET I_IsImported='N', Updated=getDate() ")
+			.append("SET I_IsImported='N', Updated=SysDate ")
 			.append("WHERE I_IsImported<>'Y'").append(clientCheck);
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		addLog (0, null, new BigDecimal (no), "@Errors@");
@@ -545,7 +553,7 @@ public class ImportInventory extends SvrProcess implements ImportProcess
 		if (cost.is_new())
 			cost.saveEx();
 		if (costingDoc == null) {
-			costingDoc = new MInventory(getCtx(), 0, get_TrxName());
+			costingDoc = PO.create(getCtx(),MInventory.Table_Name, get_TrxName());
 			costingDoc.setC_DocType_ID(p_C_DocType_ID);
 			costingDoc.setCostingMethod(cost.getM_CostElement().getCostingMethod());
 			costingDoc.setAD_Org_ID(imp.getAD_Org_ID());
@@ -553,7 +561,7 @@ public class ImportInventory extends SvrProcess implements ImportProcess
 			costingDoc.saveEx();
 		}
 		
-		MInventoryLine costingLine = new MInventoryLine(getCtx(), 0, get_TrxName());
+		MInventoryLine costingLine = PO.create(getCtx(), MInventoryLine.Table_Name, get_TrxName());
 		costingLine.setM_Inventory_ID(costingDoc.getM_Inventory_ID());
 		costingLine.setM_Product_ID(cost.getM_Product_ID());
 		costingLine.setCurrentCostPrice(cost.getCurrentCostPrice());

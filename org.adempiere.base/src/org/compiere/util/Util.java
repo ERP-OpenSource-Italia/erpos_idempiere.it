@@ -37,6 +37,8 @@ import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 
+import org.adempiere.exceptions.AdempiereException;
+
 /**
  *  General Utilities
  *
@@ -47,6 +49,9 @@ import javax.swing.KeyStroke;
  */
 public class Util
 {
+	public static final String AD_FALSE = "N",
+							   AD_TRUE = "Y";
+	
 	/**	Logger			*/
 	private static CLogger log = CLogger.getCLogger(Util.class.getName());
 
@@ -688,7 +693,7 @@ public class Util
 		}
 		String normStr = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD);
 		
-		StringBuilder sb = new StringBuilder();
+		StringBuffer sb = new StringBuffer();
 		for (int i = 0; i < normStr.length(); i++) {
 			char ch = normStr.charAt(i);
 			if (ch < 255)
@@ -707,4 +712,65 @@ public class Util
         cal.set(Calendar.MILLISECOND, 0);
         return new Timestamp(cal.getTimeInMillis());
     }
+			
+	/**
+	 * Return a boolean value from object
+	 * 
+	 * "N","false","0",0,false,null -> false
+	 * "Y","true","1",1,true -> true
+	 * 
+	 * throws exception for unsupported values
+	 * 
+	 * @param bool
+	 *            the value be treated as a boolean
+	 * @return boolean value of bool.
+	 */
+	public static boolean asBoolean(Object bool) {
+		boolean bRet = false, bError = false;
+
+		if (bool == null)
+			return false;
+
+		if (bool instanceof Boolean) {
+			bRet = ((Boolean) bool).booleanValue();
+		} else if (bool instanceof String) {
+			if (((String) bool).equalsIgnoreCase("N")
+					|| ((String) bool).equalsIgnoreCase("false")
+					|| ((String) bool).equalsIgnoreCase("0")) {
+				bRet = false;
+			} else if (((String) bool).equalsIgnoreCase("Y")
+					|| ((String) bool).equalsIgnoreCase("true")
+					|| ((String) bool).equalsIgnoreCase("1")) {
+				bRet = true;
+			} else {
+				bError = true;
+			}
+		} else if (bool instanceof Integer) {
+			if ((Integer) bool == 0) {
+				bRet = false;
+			} else if ((Integer) bool == 1) {
+				bRet = true;
+			} else {
+				bError = true;
+			}
+		} else {
+			bError = true;
+		}
+
+		if (bError) {
+			throw new AdempiereException("@Invalid@" + bool);
+		}
+
+		return bRet;
+	}
+	
+	public static String asString(boolean val)
+	{
+		if(val)
+			return AD_TRUE;
+		
+		return AD_FALSE;
+	}
+	
 }   //  Util
+

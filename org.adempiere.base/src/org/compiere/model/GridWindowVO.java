@@ -206,6 +206,18 @@ public class GridWindowVO implements Serializable
 				vo.Description = userDef.getDescription();
 			if (userDef.getHelp() != null)
 				vo.Help = userDef.getHelp();
+			// ToDo userDef.isDefault, userDef.isReadOnly, userDef.isUserUpdateable
+			
+			// F3P: implemented missing field
+			// IsDefault has practical use here ?
+			
+			if(userDef.getIsReadOnly() != null)
+			{
+				if (userDef.getIsReadOnly().equals("Y"))
+					vo.IsReadWrite = "Y";
+				else
+					vo.IsReadWrite = "N";
+			}
 		}
 
 		//  Create Tabs

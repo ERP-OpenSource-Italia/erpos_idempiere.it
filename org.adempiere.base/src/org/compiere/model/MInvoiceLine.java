@@ -35,6 +35,11 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.LITMInvoiceLine;
+import it.idempiere.base.model.LineDocumentDiscount;
+import it.idempiere.base.util.ProductPricing2Support;
+import it.idempiere.base.util.STDSysConfig;
+
 
 /**
  *	Invoice Line Model
@@ -63,10 +68,8 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	{
 		if (sLine == null)
 			return null;
-
-		final String whereClause = "C_InvoiceLine.M_InOutLine_ID=? AND C_Invoice.Processed='Y'";
-		final String joinInvoice = "JOIN C_Invoice ON (C_Invoice.C_Invoice_ID = C_InvoiceLine.C_Invoice_ID)";
-		List<MInvoiceLine> list = new Query(sLine.getCtx(),I_C_InvoiceLine.Table_Name,whereClause,sLine.get_TrxName()).addJoinClause(joinInvoice)
+		final String whereClause = I_M_InOutLine.COLUMNNAME_M_InOutLine_ID+"=?";
+		List<MInvoiceLine> list = new Query(sLine.getCtx(),I_C_InvoiceLine.Table_Name,whereClause,sLine.get_TrxName())
 		.setParameters(sLine.getM_InOutLine_ID())
 		.list();
 		
@@ -223,6 +226,11 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	protected IProductPricing	m_productPricing = null;
 	/** Parent						*/
 	protected MInvoice	m_parent = null;
+	
+	// F3P: added to keep cache, like parent
+	
+	private MOrderLine m_orderLine = null;
+	private MInOutLine m_inoutLine = null;
 
 	/**
 	 * 	Set Defaults from Order.
@@ -259,6 +267,9 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	 */
 	public void setOrderLine (MOrderLine oLine)
 	{
+		// F3P: keep cache
+		m_orderLine = oLine;
+		
 		setC_OrderLine_ID(oLine.getC_OrderLine_ID());
 		//
 		setLine(oLine.getLine());
@@ -301,6 +312,9 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	 */
 	public void setShipLine (MInOutLine sLine)
 	{
+		// F3P: keep cache
+		m_inoutLine = sLine;
+
 		setM_InOutLine_ID(sLine.getM_InOutLine_ID());
 		setC_OrderLine_ID(sLine.getC_OrderLine_ID());
 		// Set RMALine ID if shipment/receipt is based on RMA Doc
@@ -325,7 +339,8 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		int C_OrderLine_ID = sLine.getC_OrderLine_ID();
 		if (C_OrderLine_ID != 0)
 		{
-			MOrderLine oLine = new MOrderLine (getCtx(), C_OrderLine_ID, get_TrxName());
+			// MOrderLine oLine = new MOrderLine (getCtx(), C_OrderLine_ID, get_TrxName());
+			MOrderLine oLine = getOrderLine();
 			setS_ResourceAssignment_ID(oLine.getS_ResourceAssignment_ID());
 			//
 			if (sLine.sameOrderLineUOM())
@@ -335,6 +350,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 			setPriceActual(oLine.getPriceActual());
 			setPriceLimit(oLine.getPriceLimit());
 			setPriceList(oLine.getPriceList());
+			LITMInvoiceLine.setDiscount(this,oLine.getDiscount());
 			//
 			setC_Tax_ID(oLine.getC_Tax_ID());
 			setLineNetAmt(oLine.getLineNetAmt());
@@ -344,9 +360,28 @@ public class MInvoiceLine extends X_C_InvoiceLine
         else if (sLine.getM_RMALine_ID() != 0)
         {
         	// Set Pricing details from the RMA Line on which it is based
-            MRMALine rmaLine = new MRMALine(getCtx(), sLine.getM_RMALine_ID(), get_TrxName());
+        	MRMALine rmaLine = PO.get(getCtx(), MRMALine.Table_Name, sLine.getM_RMALine_ID(), get_TrxName());
+
+        	// Angelo Dabala' (genied) get price from original Order
+            try
+            {
+            	MInOutLine xLine = (MInOutLine) rmaLine.getM_InOutLine();	// Original Shipment
+            	MOrderLine oLine = xLine.getOrderLine();		// Original Order
+    			if (xLine.sameOrderLineUOM())
+    				setPriceEntered(oLine.getPriceEntered());
+    			else
+    				setPriceEntered(oLine.getPriceActual());
+        		setPriceActual (oLine.getPriceActual());
+        		setPriceList (oLine.getPriceList());
+        		setPriceLimit (oLine.getPriceLimit());
+            }
+            catch (Exception e) 
+            {
+				// Fallback
 
             setPrice();
+			}
+            // Angelo Dabala' (genied) end
             setPrice(rmaLine.getAmt());
             setC_Tax_ID(rmaLine.getC_Tax_ID());
             setLineNetAmt(rmaLine.getLineNetAmt());
@@ -424,16 +459,42 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		m_productPricing = Core.getProductPricing();
 		m_productPricing.setInvoiceLine(this, get_TrxName());
 		m_productPricing.setM_PriceList_ID(M_PriceList_ID);
-		//
-		setPriceActual (m_productPricing.getPriceStd());
+		m_productPricing.calculatePrice();
 		setPriceList (m_productPricing.getPriceList());
 		setPriceLimit (m_productPricing.getPriceLimit());
-		//
-		if (getQtyEntered().compareTo(getQtyInvoiced()) == 0)
-			setPriceEntered(getPriceActual());
-		else
-			setPriceEntered(getPriceActual().multiply(getQtyInvoiced()
-				.divide(getQtyEntered(), 6, RoundingMode.HALF_UP)));	//	precision
+
+		if(ProductPricing2Support.isSelectedPriceUOM(m_productPricing, getC_UOM_ID()) == false)
+		{
+			//
+			setPriceActual (m_productPricing.getPriceStd());
+			//
+			if (getQtyEntered().compareTo(getQtyInvoiced()) == 0)
+				setPriceEntered(getPriceActual());
+			else
+				setPriceEntered(getPriceActual().multiply(getQtyInvoiced()
+					.divide(getQtyEntered(), 20,RoundingMode.HALF_UP)));	//	precision	
+		}
+		else // F3P: new behaviour triggered by selection of price in same uom then line
+		{
+			setPriceEntered(m_productPricing.getPriceStd());
+			
+			//
+			if (getQtyEntered().compareTo(getQtyInvoiced()) == 0)
+				setPriceActual(getPriceEntered());
+			else
+			{
+				if(getQtyInvoiced().signum() != 0)
+				{
+					setPriceActual(getPriceEntered().multiply(getQtyEntered()
+							.divide(getQtyInvoiced(), 20,RoundingMode.HALF_UP)));	//	precision
+				}
+				else
+				{
+					setPriceActual(getPriceEntered());
+				}
+			}
+		}
+		
 		//
 		if (getC_UOM_ID() == 0)
 			setC_UOM_ID(m_productPricing.getC_UOM_ID());
@@ -518,12 +579,29 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	 */
 	public void setLineNetAmt ()
 	{
-		//	Calculations & Rounding
-		BigDecimal bd = getPriceActual().multiply(getQtyInvoiced());
-		int precision = getPrecision();
-		if (bd.scale() > precision)
-			bd = bd.setScale(precision, RoundingMode.HALF_UP);
-		super.setLineNetAmt (bd);
+		if(isDescription() && STDSysConfig.isDescriptionLineWithLineNetAmt0(getAD_Client_ID(), getAD_Org_ID()))
+		{
+			super.setLineNetAmt (Env.ZERO);
+		}
+		else
+		{
+			//	Calculations & Rounding
+			BigDecimal bd = getPriceActual().multiply(getQtyInvoiced());
+			int precision = getPrecision();
+			if (bd.scale() > precision)
+				bd = bd.setScale(precision, RoundingMode.HALF_UP);
+			
+			// F3P: doc discount
+			
+			BigDecimal bdDocDiscount = LineDocumentDiscount.getLIT_LineDocDiscVal(this);
+			
+			if(bdDocDiscount != null)
+			{
+				bd = bd.subtract(bdDocDiscount);
+			}
+			
+			super.setLineNetAmt (bd);
+		}
 	}	//	setLineNetAmt
 	/**
 	 * 	Get Charge
@@ -532,17 +610,17 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	public MCharge getCharge()
 	{
 		if (m_charge == null && getC_Charge_ID() != 0)
-			m_charge =  MCharge.getCopy(getCtx(), getC_Charge_ID(), get_TrxName());
+			m_charge =  MCharge.get (getCtx(), getC_Charge_ID());
 		return m_charge;
 	}
 	/**
-	 * 	Get Tax (immutable)
+	 * 	Get Tax
 	 *	@return tax
 	 */
 	protected MTax getTax()
 	{
 		if (m_tax == null)
-			m_tax = MTax.get(getCtx(), getC_Tax_ID());		
+			m_tax = MTax.get(getCtx(), getC_Tax_ID());
 		return m_tax;
 	}	//	getTax
 
@@ -648,7 +726,7 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	public MProduct getProduct()
 	{
 		if (m_product == null && getM_Product_ID() != 0)
-			m_product =  MProduct.getCopy(getCtx(), getM_Product_ID(), get_TrxName());
+			m_product =  MProduct.get (getCtx(), getM_Product_ID());
 		return m_product;
 	}	//	getProduct
 
@@ -843,10 +921,10 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	protected boolean beforeSave (boolean newRecord)
 	{
 		if (log.isLoggable(Level.FINE)) log.fine("New=" + newRecord);
-		boolean parentComplete = getParent().isProcessed();
+		boolean parentComplete = getParent().isComplete();
 		boolean isReversal = getParent().isReversal();
 		if (newRecord && parentComplete) {
-			log.saveError("ParentComplete", Msg.translate(getCtx(), "C_Invoice_ID"));
+			log.saveError("ParentComplete", Msg.translate(getCtx(), "C_InvoiceLine"));
 			return false;
 		}
 		// Re-set invoice header (need to update m_IsSOTrx flag) - phib [ 1686773 ]
@@ -863,7 +941,8 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		{
 			if (!m_priceSet
 				&&  Env.ZERO.compareTo(getPriceActual()) == 0
-				&&  Env.ZERO.compareTo(getPriceList()) == 0)
+				&&  Env.ZERO.compareTo(getPriceList()) == 0
+				&&  Env.ONEHUNDRED.compareTo(LITMInvoiceLine.getDiscount(this)) != 0)
 				setPrice();
 				// IDEMPIERE-1574 Sales Order Line lets Price under the Price Limit when updating
 				//	Check PriceLimit
@@ -908,7 +987,12 @@ public class MInvoiceLine extends X_C_InvoiceLine
 		setLineNetAmt();
 		// TaxAmt recalculations should be done if the TaxAmt is zero
 		// or this is an Invoice(Customer) - teo_sarca, globalqss [ 1686773 ]
-		if (m_IsSOTrx || getTaxAmt().compareTo(Env.ZERO) == 0)
+		//if (m_IsSOTrx || getTaxAmt().compareTo(Env.ZERO) == 0)
+		//
+		//Cristiano Lazzaro (genied) - add system variable to avoid TaxAmt recalculations on invoice customers
+		// this is important when the user want to input an tax amount by yourself, obviously the tax code should not have the check on DocumentLevel
+		boolean unforcedVat = STDSysConfig.isIsSoVatInvoiceUnforced(this.getAD_Client_ID(), this.getAD_Org_ID());
+		if (getTaxAmt().compareTo(Env.ZERO) == 0 || (m_IsSOTrx && unforcedVat == false))
 			setTaxAmt();
 		//
 		
@@ -940,8 +1024,15 @@ public class MInvoiceLine extends X_C_InvoiceLine
 				return false;
 		
 			// red1 - solving BUGS #[ 1701331 ] , #[ 1786103 ]
-			if (!tax.save(get_TrxName()))
-				return false;
+			// Angelo Dabala' (genied) modified to test TaxBaseAmt
+			if (tax.getTaxBaseAmt().signum() != 0) {
+				if (!tax.save(get_TrxName()))
+					return false;
+			}
+			else {
+				if (!tax.is_new() && !tax.delete(false, get_TrxName()))
+					return false;
+			}
 		}
 		return true;
 	}
@@ -956,12 +1047,22 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	{
 		if (!success)
 			return success;
-		MTax tax = new MTax(getCtx(), getC_Tax_ID(), get_TrxName());
-        MTaxProvider provider = new MTaxProvider(tax.getCtx(), tax.getC_TaxProvider_ID(), tax.get_TrxName());
-		ITaxProvider calculator = Core.getTaxProvider(provider);
-		if (calculator == null)
-			throw new AdempiereException(Msg.getMsg(getCtx(), "TaxNoProvider"));
-    	return calculator.recalculateTax(provider, this, newRecord);
+		
+		if(getParent().isGenerationInProgress() == false) // F3P: block expensive calculations during generation
+		{
+			if(newRecord || 
+					(is_ValueChanged(COLUMNNAME_C_Tax_ID) || is_ValueChanged(COLUMNNAME_LineNetAmt) || is_ValueChanged(COLUMNNAME_TaxAmt)))
+			{
+				MTax tax = new MTax(getCtx(), getC_Tax_ID(), get_TrxName());
+		        MTaxProvider provider = new MTaxProvider(tax.getCtx(), tax.getC_TaxProvider_ID(), tax.get_TrxName());
+				ITaxProvider calculator = Core.getTaxProvider(provider);
+				if (calculator == null)
+					throw new AdempiereException(Msg.getMsg(getCtx(), "TaxNoProvider"));
+		    	return calculator.recalculateTax(provider, this, newRecord);
+			}
+		}
+		
+		return true;
 	}	//	afterSave
 
 	/**
@@ -1368,5 +1469,49 @@ public class MInvoiceLine extends X_C_InvoiceLine
 	{
 		this.m_parent = null;
 	}
+	
+  // F3P: keep caches
+
+	@Override
+	public void setC_OrderLine_ID(int C_OrderLine_ID)
+	{
+		if(m_orderLine != null && m_orderLine.getC_OrderLine_ID() != C_OrderLine_ID)
+			m_orderLine = null;
+		
+		super.setC_OrderLine_ID(C_OrderLine_ID);
+	}
+
+	@Override
+	public void setM_InOutLine_ID(int M_InOutLine_ID)
+	{
+		if(m_inoutLine != null && m_inoutLine.getM_InOutLine_ID() != M_InOutLine_ID)
+			m_inoutLine = null;
+
+		super.setM_InOutLine_ID(M_InOutLine_ID);
+	}
+
+	public MInOutLine getInOutLine()
+	{
+		if(m_inoutLine == null && getM_InOutLine_ID() > 0)			
+			m_inoutLine = PO.get(getCtx(), MInOutLine.Table_Name, getM_InOutLine_ID(), get_TrxName());
+		
+		return m_inoutLine;
+	}
+	
+	public MOrderLine getOrderLine()
+	{
+		if(m_orderLine == null && getC_OrderLine_ID() > 0)			
+			m_orderLine = PO.get(getCtx(), MOrderLine.Table_Name, getC_OrderLine_ID(), get_TrxName());
+		
+		return m_orderLine;
+	}
+	
+	// F3P: invoice generation complete
+	
+	public void invoiceGenerationComplete()
+	{
+		afterSave(false, true); // F3P: use after save so force tax calculation
+	}
+	
 
 }	//	MInvoiceLine

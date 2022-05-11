@@ -155,6 +155,29 @@ public class MInventoryLine extends X_M_InventoryLine
 	{
 		this(ctx, copy, (String) null);
 	}
+	
+	public static MInventoryLine createMInventoryLinePO(MInventory inventory, 
+			int M_Locator_ID, int M_Product_ID, int M_AttributeSetInstance_ID,
+			BigDecimal QtyBook, BigDecimal QtyCount, BigDecimal QtyInternalUse)
+	{
+		MInventoryLine inventoryLine = PO.create(inventory.getCtx(), MInventoryLine.Table_Name, inventory.get_TrxName());
+		if (inventory.get_ID() == 0)
+				throw new IllegalArgumentException("Header not saved");
+			inventoryLine.setM_Inventory_ID (inventory.getM_Inventory_ID());		//	Parent
+			inventoryLine.setClientOrg (inventory.getAD_Client_ID(), inventory.getAD_Org_ID());
+			inventoryLine.setM_Locator_ID (M_Locator_ID);		//	FK
+			inventoryLine.setM_Product_ID (M_Product_ID);		//	FK
+			inventoryLine.setM_AttributeSetInstance_ID (M_AttributeSetInstance_ID);
+			//
+			if (QtyBook != null)
+				inventoryLine.setQtyBook (QtyBook);
+			if (QtyCount != null && QtyCount.signum() != 0)
+				inventoryLine.setQtyCount (QtyCount);
+			if (QtyInternalUse != null && QtyInternalUse.signum() != 0)
+				inventoryLine.setQtyInternalUse (QtyInternalUse);
+			return inventoryLine;
+			// m_isManualEntry = false;
+	}
 
 	/**
 	 * 

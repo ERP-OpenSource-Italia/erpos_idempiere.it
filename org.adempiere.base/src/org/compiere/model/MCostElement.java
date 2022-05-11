@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -41,6 +42,7 @@ import org.idempiere.cache.ImmutablePOSupport;
  */
 public class MCostElement extends X_M_CostElement implements ImmutablePOSupport
 {
+
 	/**
 	 * 
 	 */
@@ -424,16 +426,35 @@ public class MCostElement extends X_M_CostElement implements ImmutablePOSupport
 			&& getCostingMethod() != null;
 	}	//	isCostingMethod
 	
+	//LS START
 	/**
 	 * 	Is Avg Invoice Costing Method
 	 *	@return true if AverageInvoice
 	 */
 	public boolean isAverageInvoice()
 	{
+		return isAverageInvoice(null);
+	}
+	/**
+	 * LS
+	 * 	Is Avg Invoice Costing Method
+	 *	@return true if AverageInvoice
+	 */
+	public boolean isAverageInvoice(String productType)
+	{
 		String cm = getCostingMethod();
-		return cm != null 
-			&& cm.equals(COSTINGMETHOD_AverageInvoice)
-			&& COSTELEMENTTYPE_Material.equals(getCostElementType());
+		boolean isAverageInvoice = cm != null && cm.equals(COSTINGMETHOD_AverageInvoice);
+		if(productType != null)
+		{
+			if(productType.equals(MProduct.PRODUCTTYPE_Service))
+				isAverageInvoice = isAverageInvoice && COSTELEMENTTYPE_OutsideProcessing.equals(getCostElementType());
+			else
+				isAverageInvoice = isAverageInvoice && COSTELEMENTTYPE_Material.equals(getCostElementType());
+		}
+		else
+			isAverageInvoice = isAverageInvoice && COSTELEMENTTYPE_Material.equals(getCostElementType());
+		
+		return isAverageInvoice;
 	}	//	isAverageInvoice
 	
 	/**
@@ -442,11 +463,30 @@ public class MCostElement extends X_M_CostElement implements ImmutablePOSupport
 	 */
 	public boolean isAveragePO()
 	{
+		return isAveragePO(null);
+	}
+	/**
+	 * LS
+	 * 	Is Avg PO Costing Method
+	 *	@return true if AveragePO
+	 */
+	public boolean isAveragePO(String productType)
+	{
 		String cm = getCostingMethod();
-		return cm != null 
-			&& cm.equals(COSTINGMETHOD_AveragePO)
-			&& COSTELEMENTTYPE_Material.equals(getCostElementType());
+		boolean isAveragePO = cm != null && cm.equals(COSTINGMETHOD_AveragePO);
+		if(productType != null)
+		{
+			if(productType.equals(MProduct.PRODUCTTYPE_Service))
+				isAveragePO = isAveragePO && COSTELEMENTTYPE_OutsideProcessing.equals(getCostElementType());
+			else
+				isAveragePO = isAveragePO && COSTELEMENTTYPE_Material.equals(getCostElementType());
+		}
+		else
+			isAveragePO = isAveragePO && COSTELEMENTTYPE_Material.equals(getCostElementType());
+		return isAveragePO;
 	}	//	isAveragePO
+	
+	//LS END
 	/**
 	 * 	Is FiFo Costing Method
 	 *	@return true if Fifo
@@ -458,16 +498,36 @@ public class MCostElement extends X_M_CostElement implements ImmutablePOSupport
 			&& cm.equals(COSTINGMETHOD_Fifo)
 			&& COSTELEMENTTYPE_Material.equals(getCostElementType());
 	}	//	isFifo
+	
+	//LS START
 	/**
 	 * 	Is Last Invoice Costing Method
 	 *	@return true if LastInvoice
 	 */
 	public boolean isLastInvoice()
 	{
+		return isLastInvoice(null);
+	}
+	/**
+	 * LS
+	 * 	Is Last Invoice Costing Method
+	 *	@return true if LastInvoice
+	 */
+	public boolean isLastInvoice(String productType)
+	{
 		String cm = getCostingMethod();
-		return cm != null 
-			&& cm.equals(COSTINGMETHOD_LastInvoice)
-			&& COSTELEMENTTYPE_Material.equals(getCostElementType());
+		boolean isLastInvoice = cm != null && cm.equals(COSTINGMETHOD_LastInvoice);
+		if(productType != null)
+		{
+			if(productType.equals(MProduct.PRODUCTTYPE_Service))
+				isLastInvoice = isLastInvoice && COSTELEMENTTYPE_OutsideProcessing.equals(getCostElementType());
+			else
+				isLastInvoice = isLastInvoice && COSTELEMENTTYPE_Material.equals(getCostElementType());
+		}
+		else
+			isLastInvoice = isLastInvoice && COSTELEMENTTYPE_Material.equals(getCostElementType());
+		
+		return isLastInvoice;
 	}	//	isLastInvoice
 	/**
 	 * 	Is Last PO Costing Method
@@ -475,11 +535,28 @@ public class MCostElement extends X_M_CostElement implements ImmutablePOSupport
 	 */
 	public boolean isLastPOPrice()
 	{
+		return isLastPOPrice(null);
+	}
+	/**
+	 * 	Is Last PO Costing Method
+	 *	@return true if LastPOPrice
+	 */
+	public boolean isLastPOPrice(String productType)
+	{
 		String cm = getCostingMethod();
-		return cm != null 
-			&& cm.equals(COSTINGMETHOD_LastPOPrice)
-			&& COSTELEMENTTYPE_Material.equals(getCostElementType());
+		boolean isLastPOPrice = cm != null && cm.equals(COSTINGMETHOD_LastPOPrice);
+		if(productType != null)
+		{
+			if(productType.equals(MProduct.PRODUCTTYPE_Service))
+				isLastPOPrice = isLastPOPrice && COSTELEMENTTYPE_OutsideProcessing.equals(getCostElementType());
+			else
+				isLastPOPrice = isLastPOPrice && COSTELEMENTTYPE_Material.equals(getCostElementType());
+		}
+		else
+			isLastPOPrice = isLastPOPrice && COSTELEMENTTYPE_Material.equals(getCostElementType());
+		return isLastPOPrice;
 	}	//	isLastPOPrice
+	//LS END
 	/**
 	 * 	Is LiFo Costing Method
 	 *	@return true if Lifo
@@ -528,14 +605,39 @@ public class MCostElement extends X_M_CostElement implements ImmutablePOSupport
 			.append ("]");
 		return sb.toString ();
 	} //	toString
-	
+
 	@Override
 	public MCostElement markImmutable() {
 		if (is_Immutable())
 			return this;
-
+			
 		makeImmutable();
 		return this;
 	}
-
+	
+	/**
+	 * 	Get active OutsideProcessing Cost Element for client 
+	 *	@param po parent
+	 *	@return cost element array
+	 */
+	public static MCostElement[] getOutsideProcessingCostElement (PO po, String CostingMethod)
+	{
+		final String whereClause ="AD_Client_ID=? AND CostElementType=?"+
+				(CostingMethod != null ? " AND CostingMethod = ? " : " AND CostingMethod IS NOT NULL");
+		Object[] params = new Object[(CostingMethod != null ? 3 : 2)];
+		params[0] = po.getAD_Client_ID();
+		params[1] = COSTELEMENTTYPE_OutsideProcessing;
+		if(CostingMethod != null)
+			params[2] = CostingMethod;
+		
+		List<MCostElement> list = new Query(po.getCtx(), I_M_CostElement.Table_Name, whereClause, po.get_TrxName())
+		.setParameters(params)
+		.setOnlyActiveRecords(true)
+		.list();
+		//
+		MCostElement[] retValue = new MCostElement[list.size ()];
+		list.toArray (retValue);
+		return retValue;
+	}	//	getOutsideProcessingCostElement
+	
 }	//	MCostElement

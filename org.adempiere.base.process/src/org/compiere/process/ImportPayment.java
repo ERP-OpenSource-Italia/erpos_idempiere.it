@@ -19,15 +19,21 @@ package org.compiere.process;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Savepoint;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.model.ImportValidator;
+import org.adempiere.process.ImportProcess;
 import org.compiere.model.MBankAccount;
 import org.compiere.model.MPayment;
+import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.X_I_Payment;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
+import org.compiere.util.Trx;
+
 
 /**
  * 	Import Payments
@@ -38,20 +44,26 @@ import org.compiere.util.Env;
  *  Contributor(s):
  *    Carlos Ruiz - globalqss - FR [ 1992542 ] Import Payment doesn't have DocAction parameter
  */
-public class ImportPayment extends SvrProcess
+public class ImportPayment extends SvrProcess implements ImportProcess
 {
 	/**	Organization to be imported to	*/
-	private int				p_AD_Org_ID = 0;
+	protected int				p_AD_Org_ID = 0;
 	/** Default Bank Account			*/
-	private int				p_C_BankAccount_ID = 0;
+	protected int				p_C_BankAccount_ID = 0;
 	/**	Delete old Imported				*/
-	private boolean			p_deleteOldImported = false;
+	protected boolean			p_deleteOldImported = false;
 	/**	Document Action					*/
-	private String			m_docAction = null;
+	protected String			m_docAction = null;
 
 	/** Properties						*/
-	private Properties 		m_ctx;
+	protected Properties 		m_ctx;
 
+	// Angelo Dabala' (genied) - nectosoft - added IsValidateOnly and IsImportOnlyNoErrors parameters
+	/**	Don't import					*/
+	protected boolean			m_IsValidateOnly = false;
+	/** Import if no Errors				*/
+	protected boolean			m_IsImportOnlyNoErrors = true;
+	
 	/**
 	 *  Prepare - e.g., get Parameters.
 	 */
@@ -69,6 +81,12 @@ public class ImportPayment extends SvrProcess
 				p_deleteOldImported = "Y".equals(para[i].getParameter());
 			else if (name.equals("DocAction"))
 				m_docAction = (String)para[i].getParameter();
+			// Angelo Dabala' (genied) - nectosoft
+			else if (name.equals("IsValidateOnly"))
+				m_IsValidateOnly = "Y".equals(para[i].getParameter()); 
+			else if (name.equals("IsImportOnlyNoErrors"))
+				m_IsImportOnlyNoErrors = "Y".equals(para[i].getParameter());
+			// Angelo Dabala' (genied) - nectosoft end
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -82,25 +100,28 @@ public class ImportPayment extends SvrProcess
 	 */
 	protected String doIt() throws Exception
 	{
-		if (log.isLoggable(Level.INFO)) log.info("C_BankAccount_ID" + p_C_BankAccount_ID);
+		if (log.isLoggable(Level.INFO))  // Angelo Dabala' (genied) - nectosoft - added IsValidateOnly and IsImportOnlyNoErrors parameters
+			log.info("C_BankAccount_ID=" + p_C_BankAccount_ID + " IsValidateOnly=" + m_IsValidateOnly + ", IsImportOnlyNoErrors=" + m_IsImportOnlyNoErrors);
+
 		MBankAccount ba = MBankAccount.get(getCtx(), p_C_BankAccount_ID);
 		if (p_C_BankAccount_ID == 0 || ba.get_ID() != p_C_BankAccount_ID)
 			throw new AdempiereUserError("@NotFound@ @C_BankAccount_ID@ - " + p_C_BankAccount_ID);
-		if (p_AD_Org_ID != ba.getAD_Org_ID() && ba.getAD_Org_ID() != 0)
+		 if (p_AD_Org_ID != ba.getAD_Org_ID() && ba.getAD_Org_ID() != 0 && p_AD_Org_ID == 0)
 			p_AD_Org_ID = ba.getAD_Org_ID();
+		
+		
 		if (log.isLoggable(Level.INFO)) log.info("AD_Org_ID=" + p_AD_Org_ID);
 		
 		StringBuilder sql = null;
 		int no = 0;
-		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(ba.getAD_Client_ID());
 
 		//	****	Prepare	****
 
 		//	Delete Old Imported
 		if (p_deleteOldImported)
 		{
-			sql = new StringBuilder ("DELETE FROM I_Payment ")
-				  .append("WHERE I_IsImported='Y'").append (clientCheck);
+			sql = new StringBuilder ("DELETE I_Payment ")
+				  .append("WHERE I_IsImported='Y'");
 			no = DB.executeUpdate(sql.toString(), get_TrxName());
 			if (log.isLoggable(Level.FINE)) log.fine("Delete Old Impored =" + no);
 		}
@@ -110,21 +131,25 @@ public class ImportPayment extends SvrProcess
 			  .append("SET AD_Client_ID = COALESCE (AD_Client_ID,").append (ba.getAD_Client_ID()).append ("),")
 			  .append(" AD_Org_ID = COALESCE (AD_Org_ID,").append (p_AD_Org_ID).append ("),");
 		sql.append(" IsActive = COALESCE (IsActive, 'Y'),")
-			  .append(" Created = COALESCE (Created, getDate()),")
+			  .append(" Created = COALESCE (Created, SysDate),")
 			  .append(" CreatedBy = COALESCE (CreatedBy, 0),")
-			  .append(" Updated = COALESCE (Updated, getDate()),")
+			  .append(" Updated = COALESCE (Updated, SysDate),")
 			  .append(" UpdatedBy = COALESCE (UpdatedBy, 0),")
 			  .append(" I_ErrorMsg = ' ',")
 			  .append(" I_IsImported = 'N' ")
-			  .append("WHERE I_IsImported<>'Y' OR I_IsImported IS NULL OR AD_Client_ID IS NULL OR AD_Org_ID IS NULL OR AD_Client_ID=0 OR AD_Org_ID=0");
+			  .append("WHERE (I_IsImported<>'Y' OR I_IsImported IS NULL OR AD_Client_ID IS NULL OR AD_Org_ID IS NULL OR AD_Client_ID=0 OR AD_Org_ID=0) ")
+			  .append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info ("Reset=" + no);
+		
+		// F3P: added validate event
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_BEFORE_VALIDATE);
 
 		sql = new StringBuilder ("UPDATE I_Payment o ")
 			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Org, '")
 			.append("WHERE (AD_Org_ID IS NULL OR AD_Org_ID=0")
 			.append(" OR EXISTS (SELECT * FROM AD_Org oo WHERE o.AD_Org_ID=oo.AD_Org_ID AND (oo.IsSummary='Y' OR oo.IsActive='N')))")
-			.append(" AND I_IsImported<>'Y'").append (clientCheck);
+			.append(" AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid Org=" + no);
@@ -137,6 +162,7 @@ public class ImportPayment extends SvrProcess
 			.append(" FROM C_BankAccount a, C_Bank b ")
 			.append(" WHERE b.IsOwnBank='Y' ")
 			.append(" AND a.AD_Client_ID=i.AD_Client_ID ")
+			.append(" AND a.AD_Org_ID=i.AD_Org_ID ")//add ad_org
 			.append(" AND a.C_Bank_ID=b.C_Bank_ID ")
 			.append(" AND a.AccountNo=i.BankAccountNo ")
 			.append(" AND b.RoutingNo=i.RoutingNo ")
@@ -144,7 +170,7 @@ public class ImportPayment extends SvrProcess
 			.append(") ")
 			.append("WHERE i.C_BankAccount_ID IS NULL ")
 			.append("AND (i.I_IsImported<>'Y' ")
-			.append("OR i.I_IsImported IS NULL)").append(clientCheck);
+			.append("OR i.I_IsImported IS NULL)").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Bank Account (With Routing No)=" + no);
@@ -157,11 +183,12 @@ public class ImportPayment extends SvrProcess
 			.append(" WHERE b.IsOwnBank='Y' ")
 			.append(" AND a.C_Bank_ID=b.C_Bank_ID ") 
 			.append(" AND a.AccountNo=i.BankAccountNo ")
+			.append(" AND a.AD_Org_ID=i.AD_Org_ID ")//add ad_org
 			.append(" AND a.AD_Client_ID=i.AD_Client_ID ")
 			.append(") ")
 			.append("WHERE i.C_BankAccount_ID IS NULL ")
 			.append("AND (i.I_isImported<>'Y' ")
-			.append("OR i.I_isImported IS NULL)").append(clientCheck);
+			.append("OR i.I_isImported IS NULL)").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Bank Account (Without Routing No)=" + no);
@@ -172,7 +199,7 @@ public class ImportPayment extends SvrProcess
 			.append("WHERE i.C_BankAccount_ID IS NULL ")
 			.append("AND i.BankAccountNo IS NULL ")
 			.append("AND (i.I_isImported<>'Y' ")
-			.append("OR i.I_isImported IS NULL)").append(clientCheck);
+			.append("OR i.I_isImported IS NULL)").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Bank Account=" + no);
@@ -181,7 +208,7 @@ public class ImportPayment extends SvrProcess
 			.append("SET I_isImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Bank Account, ' ")
 			.append("WHERE C_BankAccount_ID IS NULL ")
 			.append("AND (I_isImported<>'Y' ")
-			.append("OR I_isImported IS NULL)").append(clientCheck);
+			.append("OR I_isImported IS NULL)").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning("Invalid Bank Account=" + no);
@@ -191,7 +218,7 @@ public class ImportPayment extends SvrProcess
 			.append("SET C_Currency_ID=(SELECT C_Currency_ID FROM C_Currency c")
 			.append(" WHERE i.ISO_Code=c.ISO_Code AND c.AD_Client_ID IN (0,i.AD_Client_ID)) ")
 			.append("WHERE C_Currency_ID IS NULL")
-			.append(" AND I_IsImported<>'Y'").append(clientCheck);
+			.append(" AND I_IsImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Set Currency=" + no);
@@ -199,7 +226,7 @@ public class ImportPayment extends SvrProcess
 		sql = new StringBuilder("UPDATE I_Payment i ")
 			.append("SET C_Currency_ID=(SELECT C_Currency_ID FROM C_BankAccount WHERE C_BankAccount_ID=i.C_BankAccount_ID) ")
 			.append("WHERE i.C_Currency_ID IS NULL ")
-			.append("AND i.ISO_Code IS NULL").append(clientCheck);
+			.append("AND i.ISO_Code IS NULL").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Set Currency=" + no);
@@ -208,7 +235,7 @@ public class ImportPayment extends SvrProcess
 			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=No Currency,' ")
 			.append("WHERE C_Currency_ID IS NULL ")
 			.append("AND I_IsImported<>'E' ")
-			.append(" AND I_IsImported<>'Y'").append(clientCheck);
+			.append(" AND I_IsImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning("No Currency=" + no);
@@ -217,7 +244,7 @@ public class ImportPayment extends SvrProcess
 		sql = new StringBuilder("UPDATE I_Payment ")
 		 	.append("SET ChargeAmt=0 ")
 			.append("WHERE ChargeAmt IS NULL ")
-			.append("AND I_IsImported<>'Y'").append(clientCheck);
+			.append("AND I_IsImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Charge Amount=" + no);
@@ -225,7 +252,7 @@ public class ImportPayment extends SvrProcess
 		sql = new StringBuilder("UPDATE I_Payment ")
 		 	.append("SET TaxAmt=0 ")
 			.append("WHERE TaxAmt IS NULL ")
-			.append("AND I_IsImported<>'Y'").append(clientCheck);
+			.append("AND I_IsImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Tax Amount=" + no);
@@ -233,7 +260,7 @@ public class ImportPayment extends SvrProcess
 		sql = new StringBuilder("UPDATE I_Payment ")
 			.append("SET WriteOffAmt=0 ")
 			.append("WHERE WriteOffAmt IS NULL ")
-			.append("AND I_IsImported<>'Y'").append(clientCheck);
+			.append("AND I_IsImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("WriteOff Amount=" + no);
@@ -241,7 +268,7 @@ public class ImportPayment extends SvrProcess
 		sql = new StringBuilder("UPDATE I_Payment ")
 			.append("SET DiscountAmt=0 ")
 			.append("WHERE DiscountAmt IS NULL ")
-			.append("AND I_IsImported<>'Y'").append(clientCheck);
+			.append("AND I_IsImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Discount Amount=" + no);
@@ -251,7 +278,7 @@ public class ImportPayment extends SvrProcess
 		sql = new StringBuilder("UPDATE I_Payment ")
 		 	.append("SET DateTrx=Created ")
 			.append("WHERE DateTrx IS NULL ")
-			.append("AND I_isImported<>'Y'").append(clientCheck);
+			.append("AND I_isImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Trx Date=" + no);
@@ -259,36 +286,52 @@ public class ImportPayment extends SvrProcess
 		sql = new StringBuilder("UPDATE I_Payment ")
 		 	.append("SET DateAcct=DateTrx ")
 			.append("WHERE DateAcct IS NULL ")
-			.append("AND I_isImported<>'Y'").append(clientCheck);
+			.append("AND I_isImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Acct Date=" + no);
 		
-		//	Invoice
-		sql = new StringBuilder ("UPDATE I_Payment i ")
-			  .append("SET C_Invoice_ID=(SELECT MAX(C_Invoice_ID) FROM C_Invoice ii")
-			  .append(" WHERE i.InvoiceDocumentNo=ii.DocumentNo AND i.AD_Client_ID=ii.AD_Client_ID) ")
-			  .append("WHERE C_Invoice_ID IS NULL AND InvoiceDocumentNo IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
-		no = DB.executeUpdate(sql.toString(), get_TrxName());
-		if (no != 0)
-			if (log.isLoggable(Level.FINE)) log.fine("Set Invoice from DocumentNo=" + no);
-		
+		// Angelo Dabala' (genied) - nectosoft - Assign BPartner before Invoice
+		//	BPartner
 		//	BPartner
 		sql = new StringBuilder ("UPDATE I_Payment i ")
 			  .append("SET C_BPartner_ID=(SELECT MAX(C_BPartner_ID) FROM C_BPartner bp")
 			  .append(" WHERE i.BPartnerValue=bp.Value AND i.AD_Client_ID=bp.AD_Client_ID) ")
 			  .append("WHERE C_BPartner_ID IS NULL AND BPartnerValue IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.FINE)) log.fine("Set BP from Value=" + no);
+		
+		//	Invoice
+
+		// Angelo Dabala' (genied) - nectosoft - Add BPartner match to Invoice
+		// F3P: added check for ispaid and ad_org_id
+		sql = new StringBuilder ("UPDATE I_Payment i ")
+			  .append("SET C_Invoice_ID=(SELECT MAX(C_Invoice_ID) FROM C_Invoice ii")
+			  .append(" WHERE i.InvoiceDocumentNo=ii.DocumentNo AND i.InvoiceDateInvoiced=ii.DateInvoiced AND i.AD_Client_ID=ii.AD_Client_ID ") // F3P: aggiunto date invoiced
+			  .append(" AND i.C_BPartner_ID = ii.C_BPartner_ID AND ii.ispaid = 'N' AND ii.AD_Org_ID = ")
+			  .append(p_AD_Org_ID).append(") ")
+			  .append("WHERE C_Invoice_ID IS NULL AND InvoiceDocumentNo IS NOT NULL")
+			  .append(" AND I_IsImported<>'Y'").append (getWhereClause());
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (no != 0)
+			if (log.isLoggable(Level.FINE)) log.fine("Set Invoice from DocumentNo=" + no);
+		
+		//	Check invoice
+		sql = new StringBuilder("UPDATE I_Payment ")
+			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'Err=No Invoice, ' ")
+			.append("WHERE InvoiceDocumentNo IS NOT null and C_Invoice_ID IS NULL AND I_IsImported<>'Y'")
+			.append(getWhereClause());
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (no != 0)
+			if (log.isLoggable(Level.INFO)) log.info("No invoice=" + no);				
 		
 		sql = new StringBuilder ("UPDATE I_Payment i ")
 			  .append("SET C_BPartner_ID=(SELECT MAX(C_BPartner_ID) FROM C_Invoice ii")
 			  .append(" WHERE i.C_Invoice_ID=ii.C_Invoice_ID AND i.AD_Client_ID=ii.AD_Client_ID) ")
 			  .append("WHERE C_BPartner_ID IS NULL AND C_Invoice_ID IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.FINE)) log.fine("Set BP from Invoice=" + no);
@@ -297,7 +340,7 @@ public class ImportPayment extends SvrProcess
 			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=No BPartner,' ")
 			.append("WHERE C_BPartner_ID IS NULL ")
 			.append("AND I_IsImported<>'E' ")
-			.append(" AND I_IsImported<>'Y'").append(clientCheck);
+			.append(" AND I_IsImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning("No BPartner=" + no);
@@ -313,7 +356,7 @@ public class ImportPayment extends SvrProcess
 				.append("WHERE i.C_Invoice_ID IS NOT NULL ")
 				.append(" AND p.C_Invoice_ID IS NOT NULL ")
 				.append(" AND p.C_Invoice_ID<>i.C_Invoice_ID) ")
-			.append(clientCheck);
+			.append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Payment<->Invoice Mismatch=" + no);
@@ -328,7 +371,7 @@ public class ImportPayment extends SvrProcess
 				.append("WHERE i.C_BPartner_ID IS NOT NULL ")
 				.append(" AND p.C_BPartner_ID IS NOT NULL ")
 				.append(" AND p.C_BPartner_ID<>i.C_BPartner_ID) ")
-			.append(clientCheck);
+			.append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Payment<->BPartner Mismatch=" + no);
@@ -343,7 +386,7 @@ public class ImportPayment extends SvrProcess
 				.append("WHERE i.C_BPartner_ID IS NOT NULL ")
 				.append(" AND v.C_BPartner_ID IS NOT NULL ")
 				.append(" AND v.C_BPartner_ID<>i.C_BPartner_ID) ")
-			.append(clientCheck);
+			.append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Invoice<->BPartner Mismatch=" + no);
@@ -358,7 +401,7 @@ public class ImportPayment extends SvrProcess
 				.append(" INNER JOIN C_Payment p ON (i.C_Payment_ID=p.C_Payment_ID) ")
 				.append("WHERE p.C_Invoice_ID<>v.C_Invoice_ID")
 				.append(" AND v.C_BPartner_ID<>p.C_BPartner_ID) ")
-			.append(clientCheck);
+			.append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("Invoice.BPartner<->Payment.BPartner Mismatch=" + no);
@@ -367,7 +410,7 @@ public class ImportPayment extends SvrProcess
 		sql = new StringBuilder("UPDATE I_Payment ")
 			.append("SET TrxType='S' ")	//	MPayment.TRXTYPE_Sales
 			.append("WHERE TrxType IS NULL ")
-			.append("AND I_IsImported<>'Y'").append(clientCheck);
+			.append("AND I_IsImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("TrxType Default=" + no);
@@ -376,7 +419,7 @@ public class ImportPayment extends SvrProcess
 		sql = new StringBuilder("UPDATE I_Payment ")
 			.append("SET TenderType='K' ")	//	MPayment.TENDERTYPE_Check
 			.append("WHERE TenderType IS NULL ")
-			.append("AND I_IsImported<>'Y'").append(clientCheck);
+			.append("AND I_IsImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.INFO)) log.info("TenderType Default=" + no);
@@ -385,38 +428,57 @@ public class ImportPayment extends SvrProcess
 		sql = new StringBuilder ("UPDATE I_Payment i ")
 			  .append("SET C_DocType_ID=(SELECT C_DocType_ID FROM C_DocType d WHERE d.Name=i.DocTypeName")
 			  .append(" AND d.DocBaseType IN ('ARR','APP') AND i.AD_Client_ID=d.AD_Client_ID) ")
-			  .append("WHERE C_DocType_ID IS NULL AND DocTypeName IS NOT NULL AND I_IsImported<>'Y'").append (clientCheck);
+			  .append("WHERE C_DocType_ID IS NULL AND DocTypeName IS NOT NULL AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			if (log.isLoggable(Level.FINE)) log.fine("Set DocType=" + no);
 		sql = new StringBuilder ("UPDATE I_Payment ")
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid DocTypeName, ' ")
 			  .append("WHERE C_DocType_ID IS NULL AND DocTypeName IS NOT NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("Invalid DocTypeName=" + no);
 		sql = new StringBuilder ("UPDATE I_Payment ")
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=No DocType, ' ")
 			  .append("WHERE C_DocType_ID IS NULL")
-			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+			  .append(" AND I_IsImported<>'Y'").append (getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (no != 0)
 			log.warning ("No DocType=" + no);
+		
+		// F3P: added validate event
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);
 
 		commitEx();
 		
+		// Angelo Dabala' (genied) - nectosoft - Check for errors and/or return if validate only
+		int errors = DB.getSQLValue(get_TrxName(), 
+			"SELECT COUNT(*) FROM I_Payment WHERE I_IsImported NOT IN ('Y','N')" + getWhereClause());
+		if (errors != 0)
+		{
+			if (m_IsValidateOnly || m_IsImportOnlyNoErrors)
+				throw new Exception ("@Errors@=" + errors);
+		}
+		else if (m_IsValidateOnly)
+			return "@Errors@=" + errors;
+
+		log.info("Validation Errors=" + errors);
+		
 		//Import Bank Statement
 		sql = new StringBuilder("SELECT * FROM I_Payment")
-			.append(" WHERE I_IsImported='N'").append(clientCheck)
+			.append(" WHERE I_IsImported='N'").append(getWhereClause())
 			.append(" ORDER BY C_BankAccount_ID, CheckNo, DateTrx, R_AuthCode");
 			
 		MBankAccount account = null;
-		
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
 		int noInsert = 0;
-		try (PreparedStatement pstmt = DB.prepareStatement(sql.toString(), get_TrxName());)
+		int processErr = 0;
+		try
 		{
-			ResultSet rs = pstmt.executeQuery();
+			pstmt = DB.prepareStatement(sql.toString(), get_TrxName());
+			rs = pstmt.executeQuery();
 				
 			while (rs.next())
 			{ 
@@ -458,6 +520,9 @@ public class ImportPayment extends SvrProcess
 				payment.setDateAcct(imp.getDateTrx());
 				payment.setDateTrx(imp.getDateTrx());
 			//	payment.setDescription(imp.getDescription());
+				//Cristiano Lazzaro (genied) - Save in the description the invoice number not found
+				if (imp.getC_Invoice_ID() == 0)
+					payment.setDescription(imp.getInvoiceDocumentNo());
 				//
 				payment.setC_BPartner_ID(imp.getC_BPartner_ID());
 				payment.setC_Invoice_ID(imp.getC_Invoice_ID());
@@ -472,6 +537,9 @@ public class ImportPayment extends SvrProcess
 				payment.setWriteOffAmt(imp.getWriteOffAmt());
 				payment.setDiscountAmt(imp.getDiscountAmt());
 				payment.setWriteOffAmt(imp.getWriteOffAmt());
+				// Angelo Dabala' (genied) - nectosoft - Assign missing fields
+				payment.setOverUnderAmt(imp.getOverUnderAmt());
+				payment.setIsOverUnderPayment(imp.isOverUnderPayment());
 				
 				//	Copy statement line reference data
 				payment.setA_City(imp.getA_City());
@@ -491,43 +559,90 @@ public class ImportPayment extends SvrProcess
 				payment.setOrig_TrxID(imp.getOrig_TrxID());
 				payment.setVoiceAuthCode(imp.getVoiceAuthCode());
 				
+				ModelValidationEngine.get().fireImportValidate(this,imp, payment, ImportValidator.TIMING_BEFORE_IMPORT);
+				
 				//	Save payment
 				if (payment.save())
 				{
+					ModelValidationEngine.get().fireImportValidate(this,imp, payment, ImportValidator.TIMING_AFTER_IMPORT);
+					
 					imp.setC_Payment_ID(payment.getC_Payment_ID());
 					imp.setI_IsImported(true);
 					imp.setProcessed(true);
 					imp.saveEx();
 					noInsert++;
 
+					//GM: Set DOCSTATUS_Invalid if non Completed
 					if (payment != null && m_docAction != null && m_docAction.length() > 0)
 					{
-						payment.setDocAction(m_docAction);
-						if(!payment.processIt (m_docAction)) {
-							log.warning("Payment Process Failed: " + payment + " - " + payment.getProcessMsg());
-							throw new IllegalStateException("Payment Process Failed: " + payment + " - " + payment.getProcessMsg());
-							
+						Trx trx = Trx.get(get_TrxName(), false);
+						Savepoint processSavepoint = trx.setSavepoint(null);
+						StringBuilder errMsg= null;
+						try
+						{
+							if(!payment.processIt (m_docAction)) 
+							{
+								errMsg = new StringBuilder("Order Process Failed: ")
+										.append(payment.getDocumentNo()).append(" - ")
+										.append(payment.getProcessMsg());
+								throw new IllegalStateException("Payment Process Failed: " + payment + " - " + payment.getProcessMsg());
+							}
+						}
+						catch(Exception e)
+						{
+							log.warning(e.getMessage());
+						}
+						finally
+						{
+							if(errMsg != null)
+								trx.rollback(processSavepoint);
+
+							trx.releaseSavepoint(processSavepoint);
+							processSavepoint = null;
+						}					
+
+						if(errMsg != null){
+							payment.setDocStatus(MPayment.DOCSTATUS_Invalid);	
+							processErr++;
 						}
 						payment.saveEx();
 					}
 				}
-				
 			}
 		}
 		catch(Exception e)
 		{
 			log.log(Level.SEVERE, sql.toString(), e);
 		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null;
+			pstmt = null;
+		}
 		
 		//	Set Error to indicator to not imported
 		sql = new StringBuilder ("UPDATE I_Payment ")
-			.append("SET I_IsImported='N', Updated=getDate() ")
-			.append("WHERE I_IsImported<>'Y'").append(clientCheck);
+			.append("SET I_IsImported='N', Updated=SysDate ")
+			.append("WHERE I_IsImported<>'Y'").append(getWhereClause());
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		addLog (0, null, new BigDecimal (no), "@Errors@");
-		//
+		//GM: Error on process
+		addLog (0, null, new BigDecimal(processErr), "@Errors@: @Process@");
 		addLog (0, null, new BigDecimal (noInsert), "@C_Payment_ID@: @Inserted@");
-		return "";
+		StringBuilder msgReturn = new StringBuilder("#").append(noInsert);
+		return msgReturn.toString();
 	}	//	doIt
+
+	@Override
+	public String getImportTableName() {
+		return X_I_Payment.Table_Name;
+	}
+
+	@Override
+	public String getWhereClause() {
+		StringBuilder whereClause = new StringBuilder(" AND AD_Org_ID in (0,").append(p_AD_Org_ID).append(") ");
+		return whereClause.toString();
+	}
 	
 }	//	ImportPayment

@@ -86,6 +86,7 @@ public class MSysConfig extends X_AD_SysConfig
 	public static final String DB_READ_REPLICA_NORMAL_MAX_ITERATIONS = "DB_READ_REPLICA_NORMAL_MAX_ITERATIONS";
 	public static final String DB_READ_REPLICA_NORMAL_TIMEOUT_IN_MILLISECONDS = "DB_READ_REPLICA_NORMAL_TIMEOUT_IN_MILLISECONDS";
 	public static final String DB_READ_REPLICA_URLS = "DB_READ_REPLICA_URLS";
+    public static final String DICTIONARY_ID_COMMENTS = "DICTIONARY_ID_COMMENTS";
     public static final String DICTIONARY_ID_PASSWORD = "DICTIONARY_ID_PASSWORD";
     public static final String DICTIONARY_ID_USE_CENTRALIZED_ID = "DICTIONARY_ID_USE_CENTRALIZED_ID";
     public static final String DICTIONARY_ID_USER = "DICTIONARY_ID_USER";
@@ -105,11 +106,12 @@ public class MSysConfig extends X_AD_SysConfig
     public static final String IMAGE_DB_STORAGE_SAVE_AS_ZIP = "IMAGE_DB_STORAGE_SAVE_AS_ZIP";
     public static final String INFO_DEFAULTSELECTED = "INFO_DEFAULTSELECTED";
     public static final String INFO_DOUBLECLICKTOGGLESSELECTION = "INFO_DOUBLECLICKTOGGLESSELECTION";
-	public static final String INFO_PRODUCT_SHOW_PRODUCTS_WITHOUT_PRICE = "INFO_PRODUCT_SHOW_PRODUCTS_WITHOUT_PRICE";
+    public static final String IGNORE_INOUTCONFIRM_GENERATE = "IGNORE_INOUTCONFIRM_GENERATE";
+    public static final String INFO_PRODUCT_SHOW_PRODUCTS_WITHOUT_PRICE = "INFO_PRODUCT_SHOW_PRODUCTS_WITHOUT_PRICE";
     public static final String Invoice_ReverseUseNewNumber = "Invoice_ReverseUseNewNumber";
     public static final String JASPER_SWAP_MAX_PAGES = "JASPER_SWAP_MAX_PAGES";
     public static final String LASTRUN_RECORD_COUNT = "LASTRUN_RECORD_COUNT";
-	public static final String LDAP_TYPE = "LDAP_TYPE";
+    public static final String LDAP_TYPE = "LDAP_TYPE";
     public static final String LOCATION_MAPS_DESTINATION_ADDRESS = "LOCATION_MAPS_DESTINATION_ADDRESS";
     public static final String LOCATION_MAPS_ROUTE_PREFIX = "LOCATION_MAPS_ROUTE_PREFIX";
     public static final String LOCATION_MAPS_SOURCE_ADDRESS = "LOCATION_MAPS_SOURCE_ADDRESS";
@@ -138,6 +140,7 @@ public class MSysConfig extends X_AD_SysConfig
     public static final String PDF_FONT_DIR = "PDF_FONT_DIR";
     public static final String ProductUOMConversionRateValidate = "ProductUOMConversionRateValidate";
     public static final String ProductUOMConversionUOMValidate = "ProductUOMConversionUOMValidate";
+    public static final String PROJECT_ID_COMMENTS = "PROJECT_ID_COMMENTS";
     public static final String PROJECT_ID_PASSWORD = "PROJECT_ID_PASSWORD";
     public static final String PROJECT_ID_PROJECT = "PROJECT_ID_PROJECT";
     public static final String PROJECT_ID_USE_CENTRALIZED_ID = "PROJECT_ID_USE_CENTRALIZED_ID";
@@ -160,6 +163,7 @@ public class MSysConfig extends X_AD_SysConfig
     public static final String TRACE_ALL_TRX_CONNECTION_GET = "TRACE_ALL_TRX_CONNECTION_GET";
     public static final String TWOPACK_COMMIT_DDL = "2PACK_COMMIT_DDL";
     public static final String TWOPACK_HANDLE_TRANSLATIONS = "2PACK_HANDLE_TRANSLATIONS";
+    public static final String TWOPACK_HANDLE_PREFERENCES = "2PACK_HANDLE_PREFERENCES";    //F3P: handle preferences
     public static final String USE_EMAIL_FOR_LOGIN = "USE_EMAIL_FOR_LOGIN";
     public static final String USER_LOCKING_MAX_ACCOUNT_LOCK_MINUTES = "USER_LOCKING_MAX_ACCOUNT_LOCK_MINUTES";
     public static final String USER_LOCKING_MAX_INACTIVE_PERIOD_DAY = "USER_LOCKING_MAX_INACTIVE_PERIOD_DAY";
@@ -211,7 +215,31 @@ public class MSysConfig extends X_AD_SysConfig
     public static final String ZK_TOOLBAR_SHOW_MORE_VERTICAL = "ZK_TOOLBAR_SHOW_MORE_VERTICAL";
     public static final String ZK_USE_PDF_JS_VIEWER = "ZK_USE_PDF_JS_VIEWER";
     public static final String ZOOM_ACROSS_QUERY_TIMEOUT = "ZOOM_ACROSS_QUERY_TIMEOUT";
+    public static final String ZK_LOGO_LARGE_TESTINST = "ZK_LOGO_LARGE_TESTINST"; // F3P: logos for test installation
+    public static final String ZK_LOGO_SMALL_TESTINST = "ZK_LOGO_SMALL_TESTINST";    
+    public static final String SEND_EMAIL_TIMEOUT_IN_MILLIS = "SEND_EMAIL_TIMEOUT_IN_MILLIS";
 
+	public static final String CHECK_CREDIT_ON_PROPOSAL_ORDER = "CHECK_CREDIT_ON_PROPOSAL_ORDER";
+	public static final String LIT_ORDER_CHECK_CREDIT_AS_WARNING ="LIT_ORDER_CHECK_CREDIT_AS_WARNING";
+	public static final String LIT_INOUT_CHECK_CREDIT_AS_WARNING = "LIT_INOUT_CHECK_CREDIT_AS_WARNING";
+
+	//LS
+	public static final String PAKIN_PROCESS_ALLCLIENT = "PAKIN_PROCESS_ALLCLIENT";
+	public static final String PAKIN_SQL_ENV_PARSE = "PAKIN_SQL_ENV_PARSE";
+	//Login IP
+	public static final String LIT_LOGIN_BY_IP = "LIT_LOGIN_BY_IP";
+	
+	public static final String LIT_COSTDETAIL_CALC_ALL = "LIT_COSTDETAIL_CALC_ALL";
+	public static final String LIT_COSTDETAIL_ALWAYS_CALC_AVERAGE = "LIT_COSTDETAIL_ALWAYS_CALC_AVERAGE";
+	
+	public static final String LIT_CREATEFROMSHIPMENT_STDORDER_QUERY = "LIT_CREATEFROMSHIPMENT_STDORDER_QUERY";
+	public static final String LIT_CREATEPOFROMSO_POREFERENCE_DOCNO = "LIT_CREATEPOFROMSO_POREFERENCE_DOCNO";
+
+	//ProductNotOnPriceListException
+	public static final String LIT_PRODUCT_NOT_ON_PRICELIST_PRODUCT_COLUMN = "LIT_PRODUCT_NOT_ON_PRICELIST_PRODUCT_COLUMN";	
+	public static final String LIT_PRODUCT_NOT_ON_PRICELIST_PRICELIST_COLUMN = "LIT_PRODUCT_NOT_ON_PRICELIST_PRICELIST_COLUMN";
+
+	//LS End
 	/**
 	 * 	Standard Constructor
 	 *	@param ctx context

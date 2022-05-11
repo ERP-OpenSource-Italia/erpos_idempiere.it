@@ -20,7 +20,9 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 import org.compiere.model.MAllocationLine;
+import org.compiere.model.MInvoice;
 import org.compiere.model.MPayment;
+import org.compiere.model.PO;
 import org.compiere.util.DB;
 
 /**
@@ -61,6 +63,14 @@ public class DocLine_Allocation extends DocLine
 			int C_ConversionType_ID = payment.getC_ConversionType_ID();
 			this.setC_ConversionType_ID(C_ConversionType_ID);
 		}
+		// F3P: get invoice conversion rate
+		else if (line.getC_Invoice_ID() != 0)
+		{
+			MInvoice mInvoice = PO.get(doc.getCtx(), MInvoice.Table_Name, line.getC_Invoice_ID(), doc.getTrxName());
+			int C_ConversionType_ID = mInvoice.getC_ConversionType_ID();
+			this.setC_ConversionType_ID(C_ConversionType_ID);
+		}
+		// F3P end
 	}	//	DocLine_Allocation
 
 	private int 		m_C_Invoice_ID;
@@ -72,22 +82,35 @@ public class DocLine_Allocation extends DocLine
 	private BigDecimal	m_WriteOffAmt; 
 	private BigDecimal	m_OverUnderAmt; 
 	
+	//F3P: Added trx
+	/**
+	 * 	Get Invoice C_Currency_ID
+	 *  @deprecated use trx variant
+	 *	@return 0 if no invoice -1 if not found
+	 */
+	@Deprecated
+	public int getInvoiceC_Currency_ID()
+	{
+		return getInvoiceC_Currency_ID(null);
+	}
 	
 	/**
 	 * 	Get Invoice C_Currency_ID
+	 *  @param trxName transaction
 	 *	@return 0 if no invoice -1 if not found
 	 */
-	public int getInvoiceC_Currency_ID()
+	public int getInvoiceC_Currency_ID(String trxName)
 	{
 		if (m_C_Invoice_ID == 0)
 			return 0;
 		String sql = "SELECT C_Currency_ID "
 			+ "FROM C_Invoice "
 			+ "WHERE C_Invoice_ID=?";
-		return  DB.getSQLValue(null, sql, m_C_Invoice_ID);
+		return  DB.getSQLValue(trxName, sql, m_C_Invoice_ID);
 
 	}	//	getInvoiceC_Currency_ID
-
+	//F3P: End
+	
 	/**
 	 * 	String Representation
 	 *	@return info

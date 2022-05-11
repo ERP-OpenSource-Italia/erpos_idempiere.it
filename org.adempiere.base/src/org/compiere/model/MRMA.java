@@ -173,7 +173,9 @@ public class MRMA extends X_M_RMA implements DocAction
        }
        else
        {
-           String sqlStmt = "SELECT C_Invoice_ID FROM C_Invoice WHERE C_Order_ID=?";
+           //String sqlStmt = "SELECT C_Invoice_ID FROM C_Invoice WHERE C_Order_ID=?"; //F3P: look in lines
+    	   String sqlStmt = "SELECT C_Invoice_ID FROM C_InvoiceLine WHERE "
+    	   		+ "EXISTS (SELECT 'ok' FROM C_OrderLine WHERE C_OrderLine.C_OrderLine_ID = C_InvoiceLine.C_OrderLine_ID AND C_OrderLine.C_Order_ID=?)";
            invId = DB.getSQLValueEx(null, sqlStmt, shipment.getC_Order_ID());
        }
 
@@ -505,13 +507,13 @@ public class MRMA extends X_M_RMA implements DocAction
 			return null;
 		//	Business Partner needs to be linked to Org
 		MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), get_TrxName());
-		int counterAD_Org_ID = bp.getAD_OrgBP_ID();
+		int counterAD_Org_ID = bp.getAD_OrgBP_ID_Int();
 		if (counterAD_Org_ID == 0)
 			return null;
 
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
-		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID());
+		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID(), counterAD_Org_ID); // F3P: added counter org for doc type
 		if (counterDT != null)
 		{
 			if (log.isLoggable(Level.FINE)) log.fine(counterDT.toString());
@@ -521,7 +523,7 @@ public class MRMA extends X_M_RMA implements DocAction
 		}
 		else	//	indirect
 		{
-			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID());
+			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID); // F3P: added counter org for doc type
 			if (log.isLoggable(Level.FINE)) log.fine("Indirect C_DocTypeTarget_ID=" + C_DocTypeTarget_ID);
 			if (C_DocTypeTarget_ID <= 0)
 				return null;
@@ -635,7 +637,7 @@ public class MRMA extends X_M_RMA implements DocAction
 		int count = 0;
 		for (int i = 0; i < fromLines.length; i++)
 		{
-			MRMALine line = new MRMALine(getCtx(), 0, null);
+			MRMALine line = PO.create(getCtx(), MRMALine.Table_Name, null);
 			MRMALine fromLine = fromLines[i];
 			line.set_TrxName(get_TrxName());
 			if (counter)	//	header
@@ -881,7 +883,7 @@ public class MRMA extends X_M_RMA implements DocAction
 
         for (int i = 0; i < rmaLineIds.length; i++)
         {
-            MRMALine rmaLine = new MRMALine(getCtx(), rmaLineIds[i], get_TrxName());
+            MRMALine rmaLine = PO.get(getCtx(), MRMALine.Table_Name, rmaLineIds[i], get_TrxName());
             chargeLineList.add(rmaLine);
         }
 

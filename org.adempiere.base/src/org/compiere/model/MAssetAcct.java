@@ -164,6 +164,11 @@ public class MAssetAcct extends X_A_Asset_Acct implements ImmutablePOSupport
 		setA_Period_Start(1);
 		setA_Period_End(asset.getUseLifeMonths());
 		//~ setProcessing(false);
+		
+		// F3P: added field copy
+		setA_Depreciation_Table_Header_ID(assetgrpacct.getA_Depreciation_Table_Header_ID());
+		setA_Depreciation_Table_Hdr_F_ID(assetgrpacct.getA_Depreciation_Table_Hdr_F_ID());
+		//F3P:end
 		dump();
 	}
 	
@@ -195,6 +200,14 @@ public class MAssetAcct extends X_A_Asset_Acct implements ImmutablePOSupport
 			setValidFrom(TimeUtil.getDay(1970, 01, 01)); // FIXME
 		}
 		return true;
+	}
+	
+	// F3P: added to obtain P_REVENUE_ACCT
+	public MAccount getP_Revenue_Acct(int M_Product_ID)
+	{
+		MAcctSchema as = getC_AcctSchema();
+		ProductCost pc = new ProductCost(getCtx(), M_Product_ID, 0, null);
+		return pc.getAccount(ProductCost.ACCTTYPE_P_Revenue, as);
 	}
 	
 	@Override

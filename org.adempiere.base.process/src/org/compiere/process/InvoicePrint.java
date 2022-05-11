@@ -25,6 +25,8 @@ import java.util.logging.Level;
 import org.compiere.model.MClient;
 import org.compiere.model.MInvoice;
 import org.compiere.model.MMailText;
+import org.compiere.model.MPInstance;
+import org.compiere.model.MProcess;
 import org.compiere.model.MQuery;
 import org.compiere.model.MUser;
 import org.compiere.model.MUserMail;
@@ -39,6 +41,7 @@ import org.compiere.util.EMail;
 import org.compiere.util.Env;
 import org.compiere.util.Ini;
 import org.compiere.util.Language;
+import org.compiere.util.Trx;
 
 /**
  *	Print Invoices on Paper or send PDFs
@@ -59,6 +62,8 @@ public class InvoicePrint extends SvrProcess
 	private int			m_C_Invoice_ID = 0;
 	private String		m_DocumentNo_From = null;
 	private String		m_DocumentNo_To = null;
+	//F3P porting adempiere
+	private int			m_PrintFormat_ID = 0;
 
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -89,6 +94,10 @@ public class InvoicePrint extends SvrProcess
 				m_DocumentNo_From = (String)para[i].getParameter();
 				m_DocumentNo_To = (String)para[i].getParameter_To();
 			}
+			//F3P porting adempiere
+			else if (name.equals("AD_PrintFormat_ID"))
+				m_PrintFormat_ID = para[i].getParameterAsInt();
+			//F3P end
 			else
 				log.log(Level.SEVERE, "prepare - Unknown Parameter: " + name);
 		}
@@ -209,7 +218,9 @@ public class InvoicePrint extends SvrProcess
 				sql.append("i.DocStatus IN ('CO','CL') "); 
 			}
 		}
-		sql.append(" ORDER BY i.C_Invoice_ID, pf.AD_Org_ID DESC");	//	more than 1 PF record
+		//remove for order by ad_org_id,dateinvoice and documentno 
+		//sql.append(" ORDER BY i.C_Invoice_ID, pf.AD_Org_ID DESC");	//	more than 1 PF record
+		sql.append(" ORDER BY pf.AD_Org_ID,i.DateInvoiced,i.DocumentNo DESC");
 		if (log.isLoggable(Level.FINE)) log.fine(sql.toString());
 
 		MPrintFormat format = null;
@@ -240,7 +251,7 @@ public class InvoicePrint extends SvrProcess
 				if (AD_Language != null && "Y".equals(rs.getString(3)))
 					language = Language.getLanguage(AD_Language);
 				//
-				int AD_PrintFormat_ID = rs.getInt(4);
+				int AD_PrintFormat_ID = m_PrintFormat_ID > 0 ? m_PrintFormat_ID : rs.getInt(4); //F3P porting adempiere
 				int copies = rs.getInt(5);
 				if (copies == 0)
 					copies = 1;
@@ -273,22 +284,98 @@ public class InvoicePrint extends SvrProcess
 				}
 				format.setLanguage(language);
 				format.setTranslationLanguage(language);
-				//	query
-				MQuery query = new MQuery("C_Invoice_Header_v");
+				
+				//F3P porting adempiere
+				File f_invoice = null;
+				boolean processOK = false;
+				boolean printed = false;
+				if(format.getJasperProcess_ID() > 0)
+				{
+					MProcess process = MProcess.get (getCtx(), format.getJasperProcess_ID());
+					MPInstance pInstance = new MPInstance (process, C_Invoice_ID);
+					ProcessInfo pi = new ProcessInfo (process.getName(), process.getAD_Process_ID(), MInvoice.Table_ID, C_Invoice_ID);		
+					pi.setAD_User_ID(Env.getAD_User_ID(getCtx()));
+					pi.setAD_Client_ID(Env.getAD_Client_ID(getCtx()));
+					pi.setClassName(process.getClassname());
+					pi.setAD_PInstance_ID(pInstance.getAD_PInstance_ID());
+					if (p_EMailPDF)
+					{
+						pi.setPrintPreview (false);
+						pi.setIsBatch(true);
+					}
+					else
+					{
+						pi.setPrintPreview (true);
+						pi.setIsBatch(false);
+					}
+					Trx trx = Trx.get(Trx.createTrxName("WebPrc"), true);
+					try
+					{				
+						processOK = process.processIt(pi, trx);			
+						trx.commit();
+						trx.close();
+					}
+					catch (Throwable t)
+					{
+						trx.rollback();
+						trx.close();
+					}
+					if(processOK)
+					{
+						if(p_EMailPDF)
+							f_invoice=pi.getPDFReport();
+						else 
+						{
+							count++;
+							printed = true;
+						}
+					}
+					else
+					{
+						addLog (C_Invoice_ID, null, null, DocumentNo + " No Print Format");
+						errors++;
+						continue;
+					}
+				}
+				else //F3P end
+				{
+//					query
+					MQuery query = new MQuery("C_Invoice_Header_v");
 				query.addRestriction("C_Invoice_ID", MQuery.EQUAL, Integer.valueOf(C_Invoice_ID));
 
-				//	Engine
-				PrintInfo info = new PrintInfo(
-					DocumentNo,
-					X_C_Invoice.Table_ID,
-					C_Invoice_ID,
-					C_BPartner_ID);
-				info.setCopies(copies);
-				ReportEngine re = new ReportEngine(getCtx(), format, query, info);
-				boolean printed = false;
-				if (p_EMailPDF)
+					//	Engine
+					PrintInfo info = new PrintInfo(
+						DocumentNo,
+						X_C_Invoice.Table_ID,
+						C_Invoice_ID,
+						C_BPartner_ID);
+					info.setCopies(copies);
+					ReportEngine re = new ReportEngine(getCtx(), format, query, info);
+					
+					//F3P porting adempiere
+					File invoice = null;
+					if (!Ini.isClient())
+						invoice = new File(MInvoice.getPDFFileName(documentDir, C_Invoice_ID));
+					if (p_EMailPDF)
+					{
+						f_invoice = re.getPDF(invoice);
+						if(f_invoice != null) processOK = true;
+					}
+					else
+					{
+						ServerReportCtl.startDocumentPrint(ReportEngine.INVOICE, 
+								   null, // No custom print format
+								   C_Invoice_ID,
+								   null  // No custom printer
+								   );					
+						count++;
+						printed = true;
+					}
+					//F3P end
+				}
+				
+				if (p_EMailPDF && processOK) //F3P porting adempiere add processOK
 				{
-					mText.setBPartner(C_BPartner_ID);	//	Context - Translation
 					StringBuilder subject =new StringBuilder(mText.getMailHeader()).append(" - ").append(DocumentNo);
 					EMail email = client.createEMail(to.getEMail(), subject.toString(), null);
 					if (!email.isValid())
@@ -299,6 +386,7 @@ public class InvoicePrint extends SvrProcess
 						continue;
 					}
 					mText.setUser(to);					//	Context
+					mText.setBPartner(C_BPartner_ID);	//	Context
 					mText.setPO(new MInvoice(getCtx(), C_Invoice_ID, get_TrxName()));
 					String message = mText.getMailText(true);
 					if (mText.isHtml())
@@ -333,7 +421,7 @@ public class InvoicePrint extends SvrProcess
 						  + " - " + to.getEMail());
 						errors++;
 					}
-				}
+				}/* F3P porting adempiere moved
 				else
 				{
 					ServerReportCtl.startDocumentPrint(ReportEngine.INVOICE, 
@@ -343,12 +431,12 @@ public class InvoicePrint extends SvrProcess
 													   );					
 					count++;
 					printed = true;
-				}
+				}*/
 				//	Print Confirm
 				if (printed)
 				{
 					StringBuilder sb = new StringBuilder ("UPDATE C_Invoice ")
-						.append("SET DatePrinted=getDate(), IsPrinted='Y' WHERE C_Invoice_ID=")
+						.append("SET DatePrinted=SysDate, IsPrinted='Y' WHERE C_Invoice_ID=")
 						.append (C_Invoice_ID);
 					@SuppressWarnings("unused")
 					int no = DB.executeUpdate(sb.toString(), get_TrxName());

@@ -251,7 +251,7 @@ public class WTreeBOM extends TreeBOM implements IFormController, EventListener<
 		
 		if (event.getTarget().getId().equals(ConfirmPanel.A_OK))
 		{
-			if(getM_Product_ID() > 0)
+			if(m_selected_id > 0 || getM_Product_ID() > 0)
 				action_loadBOM();
 		}
 		if (event.getTarget().getId().equals(ConfirmPanel.A_CANCEL)) 

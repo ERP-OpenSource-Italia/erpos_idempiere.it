@@ -73,7 +73,14 @@ public class MAssetGroupAcct extends X_A_Asset_Group_Acct
 		if (m_parent == null)
 		{
 			int A_Asset_Group_ID = getA_Asset_Group_ID();
-			m_parent = MAssetGroup.getCopy(getCtx(), A_Asset_Group_ID, get_TrxName());
+			if (is_new())
+			{
+				m_parent = new MAssetGroup(getCtx(), A_Asset_Group_ID, get_TrxName());
+			}
+			else
+			{
+				m_parent = MAssetGroup.get(getCtx(), A_Asset_Group_ID);
+			}
 		}
 		return m_parent;
 	}
@@ -141,6 +148,21 @@ public class MAssetGroupAcct extends X_A_Asset_Group_Acct
 					.firstOnly();
 	}
 
+	//F3P:Start
+	@Override
+	public boolean hasColumn(String sColumnName)
+	{
+		boolean bExists = false;
+		
+		int index = get_ColumnIndex(sColumnName);
 	
+		
+		if(index >= 0)
+			bExists = true;
 
+		
+		return bExists;
+	}
+	//F3P:End
+	
 }	//	MAssetGroupAcct

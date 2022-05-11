@@ -88,7 +88,7 @@ public final class DocTax
 	 *  @param as account schema
 	 *  @return Account
 	 */
-	public MAccount getAccount (int AcctType, MAcctSchema as)
+	public MAccount getAccount (int AcctType, MAcctSchema as, String trxName)
 	{
 		if (AcctType < ACCTTYPE_TaxDue || AcctType > ACCTTYPE_TaxExpense)
 			return null;
@@ -117,8 +117,14 @@ public final class DocTax
 		}
 		if (validCombination_ID == 0)
 			return null;
-		return MAccount.get(as.getCtx(), validCombination_ID);
+		return MAccount.get(as.getCtx(), trxName, validCombination_ID); // F3P: added trx
 	}   //  getAccount
+	
+	@Deprecated
+	public MAccount getAccount (int AcctType, MAcctSchema as)
+	{
+		return getAccount(AcctType, as, null);
+	}
 
 	/**
 	 *	Get Amount

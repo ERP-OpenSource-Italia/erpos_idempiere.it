@@ -107,8 +107,10 @@ public class MWebServicePara extends X_WS_WebService_Para
 	
 	@Override
 	protected boolean beforeSave(boolean newRecord) {
-		if (   "Filter".equalsIgnoreCase(getParameterName())
-			&& PARAMETERTYPE_Free.equals(getParameterType())) {
+		if ( STDSysConfig.getWebServiceCompatibilityMode(getAD_Client_ID(),getAD_Org_ID()) == false
+				&& "Filter".equalsIgnoreCase(getParameterName())
+				&& PARAMETERTYPE_Free.equals(getParameterType()))
+		{
 			log.saveError("Error", "Type Free not allowed for parameter Filter (security issue)"); // IDEMPIERE-1784
 			return false;
 		}

@@ -92,6 +92,11 @@ public class Doc_GLJournal extends Doc
 			//  --  Account
 			MAccount account = line.getAccount_Combi();
 			docLine.setAccount (account);
+			
+			//F3P: Bug-fix setQty not managed 
+			docLine.setQty(line.getQty(), false);
+			//F3P: End
+			
 			//	--	Organization of Line was set to Org of Account
 			list.add(docLine);
 			

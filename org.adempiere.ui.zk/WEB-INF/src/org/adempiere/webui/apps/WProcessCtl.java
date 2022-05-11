@@ -196,6 +196,32 @@ public class WProcessCtl extends AbstractProcessCtl {
 			}
 		}
 
+		/*
+		// F3P: Manage info window
+		
+		int AD_InfoWindow_ID = LITMProcess.getAD_InfoWindow_ID_DB((trx == null)?null:trx.getTrxName(), pi.getAD_Process_ID());
+		
+		if(AD_InfoWindow_ID > 0)
+		{
+			IDesktop desktop = SessionManager.getAppDesktop();
+			pi.setWindowNo(WindowNo);
+			
+			if(desktop instanceof TabbedDesktop)
+			{				
+				InfoPanel infoPanel = desktop.openInfo(AD_InfoWindow_ID);
+				
+				if(infoPanel != null && infoPanel instanceof InfoWindow)
+				{
+					InfoWindow iw = (InfoWindow)infoPanel;
+					iw.setRunViaProcessInfo(pi);
+				}
+			}
+			
+			return; // Operation complete
+		}*/
+		
+		
+		
 		if (pi.getRecord_IDs() != null && pi.getRecord_IDs().size() > 0)
 		{
 			DB.createT_Selection(pi.getAD_PInstance_ID(), pi.getRecord_IDs(), null);

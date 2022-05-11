@@ -343,10 +343,185 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     			}
     		}
     		int recordID = getPrmInt("Record_ID");
-    		if (tableID > 0) {
-    			AEnv.zoom(tableID, recordID);
+    		if (tableID > 0) 
+			AEnv.zoom(tableID, recordID);
+    			
+    			else // F3P: if record id is missing, try to build a query
+    			{    				
+    				MTable mTable = MTable.get(Env.getCtx(), tableID);    				
+    				MQuery query = null;
+    				
+    				for(Entry<String,String[]> entry:m_URLParameters.entrySet())
+    	    		{
+    	    			String paramName = entry.getKey();
+    	    			
+    	    			if(paramName.startsWith(QUERYPARAM_PREFIX))
+    	    			{
+    	    				String columnName = paramName.substring(QUERYPARAM_PREFIX.length()); // remove 'q_'
+    	    				MColumn mCol = mTable.getColumn(columnName);
+    	    				    	    				
+    	    				if(mCol != null)
+    	    				{    	    					
+    	    					String[] values = entry.getValue();
+    	    					String value = null;
+    	    					if(values != null && values.length > 0)
+    	    						value = values[0];
+    	    					
+    	    					if(value != null)
+    	    					{        	    					
+        	    					Object code = null;
+        	    					int displayType = mCol.getAD_Reference_ID();
+        	    					
+        	    					try
+        	    					{
+        	    						if(DisplayType.isID(displayType))
+        	    							code = Integer.parseInt(value);
+        	    						else if(DisplayType.isNumeric(displayType))
+        	    							code = new BigDecimal(value);
+        	    						else if(DisplayType.isDate(displayType)) // Dates are not support filter
+        	    						{
+        	    							logger.log(Level.SEVERE, "Query param " + paramName + " is a date, not a supported type");        	    							
+        	    						}
+        	    						else // All others are treated as string
+        	    						{
+        	    							code = value;
+        	    						}
+        	    					}
+        	    					catch(Exception e)
+        	    					{
+        	    						logger.log(Level.SEVERE, "Error reading " + paramName + " as numeric", e);
+        	    						code = null;
+        	    					}
+        	    					
+        	    					if(code != null)
+        	    					{
+        	    						if(query == null)
+        	    							query = new MQuery(tableID);
+
+        	    						query.addRestriction(mCol.getColumnName(), MQuery.EQUAL, code);
+        	    					}
+    	    					}
+    	    				}
+    	    				else
+    	    				{
+    	    					logger.warning("Zoom query param: " + paramName + " (" + columnName + ") does not match a column");
+    	    				}
+    	    			}
+    	    		}
+    				
+    				if(query != null)
+    				{
+    					String keyColumn = getPrmString("resolveKey");
+    					
+        				// For a detail record, we must resolve to the primary key
+        				
+        				if(keyColumn != null)
+        				{
+        					String	keyColumns[] = mTable.getKeyColumns();
+        					
+        					if(keyColumn.equals("Y")) // auto-resolve to key
+        					{
+        						
+        						if(keyColumns.length == 0)
+        							keyColumn = null;
+        						else
+        							keyColumn = keyColumns[0];
+        					}
+        					else
+        					{
+        						String keyCand = keyColumn;
+        						keyColumn = null;
+        						
+        						for(String candidate:keyColumns)
+        						{
+        							if(candidate.equalsIgnoreCase(keyCand)) // Check if its a real key to avoid assembling a query with non-filtered input values
+        							{
+        								keyColumn = candidate;
+        								break;
+        							}
+        						}        						
+        					}
+        					
+        					if(keyColumn != null)
+        					{
+        						String sql = "SELECT " + keyColumn + " FROM " + mTable.getTableName() + " WHERE " + query.toString();
+        						
+        						int keyValue = DB.getSQLValue(null, sql);
+        						
+        						// Reset query
+        						        						
+	    						query = new MQuery(tableID);
+	    						query.addRestriction(keyColumn, MQuery.EQUAL, keyValue);
+	    						query.setRecordCount(1);
+	    						query.setZoomColumnName(keyColumn);
+	    						query.setZoomTableName(mTable.getTableName());
+	    						query.setZoomValue(keyValue);
+        					}
+        					else
+        						logger.warning("resolveKey param found with invalid value, ignoed: " + getPrmString("resolveKey"));
+        				}
+
+    					int windowID = getPrmInt("AD_Window_ID"); // using a query we can support a known window
+    					
+    					if(windowID < 1)
+    						windowID = Env.getZoomWindowID(query);
+    					
+    					if(windowID > 0)
+    					{
+    						AEnv.zoom(windowID, query);
+    					}
+    				}
+    			}
     		}
     	}
+    	else if ("Info".equalsIgnoreCase(action)) {
+    		int AD_InfoWindow_ID = getPrmInt("AD_InfoWindow_ID");
+    		
+    		if(AD_InfoWindow_ID > 0)
+    		{
+    			final IDesktop appDesktop = SessionManager.getAppDesktop(); 
+    			int WindowNo = appDesktop.registerWindow(AD_InfoWindow_ID);
+    			boolean runQuery = "Y".equalsIgnoreCase(getPrmString(RUNQUERY));
+    			Properties ctx = Env.getCtx();
+    			
+	    		for(Entry<String,String[]> entry:m_URLParameters.entrySet())
+	    		{
+	    			String paramName = entry.getKey();
+	    			
+	    			if(paramName.startsWith(QUERYPARAM_PREFIX))
+	    			{
+	    				String columnName = paramName.substring(QUERYPARAM_PREFIX.length()); // remove 'q_'
+	    				
+	    				String[] values = entry.getValue();
+    					String value = null;
+    					if(values != null && values.length > 0)
+    						value = values[0];
+    					
+    					if(value != null)
+    						Env.setContext(ctx, WindowNo, columnName, value);
+	    			}
+	    		}
+	    		
+	    		EventListener<Event> closeEvtListener = new EventListener<Event>() {
+	    			@Override
+					public void onEvent(Event evt) throws Exception {
+	    				appDesktop.unregisterWindow(WindowNo);						
+					}
+				};
+	    		
+	    		InfoPanel ip = appDesktop.openInfo(AD_InfoWindow_ID, WindowNo);
+	    		
+	    		if(ip != null)
+	    		{
+		    		if(runQuery)
+		    			ip.onUserQuery();
+		    		
+	    			ip.addEventListener(Events.ON_CLOSE, closeEvtListener);
+	    			ip.addEventListener(Events.ON_CANCEL, closeEvtListener);
+	    		}
+    		}
+    	}
+    	
     	m_URLParameters = null;
     }
 
@@ -548,6 +723,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 	private void onChangeRole(Locale locale, Properties context) {
 		SessionManager.setSessionApplication(this);
 		loginDesktop = new WLogin(this);
+		//loginDesktop = new WLogin(this, true);  // FIN: (st) 20/09/2017 need to know if its a role change
         loginDesktop.createPart(this.getPage());
         loginDesktop.changeRole(locale, context);
         loginDesktop.getComponent().getRoot().addEventListener(Events.ON_CLIENT_INFO, this);

@@ -179,7 +179,14 @@ public class WInvoiceGen extends InvoiceGen implements IFormController, EventLis
 		docAction = new WTableDirEditor("DocAction", true, false, true,docActionL);
 		docAction.setValue(DocAction.ACTION_Complete);
 		// docAction.addValueChangeListener(this); // IDEMPIERE-768
-
+		//F3P
+		String sDocAction = getDefaultDocAction();
+		
+		if(sDocAction != null)
+		{
+			docAction.setValue(sDocAction);
+		}
+		//F3P end
 //      Document Type Sales Order/Vendor RMA
         lDocType.setText(Msg.translate(Env.getCtx(), "C_DocType_ID"));
         cmbDocType.addItem(new KeyNamePair(MOrder.Table_ID, Msg.translate(Env.getCtx(), "Order")));

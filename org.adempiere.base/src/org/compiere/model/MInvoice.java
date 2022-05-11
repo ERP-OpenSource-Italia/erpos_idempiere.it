@@ -18,7 +18,6 @@ package org.compiere.model;
 
 import java.io.File;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -36,17 +35,26 @@ import org.adempiere.exceptions.BPartnerNoAddressException;
 import org.adempiere.exceptions.DBException;
 import org.adempiere.exceptions.PeriodClosedException;
 import org.adempiere.model.ITaxProvider;
+import org.adempiere.util.FeedbackContainer;
 import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.DocAction;
 import org.compiere.process.DocumentEngine;
 import org.compiere.process.ProcessInfo;
 import org.compiere.process.ServerProcessCtl;
+import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
+
+import it.idempiere.base.model.FreeOfCharge;
+import it.idempiere.base.model.LITMInvoice;
+import it.idempiere.base.model.LITMBPartner;
+import it.idempiere.base.util.GenericPOAdvancedComparator;
+import it.idempiere.base.util.STDSysConfig;
+import it.idempiere.base.util.STDUtils;
 
 
 /**
@@ -69,7 +77,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -261338363319970683L;
+	private static final long serialVersionUID = -3191227310812025813L;
 
 	/**
 	 * 	Get Payments Of BPartner
@@ -124,10 +132,34 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		int C_DocTypeTarget_ID, boolean isSOTrx, boolean counter,
 		String trxName, boolean setOrder, String documentNo)
 	{
+		return copyFrom (from, dateDoc, dateAcct,
+				C_DocTypeTarget_ID, isSOTrx, counter,
+				trxName, setOrder,documentNo, null);
+	}
+	
+	/**
+	 * 	Create new Invoice by copying
+	 * 	@param from invoice
+	 * 	@param dateDoc date of the document date
+	 *  @param acctDate original account date 
+	 * 	@param C_DocTypeTarget_ID target doc type
+	 * 	@param isSOTrx sales order
+	 * 	@param counter create counter links
+	 * 	@param trxName trx
+	 * 	@param setOrder set Order links
+	 *  @param Document Number for reversed invoices
+	 *  @param vatLedgerNo for reversed invoices
+	 *	@return Invoice
+	 */
+	public static MInvoice copyFrom (MInvoice from, Timestamp dateDoc, Timestamp dateAcct,
+		int C_DocTypeTarget_ID, boolean isSOTrx, boolean counter,
+		String trxName, boolean setOrder, String documentNo, String vatLedgerNo)
+	{
 		MInvoice to = new MInvoice (from.getCtx(), 0, trxName);
 		PO.copyValues (from, to, from.getAD_Client_ID(), from.getAD_Org_ID());
 		to.set_ValueNoCheck ("C_Invoice_ID", I_ZERO);
 		to.set_ValueNoCheck ("DocumentNo", documentNo);
+		LITMInvoice.setVATLedgerNo(to, vatLedgerNo); //F3P
 		//
 		to.setDocStatus (DOCSTATUS_Drafted);		//	Draft
 		to.setDocAction(DOCACTION_Complete);
@@ -163,7 +195,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		if (counter)
 		{
 			to.setRef_Invoice_ID(from.getC_Invoice_ID());
-			MOrg org = MOrg.get(from.getAD_Org_ID());
+			MOrg org = MOrg.get(from.getCtx(), from.getAD_Org_ID());
 			int counterC_BPartner_ID = org.getLinkedC_BPartner_ID(trxName);
 			if (counterC_BPartner_ID == 0)
 				return null;
@@ -173,7 +205,16 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			{
 				MOrder peer = new MOrder (from.getCtx(), from.getC_Order_ID(), from.get_TrxName());
 				if (peer.getRef_Order_ID() != 0)
+				{
 					to.setC_Order_ID(peer.getRef_Order_ID());
+					
+				// F3P: propagate adress and user from order
+					I_C_Order refOrder = to.getC_Order();
+					to.setC_BPartner_Location_ID(refOrder.getBill_Location_ID());	
+					
+					if(refOrder.getAD_User_ID() > 0)
+						to.setAD_User_ID(refOrder.getAD_User_ID());					
+				}
 			}
 			// Try to find RMA link
 			if (from.getM_RMA_ID() != 0)
@@ -239,30 +280,28 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		return sb.toString();
 	}	//	getPDFFileName
 
+
 	/**
-	 * 	Get MInvoice from db
-	 *	@param C_Invoice_ID id
-	 *	@return MInvoice
-	 */
-	public static MInvoice get (int C_Invoice_ID)
-	{
-		return get(Env.getCtx(), C_Invoice_ID);
-	}
-	
-	/**
-	 * 	Get MInvoice from db
+	 * 	Get MInvoice from Cache
+	 *	@param ctx context
 	 *	@param C_Invoice_ID id
 	 *	@return MInvoice
 	 */
 	public static MInvoice get (Properties ctx, int C_Invoice_ID)
 	{
-		MInvoice retValue = new MInvoice(ctx, C_Invoice_ID, (String)null);
-		if (retValue.get_ID () == C_Invoice_ID)
-		{
+		Integer key = Integer.valueOf(C_Invoice_ID);
+		MInvoice retValue = (MInvoice) s_cache.get (key);
+		if (retValue != null)
 			return retValue;
-		}
-		return null;
+		retValue = new MInvoice (ctx, C_Invoice_ID, null);
+		if (retValue.get_ID () != 0)
+			s_cache.put (key, retValue);
+		return retValue;
 	} //	get
+
+	/**	Cache						*/
+	private static CCache<Integer,MInvoice>	s_cache	= new CCache<Integer,MInvoice>(Table_Name, 20, 2);	//	2 minutes
+
 
 	/**************************************************************************
 	 * 	Invoice Constructor
@@ -329,7 +368,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		//
 		if (C_DocTypeTarget_ID <= 0)
 		{
-			MDocType odt = MDocType.get(order.getC_DocType_ID());
+			MDocType odt = MDocType.get(order.getCtx(), order.getC_DocType_ID());
 			if (odt != null)
 			{
 				C_DocTypeTarget_ID = odt.getC_DocTypeInvoice_ID();
@@ -380,7 +419,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		setDocumentNo(line.getDocumentNo());
 		//
 		setIsSOTrx(batch.isSOTrx());
-		MBPartner bp = new MBPartner (line.getCtx(), line.getC_BPartner_ID(), line.get_TrxName());
+		// MBPartner bp = new MBPartner (line.getCtx(), line.getC_BPartner_ID(), line.get_TrxName());
+		MBPartner bp = MBPartner.getReadonlyNoVirtualCols(line.getCtx(), line.getC_BPartner_ID());
 		setBPartner(bp);	//	defaults
 		//
 		setIsTaxIncluded(line.isTaxIncluded());
@@ -455,6 +495,11 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	private MInvoiceTax[]	m_taxes;
 	/**	Logger			*/
 	private static CLogger s_log = CLogger.getCLogger(MInvoice.class);
+	
+	// F3P: is generation in progress ?
+	private boolean generationInProgress = false;
+	// F3P: is reopen in progress ?
+	private boolean reopenInProgress = false;
 
 	/**
 	 * 	Overwrite Client/Org if required
@@ -565,7 +610,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 		setIsSOTrx(ship.isSOTrx());
 		//
-		MBPartner bp = new MBPartner (getCtx(), ship.getC_BPartner_ID(), null);
+		// MBPartner bp = new MBPartner (getCtx(), ship.getC_BPartner_ID(), null);
+		MBPartner bp = MBPartner.getReadonlyNoVirtualCols(getCtx(), ship.getC_BPartner_ID());
 		setBPartner (bp);
 		//
 		setAD_User_ID(ship.getAD_User_ID());
@@ -595,7 +641,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			setPaymentRule(order.getPaymentRule());
 			setC_PaymentTerm_ID(order.getC_PaymentTerm_ID());
 			//
-			MDocType dt = MDocType.get(order.getC_DocType_ID());
+			MDocType dt = MDocType.get(getCtx(), order.getC_DocType_ID());
 			if (dt.getC_DocTypeInvoice_ID() != 0)
 				setC_DocTypeTarget_ID(dt.getC_DocTypeInvoice_ID());
 			// Overwrite Invoice BPartner
@@ -613,7 +659,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
             MRMA rma = new MRMA(getCtx(), ship.getM_RMA_ID(), get_TrxName());
             // Retrieves the invoice DocType
-            MDocType dt = MDocType.get(rma.getC_DocType_ID());
+            MDocType dt = MDocType.get(getCtx(), rma.getC_DocType_ID());
             if (dt.getC_DocTypeInvoice_ID() != 0)
             {
                 setC_DocTypeTarget_ID(dt.getC_DocTypeInvoice_ID());
@@ -715,10 +761,16 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		String whereClauseFinal = "C_Invoice_ID=? ";
 		if (whereClause != null)
 			whereClauseFinal += whereClause;
+		
 		List<MInvoiceLine> list = new Query(getCtx(), I_C_InvoiceLine.Table_Name, whereClauseFinal, get_TrxName())
 										.setParameters(getC_Invoice_ID())
 										.setOrderBy("Line, C_InvoiceLine_ID")
-										.list();		
+										.list();
+		
+		// F3P: set parent invoice, this may avoid many queries to get the parent of each line at the cost of iterating over every single line
+		for(MInvoiceLine line:list)
+			line.setInvoice(this);
+		
 		return list.toArray(new MInvoiceLine[list.size()]);
 	}	//	getLines
 
@@ -730,9 +782,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	public MInvoiceLine[] getLines (boolean requery)
 	{
 		if (m_lines == null || m_lines.length == 0 || requery)
-		{
 			m_lines = getLines(null);
-		}
 		set_TrxName(m_lines, get_TrxName());
 		return m_lines;
 	}	//	getLines
@@ -790,63 +840,78 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			return 0;
 		MInvoiceLine[] fromLines = otherInvoice.getLines(false);
 		int count = 0;
-		for (int i = 0; i < fromLines.length; i++)
+		
+		try  // F3P: managing of generation in progress, require try/catch to reset flag
 		{
-			MInvoiceLine line = new MInvoiceLine (getCtx(), 0, get_TrxName());
-			MInvoiceLine fromLine = fromLines[i];
+			setGenerationInProgress(true);
+			
+			for (int i = 0; i < fromLines.length; i++)
+			{
+				MInvoiceLine line = new MInvoiceLine (getCtx(), 0, get_TrxName());
+				MInvoiceLine fromLine = fromLines[i];
 			if (counter || !copyClientOrg)	//	header
-				PO.copyValues (fromLine, line, getAD_Client_ID(), getAD_Org_ID());
-			else
-				PO.copyValues (fromLine, line, fromLine.getAD_Client_ID(), fromLine.getAD_Org_ID());
-			line.setC_Invoice_ID(getC_Invoice_ID());
-			line.setInvoice(this);
-			line.set_ValueNoCheck ("C_InvoiceLine_ID", I_ZERO);	// new
-			//	Reset
-			if (!setOrder)
-				line.setC_OrderLine_ID(0);
-			line.setRef_InvoiceLine_ID(0);
-			line.setM_InOutLine_ID(0);
-			line.setA_Asset_ID(0);
-			line.setM_AttributeSetInstance_ID(0);
-			line.setS_ResourceAssignment_ID(0);
-			//	New Tax
-			if (getC_BPartner_ID() != otherInvoice.getC_BPartner_ID())
-				line.setTax();	//	recalculate
-			//
-			if (counter)
-			{
-				line.setRef_InvoiceLine_ID(fromLine.getC_InvoiceLine_ID());
-				if (fromLine.getC_OrderLine_ID() != 0)
-				{
-					MOrderLine peer = new MOrderLine (getCtx(), fromLine.getC_OrderLine_ID(), get_TrxName());
-					if (peer.getRef_OrderLine_ID() != 0)
-						line.setC_OrderLine_ID(peer.getRef_OrderLine_ID());
-				}
+					PO.copyValues (fromLine, line, getAD_Client_ID(), getAD_Org_ID());
+				else
+					PO.copyValues (fromLine, line, fromLine.getAD_Client_ID(), fromLine.getAD_Org_ID());
+				line.setC_Invoice_ID(getC_Invoice_ID());
+				line.setInvoice(this);
+				line.set_ValueNoCheck ("C_InvoiceLine_ID", I_ZERO);	// new
+				//	Reset
+				if (!setOrder)
+					line.setC_OrderLine_ID(0);
+				line.setRef_InvoiceLine_ID(0);
 				line.setM_InOutLine_ID(0);
-				if (fromLine.getM_InOutLine_ID() != 0)
+				line.setA_Asset_ID(0);
+				line.setM_AttributeSetInstance_ID(0);
+				line.setS_ResourceAssignment_ID(0);
+				//	New Tax
+				/*if (getC_BPartner_ID() != otherInvoice.getC_BPartner_ID()) F3P Fix not recalculate tax for counter document
+					line.setTax();	//	recalculate*/
+				//
+				if (counter)
 				{
-					MInOutLine peer = new MInOutLine (getCtx(), fromLine.getM_InOutLine_ID(), get_TrxName());
-					if (peer.getRef_InOutLine_ID() != 0)
-						line.setM_InOutLine_ID(peer.getRef_InOutLine_ID());
+					line.setRef_InvoiceLine_ID(fromLine.getC_InvoiceLine_ID());
+					if (fromLine.getC_OrderLine_ID() != 0)
+					{
+						MOrderLine peer = PO.get(getCtx(),MOrderLine.Table_Name, fromLine.getC_OrderLine_ID(), get_TrxName());
+						if (peer.getRef_OrderLine_ID() != 0)
+							line.setC_OrderLine_ID(peer.getRef_OrderLine_ID());
+					}
+					line.setM_InOutLine_ID(0);
+					if (fromLine.getM_InOutLine_ID() != 0)
+					{
+						MInOutLine peer = new MInOutLine (getCtx(), fromLine.getM_InOutLine_ID(), get_TrxName());
+						if (peer.getRef_InOutLine_ID() != 0)
+							line.setM_InOutLine_ID(peer.getRef_InOutLine_ID());
+					}
 				}
+				//
+				line.setProcessed(false);
+				//if (line.save(get_TrxName())) //F3P use saveEx
+				line.saveEx(get_TrxName());
+					count++;
+				//	Cross Link
+				if (counter)
+				{
+					fromLine.setRef_InvoiceLine_ID(line.getC_InvoiceLine_ID());
+					fromLine.saveEx(get_TrxName());
+				}
+	
+				// MZ Goodwill
+				// copy the landed cost
+				line.copyLandedCostFrom(fromLine);
+				line.allocateLandedCosts();
+				// end MZ
 			}
-			//
-			line.setProcessed(false);
-			if (line.save(get_TrxName()))
-				count++;
-			//	Cross Link
-			if (counter)
-			{
-				fromLine.setRef_InvoiceLine_ID(line.getC_InvoiceLine_ID());
-				fromLine.saveEx(get_TrxName());
-			}
-
-			// MZ Goodwill
-			// copy the landed cost
-			line.copyLandedCostFrom(fromLine);
-			line.allocateLandedCosts();
-			// end MZ
+			
+			setGenerationInProgress(false);
+			calcTaxesAfterGeneration();
 		}
+		finally // F3P: end of block
+		{
+			setGenerationInProgress(false);
+		}
+		
 		if (fromLines.length != count)
 			log.log(Level.SEVERE, "Line difference - From=" + fromLines.length + " <> Saved=" + count);
 		return count;
@@ -911,7 +976,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	 */
 	public boolean isCreditMemo()
 	{
-		MDocType dt = MDocType.get(getC_DocType_ID()==0 ? getC_DocTypeTarget_ID() : getC_DocType_ID());
+		MDocType dt = MDocType.get(getCtx(),
+			getC_DocType_ID()==0 ? getC_DocTypeTarget_ID() : getC_DocType_ID());
 		return MDocType.DOCBASETYPE_APCreditMemo.equals(dt.getDocBaseType())
 			|| MDocType.DOCBASETYPE_ARCreditMemo.equals(dt.getDocBaseType());
 	}	//	isCreditMemo
@@ -955,6 +1021,16 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 		//	Add up due amounts
 		BigDecimal total = Env.ZERO;
+		
+		// F3P: add the free of charge amount
+		BigDecimal bdFreeOfCharge = FreeOfCharge.getFreeOfChargeAmt(this);		
+		
+		if(bdFreeOfCharge.signum() != 0)
+		{
+			total = total.add(bdFreeOfCharge);
+		}
+		// end
+		
 		for (int i = 0; i < schedule.length; i++)
 		{
 			schedule[i].setParent(this);
@@ -991,7 +1067,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		if (getC_BPartner_ID() == 0)
 			setBPartner(MBPartner.getTemplate(getCtx(), getAD_Client_ID()));
 		if (getC_BPartner_Location_ID() == 0)
-			setBPartner(new MBPartner(getCtx(), getC_BPartner_ID(), null));
+			// setBPartner(new MBPartner(getCtx(), getC_BPartner_ID(), null));
+			setBPartner(MBPartner.getReadonlyNoVirtualCols(getCtx(), getC_BPartner_ID()));
 
 		//	Price List
 		if (getM_PriceList_ID() == 0)
@@ -1072,9 +1149,13 @@ public class MInvoice extends X_C_Invoice implements DocAction
 					MPriceList pList =  MPriceList.get(getCtx(), getM_PriceList_ID(), null);
 					MPriceListVersion plOld = pList.getPriceListVersion((Timestamp)get_ValueOld(COLUMNNAME_DateInvoiced));
 					MPriceListVersion plNew = pList.getPriceListVersion((Timestamp)get_Value(COLUMNNAME_DateInvoiced));
-					if (plNew == null || !plNew.equals(plOld)) {
-						log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeDateInvoiced"));
-						return false;
+					if (plNew == null || !plNew.equals(plOld)) 
+					{
+						if(STDSysConfig.isChangeDateAndPriceList(getAD_Client_ID(), getAD_Org_ID()) == false)
+						{
+							log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeDateInvoiced"));
+							return false;
+						}
 					}
 				}
 			}
@@ -1180,12 +1261,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	 */
 	public String getDocumentInfo()
 	{
-		MDocType dt;
-		if (getC_DocType_ID() == 0) {
-			dt = MDocType.get(getCtx(), getC_DocTypeTarget_ID());
-		} else {
-			dt = MDocType.get(getCtx(), getC_DocType_ID());
-		}
+		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		StringBuilder msgreturn = new StringBuilder().append(dt.getNameTrl()).append(" ").append(getDocumentNo());
 		return msgreturn.toString();
 	}	//	getDocumentInfo
@@ -1351,7 +1427,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	 */
 	public BigDecimal getOpenAmt ()
 	{
-		return getOpenAmt (true, null, false);
+		return getOpenAmt (true, null);
 	}	//	getOpenAmt
 
 	public BigDecimal getOpenAmt (boolean creditMemoAdjusted, Timestamp paymentDate)
@@ -1361,26 +1437,33 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	/**
 	 * 	Get Open Amount
 	 * 	@param creditMemoAdjusted adjusted for CM (negative)
-	 * 	@param paymentDate Payment Date
+	 * 	@param paymentDate ignored Payment Date
 	 * 	@return Open Amt
 	 */
-	public BigDecimal getOpenAmt (boolean creditMemoAdjusted, Timestamp paymentDate, boolean requery)
+	public BigDecimal getOpenAmt (boolean creditMemoAdjusted, Timestamp paymentDate)
 	{
-		if (isPaid() && paymentDate == null)
+		if (isPaid())
 			return Env.ZERO;
 		//
-		if (paymentDate != null || m_openAmt == null || requery) {
-			BigDecimal l_openAmt = getOpenAmt(paymentDate);
-			if (paymentDate != null) {
-				if (isCreditMemo() && creditMemoAdjusted)
-					return l_openAmt.negate();
-				return l_openAmt;
-			} else {
-				m_openAmt = l_openAmt;
+		if (m_openAmt == null)
+		{
+			m_openAmt = getGrandTotal();
+			if (paymentDate != null)
+			{
+				//	Payment Discount
+				//	Payment Schedule
+			}
+			BigDecimal allocated = getAllocatedAmt();
+			if (allocated != null)
+			{
+				allocated = allocated.abs();	//	is absolute
+				m_openAmt = m_openAmt.subtract(allocated);
 			}
 		}
 		//
-		if (isCreditMemo() && creditMemoAdjusted)
+		if (!creditMemoAdjusted)
+			return m_openAmt;
+		if (isCreditMemo())
 			return m_openAmt.negate();
 		return m_openAmt;
 	}	//	getOpenAmt
@@ -1566,15 +1649,19 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			return DocAction.STATUS_Invalid;
 		}
 
-		explodeBOM();
+		if(STDSysConfig.isOverwriteDataWhenExplodeBOM(getAD_Client_ID(),getAD_Org_ID()))
+		{
+			explodeBOM();
+		}
+		
 		if (!calculateTaxTotal())	//	setTotals
 		{
 			m_processMsg = "Error calculating Tax";
 			return DocAction.STATUS_Invalid;
 		}
 
-		if (   getGrandTotal().signum() != 0
-			&& (PAYMENTRULE_OnCredit.equals(getPaymentRule()) || PAYMENTRULE_DirectDebit.equals(getPaymentRule())))
+		if (   getGrandTotal().signum() != 0)
+		//	&& (PAYMENTRULE_OnCredit.equals(getPaymentRule()) || PAYMENTRULE_DirectDebit.equals(getPaymentRule()))) F3P: removed filter that not generate payschedule
 		{
 			if (!createPaySchedule())
 			{
@@ -1598,11 +1685,13 @@ public class MInvoice extends X_C_Invoice implements DocAction
 				(doc.getDocBaseType().equals(MDocType.DOCBASETYPE_ARInvoice) && getGrandTotal().signum() > 0 )
 			   )
 			{	
-				MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), null);
+				// MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), null);
+				MBPartner bp = MBPartner.getReadonlyNoVirtualCols (getCtx(), getC_BPartner_ID());
+				
 				if ( MBPartner.SOCREDITSTATUS_CreditStop.equals(bp.getSOCreditStatus()) )
 				{
 					m_processMsg = "@BPartnerCreditStop@ - @TotalOpenBalance@="
-							+ bp.getTotalOpenBalance()
+							+ LITMBPartner.getTotalOpenBalanceDB(bp,true)
 							+ ", @SO_CreditLimit@=" + bp.getSO_CreditLimit();
 					return DocAction.STATUS_Invalid;
 				}
@@ -1640,9 +1729,29 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	 */
 	private void explodeBOM ()
 	{
-		String where = "AND IsActive='Y' AND EXISTS "
-			+ "(SELECT * FROM M_Product p WHERE C_InvoiceLine.M_Product_ID=p.M_Product_ID"
-			+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')";
+		// F3P
+		String sExplodeBOM = STDSysConfig.getIsExplodeBOMService(getAD_Client_ID(), getAD_Org_ID());
+
+		if (sExplodeBOM.equals("X")) {
+			return;
+		}
+
+		boolean bExplodeBOM = STDUtils.asBoolean(sExplodeBOM);
+
+		String where = null;
+
+		if (bExplodeBOM) {
+			where = "AND IsActive='Y' AND EXISTS "
+					+ "(SELECT * FROM M_Product p WHERE C_InvoiceLine.M_Product_ID=p.M_Product_ID"
+					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N')";
+		} else {
+			where = "AND IsActive='Y' AND EXISTS "
+					+ "(SELECT * FROM M_Product p WHERE C_InvoiceLine.M_Product_ID=p.M_Product_ID"
+					+ " AND	p.IsBOM='Y' AND p.IsVerified='Y' AND p.IsStocked='N' and p.ProductType='I')"; // F3P: aggiunta verifica che sia di tipo 'item'
+		}
+
+		// F3P end
+
 		//
 		String sql = "SELECT COUNT(*) FROM C_InvoiceLine "
 			+ "WHERE C_Invoice_ID=? " + where;
@@ -1727,7 +1836,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	{
 		log.fine("");
 		//	Delete Taxes
-		StringBuilder msgdb = new StringBuilder("DELETE FROM C_InvoiceTax WHERE C_Invoice_ID=").append(getC_Invoice_ID());
+		StringBuilder msgdb = new StringBuilder("DELETE C_InvoiceTax WHERE C_Invoice_ID=").append(getC_Invoice_ID());
 		DB.executeUpdateEx(msgdb.toString(), get_TrxName());
 		m_taxes = null;
 
@@ -1753,7 +1862,9 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	{
 		if (getC_PaymentTerm_ID() == 0)
 			return false;
-		MPaymentTerm pt = new MPaymentTerm(getCtx(), getC_PaymentTerm_ID(), null);
+		// F3P: changed to use model factory to enable customization
+		// MPaymentTerm pt = new MPaymentTerm(getCtx(), getC_PaymentTerm_ID(), null);
+		MPaymentTerm pt = PO.get(getCtx(), MPaymentTerm.Table_Name, getC_PaymentTerm_ID(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine(pt.toString());
 		
 		int numSchema = pt.getSchedule(false).length;
@@ -1813,7 +1924,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 
 		// Set the definite document number after completed (if needed)
-		setDefiniteDocumentNo();
+		if (LITMInvoice.isUpdateDocNo(this)) // F3P: Check if we want to update docNo. This is not good in reopen invoice process
+			setDefiniteDocumentNo();
 
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this, ModelValidator.TIMING_BEFORE_COMPLETE);
 		if (m_processMsg != null)
@@ -1852,7 +1964,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			else
 				docBaseType=MDocType.DOCBASETYPE_APPayment;
 			
-			MDocType[] doctypes = MDocType.getOfDocBaseType(getCtx(), docBaseType);
+			MDocType[] doctypes = MDocType.getOfDocBaseType(getCtx(), docBaseType,getAD_Org_ID());
 			if (doctypes == null || doctypes.length == 0) {
 				m_processMsg = "No document type ";
 				return DocAction.STATUS_Invalid;
@@ -1903,39 +2015,38 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		//	Update Order & Match
 		int matchInv = 0;
 		int matchPO = 0;
-		MInvoiceLine[] lines = getLines(false);
+		
+		//F3P reorder invoice
+		//MInvoiceLine[] lines = getLines(false);
+		MInvoiceLine[] lines = getOrderedLines();
+		
 		for (int i = 0; i < lines.length; i++)
 		{
 			MInvoiceLine line = lines[i];
-
-			//	Matching - Inv-Shipment
+			
+	//		Matching - Inv-Shipment
 			if (!isSOTrx()
 				&& line.getM_InOutLine_ID() != 0
 				&& line.getM_Product_ID() != 0
 				&& !isReversal())
 			{
 				MInOutLine receiptLine = new MInOutLine (getCtx(),line.getM_InOutLine_ID(), get_TrxName());
-				MInOut receipt = receiptLine.getParent();
-
-				if (receipt.isProcessed()){
-
-					BigDecimal movementQty = receiptLine.getM_InOut().getMovementType().charAt(1) == '-' ? receiptLine.getMovementQty().negate() : receiptLine.getMovementQty();
-					BigDecimal matchQty = isCreditMemo() ? line.getQtyInvoiced().negate() : line.getQtyInvoiced();
-
-					if (movementQty.compareTo(matchQty) < 0)
-						matchQty = movementQty;
-
-					MMatchInv inv = new MMatchInv(line, getDateInvoiced(), matchQty);
-					if (!inv.save(get_TrxName()))
-					{
-						m_processMsg = CLogger.retrieveErrorString("Could not create Invoice Matching");
-						return DocAction.STATUS_Invalid;
-					}
-					matchInv++;
-					addDocsPostProcess(inv);
+				BigDecimal movementQty = receiptLine.getM_InOut().getMovementType().charAt(1) == '-' ? receiptLine.getMovementQty().negate() : receiptLine.getMovementQty();
+				BigDecimal matchQty = isCreditMemo() ? line.getQtyInvoiced().negate() : line.getQtyInvoiced();
+	
+				if (movementQty.compareTo(matchQty) < 0)
+					matchQty = movementQty;
+	
+				MMatchInv inv = new MMatchInv(line, getDateInvoiced(), matchQty);
+				if (!inv.save(get_TrxName()))
+				{
+					m_processMsg = CLogger.retrieveErrorString("Could not create Invoice Matching");
+					return DocAction.STATUS_Invalid;
 				}
-			}
-					
+				matchInv++;
+				addDocsPostProcess(inv);
+			}			
+
 			//	Update Order Line
 			MOrderLine ol = null;
 			if (line.getC_OrderLine_ID() != 0)
@@ -1943,9 +2054,14 @@ public class MInvoice extends X_C_Invoice implements DocAction
 				if (isSOTrx()
 					|| line.getM_Product_ID() == 0)
 				{
-					ol = new MOrderLine (getCtx(), line.getC_OrderLine_ID(), get_TrxName());
+					ol = PO.get(getCtx(),MOrderLine.Table_Name,line.getC_OrderLine_ID(), get_TrxName());
 					if (line.getQtyInvoiced() != null) {
-						ol.setQtyInvoiced(ol.getQtyInvoiced().add(isCreditMemo() ? line.getQtyInvoiced().negate() : line.getQtyInvoiced()));
+						//F3P if credit memo negate qty
+						BigDecimal qty = line.getQtyInvoiced();
+						if(isCreditMemo())
+							qty = qty.negate();
+						
+						ol.setQtyInvoiced(ol.getQtyInvoiced().add(qty));
 					}
 					if (!ol.save(get_TrxName()))
 					{
@@ -1997,8 +2113,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			
 			//Update QtyInvoiced RMA Line
 			if (line.getM_RMALine_ID() != 0)
-			{
-				MRMALine rmaLine = new MRMALine (getCtx(),line.getM_RMALine_ID(), get_TrxName());
+			{				
+				MRMALine rmaLine = PO.get(getCtx(), MRMALine.Table_Name, line.getM_RMALine_ID(), get_TrxName());
 				if (rmaLine.getQtyInvoiced() != null)
 					rmaLine.setQtyInvoiced(rmaLine.getQtyInvoiced().add(line.getQtyInvoiced()));
 				else
@@ -2010,6 +2126,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 				}
 			}
 			//			
+
 		}	//	for all lines
 		if (matchInv > 0)
 			info.append(" @M_MatchInv_ID@#").append(matchInv).append(" ");
@@ -2019,23 +2136,16 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 
 		//	Update BP Statistics
-		MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), get_TrxName());
+		//  MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), get_TrxName());
+		
+		// F3P: small improvement to avoid reading expensive virtual columns
+		Query qBP = new Query(getCtx(), MBPartner.Table_Name,  "C_BPartner_ID = ?", get_TrxName());		
+		MBPartner bp = qBP.setNoVirtualColumn(true).setParameters(getC_BPartner_ID()).first();
+				
 		DB.getDatabase().forUpdate(bp, 0);
 		//	Update total revenue and balance / credit limit (reversed on AllocationLine.processIt)
-		BigDecimal invAmt = null;
-		int baseCurrencyId = Env.getContextAsInt(getCtx(), "$C_Currency_ID");
-		if (getC_Currency_ID() != baseCurrencyId && isOverrideCurrencyRate())
-		{
-			invAmt = getGrandTotal(true).multiply(getCurrencyRate());
-			int stdPrecision = MCurrency.getStdPrecision(getCtx(), baseCurrencyId);
-			if (invAmt.scale() > stdPrecision)
-				invAmt = invAmt.setScale(stdPrecision, RoundingMode.HALF_UP);
-		}
-		else
-		{
-			invAmt = MConversionRate.convertBase(getCtx(), getGrandTotal(true),	//	CM adjusted
-				getC_Currency_ID(), getDateAcct(), getC_ConversionType_ID(), getAD_Client_ID(), getAD_Org_ID());
-		}
+		BigDecimal invAmt = MConversionRate.convertBase(getCtx(), getGrandTotal(true),	//	CM adjusted
+			getC_Currency_ID(), getDateAcct(), getC_ConversionType_ID(), getAD_Client_ID(), getAD_Org_ID());
 		if (invAmt == null)
 		{
 			m_processMsg = MConversionRateUtil.getErrorMessage(getCtx(), "ErrorConvertingCurrencyToBaseCurrency",
@@ -2076,11 +2186,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			if (log.isLoggable(Level.FINE)) log.fine("GrandTotal=" + getGrandTotal(true) + "(" + invAmt
 				+ ") Balance=" + bp.getTotalOpenBalance() + " -> " + newBalance);
 		}
-		// the payment just created already updated the open balance
-		if ( ! (PAYMENTRULE_Cash.equals(getPaymentRule()) && !fromPOS ) )
-		{
-			bp.setTotalOpenBalance(newBalance);
-		}
+		bp.setTotalOpenBalance(newBalance);
 		bp.setSOCreditStatus();
 		if (!bp.save(get_TrxName()))
 		{
@@ -2253,6 +2359,14 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		MInvoice counter = createCounterDoc();
 		if (counter != null)
 			info.append(" - @CounterDoc@: @C_Invoice_ID@=").append(counter.getDocumentNo());
+		
+		
+		// F3P: check gathered feedback
+		
+		if(FeedbackContainer.getCurrent() != null)
+		{
+			FeedbackContainer.getCurrent().appendInfoFeedback(info);
+		}
 
 		m_processMsg = info.toString().trim();
 		setProcessed(true);
@@ -2277,13 +2391,27 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	private void setDefiniteDocumentNo() {
 		if (isReversal() && ! MSysConfig.getBooleanValue(MSysConfig.Invoice_ReverseUseNewNumber, true, getAD_Client_ID())) // IDEMPIERE-1771
 			return;
-		MDocType dt = MDocType.get(getC_DocType_ID());
+		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 		if (dt.isOverwriteDateOnComplete()) {
 			setDateInvoiced(TimeUtil.getDay(0));
+			// setDateInvoiced(new Timestamp (System.currentTimeMillis()));
+			Timestamp tsNow = TimeUtil.getDay(System.currentTimeMillis());
+			setDateInvoiced(tsNow);
 			if (getDateAcct().before(getDateInvoiced())) {
 				setDateAcct(getDateInvoiced());
 				MPeriod.testPeriodOpen(getCtx(), getDateAcct(), getC_DocType_ID(), getAD_Org_ID());
 			}
+			
+			// F3P: if pay schedule is not customized, regenerate based on new record
+			
+			if(isInvPaySchedCustomized() == false)
+			{
+				createPaySchedule();
+			}
+			
+			// F3P: need to change vatLedgerDate and dateAcct			
+			LITMInvoice.setVATLedgerDate(this,getDateInvoiced());
+
 		}
 		if (dt.isOverwriteSeqOnComplete()) {
 			String value = DB.getDocumentNo(getC_DocType_ID(), get_TrxName(), true, this);
@@ -2301,25 +2429,36 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		//	Is this a counter doc ?
 		if (getRef_Invoice_ID() != 0)
 			return null;
+		
+		// F3P: check if is allowed to create counter doc for reversal, needed for compatibility with reeopn
+		
+		if(getReversal_ID() > 0 && 
+				(STDSysConfig.isCreateCounterForReversal(getAD_Client_ID(), getAD_Org_ID()) == false ||
+						isReopenInProgress()))
+		{
+			return null;
+		}		
 
 		//	Org Must be linked to BPartner
-		MOrg org = MOrg.get(getAD_Org_ID());
+		MOrg org = MOrg.get(getCtx(), getAD_Org_ID());
 		int counterC_BPartner_ID = org.getLinkedC_BPartner_ID(get_TrxName());
 		if (counterC_BPartner_ID == 0)
 			return null;
 		//	Business Partner needs to be linked to Org
-		MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), null);
-		int counterAD_Org_ID = bp.getAD_OrgBP_ID();
+		// MBPartner bp = new MBPartner (getCtx(), getC_BPartner_ID(), null);
+		MBPartner bp = MBPartner.getReadonlyNoVirtualCols (getCtx(), getC_BPartner_ID());
+		int counterAD_Org_ID = bp.getAD_OrgBP_ID_Int();
 		if (counterAD_Org_ID == 0)
 			return null;
 
-		MBPartner counterBP = new MBPartner (getCtx(), counterC_BPartner_ID, null);
+		// MBPartner counterBP = new MBPartner (getCtx(), counterC_BPartner_ID, null);
+		MBPartner counterBP = MBPartner.getReadonlyNoVirtualCols (getCtx(), counterC_BPartner_ID);
 //		MOrgInfo counterOrgInfo = MOrgInfo.get(getCtx(), counterAD_Org_ID);
 		if (log.isLoggable(Level.INFO)) log.info("Counter BP=" + counterBP.getName());
 
 		//	Document Type
 		int C_DocTypeTarget_ID = 0;
-		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID());
+		MDocTypeCounter counterDT = MDocTypeCounter.getCounterDocType(getCtx(), getC_DocType_ID(), counterAD_Org_ID); // F3P: added counter org for doc type
 		if (counterDT != null)
 		{
 			if (log.isLoggable(Level.FINE)) log.fine(counterDT.toString());
@@ -2329,7 +2468,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		}
 		else	//	indirect
 		{
-			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID());
+			C_DocTypeTarget_ID = MDocTypeCounter.getCounterDocType_ID(getCtx(), getC_DocType_ID(),counterAD_Org_ID); // F3P: added counter org for doc type
 			if (log.isLoggable(Level.FINE)) log.fine("Indirect C_DocTypeTarget_ID=" + C_DocTypeTarget_ID);
 			if (C_DocTypeTarget_ID <= 0)
 				return null;
@@ -2337,7 +2476,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 		//	Deep Copy
 		MInvoice counter = copyFrom(this, getDateInvoiced(), getDateAcct(),
-			C_DocTypeTarget_ID, !isSOTrx(), true, get_TrxName(), true);
+			C_DocTypeTarget_ID, !isSOTrx(), false, get_TrxName(), true, getDocumentNo()); // F3P: Keep doc no
 		//
 		counter.setAD_Org_ID(counterAD_Org_ID);
 	//	counter.setM_Warehouse_ID(counterOrgInfo.getM_Warehouse_ID());
@@ -2354,8 +2493,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			MInvoiceLine counterLine = counterLines[i];
 			counterLine.setClientOrg(counter);
 			counterLine.setInvoice(counter);	//	copies header values (BP, etc.)
-			counterLine.setPrice();
-			counterLine.setTax();
+			//counterLine.setPrice(); F3P Fix not recalculate price for counter document
+			//counterLine.setTax(); F3P Fix not recalculate tax for counter document
 			//
 			counterLine.saveEx(get_TrxName());
 		}
@@ -2575,10 +2714,18 @@ public class MInvoice extends X_C_Invoice implements DocAction
 
 		//	Deep Copy
 		MInvoice reversal = null;
-		if (MSysConfig.getBooleanValue(MSysConfig.Invoice_ReverseUseNewNumber, true, getAD_Client_ID()))
-			reversal = copyFrom (this, reversalDateInvoiced, reversalDate, getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true);
-		else 
-			reversal = copyFrom (this, reversalDateInvoiced, reversalDate, getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true, getDocumentNo()+"^");
+		//F3P check document no and vat ledger no for reversed
+		String docNo = null;
+		String vatLedgerNo = null;
+		
+		if (MSysConfig.getBooleanValue(MSysConfig.Invoice_ReverseUseNewNumber, true, getAD_Client_ID()) == false)
+			docNo = getDocumentNo()+"^";
+		
+		if(STDSysConfig.isReversedInvoiceUseNewVATLedgerNo(getAD_Client_ID(), getAD_Org_ID()) == false)
+			vatLedgerNo = LITMInvoice.getVATLedgerNo(this); //F3P vatLedgerNo must be isAllowCopy=N, if reversed doesn't use new vatLedgerNo set original no
+			
+		reversal = copyFrom (this, reversalDateInvoiced, reversalDate, getC_DocType_ID(), isSOTrx(), false, get_TrxName(), true, docNo, vatLedgerNo);
+
 		if (reversal == null)
 		{
 			m_processMsg = "Could not create Invoice Reversal";
@@ -2589,9 +2736,16 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		//	Reverse Line Qty
 		MInvoiceLine[] oLines = getLines(false);
 		MInvoiceLine[] rLines = reversal.getLines(true);
-		for (int i = 0; i < rLines.length; i++)
+		
+		// F3P: set as processing
+		try  // F3P: managing of generation in progress and reopen in progress, require try/catch to reset flag
 		{
-			MInvoiceLine rLine = rLines[i];
+			reversal.setGenerationInProgress(true);
+			reversal.setReopenInProgress(isReopenInProgress());
+		
+			for (int i = 0; i < rLines.length; i++)
+			{
+				MInvoiceLine rLine = rLines[i];
 			rLine.getParent().setReversal(true);
 			MInvoiceLine oLine = oLines[i];
 			rLine.setQtyEntered(oLine.getQtyEntered().negate());
@@ -2604,12 +2758,21 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			rLine.setPriceLimit(oLine.getPriceLimit());
 			rLine.setPriceEntered(oLine.getPriceEntered());
 			rLine.setC_UOM_ID(oLine.getC_UOM_ID());
-			if (!rLine.save(get_TrxName()))
-			{
-				m_processMsg = "Could not correct Invoice Reversal Line";
-				return null;
+				if (!rLine.save(get_TrxName()))
+				{
+					m_processMsg = "Could not correct Invoice Reversal Line";
+					return null;
+				}
 			}
+			
+			reversal.setGenerationInProgress(false);
+			reversal.calcTaxesAfterGeneration();
 		}
+		finally // F3P: end of block
+		{
+			reversal.setGenerationInProgress(false);
+		}
+		
 		reversal.setC_Order_ID(getC_Order_ID());
 		StringBuilder msgadd = new StringBuilder("{->").append(getDocumentNo()).append(")");
 		reversal.addDescription(msgadd.toString());
@@ -2646,7 +2809,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			MInvoiceLine iLine = iLines[i];
 			if (iLine.getM_InOutLine_ID() != 0)
 			{
-				MInOutLine ioLine = new MInOutLine(getCtx(), iLine.getM_InOutLine_ID(), get_TrxName());
+				// MInOutLine ioLine = new MInOutLine(getCtx(), iLine.getM_InOutLine_ID(), get_TrxName());
+				MInOutLine ioLine = iLine.getInOutLine();
 				ioLine.setIsInvoiced(false);
 				ioLine.saveEx(get_TrxName());
 				//	Reconsiliation
@@ -2907,5 +3071,77 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	{
 		return getC_DocType_ID() > 0 ? getC_DocType_ID() : getC_DocTypeTarget_ID();
 	}
+	
+	public boolean isInvPaySchedCustomized() 
+	{
+		return !isReversal()
+				&& STDSysConfig.isPayScheduleInvBeforeComplete(
+						Env.getAD_Client_ID(getCtx()),
+						Env.getAD_Org_ID(getCtx()));
+	}
+	
+  // F3P: mark generation in progress
 
+	public boolean isGenerationInProgress()
+	{
+		return generationInProgress;
+	}
+
+	public void setGenerationInProgress(boolean generationInProgress)
+	{
+		this.generationInProgress = generationInProgress;
+	}	
+	
+	// F3P: mark reopen in progress
+
+	public boolean isReopenInProgress()
+	{
+		return reopenInProgress;
+	}
+
+	public void setReopenInProgress(boolean reopenInProgress)
+	{
+		this.reopenInProgress = reopenInProgress;
+	}	
+	
+	public void calcTaxesAfterGeneration()
+	{
+		// Delete Taxes
+		StringBuilder msgdb = new StringBuilder("DELETE C_InvoiceTax WHERE C_Invoice_ID=").append(getC_Invoice_ID());
+		DB.executeUpdateEx(msgdb.toString(), get_TrxName());
+			
+		Query qTaxes = new Query(getCtx(), MTax.Table_Name, "C_Tax_ID in (SELECT l.C_Tax_ID FROM C_InvoiceLine l WHERE l.C_Invoice_ID = ?)",get_TrxName());
+		qTaxes.setParameters(getC_Invoice_ID());
+		List<MTax> taxes = qTaxes.list();
+		
+		for(MTax tax:taxes)
+		{
+			// Need one invoice line for every tax to use the tax provider
+			
+			Query qInvLine = new Query(getCtx(), MInvoiceLine.Table_Name, "C_Tax_ID = ? and C_Invoice_ID = ?",get_TrxName());
+			qInvLine.setParameters(tax.getC_Tax_ID(), getC_Invoice_ID());
+			
+			MInvoiceLine line = qInvLine.first();
+			
+      MTaxProvider provider = new MTaxProvider(tax.getCtx(), tax.getC_TaxProvider_ID(), tax.get_TrxName());
+			ITaxProvider calculator = Core.getTaxProvider(provider);
+			if (calculator == null)
+				throw new AdempiereException(Msg.getMsg(getCtx(), "TaxNoProvider"));
+	    calculator.recalculateTax(provider, line, true);
+		}
+	}
+
+	//F3P
+	protected MInvoiceLine[] getOrderedLines()
+	{
+		MInvoiceLine[] orderedLines = getLines(false).clone();
+		
+		GenericPOAdvancedComparator comparator = new GenericPOAdvancedComparator();
+		comparator.addOrderColumn(MInvoiceLine.COLUMNNAME_M_InOutLine_ID, true);
+		comparator.addOrderColumn(MInvoiceLine.COLUMNNAME_Line);
+		
+		Arrays.sort(orderedLines, comparator);
+		
+		return orderedLines;
+	}
 }	//	MInvoice

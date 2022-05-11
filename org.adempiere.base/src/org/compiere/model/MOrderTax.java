@@ -1,4 +1,3 @@
-/******************************************************************************
  * Product: Adempiere ERP & CRM Smart Business Solution                       *
  * Copyright (C) 1999-2006 ComPiere, Inc. All Rights Reserved.                *
  * This program is free software; you can redistribute it and/or modify it    *
@@ -182,7 +181,7 @@ public class MOrderTax extends X_C_OrderTax
 	}	//	setPrecision
 
 	/**
-	 * 	Get Tax (immutable)
+	 * 	Get Tax
 	 *	@return tax
 	 */
 	protected MTax getTax()
@@ -258,7 +257,7 @@ public class MOrderTax extends X_C_OrderTax
 	 */
 	public String toString ()
 	{
-		StringBuilder sb = new StringBuilder ("MOrderTax[")
+		StringBuffer sb = new StringBuffer ("MOrderTax[")
 			.append("C_Order_ID=").append(getC_Order_ID())
 			.append(", C_Tax_ID=").append(getC_Tax_ID())
 			.append(", Base=").append(getTaxBaseAmt())
@@ -266,5 +265,6 @@ public class MOrderTax extends X_C_OrderTax
 			.append ("]");
 		return sb.toString ();
 	}	//	toString
-
+	
 }	//	MOrderTax
+

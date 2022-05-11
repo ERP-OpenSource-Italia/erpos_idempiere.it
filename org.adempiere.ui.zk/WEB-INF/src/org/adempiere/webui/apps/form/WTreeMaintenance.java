@@ -21,6 +21,7 @@ import java.util.logging.Level;
 
 import org.adempiere.util.Callback;
 import org.adempiere.webui.ClientInfo;
+import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.Checkbox;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.Listbox;
@@ -97,6 +98,7 @@ public class WTreeMaintenance extends TreeMaintenance implements IFormController
 			preInit();
 			jbInit ();
 			action_loadTree();
+//			LayoutUtils.sendDeferLayoutEvent(mainLayout, 100);
 		}
 		catch (Exception ex)
 		{
@@ -241,6 +243,7 @@ public class WTreeMaintenance extends TreeMaintenance implements IFormController
 		if (e.getTarget() == treeField)
 		{
 			action_loadTree();
+//			LayoutUtils.sendDeferLayoutEvent(mainLayout, 100);
 		}
 		else if (e.getTarget() == bAddAll)
 			action_treeAddAll();

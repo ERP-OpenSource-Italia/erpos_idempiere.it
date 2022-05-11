@@ -62,7 +62,7 @@ public class Doc_Cash extends Doc
 		setAmount(Doc.AMTTYPE_Gross, cash.getStatementDifference());
 
 		//  Set CashBook Org & Currency
-		MCashBook cb = MCashBook.get(getCtx(), cash.getC_CashBook_ID());
+		MCashBook cb = MCashBook.get(getCtx(), cash.getC_CashBook_ID(),getTrxName()); // F3P: operation outside trx gives problem when used by post direct
 		setC_CashBook_ID(cb.getC_CashBook_ID());
 		setC_Currency_ID(cb.getC_Currency_ID());
 

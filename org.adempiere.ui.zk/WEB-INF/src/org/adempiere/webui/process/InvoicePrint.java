@@ -17,6 +17,7 @@
 package org.adempiere.webui.process;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
@@ -24,9 +25,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
+import org.adempiere.webui.apps.AEnv;
+import org.adempiere.webui.component.Window;
+import org.adempiere.webui.session.SessionManager;
+import org.adempiere.webui.window.SimplePDFViewer;
 import org.compiere.model.MClient;
 import org.compiere.model.MInvoice;
 import org.compiere.model.MMailText;
+import org.compiere.model.MPInstance;
+import org.compiere.model.MProcess;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.model.MUser;
@@ -34,6 +41,7 @@ import org.compiere.model.MUserMail;
 import org.compiere.model.PrintInfo;
 import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportEngine;
+import org.compiere.process.ProcessInfo;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
 import org.compiere.util.AdempiereUserError;
@@ -42,6 +50,7 @@ import org.compiere.util.EMail;
 import org.compiere.util.Env;
 import org.compiere.util.Ini;
 import org.compiere.util.Language;
+import org.compiere.util.Trx;
 import org.compiere.util.Util;
 
 /**
@@ -234,22 +243,67 @@ public class InvoicePrint extends SvrProcess
 				}
 				format.setLanguage(language);
 				format.setTranslationLanguage(language);
-				//	query
-				MQuery query = new MQuery("C_Invoice_Header_v");
-				query.addRestriction("C_Invoice_ID", MQuery.EQUAL, Integer.valueOf(C_Invoice_ID));
-
-				//	Engine
-				PrintInfo info = new PrintInfo(
-					DocumentNo,
-					MInvoice.Table_ID,
-					C_Invoice_ID,
-					C_BPartner_ID);
-				info.setCopies(copies);
-				ReportEngine re = new ReportEngine(getCtx(), format, query, info);
+				//F3P
+				File f_invoice = null;
+				boolean processOK = false;
 				boolean printed = false;
+				if(format.getJasperProcess_ID() > 0)
+				{
+					MProcess process = MProcess.get (getCtx(), format.getJasperProcess_ID());
+					MPInstance pInstance = new MPInstance (process, C_Invoice_ID);
+					ProcessInfo pi = new ProcessInfo (process.getName(), process.getAD_Process_ID(), MInvoice.Table_ID, C_Invoice_ID);		
+					pi.setAD_User_ID(Env.getAD_User_ID(getCtx()));
+					pi.setAD_Client_ID(Env.getAD_Client_ID(getCtx()));
+					pi.setClassName(process.getClassname());
+					pi.setAD_PInstance_ID(pInstance.getAD_PInstance_ID());			
+					pi.setPrintPreview (false);
+					pi.setIsBatch(true);
+					Trx trx = Trx.get(Trx.createTrxName("WebPrc"), true);
+					try
+					{				
+						processOK = process.processIt(pi, trx);			
+						trx.commit();
+						trx.close();
+					}
+					catch (Throwable t)
+					{
+						trx.rollback();
+						trx.close();
+					}
+					if(processOK)
+					{
+						f_invoice=pi.getPDFReport();
+						if(f_invoice == null)
+						{
+							addLog (C_Invoice_ID, null, null, DocumentNo + " Jasper Error: "+pi.getSummary());
+							errors++;
+							continue;
+						}
+					}
+					
+				}
+				else
+				{
+					//	query
+					MQuery query = new MQuery("C_Invoice_Header_v");
+					query.addRestriction("C_Invoice_ID", MQuery.EQUAL, Integer.valueOf(C_Invoice_ID));
+
+					//	Engine
+					PrintInfo info = new PrintInfo(
+						DocumentNo,
+						MInvoice.Table_ID,
+						C_Invoice_ID,
+						C_BPartner_ID);
+					info.setCopies(copies);
+					ReportEngine re = new ReportEngine(getCtx(), format, query, info);
+					File invoice = null;
+					if (!Ini.isClient())
+						invoice = new File(MInvoice.getPDFFileName(documentDir, C_Invoice_ID));
+					f_invoice = re.getPDF(invoice);
+				}
+				//F3P End
 				if (p_EMailPDF)
 				{
-					mText.setBPartner(C_BPartner_ID);	//	Context - Translation
 					String subject = mText.getMailHeader() + " - " + DocumentNo;
 					EMail email = client.createEMail(to.getEMail(), subject, null);
 					if (!email.isValid())
@@ -260,6 +314,7 @@ public class InvoicePrint extends SvrProcess
 						continue;
 					}
 					mText.setUser(to);					//	Context
+					mText.setBPartner(C_BPartner_ID);	//	Context
 					mText.setPO(new MInvoice(getCtx(), C_Invoice_ID, get_TrxName()));
 					String message = mText.getMailText(true);
 					if (mText.isHtml())
@@ -269,11 +324,8 @@ public class InvoicePrint extends SvrProcess
 						email.setSubject (subject);
 						email.setMessageText (message);
 					}
-					//
-					File invoice = null;
-					if (!Ini.isClient())
-						invoice = new File(MInvoice.getPDFFileName(documentDir, C_Invoice_ID));
-					File attachment = re.getPDF(invoice);
+					//F3P: use f_invoice no pdf file name
+					File attachment = f_invoice;
 					if (log.isLoggable(Level.FINE)) log.fine(to + " - " + attachment);
 					email.addAttachment(attachment);
 					//
@@ -297,7 +349,8 @@ public class InvoicePrint extends SvrProcess
 				}
 				else
 				{
-					pdfList.add(re.getPDF());
+					//F3P: use f_invoice no pdf file name
+					pdfList.add(f_invoice);
 					count++;
 					printed = true;
 				}
@@ -305,7 +358,7 @@ public class InvoicePrint extends SvrProcess
 				if (printed)
 				{
 					StringBuffer sb = new StringBuffer ("UPDATE C_Invoice "
-						+ "SET DatePrinted=getDate(), IsPrinted='Y' WHERE C_Invoice_ID=")
+						+ "SET DatePrinted=SysDate, IsPrinted='Y' WHERE C_Invoice_ID=")
 						.append (C_Invoice_ID);
 					DB.executeUpdateEx(sb.toString(), get_TrxName());
 				}
@@ -320,10 +373,12 @@ public class InvoicePrint extends SvrProcess
 			DB.close(rs, pstmt);
 		}
 		
-		if (processUI != null)
-		{
-			processUI.showReports(pdfList);
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				showReports(pdfList);
 			}
+		});
 
 		//
 		if (p_EMailPDF)
@@ -428,11 +483,35 @@ public class InvoicePrint extends SvrProcess
 		}
 		String orgWhere = MRole.getDefault(getCtx(), false).getOrgWhere(MRole.SQL_RO);
 		if (!Util.isEmpty(orgWhere, true)) {
-			orgWhere = orgWhere.replaceAll("AD_Org_ID", "i.AD_Org_ID");
-			sql.append(" AND ");
+			sql.append(" AND i.");
 			sql.append(orgWhere);
 		}
 		sql.append(" ORDER BY i.C_Invoice_ID, pf.AD_Org_ID DESC");	//	more than 1 PF record
+	}
+
+	private void showReports(List<File> pdfList) {
+		if (pdfList.size() > 1) {
+			try {
+				File outFile = File.createTempFile("InvoicePrint", ".pdf");					
+				AEnv.mergePdf(pdfList, outFile);
+
+				Window win = new SimplePDFViewer(this.getName(), new FileInputStream(outFile));
+				win.setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
+				SessionManager.getAppDesktop().showWindow(win, "center");
+			} catch (Exception e) {
+				log.log(Level.SEVERE, e.getLocalizedMessage(), e);
+			}
+		} else if (pdfList.size() > 0) {
+			try {
+				Window win = new SimplePDFViewer(this.getName(), new FileInputStream(pdfList.get(0)));
+				win.setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
+				SessionManager.getAppDesktop().showWindow(win, "center");
+			} catch (Exception e)
+			{
+				log.log(Level.SEVERE, e.getLocalizedMessage(), e);
+			}
+		}
+		
 	}
 
 }	//	InvoicePrint

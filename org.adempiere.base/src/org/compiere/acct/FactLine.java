@@ -62,7 +62,7 @@ public final class FactLine extends X_Fact_Acct
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -533308106857819424L;
+	private static final long serialVersionUID = 6141312459030795891L;
 
 	/**
 	 *	Constructor
@@ -726,12 +726,12 @@ public final class FactLine extends X_Fact_Acct
 			if (AD_Org_ID == 0)
 				AD_Org_ID = m_doc.getAD_Org_ID();
 		}
-
+		
 		Timestamp convDate = getDateAcct();
 
 		if (( m_doc instanceof Doc_BankStatement || m_doc instanceof Doc_AllocationHdr ) && m_docLine != null)
-			convDate = m_docLine.getDateConv();
-
+			convDate = m_docLine.getDateConv();				
+			
 		BigDecimal currencyRate = null;
 		if (m_docLine != null && m_docLine.getCurrencyRate() != null && m_docLine.getCurrencyRate().signum() > 0) 
 		{
@@ -741,6 +741,7 @@ public final class FactLine extends X_Fact_Acct
 		{
 			currencyRate = m_doc.getCurrencyRate();
 		}
+		
 
 		if (currencyRate != null && currencyRate.signum() > 0)
 		{
@@ -756,14 +757,14 @@ public final class FactLine extends X_Fact_Acct
 		} 
 		else 
 		{
-			setAmtAcctDr (MConversionRate.convert (getCtx(),
-					getAmtSourceDr(), getC_Currency_ID(), m_acctSchema.getC_Currency_ID(),
-					convDate, C_ConversionType_ID, m_doc.getAD_Client_ID(), AD_Org_ID));
-			if (getAmtAcctDr() == null)
-				return false;
-			setAmtAcctCr (MConversionRate.convert (getCtx(),
-					getAmtSourceCr(), getC_Currency_ID(), m_acctSchema.getC_Currency_ID(),
-					convDate, C_ConversionType_ID, m_doc.getAD_Client_ID(), AD_Org_ID));
+		setAmtAcctDr (MConversionRate.convert (getCtx(),
+			getAmtSourceDr(), getC_Currency_ID(), m_acctSchema.getC_Currency_ID(),
+			convDate, C_ConversionType_ID, m_doc.getAD_Client_ID(), AD_Org_ID));
+		if (getAmtAcctDr() == null)
+			return false;
+		setAmtAcctCr (MConversionRate.convert (getCtx(),
+			getAmtSourceCr(), getC_Currency_ID(), m_acctSchema.getC_Currency_ID(),
+			convDate, C_ConversionType_ID, m_doc.getAD_Client_ID(), AD_Org_ID));
 		}
 		return true;
 	}	//	convert
@@ -1178,7 +1179,7 @@ public final class FactLine extends X_Fact_Acct
 				BigDecimal cr = fact.getAmtAcctCr();
 				// setAmtAcctDr (cr.multiply(multiplier));
 				// setAmtAcctCr (dr.multiply(multiplier));
-				setAmtAcct(getC_Currency_ID(), cr.multiply(multiplier), dr.multiply(multiplier));
+				setAmtAcct(fact.getC_Currency_ID(), cr.multiply(multiplier), dr.multiply(multiplier));
 				//  
 				//  Bayu Sistematika - Source Amounts
 				//  Fixing source amounts
@@ -1235,5 +1236,18 @@ public final class FactLine extends X_Fact_Acct
 		}
 		return success;
 	}   //  updateReverseLine
+	
+	// F3P: expose access to doc
+	
+	/**
+	 * Return the parent doc
+	 * 
+	 * @return
+	 */
+	public Doc getParent()
+	{
+		return m_doc;
+	}
+	//F3P: end
 
 }	//	FactLine

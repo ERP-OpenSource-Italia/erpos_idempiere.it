@@ -31,6 +31,10 @@ public class LoggedSessionListener implements HttpSessionListener, ServletContex
 	public void sessionCreated(HttpSessionEvent evt) {
 		AD_SessionList.put(evt.getSession().getId(), evt.getSession());
 	}
+	
+	public static void sessionCreated(String id,HttpSession httpSessionValue) {
+		AD_SessionList.put(id, httpSessionValue);
+	}
 
 	@Override
 	public void sessionDestroyed(HttpSessionEvent evt) {

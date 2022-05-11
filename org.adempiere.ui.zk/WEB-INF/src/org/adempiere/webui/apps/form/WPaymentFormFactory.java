@@ -34,5 +34,16 @@ public class WPaymentFormFactory {
 	public static IPaymentForm create(int windowNo, GridTab mTab, String paymentRule)
 	{
 		return Extensions.getPaymentForm(windowNo, mTab, paymentRule);
+		
+		
+		/*
+		IPaymentForm paymentForm = null;
+		List<IPaymentFormFactory> factories = Service.locator().list(IPaymentFormFactory.class).getServices();
+		for (IPaymentFormFactory factory : factories) {
+			paymentForm = factory.create(windowNo, mTab, paymentRule);
+			if (paymentForm != null)
+				break;
+		}
+		return paymentForm;*/
 	}
 }

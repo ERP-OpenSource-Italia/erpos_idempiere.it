@@ -27,6 +27,7 @@ import java.util.logging.Level;
 import org.adempiere.exceptions.DBException;
 import org.compiere.model.I_R_Request;
 import org.compiere.model.MClient;
+import org.compiere.model.MMailText;
 import org.compiere.model.MNote;
 import org.compiere.model.MRequest;
 import org.compiere.model.MRequestAction;
@@ -45,6 +46,8 @@ import org.osgi.service.cm.ConfigurationException;
 import org.osgi.service.cm.ManagedService;
 import org.osgi.service.event.Event;
 
+import it.idempiere.base.model.LITMRequestType;
+
 /**
  * Request event handler
  * @author Nur Yasmin
@@ -52,7 +55,7 @@ import org.osgi.service.event.Event;
  */
 public class RequestEventHandler extends AbstractEventHandler implements ManagedService
 {
-	private static final CLogger s_log = CLogger.getCLogger (RequestEventHandler.class);
+	private static CLogger s_log = CLogger.getCLogger (RequestEventHandler.class);
 	
 	@Override
 	protected void doHandleEvent(Event event) 
@@ -261,6 +264,14 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 	 */
 	private void sendNotices(MRequest r, ArrayList<String> list)
 	{
+		MRequestType rt = r.getRequestType();
+		String mailWhenChangedType = LITMRequestType.getIsEmailWhenChanged(rt);
+		
+		// F3P: notificaions not required
+		
+		if(LITMRequestType.ISEMAILWHENCHANGEDTYPE_DontNotify.equals(mailWhenChangedType))
+			return;
+		
 		//	Subject
 		String subject = Msg.translate(r.getCtx(), "R_Request_ID") 
 			+ " " + Msg.getMsg(r.getCtx(), "Updated") + ": " + r.getDocumentNo();
@@ -293,9 +304,28 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 				.append(": ").append(r.getDateNextAction());
 		message.append(MRequest.SEPARATOR)
 			.append(r.getSummary());
+		
 		if (r.getResult() != null)
 			message.append("\n----------\n").append(r.getResult());
-		message.append(getMailTrailer(r, null));
+
+		//F3P:
+		String trailer = getMailTrailer(r, null);
+		
+		MMailText				mMailText = r.getNoticesMailText();
+		boolean					bMailIsHtml = false;
+		
+		if(mMailText != null)
+		{
+			subject = r.getNoticesSubject(subject, mMailText);
+			message = new StringBuilder(r.getNoticesBody(message.toString(), trailer, mMailText));
+			bMailIsHtml = mMailText.isHtml();
+		}
+		else
+		{
+			message.append(trailer);
+		}
+		
+		//F3P End
 		File pdf = r.createPDF();
 		if (s_log.isLoggable(Level.FINER)) s_log.finer(message.toString());
 		
@@ -306,14 +336,37 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 			from = null;
 		//
 		ArrayList<Integer> userList = new ArrayList<Integer>();
-		final String sql = "SELECT u.AD_User_ID, u.NotificationType, u.EMail, u.Name, MAX(r.AD_Role_ID) "
-			+ "FROM RV_RequestUpdates_Only ru"
-			+ " INNER JOIN AD_User u ON (ru.AD_User_ID=u.AD_User_ID OR u.AD_User_ID=?)"
-			+ " LEFT OUTER JOIN AD_User_Roles r ON (u.AD_User_ID=r.AD_User_ID) "
-			+ "WHERE ru.R_Request_ID=? "
-			+ "GROUP BY u.AD_User_ID, u.NotificationType, u.EMail, u.Name";
+		final String sql;
+		
+		// F3P: change query based on notification type
+		
+		if(LITMRequestType.ISEMAILWHENCHANGEDTYPE_Notify.equals(mailWhenChangedType))
+		{
+			sql = "SELECT u.AD_User_ID, u.NotificationType, u.EMail, u.Name, MAX(r.AD_Role_ID) "
+					+ "FROM RV_RequestUpdates_Only ru"
+					+ " INNER JOIN AD_User u ON (ru.AD_User_ID=u.AD_User_ID OR u.AD_User_ID=?)"
+					+ " LEFT OUTER JOIN AD_User_Roles r ON (u.AD_User_ID=r.AD_User_ID) "
+					+ "WHERE ru.R_Request_ID=? "
+					+ "GROUP BY u.AD_User_ID, u.NotificationType, u.EMail, u.Name"; 
+		}
+		else
+		{
+			// F3P: compatible query selecting only responsible user
+			
+			sql = "SELECT u.AD_User_ID, u.NotificationType, u.EMail, u.Name, MAX(r.AD_Role_ID) "
+					+ "FROM R_Request rq "
+					+ " INNER JOIN AD_User u ON (rq.SalesRep_ID = u.AD_User_ID AND u.AD_User_ID=?)"
+					+ " LEFT OUTER JOIN AD_User_Roles r ON (u.AD_User_ID=r.AD_User_ID) "
+					+ "WHERE rq.R_Request_ID=? "
+					+ "GROUP BY u.AD_User_ID, u.NotificationType, u.EMail, u.Name";
+		}
+
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
+		
+		// ADEMPIERE-49: cache logged user, for later use
+		int iLoggedAD_User_ID = Env.getAD_User_ID(r.getCtx());
+		
 		try
 		{
 			pstmt = DB.prepareStatement (sql, r.get_TrxName());
@@ -323,6 +376,10 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 			while (rs.next ())
 			{
 				int AD_User_ID = rs.getInt(1);
+				
+				// ADEMPIERE-49: if notification is to be sent to the logged user, skip it
+				if(AD_User_ID == iLoggedAD_User_ID)
+					continue;
 				String NotificationType = rs.getString(2);
 				if (NotificationType == null)
 					NotificationType = X_AD_User.NOTIFICATIONTYPE_EMail;
@@ -378,7 +435,8 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 				if (X_AD_User.NOTIFICATIONTYPE_EMail.equals(NotificationType)
 					|| X_AD_User.NOTIFICATIONTYPE_EMailPlusNotice.equals(NotificationType))
 				{
-					RequestSendEMailEventData eventData = new RequestSendEMailEventData(client, from, to, subject, message.toString(), pdf, r.getR_Request_ID());
+					// ADEMPIERE-49: support send of mail with html body 
+					RequestSendEMailEventData eventData = new RequestSendEMailEventData(client, from, to, subject, message.toString(), pdf, r.getR_Request_ID(),bMailIsHtml);
 					Event event = EventManager.newEvent(IEventTopics.REQUEST_SEND_EMAIL, eventData);
 					EventManager.getInstance().postEvent(event);
 				}
@@ -412,7 +470,7 @@ public class RequestEventHandler extends AbstractEventHandler implements Managed
 	 */
 	private String getMailTrailer(MRequest r, String serverAddress)
 	{
-		StringBuilder sb = new StringBuilder("\n").append(MRequest.SEPARATOR)
+		StringBuffer sb = new StringBuffer("\n").append(MRequest.SEPARATOR)
 			.append(Msg.translate(r.getCtx(), "R_Request_ID"))
 			.append(": ").append(r.getDocumentNo())
 			.append("  ").append(r.getMailTag())

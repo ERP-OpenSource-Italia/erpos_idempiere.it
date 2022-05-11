@@ -83,7 +83,7 @@ public class CalloutBOM extends CalloutEngine
 		if (M_Product_ID <= 0)
 		{
 			BigDecimal QtyEntered = bomLine.getQtyEntered();
-			bomLine.setQtyRequiered(QtyEntered);
+			bomLine.setQtyRequired(QtyEntered);
 		}
 		//	UOM Changed - convert from Entered -> Product
 		//	QtyEntered changed - calculate QtyOrdered
@@ -97,12 +97,12 @@ public class CalloutBOM extends CalloutEngine
 				QtyRequiered = QtyEntered;
 			boolean conversion = QtyEntered.compareTo(QtyRequiered) != 0;
 			Env.setContext(ctx, WindowNo, "UOMConversion", conversion);
-			bomLine.setQtyRequiered(QtyRequiered);
+			bomLine.setQtyRequired(QtyRequiered);
 		}
 		//	QtyOrdered changed - calculate QtyEntered
-		else if (I_PP_Order_BOMLine.COLUMNNAME_QtyRequiered.equals(columnName))
+		else if (I_PP_Order_BOMLine.COLUMNNAME_QtyRequired.equals(columnName))
 		{
-			final BigDecimal QtyRequiered = bomLine.getQtyRequiered();
+			final BigDecimal QtyRequiered = bomLine.getQtyRequired();
 			BigDecimal QtyEntered = MUOMConversion.convertProductTo (ctx, M_Product_ID, 
 					bomLine.getC_UOM_ID(), QtyRequiered);
 			if (QtyEntered == null) // No Conversion Found

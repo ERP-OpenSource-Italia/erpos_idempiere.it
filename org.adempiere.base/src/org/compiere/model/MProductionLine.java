@@ -13,7 +13,6 @@ import java.util.logging.Level;
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
-import org.compiere.util.Msg;
 import org.compiere.util.Util;
 
 
@@ -110,7 +109,7 @@ public class MProductionLine extends X_M_ProductionLine {
 		if ( getM_Product_ID() == getEndProduct_ID()) {
 			if (reversalId <= 0  && isAutoGenerateLot && getM_AttributeSetInstance_ID() == 0)
 			{
-				asi = MAttributeSetInstance.generateLot(getCtx(), (MProduct)getM_Product(), get_TrxName());
+				asi = MAttributeSetInstance.generateLot(getCtx(), (MProduct)getM_Product(), this, get_TrxName());
 				setM_AttributeSetInstance_ID(asi.getM_AttributeSetInstance_ID());
 			} 
 			Timestamp dateMPolicy = date;
@@ -148,18 +147,73 @@ public class MProductionLine extends X_M_ProductionLine {
 			return errorString.toString();
 		}
 		
+		// F3P: Reversas: revert from MA lines
+		
+		if (reversalId > 0)
+		{
+			MProductionLineMA lineMAs[] = MProductionLineMA.get(getCtx(), getM_ProductionLine_ID(), get_TrxName());
+			
+			for(MProductionLineMA lineMA:lineMAs)
+			{
+				BigDecimal lineQty = lineMA.getMovementQty();
+				Timestamp dateMaterialPolicy = lineMA.getDateMaterialPolicy();				
+				
+				MTransaction matTrx = new MTransaction (getCtx(), getAD_Org_ID(), 
+						"P-", 
+						getM_Locator_ID(), getM_Product_ID(), lineMA.getM_AttributeSetInstance_ID(), 
+						lineQty, date, get_TrxName());
+				matTrx.setM_ProductionLine_ID(get_ID());
+				
+				if ( !matTrx.save(get_TrxName()) ) {
+					log.log(Level.SEVERE, "Could not save transaction for " + toString());
+					errorString.append("Could not save transaction for " + toString() + "\n");
+				} else {
+					if (log.isLoggable(Level.FINE))log.log(Level.FINE, "Saved transaction for " + toString());
+				}
+				
+				MStorageOnHand storage = MStorageOnHand.getCreate(getCtx(), getM_Locator_ID(),
+						getM_Product_ID(), lineMA.getM_AttributeSetInstance_ID(), dateMaterialPolicy, get_TrxName());
+				
+				DB.getDatabase().forUpdate(storage, 120);
+				storage.addQtyOnHand(lineQty);				
+			}
+			
+			return errorString.toString();
+		}		
+		
 		// create transactions and update stock used in production
+		
+		// F3P: changed storages retrieval and control
+		/*
 		MStorageOnHand[] storages = MStorageOnHand.getAll( getCtx(), getM_Product_ID(),
 				getM_Locator_ID(), get_TrxName(), false, 0);
+		*/
+		
+		String sqlWhere = "M_Product_ID=? AND M_Locator_ID=?";
+		
+		List<Object> params = new ArrayList<>();
+		params.add(getM_Product_ID());
+		params.add(getM_Locator_ID());
+		
+		if(getM_AttributeSetInstance_ID() > 0)
+		{
+			sqlWhere += " AND M_AttributeSetInstance_ID = ?";
+			params.add(getM_AttributeSetInstance_ID());
+		}
+		
+		List<MStorageOnHand> storages = new Query(getCtx(), MStorageOnHand.Table_Name, sqlWhere, get_TrxName())
+				.setParameters(params)
+				.setOrderBy(MStorageOnHand.COLUMNNAME_DateMaterialPolicy+","+ MStorageOnHand.COLUMNNAME_M_AttributeSetInstance_ID)
+				.list();
 		
 		MProductionLineMA lineMA = null;
 		MTransaction matTrx = null;
 		BigDecimal qtyToMove = getMovementQty().negate();
 
 		if (qtyToMove.signum() > 0) {
-			for (int sl = 0; sl < storages.length; sl++) {
+			for (MStorageOnHand storage: storages ) {
 	
-				BigDecimal lineQty = storages[sl].getQtyOnHand();
+				BigDecimal lineQty = storage.getQtyOnHand();
 				
 				if (log.isLoggable(Level.FINE))log.log(Level.FINE, "QtyAvailable " + lineQty );
 				if (lineQty.signum() > 0) 
@@ -168,19 +222,21 @@ public class MProductionLine extends X_M_ProductionLine {
 							lineQty = qtyToMove;
 	
 					MAttributeSetInstance slASI = new MAttributeSetInstance(getCtx(),
-							storages[sl].getM_AttributeSetInstance_ID(),get_TrxName());
+							storage.getM_AttributeSetInstance_ID(),get_TrxName());
 					String slASIString = slASI.getDescription();
 					if (slASIString == null)
 						slASIString = "";
 					
 					if (log.isLoggable(Level.FINEST))log.log(Level.FINEST,"slASI-Description =" + slASIString);
 						
+					/* Storages are pre-filtered
 					if ( slASIString.compareTo(asiString) == 0
 							|| asi.getM_AttributeSet_ID() == 0  )  
 					//storage matches specified ASI or is a costing asi (inc. 0)
 				    // This process will move negative stock on hand quantities
 					{
-						lineMA = MProductionLineMA.get(this,storages[sl].getM_AttributeSetInstance_ID(),storages[sl].getDateMaterialPolicy());
+					*/
+						lineMA = MProductionLineMA.get(this,storage.getM_AttributeSetInstance_ID(),storage.getDateMaterialPolicy());
 						lineMA.setMovementQty(lineMA.getMovementQty().add(lineQty.negate()));
 						if ( !lineMA.save(get_TrxName()) ) {
 							log.log(Level.SEVERE, "Could not save MA for " + toString());
@@ -199,11 +255,11 @@ public class MProductionLine extends X_M_ProductionLine {
 						} else {
 							if (log.isLoggable(Level.FINE))log.log(Level.FINE, "Saved transaction for " + toString());
 						}
-						DB.getDatabase().forUpdate(storages[sl], 120);
-						storages[sl].addQtyOnHand(lineQty.negate());
+						DB.getDatabase().forUpdate(storage, 120);
+						storage.addQtyOnHand(lineQty.negate());
 						qtyToMove = qtyToMove.subtract(lineQty);
 						if (log.isLoggable(Level.FINE))log.log(Level.FINE, getLine() + " Qty moved = " + lineQty + ", Remaining = " + qtyToMove );
-					}
+					// }
 				}
 				
 				if ( qtyToMove.signum() == 0 )			
@@ -219,12 +275,12 @@ public class MProductionLine extends X_M_ProductionLine {
 			if (asi.get_ID() == 0 && MAcctSchema.COSTINGLEVEL_BatchLot.equals(prod.getCostingLevel(acctSchema)) )
 			{
 				//add quantity to last attributesetinstance
-				String sqlWhere = "M_Product_ID=? AND M_Locator_ID=? AND M_AttributeSetInstance_ID > 0 ";
+				// String sqlWhere = "M_Product_ID=? AND M_Locator_ID=? AND M_AttributeSetInstance_ID > 0 ";
 				MStorageOnHand storage = new Query(getCtx(), MStorageOnHand.Table_Name, sqlWhere, get_TrxName())
 						.setParameters(getM_Product_ID(), getM_Locator_ID())
 						.setOrderBy(MStorageOnHand.COLUMNNAME_DateMaterialPolicy+" DESC,"+ MStorageOnHand.COLUMNNAME_M_AttributeSetInstance_ID +" DESC")
 						.first();
-			
+				
 				if (storage != null)
 				{
 					setM_AttributeSetInstance_ID(storage.getM_AttributeSetInstance_ID());

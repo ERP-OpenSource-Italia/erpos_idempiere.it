@@ -16,11 +16,14 @@
  *****************************************************************************/
 package org.compiere.process;
 
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.logging.Level;
 
+import org.compiere.model.I_S_TimeExpense;
+import org.compiere.model.MAcctSchema;
 import org.compiere.model.MBPartner;
 import org.compiere.model.MDocType;
 import org.compiere.model.MInvoice;
@@ -28,10 +31,16 @@ import org.compiere.model.MInvoiceLine;
 import org.compiere.model.MPriceList;
 import org.compiere.model.MTimeExpense;
 import org.compiere.model.MTimeExpenseLine;
+import org.compiere.model.PO;
+import org.compiere.model.ProductCost;
+import org.compiere.model.X_C_Invoice;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+
+import it.idempiere.base.util.STDSysConfig;
+import it.idempiere.base.util.STDUtils;
 
 /**
  *	Create AP Invoices from Expense Reports
@@ -45,6 +54,11 @@ public class ExpenseAPInvoice extends SvrProcess
 	private Timestamp	m_DateFrom = null;
 	private Timestamp	m_DateTo = null;
 	private int			m_noInvoices = 0;
+	
+	//F3P
+	private int			m_C_DocType_ID = 0;
+	private Timestamp	m_DateInvoiced = null;
+	//F3P end
 
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -64,6 +78,17 @@ public class ExpenseAPInvoice extends SvrProcess
 				m_DateFrom = (Timestamp)para[i].getParameter();
 				m_DateTo = (Timestamp)para[i].getParameter_To();
 			}
+			//F3P read also C_DocType_ID
+			else if (name.equals(MDocType.COLUMNNAME_C_DocType_ID))
+			{
+				m_C_DocType_ID = para[i].getParameterAsInt();
+			}
+			//F3P add DateInvoiced
+			else if(name.equals(MInvoice.COLUMNNAME_DateInvoiced))
+			{
+				m_DateInvoiced = (Timestamp)para[i].getParameter();
+			}
+			//F3P end
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -95,9 +120,16 @@ public class ExpenseAPInvoice extends SvrProcess
 		//
 		int old_BPartner_ID = -1;
 		MInvoice invoice = null;
-		//		
-		try (PreparedStatement pstmt = DB.prepareStatement (sql.toString (), get_TrxName());)
-		{			
+		//
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		
+		//F3P
+		boolean bBreakByBP = STDSysConfig.isBreakByBP(getAD_Client_ID());
+
+		try
+		{
+			pstmt = DB.prepareStatement (sql.toString (), get_TrxName());
 			int par = 1;
 			pstmt.setInt(par++, getAD_Client_ID());
 			if (m_C_BPartner_ID != 0)
@@ -106,13 +138,13 @@ public class ExpenseAPInvoice extends SvrProcess
 				pstmt.setTimestamp (par++, m_DateFrom);
 			if (m_DateTo != null)
 				pstmt.setTimestamp (par++, m_DateTo);
-			ResultSet rs = pstmt.executeQuery ();
+			rs = pstmt.executeQuery ();
 			while (rs.next())				//	********* Expense Line Loop
 			{
 				MTimeExpense te = new MTimeExpense (getCtx(), rs, get_TrxName());
 
 				//	New BPartner - New Order
-				if (te.getC_BPartner_ID() != old_BPartner_ID)
+				if ((bBreakByBP && te.getC_BPartner_ID() != old_BPartner_ID)|| bBreakByBP == false)//F3P generate new invoice based on sys variable
 				{
 					completeInvoice (invoice);
 					MBPartner bp = new MBPartner (getCtx(), te.getC_BPartner_ID(), get_TrxName());
@@ -120,7 +152,22 @@ public class ExpenseAPInvoice extends SvrProcess
 					if (log.isLoggable(Level.INFO)) log.info("New Invoice for " + bp);
 					invoice = new MInvoice (getCtx(), 0, get_TrxName());
 					invoice.setClientOrg(te.getAD_Client_ID(), te.getAD_Org_ID());
-					invoice.setC_DocTypeTarget_ID(MDocType.DOCBASETYPE_APInvoice);	//	API
+					//F3P set doc type
+
+					//invoice.setC_DocTypeTarget_ID(MDocType.DOCBASETYPE_APInvoice);	//	API
+
+					invoice.setC_DocTypeTarget_ID(m_C_DocType_ID);
+					invoice.setIsSOTrx(false);
+
+					//F3P set date invoiced, date acct
+					invoice.setDateInvoiced(m_DateInvoiced);
+					invoice.setDateAcct(m_DateInvoiced);
+					//F3P set S_TimeExpense
+
+					setS_TimeExpense_ID(invoice, te.getS_TimeExpense_ID());
+
+					//F3P end
+					
 					invoice.setDocumentNo (te.getDocumentNo());
 					//
 					invoice.setBPartner(bp);
@@ -183,22 +230,59 @@ public class ExpenseAPInvoice extends SvrProcess
 					il.setC_Campaign_ID(line.getC_Campaign_ID());
 					//
 				//	il.setPrice();	//	not really a list/limit price for reimbursements
-					il.setPrice(line.getPriceReimbursed());	//
+
+					//F3P set price ConvertedAmt instead of ExpenseAmt 
+					// if price = 0 then product price
+
+					//il.setPrice(line.getPriceReimbursed());	//
+
+					BigDecimal bdPrice = line.getConvertedAmt();
+
+					if(bdPrice.signum() == 0)
+					{
+						bdPrice = getProductCosts(line.getAD_Org_ID(), line.getM_Product_ID());	//	current costs
+					}
+
+					il.setPrice(bdPrice);
+
+					//F3P set C_Tax_ID
+
+					int C_Tax_ID = STDSysConfig.getSysTaxID(te.getAD_Client_ID(), te.getAD_Org_ID());
+
+					if(C_Tax_ID > 0)
+					{
+						il.setC_Tax_ID(C_Tax_ID);
+					}
+					else
+					{
+						il.setTax();
+					}
+					//F3P end
 					
-					il.setTax();
 					if (!il.save())
 						throw new IllegalStateException("Cannot save Invoice Line");
 					//	Update TEL
 					line.setC_InvoiceLine_ID(il.getC_InvoiceLine_ID());
 					line.saveEx();
 				}	//	for all expense lines
+				
+				if(!bBreakByBP) //F3P complete invoice based on variable
+					completeInvoice (invoice);
 			}								//	********* Expense Line Loop
  		}
 		catch (Exception e)
 		{
+			m_noInvoices--;
 			log.log(Level.SEVERE, sql.toString(), e);
 		}
-		completeInvoice (invoice);
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
+		}
+		
+		if(bBreakByBP) //F3P invoice has already been completed or not based on variable
+			completeInvoice (invoice);
 		StringBuilder msgreturn = new StringBuilder("@Created@=").append(m_noInvoices);
 		return msgreturn.toString();
 	}	//	doIt
@@ -225,5 +309,40 @@ public class ExpenseAPInvoice extends SvrProcess
 		addBufferLog(invoice.get_ID(), invoice.getDateInvoiced(), 
 			invoice.getGrandTotal(), invoice.getDocumentNo(), invoice.get_Table_ID(), invoice.getC_Invoice_ID());
 	}	//	completeInvoice
+	
+	//F3P
+	protected BigDecimal getProductCosts (int AD_Org_ID, int M_Product_ID)
+	{
+		BigDecimal bdCost = BigDecimal.ZERO;
+
+		int C_AcctSchema_ID = STDUtils.getAcctSchemaOf(getAD_Client_ID(), AD_Org_ID);
+
+		if(C_AcctSchema_ID > 0)
+		{
+			MAcctSchema as = PO.get(getCtx(), MAcctSchema.Table_Name, C_AcctSchema_ID, get_TrxName());
+
+			ProductCost pc = new ProductCost (getCtx(),	M_Product_ID, 0, get_TrxName());
+
+			BigDecimal costs = pc.getProductCosts(as, AD_Org_ID, null, 0, false);
+
+			if (costs != null)
+			{
+				bdCost = costs;
+			}
+		}
+
+		return bdCost;
+	}   //  getProductCosts
+
+	private static void setS_TimeExpense_ID(X_C_Invoice invoice,
+			Integer S_TimeExpense_ID) {
+		
+		if (S_TimeExpense_ID < 1)
+			invoice.set_ValueOfColumn(I_S_TimeExpense.COLUMNNAME_S_TimeExpense_ID, null);
+		else
+			invoice.set_ValueOfColumn(I_S_TimeExpense.COLUMNNAME_S_TimeExpense_ID,
+					S_TimeExpense_ID);
+	}
+	//F3P end
 
 }	//	ExpenseAPInvoice

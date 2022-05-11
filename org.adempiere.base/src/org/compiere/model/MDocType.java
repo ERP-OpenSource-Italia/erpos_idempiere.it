@@ -21,8 +21,12 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
+import org.compiere.util.CCache;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
+
+import it.idempiere.base.util.STDSysConfig;
 import org.idempiere.cache.ImmutableIntPOCache;
 import org.idempiere.cache.ImmutablePOSupport;
 
@@ -51,7 +55,7 @@ public class MDocType extends X_C_DocType implements ImmutablePOSupport
 	 */
 	static public int getDocType(String DocBaseType)
 	{
-		MDocType[] doc = MDocType.getOfDocBaseType(Env.getCtx(), DocBaseType);
+		MDocType[] doc = MDocType.getOfDocBaseType(Env.getCtx(), DocBaseType,Env.getAD_Org_ID(Env.getCtx()));
 		return doc.length > 0 ? doc[0].get_ID() : 0;
 	}
 	
@@ -59,13 +63,14 @@ public class MDocType extends X_C_DocType implements ImmutablePOSupport
 	 * 	Get Client Document Type with DocBaseType
 	 *	@param ctx context
 	 *	@param DocBaseType base document type
+	 *  @param AD_Org_ID
 	 *	@return array of doc types
 	 */
-	static public MDocType[] getOfDocBaseType (Properties ctx, String DocBaseType)
+	static public MDocType[] getOfDocBaseType (Properties ctx, String DocBaseType,int AD_Org_ID)
 	{
-		final String whereClause  = "AD_Client_ID=? AND DocBaseType=?";
+		final String whereClause  = "AD_Client_ID=? AND DocBaseType=? AND AD_Org_ID in (0,?)";
 		List<MDocType> list = new Query(ctx, Table_Name, whereClause, null)
-									.setParameters(Env.getAD_Client_ID(ctx), DocBaseType)
+									.setParameters(Env.getAD_Client_ID(ctx), DocBaseType,AD_Org_ID)
 									.setOnlyActiveRecords(true)
 									.setOrderBy("IsDefault DESC, C_DocType_ID")
 									.list();
@@ -104,12 +109,8 @@ public class MDocType extends X_C_DocType implements ImmutablePOSupport
 	 */
 	static public MDocType get (Properties ctx, int C_DocType_ID)
 	{
-		MDocType retValue = s_cache.get(ctx, C_DocType_ID, e -> new MDocType(ctx, e));
-		if (retValue != null)
-			return retValue;
-		
-		retValue = new MDocType (ctx, C_DocType_ID, (String)null);
-		if (retValue.getC_DocType_ID() == C_DocType_ID)
+		MDocType retValue = (MDocType)s_cache.get(C_DocType_ID);
+		if (retValue == null)
 		{
 			s_cache.put(C_DocType_ID, retValue, e -> new MDocType(Env.getCtx(), e));
 			return retValue;
@@ -299,6 +300,17 @@ public class MDocType extends X_C_DocType implements ImmutablePOSupport
 	{
 		/*if (getAD_Org_ID() != 0)
 			setAD_Org_ID(0);*/
+		
+		// F3P: improve readability of duplicate name error
+		
+		if(newRecord)
+		{
+			int no = DB.getSQLValue(get_TrxName(), "SELECT count('ok') FROM C_DocType WHERE AD_Client_ID = ? and Name = ?", getAD_Client_ID(), getName());
+			
+			if(no > 0)
+				throw new AdempiereException("@AlreadyExists@: " + getName());			
+		}
+		
 		return true;
 	}	//	beforeSave
 	
@@ -317,8 +329,8 @@ public class MDocType extends X_C_DocType implements ImmutablePOSupport
 				.append("(AD_Client_ID,AD_Org_ID,IsActive,Created,CreatedBy,Updated,UpdatedBy,")
 				.append("C_DocType_ID , AD_Ref_List_ID, AD_Role_ID) ")
 				.append("(SELECT ")
-				.append(getAD_Client_ID()).append(",0,'Y', getDate(),") 
-				.append(getUpdatedBy()).append(", getDate(),").append(getUpdatedBy()) 
+				.append(getAD_Client_ID()).append(",0,'Y', SysDate,") 
+				.append(getUpdatedBy()).append(", SysDate,").append(getUpdatedBy()) 
 				.append(", doctype.C_DocType_ID, action.AD_Ref_List_ID, rol.AD_Role_ID ")
 				.append("FROM AD_Client client ")
 				.append("INNER JOIN C_DocType doctype ON (doctype.AD_Client_ID=client.AD_Client_ID) ")
@@ -326,10 +338,13 @@ public class MDocType extends X_C_DocType implements ImmutablePOSupport
 				.append("INNER JOIN AD_Role rol ON (rol.AD_Client_ID=client.AD_Client_ID) ")
 				.append("WHERE client.AD_Client_ID=").append(getAD_Client_ID()) 
 				.append(" AND doctype.C_DocType_ID=").append(get_ID())
-				.append(" AND rol.IsManual='N'")
-				.append(")");
-			
-			int docact = DB.executeUpdate(sqlDocAction.toString(), get_TrxName());
+				.append(" AND (rol.IsManual='N' OR ? ='Y')") //F3P: Manage AutoUpdateDocActionAccess variable
+				.append(")");			
+						
+			//F3P: Manage AutoUpdateDocActionAccess variable
+			Object[] oParams = new Object[1];
+			oParams[0] = STDSysConfig.isRoleAutoUpdateDocActionAccessAsString(getAD_Client_ID(), getAD_Org_ID());
+			int docact = DB.executeUpdate(sqlDocAction.toString(), oParams , false, get_TrxName());
 			if (log.isLoggable(Level.FINE)) log.fine("AD_Document_Action_Access=" + docact);
 		}
 		return success;
@@ -360,7 +375,7 @@ public class MDocType extends X_C_DocType implements ImmutablePOSupport
         int relatedDocTypeId = 0;
         if (docTypeId != 0)
         {
-            MDocType docType = MDocType.get(docTypeId);
+            MDocType docType = MDocType.get(Env.getCtx(), docTypeId);
             // FIXME: Should refactor code and remove the hard coded name
             // Should change document type to allow query the value
             if ("Return Material".equals(docType.getName()) ||

@@ -31,6 +31,20 @@ public class WCreateFromFactory
 	 */
 	public static ICreateFrom create (GridTab mTab)
 	{
+		/*
+		
+		ICreateFrom createFrom = null;
+		List<ICreateFromFactory> factories = Service.locator().list(ICreateFromFactory.class).getServices();
+		for (ICreateFromFactory factory : factories) 
+		{
+			createFrom = factory.create(mTab);
+			if (createFrom != null)
+				break;
+		}
+		return createFrom;
+		
+		*/
+	
 		return Extensions.getCreateFrom(mTab);
 	}
 }

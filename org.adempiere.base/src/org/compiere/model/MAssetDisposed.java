@@ -17,12 +17,17 @@ import org.idempiere.fa.exceptions.AssetNotSupportedException;
 import org.idempiere.fa.exceptions.AssetStatusChangedException;
 import org.idempiere.fa.util.POCacheLocal;
 
+import it.idempiere.base.model.LITMAssetDisposed;
+
 
 
 /**
  * Asset Disposal Model
  * @author Teo Sarca, SC ARHIPAC SERVICE SRL
+ * 
+ * @author Silvano Trinchero, FreePath srl (www.freepath.it)
  */
+
 public class MAssetDisposed extends X_A_Asset_Disposed
 implements DocAction
 {
@@ -124,7 +129,7 @@ implements DocAction
 		MPeriod.testPeriodOpen(getCtx(), getDateAcct(), MDocType.DOCBASETYPE_GLDocument, getAD_Org_ID());
 
 		//saveEx() //commented by @win
-		updateFromAsset(this);
+		//updateFromAsset(this);
 		saveEx(get_TrxName()); //added by @win
 		if (is_Changed())
 		{
@@ -221,14 +226,31 @@ implements DocAction
 				)
 			{
 				asset.changeStatus(MAsset.A_ASSET_STATUS_Disposed, null);
-				setA_Disposal_Amt(getA_Asset_Cost());
-				setA_Accumulated_Depr_Delta(getA_Accumulated_Depr());
-				setExpense(getA_Disposal_Amt().subtract(getA_Accumulated_Depr_Delta()));
+				MDepreciationWorkfile assetwk = MDepreciationWorkfile.get(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
+				setA_Asset_Cost(assetwk.getA_Asset_Cost());
+				setA_Accumulated_Depr(assetwk.getA_Accumulated_Depr());
+				setA_Disposal_Amt(BigDecimal.ZERO);
+				setExpense(getA_Asset_Cost().subtract(assetwk.getA_Accumulated_Depr()));
+				setA_Accumulated_Depr_Delta(getExpense());
 				createDisposal();
 			}
 			else if (A_DISPOSED_METHOD_PartialRetirement.equals(method))
 			{
 				createDisposal();
+			}
+			// F3P: added 'sale' as a disposal method
+			else if(LITMAssetDisposed.A_DISPOSED_METHOD_Sale.equals(method))
+			{
+//				if(getA_Disposal_Amt().compareTo(getA_Asset_Cost().subtract(getA_Accumulated_Depr()))==0)
+//				{
+//					asset.changeStatus(MAsset.A_ASSET_STATUS_Sold, null);
+//					asset.setIsFullyDepreciated(true);
+//				}
+//				else//Not completely sold
+//					asset.changeStatus(MAsset.A_ASSET_STATUS_Activated,null);
+
+				createSaleDisposal(asset);
+
 			}
 			else
 			{
@@ -288,7 +310,7 @@ implements DocAction
 	
 	public String getSummary()
 	{
-		return new StringBuilder()
+		return new StringBuffer()
 				.append(getDocumentNo()).append("/").append(getDateDoc())
 				.toString();
 	}
@@ -406,7 +428,7 @@ implements DocAction
 		//
 		BigDecimal A_Accumulated_Depr = bean.getA_Accumulated_Depr();
 		BigDecimal A_Accumulated_Depr_Delta = A_Accumulated_Depr.multiply(coef).setScale(precision, RoundingMode.HALF_UP);
-		BigDecimal Expense = A_Disposal_Amt.subtract(A_Accumulated_Depr_Delta);
+		BigDecimal Expense = A_Accumulated_Depr_Delta.subtract(A_Disposal_Amt);
 		//
 		bean.setA_Accumulated_Depr_Delta(A_Accumulated_Depr_Delta);
 		bean.setExpense(Expense);
@@ -414,40 +436,11 @@ implements DocAction
 	
 	private void createDisposal()
 	{
-		for (MDepreciationWorkfile assetwk :  MDepreciationWorkfile.forA_Asset_ID(getCtx(), getA_Asset_ID(), get_TrxName()))
-		{
-			BigDecimal disposalAmt = Env.ZERO;
-			BigDecimal accumDeprAmt = Env.ZERO;
-			if (assetwk.getC_AcctSchema().getC_Currency_ID() != getC_Currency_ID()) 
-			{
-				disposalAmt  =  assetwk.getA_Asset_Cost();
-				accumDeprAmt = assetwk.getA_Accumulated_Depr();
-			} else
-			{
-				disposalAmt = getA_Disposal_Amt();
-				accumDeprAmt = getA_Accumulated_Depr_Delta();
-			}			
-			
-			MAssetChange change = new MAssetChange (getCtx(), 0, get_TrxName());
-			change.setAD_Org_ID(getAD_Org_ID()); 
-			change.setA_Asset_ID(getA_Asset_ID());
-			change.setChangeType(MAssetChange.CHANGETYPE_Disposal);
-			change.setTextDetails(MRefList.getListDescription (getCtx(),"A_Update_Type" , MAssetChange.CHANGETYPE_Disposal));
-			change.setPostingType(assetwk.getPostingType());
-			change.setAssetValueAmt(disposalAmt);
-			change.setAssetBookValueAmt(assetwk.getA_Asset_Remaining());
-			change.setAssetAccumDepreciationAmt(accumDeprAmt);
-			change.setA_QTY_Current(assetwk.getA_QTY_Current());
-			change.setC_AcctSchema_ID(assetwk.getC_AcctSchema_ID());
-			change.setAssetDisposalDate(getA_Disposed_Date());
-			change.setIsDisposed(true);
-			change.saveEx(get_TrxName());
-			
-			assetwk.adjustCost(disposalAmt.negate(), Env.ZERO, false);
-			assetwk.adjustAccumulatedDepr(accumDeprAmt.negate(), accumDeprAmt.negate(), false);
-			assetwk.saveEx();
-			assetwk.buildDepreciation();
-		}
+		MDepreciationWorkfile assetwk = MDepreciationWorkfile.get(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
+		assetwk.adjustCost(getA_Asset_Cost().negate(), Env.ZERO, false);
+		assetwk.adjustAccumulatedDepr(getA_Accumulated_Depr().negate(), getA_Accumulated_Depr().negate(), false);
+		assetwk.saveEx();
+		assetwk.buildDepreciation();
 		//
 		// Delete not processed expense entries
 		List<MDepreciationExp> list = MDepreciationExp.getNotProcessedEntries(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
@@ -455,5 +448,46 @@ implements DocAction
 		{
 			ex.deleteEx(false);
 		}	
+	}
+	
+	private void createSaleDisposal(MAsset asset)
+	{
+		MDepreciationWorkfile assetwk = MDepreciationWorkfile.get(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
+		assetwk.adjustCost(getA_Asset_Cost().negate(), Env.ZERO, false);
+		assetwk.adjustAccumulatedDepr(getA_Accumulated_Depr().negate(), getA_Accumulated_Depr().negate(), false);
+
+		assetwk.saveEx();
+		assetwk.buildDepreciation();
+		
+		List<MDepreciationExp> list = MDepreciationExp.getNotProcessedEntries(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
+
+		boolean wasAssetNull = false;
+		if(asset == null)
+		{
+			asset = assetwk.getAsset();
+			wasAssetNull=true;
+		}
+		
+		BigDecimal remaining = assetwk.getA_Asset_Cost().subtract(assetwk.getA_Accumulated_Depr());
+
+		if(remaining.compareTo(Env.ZERO)<= 0)
+		{
+			asset.setA_Asset_Status(A_ASSET_STATUS_Sold);
+			asset.setIsFullyDepreciated(true);
+			asset.setAssetDisposalDate(getA_Disposed_Date());
+			asset.saveEx(get_TrxName());
+			
+			for (MDepreciationExp ex : list)
+			{
+				ex.deleteEx(false);
+			}
+		}
+		else
+		{
+			asset.setA_Asset_Status(A_ASSET_STATUS_Activated);
+		}
+		
+		if(wasAssetNull == true && asset != null)
+			asset.saveEx(get_TrxName());
 	}
 }

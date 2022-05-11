@@ -41,6 +41,7 @@ import java.util.logging.Level;
 import org.compiere.acct.DocManager;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MClient;
+import org.compiere.model.MClientInfo;
 import org.compiere.model.MCost;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
@@ -106,8 +107,23 @@ public class ClientAcctProcessor extends SvrProcess
 
 		if (p_C_AcctSchema_ID == 0)
 			m_ass = MAcctSchema.getClientAcctSchema(getCtx(), getAD_Client_ID());
+		else	//	accounting schema selected by user and accounting schema of client info 
+		{
+			//nectosoft porting adempiere
+			MClientInfo info = MClientInfo.get(getCtx(), getAD_Client_ID(), get_TrxName());
+			if (p_C_AcctSchema_ID != info.getC_AcctSchema1_ID())
+			{
+				m_ass = new MAcctSchema[2];
+				m_ass[0] = new MAcctSchema (getCtx(), p_C_AcctSchema_ID, get_TrxName());
+				m_ass[1] = new MAcctSchema (getCtx(), info.getC_AcctSchema1_ID(), get_TrxName()); 
+			}
+			//nectosoft end
 		else	//	only specific accounting schema
+			else //	only specific accounting schema
+			{
 			m_ass = new MAcctSchema[] {new MAcctSchema (getCtx(), p_C_AcctSchema_ID, get_TrxName())};
+			}
+		}
 
 		postSession();
 		MCost.create(m_client);

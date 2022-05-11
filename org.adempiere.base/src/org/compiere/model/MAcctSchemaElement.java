@@ -555,6 +555,19 @@ public class MAcctSchemaElement extends X_C_AcctSchema_Element implements Immuta
 		MAccount.updateValueDescription(getCtx(),msguvd.toString(), get_TrxName());
 	}	//	updateData
 
+	
+	@Override
+	protected boolean beforeDelete ()
+	{
+		String et = getElementType();
+		// Acct Schema Elements "Account" and "Org" should be mandatory - teo_sarca BF [ 1795817 ] 
+		if (ELEMENTTYPE_Account.equals(et) || ELEMENTTYPE_Organization.equals(et)) {
+			log.saveError("Error", Msg.parseTranslation(getCtx(), "@DeleteError@ @IsMandatory@"));
+			return false;
+		}
+		return true;
+	}
+	
 	/**
 	 * After Delete
 	 * @param success success

@@ -326,6 +326,11 @@ public class MJournalLine extends X_GL_JournalLine
 			amt = amt.setScale(getPrecision(), RoundingMode.HALF_UP);
 		setAmtAcctCr(amt);
  
+		//	Set Line Org to Doc Org if still not set
+		if(getAD_Org_ID() <= 0) 
+		{ 
+			setAD_Org_ID(getParent().getAD_Org_ID()); 
+		} 
 		return true;
 	}	//	beforeSave
 	

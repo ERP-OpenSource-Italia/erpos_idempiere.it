@@ -209,6 +209,8 @@ public class GenericPOElementHandler extends AbstractElementHandler {
 			}
 		} catch (Exception e)	{
 			throw new AdempiereException(e);
+		} finally {
+			DB.close(rs, stmt);
 		}
 	}
 

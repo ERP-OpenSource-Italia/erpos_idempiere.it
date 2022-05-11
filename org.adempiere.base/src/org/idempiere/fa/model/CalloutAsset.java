@@ -12,7 +12,9 @@ import java.util.logging.Level;
 import org.compiere.model.CalloutEngine;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
+import org.compiere.model.I_A_Asset;
 import org.compiere.model.MAsset;
+import org.compiere.model.SetGetUtil;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 
@@ -24,14 +26,15 @@ public class CalloutAsset extends CalloutEngine {
 	
 	public String location (Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value, Object oldValue)
 	{
-		Integer locator = (Integer)value;
-		if (locator == null || locator <= 0)
+		Integer location = (Integer)value;
+		if (location == null || location <= 0)
 			return "";
 		if (isCalloutActive())
 			return "";
-		//
-		//TODO - found missing but MAsset table is asking for this in 3 location fields.
-		//
+		
+		//F3P from adempiere
+		mTab.setValue(I_A_Asset.COLUMNNAME_M_Locator_ID, null);
+		
 		return "";
 	}
 	public String locator (Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value, Object oldValue)
@@ -42,9 +45,10 @@ public class CalloutAsset extends CalloutEngine {
 			return "";
 		if (isCalloutActive())
 			return "";
-		//
-		//TODO - found missing but MAsset table is asking for this in 3 location fields.
-		//
+		
+		//F3P from adempiere		
+		mTab.setValue(I_A_Asset.COLUMNNAME_C_Location_ID, null);
+		
 		return "";
 	}
 	
@@ -55,7 +59,11 @@ public class CalloutAsset extends CalloutEngine {
 		{
 			MAsset asset = new MAsset(ctx, (Integer) value, null);
 			if (asset != null)
-			mTab.setValue(MAsset.COLUMNNAME_M_Product_ID, asset.getM_Product_ID());
+				
+			if(asset.getM_Product_ID() > 0)
+				mTab.setValue(MAsset.COLUMNNAME_M_Product_ID, asset.getM_Product_ID());
+			else
+				mTab.setValue(MAsset.COLUMNNAME_M_Product_ID, null);
 		}
 		
 		return "";
@@ -186,17 +194,15 @@ public class CalloutAsset extends CalloutEngine {
 		}	//	Period Type	
 
 	/** ARHIPAC: TEO: BEGIN ------------------------------------------------------------------------------------------------------------------------------ */
-	/* commented by @win - no necessary code
+	//F3P: from adempiere ripristinato
 	public String invoiceLineProduct(Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value, Object oldValue) {
 		if (isCalloutActive()) {
 			return "";
 		}
-		ro.arhipac.adempiere.fa.ModelValidator.modelChange_InvoiceLine(
-				SetGetUtil.wrap(mTab),
-				-1);
+		ModelValidator.modelChange_InvoiceLine(SetGetUtil.wrap(mTab),-1);
 		return "";
-	}
-	
+	}//F3P:end
+	/* commented by @win - no necessary code
 	public String inventoryLineProduct(Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value, Object oldValue) {
 		if (isCalloutActive()) {
 			return "";

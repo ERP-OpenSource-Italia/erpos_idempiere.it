@@ -23,6 +23,7 @@ import java.util.Calendar;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.compiere.util.CCache;
 import org.compiere.util.Env;
 import org.compiere.util.TimeUtil;
 import org.idempiere.cache.ImmutableIntPOCache;
@@ -51,7 +52,7 @@ public class MInvoiceSchedule extends X_C_InvoiceSchedule implements ImmutablePO
 	{
 		return get(Env.getCtx(), C_InvoiceSchedule_ID, trxName);
 	}
-	
+
 	/**
 	 * 	Get MInvoiceSchedule (Immutable) from Cache
 	 *	@param C_InvoiceSchedule_ID id
@@ -61,10 +62,10 @@ public class MInvoiceSchedule extends X_C_InvoiceSchedule implements ImmutablePO
 	{
 		return get(C_InvoiceSchedule_ID, (String)null);
 	}
-	
+
 	/**
-	 * 	Get MInvoiceSchedule (Immutable) from Cache
-	 *  @param ctx context
+	 * 	Get MInvoiceSchedule from Cache
+	 *	@param ctx context
 	 *	@param C_InvoiceSchedule_ID id
 	 *	@param trxName transaction
 	 *	@return MInvoiceSchedule
@@ -72,16 +73,13 @@ public class MInvoiceSchedule extends X_C_InvoiceSchedule implements ImmutablePO
 	public static MInvoiceSchedule get (Properties ctx, int C_InvoiceSchedule_ID, String trxName)
 	{
 		Integer key = Integer.valueOf(C_InvoiceSchedule_ID);
-		MInvoiceSchedule retValue = (MInvoiceSchedule) s_cache.get (ctx, key, e -> new MInvoiceSchedule(ctx, e));
+		MInvoiceSchedule retValue = (MInvoiceSchedule) s_cache.get (key);
 		if (retValue != null)
 			return retValue;
-		retValue = new MInvoiceSchedule (Env.getCtx(), C_InvoiceSchedule_ID, trxName);
-		if (retValue.get_ID () == C_InvoiceSchedule_ID) 
-		{
-			s_cache.put (key, retValue, e -> new MInvoiceSchedule(Env.getCtx(), e));
-			return retValue;
-		}
-		return null;
+		retValue = new MInvoiceSchedule (ctx, C_InvoiceSchedule_ID, trxName);
+		if (retValue.get_ID () != 0)
+			s_cache.put (key, retValue);
+		return retValue;
 	}	//	get
 
 	/**	Cache						*/
@@ -153,7 +151,12 @@ public class MInvoiceSchedule extends X_C_InvoiceSchedule implements ImmutablePO
 	public boolean canInvoice (Timestamp xDate, BigDecimal orderAmt)
 	{
 		//	Amount
-		if (isAmount() && getAmt() != null && orderAmt != null 
+		if (isAmount())	// f3p changed to immediately return false if amount below limit
+		{
+			return false;
+		}
+		
+		if (getAmt() != null && orderAmt != null 
 			&& orderAmt.compareTo(getAmt()) >= 0)
 			return true;
 
@@ -164,21 +167,54 @@ public class MInvoiceSchedule extends X_C_InvoiceSchedule implements ImmutablePO
 	 * 	Can I send Invoice
 	 * 	@param xDate date
 	 *	@return true if I can send Invoice
+	 *  @deprecated use variant with invoice date 
 	 */
+	
 	public boolean canInvoice (Timestamp xDate)
 	{
-		//	Daily
-		if (INVOICEFREQUENCY_Daily.equals(getInvoiceFrequency()))
-			return true;
-
+		return canInvoice(xDate,(Timestamp)null);
+	}
+	
+	/**
+	 * 	Can I send Invoice
+	 * 	@param xDate date
+	 *  @param invoiceDate date of invoice being generated
+	 *	@return true if I can send Invoice
+	 */
+	public boolean canInvoice (Timestamp xDate,Timestamp invoicingDate)
+	{
+		if (isAmount())	// f3p return false if amount below limit
+		{
+			return false;
+		}
+		
 		//	Remove time
 		xDate = TimeUtil.getDay(xDate);
-		Calendar today = TimeUtil.getToday();
 		
+		// F3P: use invoice date and not today, with 'today' as default
+		
+		Calendar today = null;
+		
+		if(invoicingDate != null)
+		{
+			today = Calendar.getInstance();
+			today.setTime(TimeUtil.getDay(invoicingDate));
+		}
+		else
+			today = TimeUtil.getToday();
+		
+		//	Daily
+		if (INVOICEFREQUENCY_Daily.equals(getInvoiceFrequency()))
+		{
+			Timestamp tsInvoicingDate = new Timestamp(today.getTimeInMillis());
+			
+			return !xDate.after(tsInvoicingDate);
+		}
+
 		//	Weekly
 		if (INVOICEFREQUENCY_Weekly.equals(getInvoiceFrequency()))
 		{
-			Calendar cutoff = TimeUtil.getToday();
+			Calendar cutoff = (Calendar)today.clone(); // F3P: using 'today' (dateInvoiced/today)
 			cutoff.set(Calendar.DAY_OF_WEEK, getCalendarDay(getInvoiceWeekDayCutoff()));
 			if (cutoff.after(today))
 				cutoff.add(Calendar.DAY_OF_YEAR, -7);
@@ -188,7 +224,7 @@ public class MInvoiceSchedule extends X_C_InvoiceSchedule implements ImmutablePO
 			if (xDate.after(cutoffDate))
 				return false;
 			//
-			Calendar invoice = TimeUtil.getToday();
+			Calendar invoice = (Calendar)today.clone(); // F3P: using 'today' (dateInvoiced/today)
 			invoice.set(Calendar.DAY_OF_WEEK, getCalendarDay(getInvoiceWeekDay()));
 			if (invoice.after(today))
 				invoice.add(Calendar.DAY_OF_YEAR, -7);
@@ -206,26 +242,42 @@ public class MInvoiceSchedule extends X_C_InvoiceSchedule implements ImmutablePO
 		{
 			if (getInvoiceDayCutoff() > 0)
 			{
-				Calendar cutoff = TimeUtil.getToday();
-				cutoff.set(Calendar.DAY_OF_MONTH, getInvoiceDayCutoff());
+				Calendar cutoff = (Calendar)today.clone(); // F3P: using 'today' (dateInvoiced/today)
+				
+				int cutoffDay = getInvoiceDayCutoff();
+				
+				if(cutoffDay == today.getMaximum(Calendar.DAY_OF_MONTH)) // F3P: manage 31 as 'last day of month'
+					cutoffDay = today.getActualMaximum(Calendar.DAY_OF_MONTH);
+				
+				cutoff.set(Calendar.DAY_OF_MONTH, cutoffDay);
 				if (cutoff.after(today))
 					cutoff.add(Calendar.MONTH, -1);
 				Timestamp cutoffDate = new Timestamp (cutoff.getTimeInMillis());
 				if (log.isLoggable(Level.FINE)) log.fine("canInvoice - Date=" + xDate + " > Cutoff=" + cutoffDate 
 					+ " - " + xDate.after(cutoffDate));
-				if (xDate.after(cutoffDate))
+				if (xDate.after(cutoffDate) && INVOICEFREQUENCY_Monthly.equals(getInvoiceFrequency())) // F3P: dont fail if its twice monthly
 					return false;
 			}
-			Calendar invoice = TimeUtil.getToday();
-			invoice.set(Calendar.DAY_OF_MONTH, getInvoiceDay());
+			Calendar invoice = (Calendar)today.clone(); // F3P: using 'today' (dateInvoiced/today)
+			
+			int invoiceDay = getInvoiceDay();
+			
+			if(invoiceDay == today.getMaximum(Calendar.DAY_OF_MONTH)) // F3P: manage 31 as 'last day of month'
+				invoiceDay = today.getActualMaximum(Calendar.DAY_OF_MONTH);
+						
+			invoice.set(Calendar.DAY_OF_MONTH, invoiceDay);
 			if (invoice.after(today))
 				invoice.add(Calendar.MONTH, -1);
 			Timestamp invoiceDate = new Timestamp (invoice.getTimeInMillis());
 			if (log.isLoggable(Level.FINE)) log.fine("canInvoice - Date=" + xDate + " > Invoice=" + invoiceDate 
 				+ " - " + xDate.after(invoiceDate));
 			if (xDate.after(invoiceDate))
-				return false;
-			return true;
+			{
+				if(INVOICEFREQUENCY_Monthly.equals(getInvoiceFrequency())) // F3P: dont fail if its twice monthly
+					return false;
+			}
+			else
+				return true;
 		}
 
 		//	Bi-Monthly (+15)
@@ -233,16 +285,28 @@ public class MInvoiceSchedule extends X_C_InvoiceSchedule implements ImmutablePO
 		{
 			if (getInvoiceDayCutoff() > 0)
 			{
-				Calendar cutoff = TimeUtil.getToday();
-				cutoff.set(Calendar.DAY_OF_MONTH, getInvoiceDayCutoff() +15);
+				Calendar cutoff = (Calendar)today.clone(); // F3P: using 'today' (dateInvoiced/today)
+				
+				int invoiceDayCutoff = getInvoiceDayCutoff() +16;
+				
+				if(invoiceDayCutoff >= today.getMaximum(Calendar.DAY_OF_MONTH)) // F3P: manage 31 as 'last day of month'
+					invoiceDayCutoff = today.getActualMaximum(Calendar.DAY_OF_MONTH);
+				
+				cutoff.set(Calendar.DAY_OF_MONTH, invoiceDayCutoff);
 				if (cutoff.after(today))
 					cutoff.add(Calendar.MONTH, -1);
 				Timestamp cutoffDate = new Timestamp (cutoff.getTimeInMillis());
 				if (xDate.after(cutoffDate))
 					return false;
 			}
-			Calendar invoice = TimeUtil.getToday();
-			invoice.set(Calendar.DAY_OF_MONTH, getInvoiceDay() +15);
+			Calendar invoice = (Calendar)today.clone(); // F3P: using 'today' (dateInvoiced/today)
+			
+			int invoiceDay = getInvoiceDay() +16;
+			
+			if(invoiceDay >= today.getMaximum(Calendar.DAY_OF_MONTH)) // F3P: manage 31 as 'last day of month'
+				invoiceDay = today.getActualMaximum(Calendar.DAY_OF_MONTH);
+			
+			invoice.set(Calendar.DAY_OF_MONTH, invoiceDay);
 			if (invoice.after(today))
 				invoice.add(Calendar.MONTH, -1);
 			Timestamp invoiceDate = new Timestamp (invoice.getTimeInMillis());
@@ -275,7 +339,7 @@ public class MInvoiceSchedule extends X_C_InvoiceSchedule implements ImmutablePO
 	//	if (INVOICEWEEKDAY_Thursday.equals(day))
 		return Calendar.THURSDAY;
 	}	//	getCalendarDay
-
+	
 	@Override
 	public MInvoiceSchedule markImmutable() {
 		if (is_Immutable())

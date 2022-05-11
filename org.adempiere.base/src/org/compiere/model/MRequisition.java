@@ -27,6 +27,7 @@ import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.process.DocAction;
+import org.compiere.process.DocOptions;
 import org.compiere.process.DocumentEngine;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -47,7 +48,8 @@ import org.compiere.util.TimeUtil;
  *  @author Teo Sarca, www.arhipac.ro
  *  		<li>FR [ 2744682 ] Requisition: improve error reporting
  */
-public class MRequisition extends X_M_Requisition implements DocAction
+//F3P add DocOptions
+public class MRequisition extends X_M_Requisition implements DocAction, DocOptions
 {
 	/**
 	 * 
@@ -215,7 +217,7 @@ public class MRequisition extends X_M_Requisition implements DocAction
 	}	//	process
 	
 	/**	Process Message 			*/
-	private String			m_processMsg = null;
+	protected String			m_processMsg = null;
 	/**	Just Prepared Flag			*/
 	private boolean 		m_justPrepared = false;
 
@@ -424,7 +426,7 @@ public class MRequisition extends X_M_Requisition implements DocAction
 				finalQty = Env.ZERO;
 			else
 			{
-				MOrderLine ol = new MOrderLine (getCtx(), line.getC_OrderLine_ID(), get_TrxName());
+				MOrderLine ol = PO.get(getCtx(),MOrderLine.Table_Name, line.getC_OrderLine_ID(), get_TrxName());
 				finalQty = ol.getQtyOrdered();
 			}
 			//	final qty is not line qty
@@ -507,14 +509,20 @@ public class MRequisition extends X_M_Requisition implements DocAction
 			return false;
 
 	//	setProcessed(false);
-		if (! reverseCorrectIt())
-			return false;
+//		if (! reverseCorrectIt()) //LS removed, throws 'PerformWork Error - MWFNode[(DocAuto)-DocumentAction=--] - DocStatus=CO'
+//			return false;
+		
+		MFactAcct.deleteEx(MRequisition.Table_ID, getM_Requisition_ID(), get_TrxName());
+		setPosted(false);
 
 		// After reActivate
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_AFTER_REACTIVATE);
 		if (m_processMsg != null)
 			return false;
-
+		
+		setDocAction(DOCACTION_Complete);
+		setProcessed(false);
+	
 		return true;
 	}	//	reActivateIt
 	
@@ -596,4 +604,24 @@ public class MRequisition extends X_M_Requisition implements DocAction
 			|| DOCSTATUS_Reversed.equals(ds);
 	}	//	isComplete
 	
+	// F3P: needed to manage prepare state
+	@Override
+	public int customizeValidActions(String docStatus, Object processing,
+			String orderType, String isSOTrx, int AD_Table_ID, String[] docAction,
+			String[] options, int index)
+	{
+		if (docStatus.equals(DocumentEngine.STATUS_Drafted))
+		{
+			options[index++] = DocumentEngine.ACTION_Prepare;
+		}
+		
+		// LS: needed to manage reactivate state
+		if (docStatus.equals(DOCSTATUS_Completed)) {
+			options[index++] = DocumentEngine.ACTION_ReActivate;
+		}
+		// LS end
+		
+		return index;
+	}
+	//F3P end
 }	//	MRequisition

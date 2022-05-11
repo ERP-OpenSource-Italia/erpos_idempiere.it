@@ -1,5 +1,5 @@
 /******************************************************************************
- * Product: Adempiere ERP & CRM Smart Business Solution                       *
+ * Product: Adempiere ERP & CRM Smart Business Solution                        *
  * Copyright (C) 1999-2006 ComPiere, Inc. All Rights Reserved.                *
  * This program is free software; you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
@@ -16,37 +16,16 @@
  *****************************************************************************/
 package org.compiere.util;
 
-import java.io.File;
-import java.sql.Timestamp;
-import java.util.Enumeration;
-import java.util.Properties;
-import java.util.logging.Level;
+import java.sql.*;
+import java.util.*;
+import java.util.logging.*;
+import javax.servlet.*;
+import javax.servlet.http.*;
+import org.apache.ecs.*;
+import org.apache.ecs.xhtml.*;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
-import org.adempiere.util.ServerContext;
-import org.apache.ecs.AlignType;
-import org.apache.ecs.xhtml.a;
-import org.apache.ecs.xhtml.body;
-import org.apache.ecs.xhtml.br;
-import org.apache.ecs.xhtml.comment;
-import org.apache.ecs.xhtml.h3;
-import org.apache.ecs.xhtml.hr;
-import org.apache.ecs.xhtml.img;
-import org.apache.ecs.xhtml.p;
-import org.apache.ecs.xhtml.script;
-import org.apache.ecs.xhtml.table;
-import org.apache.ecs.xhtml.td;
-import org.apache.ecs.xhtml.tr;
-import org.compiere.Adempiere;
-import org.compiere.model.MClient;
-import org.compiere.model.MSystem;
+import org.compiere.*;
+import org.compiere.model.*;
 
 /**
  *  Web Environment and debugging
@@ -63,14 +42,15 @@ public class WebEnv
 
 	/**
 	 *  Base Directory links <b>http://localhost:8080/adempiere</b>
-	 *  to the physical <i>%adempiere_HOME%/jetty/webroot/adempiere</i> directory
+	 *  to the physical <i>%adempiere_HOME%/tomcat/webroot/adempiere</i> directory
 	 */
 	public static final String   	DIR_BASE    = "/adempiere";      //  /adempiere
 	/** Image Sub-Directory under BASE          */
 	private static final String     DIR_IMAGE   = "images";         //  /adempiere/images
 	/** Stylesheet Name                         */
-	private static final String     STYLE_STD   = "/css/standard.css";   //  /adempiere/standard.css
-	/** Small Logo. */
+	private static final String     STYLE_STD   = "standard.css";   //  /adempiere/standard.css
+	/** Small Logo.
+	/** Removing/modifying the adempiere logo is a violation of the license	*/
 	private static final String     LOGO        = "LogoSmall.gif";  //  /adempiere/LogoSmall.gif
 	/** Store Sub-Directory under BASE          */
 	private static final String     DIR_STORE   = "store";          //  /adempiere/store
@@ -112,25 +92,25 @@ public class WebEnv
 	{
 		if (s_initOK)
 		{
-			if (log.isLoggable(Level.INFO)) log.info(config.getServletName());
+			log.info(config.getServletName());
 			return true;
 		}
 
-		Enumeration<String> en = config.getInitParameterNames();
-		StringBuilder info = new StringBuilder("Servlet Init Parameter: ")
+		Enumeration en = config.getInitParameterNames();
+		StringBuffer info = new StringBuffer("Servlet Init Parameter: ")
 			.append(config.getServletName());
 		while (en.hasMoreElements())
 		{
-			String name = en.nextElement();
+			String name = en.nextElement().toString();
 			String value = config.getInitParameter(name);
 			System.setProperty(name, value);
 			info.append("\n").append(name).append("=").append(value);
 		}
 
 		boolean retValue = initWeb (config.getServletContext());
-
+		
 		//	Logging now initiated
-		if (log.isLoggable(Level.INFO)) log.info(info.toString());
+		log.info(info.toString());
 		return retValue;
 	}   //  initWeb
 
@@ -144,59 +124,49 @@ public class WebEnv
 	{
 		if (s_initOK)
 		{
-			if (log.isLoggable(Level.INFO)) log.info(context.getServletContextName());
+			log.info(context.getServletContextName());
 			return true;
 		}
-
-		Properties ctx = new Properties();
-		Env.setContext(ctx, Env.AD_CLIENT_ID, 0);
-		Env.setContext(ctx, Env.AD_USER_ID, 0);
-		ServerContext.setCurrentInstance(ctx);
 		
 		//  Load Environment Variables (serverApps/src/web/WEB-INF/web.xml)
-		Enumeration<String> en = context.getInitParameterNames();
-		StringBuilder info = new StringBuilder("Servlet Context Init Parameters: ")
+		Enumeration en = context.getInitParameterNames();
+		StringBuffer info = new StringBuffer("Servlet Context Init Parameters: ")
 			.append(context.getServletContextName());
 		while (en.hasMoreElements())
 		{
-			String name = en.nextElement();
+			String name = en.nextElement().toString();
 			String value = context.getInitParameter(name);
 			System.setProperty(name, value);
 			info.append("\n").append(name).append("=").append(value);
 		}
 
-		String propertyFile = Ini.getFileName(false);
-		File file = new File(propertyFile);
-		if (!file.exists())
-		{
-			throw new java.lang.IllegalStateException("idempiere.properties is not setup. PropertyFile="+propertyFile);
-		}
 		try
 		{
 			s_initOK = Adempiere.startup(false);
 		}
 		catch (Exception ex)
 		{
-			log.log(Level.SEVERE, "startup", ex);
+			log.log(Level.SEVERE, "startup", ex); 
 		}
 		if (!s_initOK)
 			return false;
 
 		//	Logging now initiated
-		if (log.isLoggable(Level.INFO)) log.info(info.toString());
-		//		
-		MClient client = MClient.get(Env.getCtx(), 0);
-		MSystem system = MSystem.get(Env.getCtx());
-		client.sendEMail(client.getRequestEMail(),
-			"Server started: " + system.getName() + " (" + WebUtil.getServerName() + ")",
+		log.info(info.toString());
+		//
+		Properties ctx = new Properties();
+		MClient client = MClient.get(ctx, 0);
+		MSystem system = MSystem.get(ctx);
+		client.sendEMail(client.getRequestEMail(), 
+			"Server started: " + system.getName(), 
 			"ServerInfo: " + context.getServerInfo(), null);
 
 		return s_initOK;
 	}	//	initWeb
 
-
+	
 	/**************************************************************************
-	 *  Get Base Directory entry.
+	 *  Get Base Directory entrry.
 	 *  <br>
 	 *  /adempiere/
 	 *  @param entry file entry or path
@@ -204,7 +174,7 @@ public class WebEnv
 	 */
 	public static String getBaseDirectory (String entry)
 	{
-		StringBuilder sb = new StringBuilder (DIR_BASE);
+		StringBuffer sb = new StringBuffer (DIR_BASE);
 		if (!entry.startsWith("/"))
 			sb.append("/");
 		sb.append(entry);
@@ -220,7 +190,7 @@ public class WebEnv
 	 */
 	public static String getImageDirectory(String entry)
 	{
-		StringBuilder sb = new StringBuilder (DIR_BASE);
+		StringBuffer sb = new StringBuffer (DIR_BASE);
 		sb.append("/").append(DIR_IMAGE);
 		if (!entry.startsWith("/"))
 			sb.append("/");
@@ -237,7 +207,7 @@ public class WebEnv
 	 */
 	public static String getStoreDirectory(String entry)
 	{
-		StringBuilder sb = new StringBuilder (DIR_BASE);
+		StringBuffer sb = new StringBuffer (DIR_BASE);
 		sb.append("/").append(DIR_STORE);
 		if (!entry.startsWith("/"))
 			sb.append("/");
@@ -247,6 +217,7 @@ public class WebEnv
 
 	/**
 	 *  Get Logo Path.
+	 *	Removing/modifying the adempiere logo is a violation of the license
 	 *  <p>
 	 *  /adempiere/LogoSmall.gif
 	 *  @return url to logo
@@ -258,12 +229,16 @@ public class WebEnv
 
 	/**
 	 *  Get Logo Image HTML tag.
+	 *	Removing/modifying the adempiere logo or copyright notice is a violation of the license
 	 *  @return Image
 	 */
 	public static img getLogo()
 	{
+		/** Removing/modifying the adempiere logo is a violation of the license	*/
 		return new img(getLogoURL()).setAlign(AlignType.RIGHT)
-			.setAlt("&copy; Jorg Janke/adempiere");
+		//	Changing the copyright notice in any way violates the license 
+		//	and you'll be held liable for any damage claims
+			.setAlt("&copy; Jorg Janke/adempiere");	
 	}   //  getLogo
 
 	/**
@@ -308,20 +283,20 @@ public class WebEnv
 	 */
 	public static void dump (ServletConfig config)
 	{
-		if (log.isLoggable(Level.CONFIG))log.config("ServletConfig " + config.getServletName());
-		if (log.isLoggable(Level.CONFIG))log.config("- Context=" + config.getServletContext());
+		log.config("ServletConfig " + config.getServletName());
+		log.config("- Context=" + config.getServletContext());
 		if (!CLogMgt.isLevelFiner())
 			return;
 		boolean first = true;
-		Enumeration<String> e = config.getInitParameterNames();
+		Enumeration e = config.getInitParameterNames();
 		while (e.hasMoreElements())
 		{
 			if (first)
 				log.finer("InitParameter:");
 			first = false;
-			String key = e.nextElement();
+			String key = (String)e.nextElement();
 			Object value = config.getInitParameter(key);
-			if (log.isLoggable(Level.FINER)) log.finer("- " + key + " = " + value);
+			log.finer("- " + key + " = " + value);
 		}
 	}	//	dump (ServletConfig)
 
@@ -331,20 +306,20 @@ public class WebEnv
 	 */
 	public static void dump (ServletContext ctx)
 	{
-		if (log.isLoggable(Level.CONFIG)) log.config("ServletContext " + ctx.getServletContextName());
-		if (log.isLoggable(Level.CONFIG)) log.config("- ServerInfo=" + ctx.getServerInfo());
+		log.config("ServletContext " + ctx.getServletContextName());
+		log.config("- ServerInfo=" + ctx.getServerInfo());
 		if (!CLogMgt.isLevelFiner())
 			return;
 		boolean first = true;
-		Enumeration<String> e = ctx.getInitParameterNames();
+		Enumeration e = ctx.getInitParameterNames();
 		while (e.hasMoreElements())
 		{
 			if (first)
 				log.finer("InitParameter:");
 			first = false;
-			String key = e.nextElement();
+			String key = (String)e.nextElement();
 			Object value = ctx.getInitParameter(key);
-			if (log.isLoggable(Level.FINER)) log.finer("- " + key + " = " + value);
+			log.finer("- " + key + " = " + value);
 		}
 		first = true;
 		e = ctx.getAttributeNames();
@@ -353,9 +328,9 @@ public class WebEnv
 			if (first)
 				log.finer("Attributes:");
 			first = false;
-			String key = e.nextElement();
+			String key = (String)e.nextElement();
 			Object value = ctx.getAttribute(key);
-			if (log.isLoggable(Level.FINER)) log.finer("- " + key + " = " + value);
+			log.finer("- " + key + " = " + value);
 		}
 	}	//	dump
 
@@ -365,20 +340,20 @@ public class WebEnv
 	 */
 	public static void dump (HttpSession session)
 	{
-		if (log.isLoggable(Level.CONFIG))log.config("Session " + session.getId());
-		if (log.isLoggable(Level.CONFIG))log.config("- Created=" + new Timestamp(session.getCreationTime()));
+		log.config("Session " + session.getId());
+		log.config("- Created=" + new Timestamp(session.getCreationTime()));
 		if (!CLogMgt.isLevelFiner())
 			return;
 		boolean first = true;
-		Enumeration<String> e = session.getAttributeNames();
+		Enumeration e = session.getAttributeNames();
 		while (e.hasMoreElements())
 		{
 			if (first)
 				log.finer("Attributes:");
 			first = false;
-			String key = e.nextElement();
+			String key = (String)e.nextElement();
 			Object value = session.getAttribute(key);
-			if (log.isLoggable(Level.FINER)) log.finer("- " + key + " = " + value);
+			log.finer("- " + key + " = " + value);
 		}
 	}	//	dump (session)
 
@@ -388,15 +363,15 @@ public class WebEnv
 	 */
 	public static void dump (HttpServletRequest request)
 	{
-		if (log.isLoggable(Level.CONFIG)) log.config("Request " + request.getProtocol() + " " + request.getMethod());
-		if (!log.isLoggable(Level.FINER))
+		log.config("Request " + request.getProtocol() + " " + request.getMethod());
+		if (!CLogMgt.isLevelFiner())
 			return;
 		log.finer("- Server="  + request.getServerName() + ", Port=" + request.getServerPort());
 		log.finer("- ContextPath=" + request.getContextPath()
 			+ ", ServletPath=" + request.getServletPath()
 			+ ", Query=" + request.getQueryString());
 		log.finer("- From " + request.getRemoteHost() + "/" + request.getRemoteAddr()
-			//	+ ":" + request.getRemotePort()
+			//	+ ":" + request.getRemotePort() 
 				+ " - User=" + request.getRemoteUser());
 		log.finer("- URI=" + request.getRequestURI() + ", URL=" + request.getRequestURL());
 		log.finer("- AuthType=" + request.getAuthType());
@@ -405,7 +380,7 @@ public class WebEnv
 		log.finer("- UserPrincipal=" + request.getUserPrincipal());
 		//
 		boolean first = true;
-		Enumeration<?> e = request.getHeaderNames();
+		Enumeration e = request.getHeaderNames();
 		/** Header Names */
 		while (e.hasMoreElements())
 		{
@@ -479,7 +454,7 @@ public class WebEnv
 		log.finer("- Class=" + request.getClass().getName());
 	}	//	dump (Request)
 
-
+	
 	/**************************************************************************
 	 *  Add Footer (with diagnostics)
 	 *  @param request request
@@ -496,8 +471,6 @@ public class WebEnv
 		p footer = new p();
 		footer.addElement(org.compiere.Adempiere.DATE_VERSION + ": ");
 		footer.addElement(new a("javascript:diag_window();", "Window Info"));
-		footer.addElement(" - ");
-		footer.addElement(new a("javascript:parent.resizeFrame('5,*');", "Menu"));
 		footer.addElement(" - ");
 		footer.addElement(new a("javascript:diag_navigator();", "Browser Info"));
 		footer.addElement(" - ");
@@ -532,7 +505,7 @@ public class WebEnv
 	{
 		table table = new table();
 		table.setID("DEBUG");
-		Enumeration<?> e;
+		Enumeration e;
 
 		tr space = new tr().addElement(new td().addElement("."));
 		//	Request Info

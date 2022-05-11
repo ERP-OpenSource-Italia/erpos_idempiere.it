@@ -31,11 +31,15 @@ import org.adempiere.webui.event.ValueChangeListener;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
 import org.compiere.model.MBPartner;
+import org.adempiere.webui.editor.WTableDirEditor;
 import org.compiere.model.MBPartnerLocation;
 import org.compiere.model.MLocation;
 import org.compiere.model.MLocationLookup;
 import org.compiere.model.MRole;
+import org.compiere.model.MLookup;
+import org.compiere.model.MLookupFactory;
 import org.compiere.model.MUser;
+import org.compiere.util.DisplayType;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -51,6 +55,8 @@ import org.zkoss.zul.Hlayout;
 import org.zkoss.zul.Separator;
 import org.zkoss.zul.Span;
 import org.zkoss.zul.Vlayout;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  * Business Partner : Based on VBPartner
@@ -68,7 +74,7 @@ public class WBPartner extends Window implements EventListener<Event>, ValueChan
 	 */
 	private static final long serialVersionUID = 5842369060073088746L;
 
-	private static final CLogger log = CLogger.getCLogger(WBPartner.class);
+	private static CLogger log = CLogger.getCLogger(WBPartner.class);
 	
 	private int m_WindowNo;
 	
@@ -98,6 +104,12 @@ public class WBPartner extends Window implements EventListener<Event>, ValueChan
 	private Textbox fPhone2 = new Textbox();
 	private Textbox fFax = new Textbox();
 	
+	// F3P: BPGroup and Region
+	
+	private WTableDirEditor	lkBPGroup,
+													lkRegion;
+	private boolean 				bMandatorySalesRegion;
+	
 	private WLocationEditor fAddress;/* = new WLocationDialog();*/
 	
 	private Vlayout centerPanel = new Vlayout();	
@@ -120,6 +132,9 @@ public class WBPartner extends Window implements EventListener<Event>, ValueChan
 			Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx()), 
 			MBPartner.Table_ID, 0, false);
 		log.info("R/O=" + m_readOnly);
+		
+		// F3P: mandatory sales region		
+		bMandatorySalesRegion = STDSysConfig.isSalesRegionMandatory(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Client_ID(Env.getCtx()));
 		
 		try
 		{
@@ -181,6 +196,12 @@ public class WBPartner extends Window implements EventListener<Event>, ValueChan
 		//	Name2
 		createLine (fName2, "Name2", false);
 		
+		// F3P: Business partner group
+		
+		MLookup mBPGLookup = MLookupFactory.get(Env.getCtx(), m_WindowNo, 0, 4940, DisplayType.TableDir); // C_BPartner.C_BP_Group_ID
+		lkBPGroup = new WTableDirEditor("C_BP_Group_ID", true, false, true, mBPGLookup);		
+		createLine(lkBPGroup.getComponent(),"C_BP_Group_ID",false);
+		
 		//	Contact
 		createLine (fContact, "Contact", true)/*.setFontBold(true)*/;
 
@@ -218,6 +239,11 @@ public class WBPartner extends Window implements EventListener<Event>, ValueChan
 		fAddress.setValue (null);
 		createLine (fAddress.getComponent(), "C_Location_ID", true)/*.setFontBold(true)*/;
 		
+		// F3P: Sales region
+		MLookup mlkSalesRegion = MLookupFactory.get(Env.getCtx(), m_WindowNo, 0, 2968, DisplayType.TableDir); // C_BPartner.C_SalesRegion_ID
+		lkRegion = new WTableDirEditor("C_SalesRegion_ID", bMandatorySalesRegion, false, true, mlkSalesRegion);		
+		createLine(lkRegion.getComponent(),"C_SalesRegion_ID",false);
+				
 		//	Phone
 		createLine (fPhone, "Phone", true);
 		
@@ -335,6 +361,9 @@ public class WBPartner extends Window implements EventListener<Event>, ValueChan
 		
 		fName.setText(m_partner.getName());
 		fName2.setText(m_partner.getName2());
+		
+		// F3P: BP Group
+		lkBPGroup.setValue(m_partner.getC_BP_Group_ID());
 
 		//	Contact - Load values
 		m_pLocation = m_partner.getLocation(
@@ -348,6 +377,13 @@ public class WBPartner extends Window implements EventListener<Event>, ValueChan
 			fPhone.setText(m_pLocation.getPhone());
 			fPhone2.setText(m_pLocation.getPhone2());
 			fFax.setText(m_pLocation.getFax());
+			
+			// F3P: sales region
+			int C_SalesRegion_ID = m_pLocation.getC_SalesRegion_ID();
+			if(C_SalesRegion_ID > 0)
+			{
+				lkRegion.setValue(C_SalesRegion_ID);
+			}
 		}
 		//	User - Load values
 		m_user = m_partner.getContact(
@@ -400,6 +436,24 @@ public class WBPartner extends Window implements EventListener<Event>, ValueChan
 		{
 			throw new WrongValueException(fAddress.getComponent(), Msg.translate(Env.getCtx(), "FillMandatory"));
 		}
+		
+		// F3P: bpgruop and sales region
+		Integer iBPGroup = (Integer)lkBPGroup.getValue(); 		
+		if( iBPGroup == null || iBPGroup.intValue() <= 0)
+		{
+			throw new WrongValueException(lkBPGroup.getComponent(), Msg.translate(Env.getCtx(), "FillMandatory"));
+		}
+
+		Integer C_SalesRegion_ID = (Integer)lkRegion.getValue();
+		
+		if(bMandatorySalesRegion)
+		{		
+			if( C_SalesRegion_ID == null || C_SalesRegion_ID.intValue() <= 0)
+			{
+				throw new WrongValueException(lkRegion.getComponent(), Msg.translate(Env.getCtx(), "FillMandatory"));
+			}
+		}
+		// F3P end
 
 		//	***** Business Partner *****
 		
@@ -431,6 +485,9 @@ public class WBPartner extends Window implements EventListener<Event>, ValueChan
 		
 		ListItem listitem = fGreetingBP.getSelectedItem();
 		KeyNamePair p = listitem != null ? (KeyNamePair)listitem.getValue() : null;
+		
+		// F3P: bpGroup		
+		m_partner.setC_BP_Group_ID(iBPGroup);
 		
 		if (p != null && p.getKey() > 0)
 			m_partner.setC_Greeting_ID(p.getKey());
@@ -490,6 +547,12 @@ public class WBPartner extends Window implements EventListener<Event>, ValueChan
 			m_user.setPhone(fPhone.getText());
 			m_user.setPhone2(fPhone2.getText());
 			m_user.setFax(fFax.getText());
+			
+			// F3P: Sales region
+			if(C_SalesRegion_ID != null && C_SalesRegion_ID.intValue() > 0)
+			{
+				m_pLocation.setC_SalesRegion_ID(C_SalesRegion_ID);
+			}
 			
 			if (m_user.save()) {
 				if (log.isLoggable(Level.FINE)) log.fine("AD_User_ID=" + m_user.getAD_User_ID());

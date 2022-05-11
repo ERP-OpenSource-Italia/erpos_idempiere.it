@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -46,10 +47,13 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
+import org.compiere.db.CConnection;
+import org.compiere.interfaces.Server;
 import org.compiere.model.MClient;
 import org.compiere.model.MSysConfig;
-
 import com.sun.mail.smtp.SMTPMessage;
+
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *	EMail Object.
@@ -67,8 +71,11 @@ import com.sun.mail.smtp.SMTPMessage;
  *  @author Jorg Janke
  *  @version  $Id: EMail.java,v 1.4 2006/07/30 00:54:35 jjanke Exp $
  *	@author	Michael Judd BF [ 2736995 ] - toURL() in java.io.File has been depreciated
+ *
+ *	@author Silvano Trinchero www.freepath.it
  */
-public final class EMail implements Serializable
+//F3P: Removed final...
+public class EMail implements Serializable
 {
 	/**
 	 * 
@@ -245,6 +252,30 @@ public final class EMail implements Serializable
 			log.info("(m_auth) " + m_auth);
 		}
 		
+		//F3P from adempiere
+		//send from server
+		MClient client = new MClient(m_ctx, Env.getAD_Client_ID(m_ctx), null);
+		if (Ini.isClient() && client.isServerEMail())
+		{
+			Server server = CConnection.get().getServer();
+			try
+			{
+				if (server != null)
+				{	//	See ServerBean
+					String dn = server.sendEMail(m_ctx, this);
+					log.finest("Server => " + dn);
+					if (dn != null)
+						return dn;
+				}
+				log.log(Level.SEVERE, "AppsServer not found");
+			}
+			catch (Exception ex)
+			{
+				log.log(Level.SEVERE, "AppsServer error", ex);
+			}
+		}
+		//F3P
+		
 		m_sentMsg = null;
 		//
 		if (!isValid(true))
@@ -253,25 +284,44 @@ public final class EMail implements Serializable
 			return m_sentMsg;
 		}
 		//
-		Properties props = new Properties();
-		props.putAll(System.getProperties());
+		Properties props = new Properties(System.getProperties());
 		props.put("mail.store.protocol", "smtp");
 		props.put("mail.transport.protocol", "smtp");
 		props.put("mail.host", m_smtpHost);
 		//Timeout for sending the email defaulted to 20 seconds
-		props.put("mail.smtp.timeout", 20000);
+		//props.put("mail.smtp.timeout", 20000);
+		props.put("mail.smtp.timeout", MSysConfig.getIntValue(MSysConfig.SEND_EMAIL_TIMEOUT_IN_MILLIS, 20000));
 
 		if (CLogMgt.isLevelFinest())
 			props.put("mail.debug", "true");
 		//
-
 		Session session = null;
 		try
 		{
 			boolean isGmail = m_smtpHost.equalsIgnoreCase("smtp.gmail.com");
 			if (m_auth != null)		//	createAuthenticator was called
 				props.put("mail.smtp.auth", "true");
-			if (m_smtpPort > 0)
+			
+			// Angelo Dabala' (genied) backported:  feature/ADEMPIERE-47 
+			if (m_smtpHost.contains(":"))
+			{
+				// verify if it's an URI in the form smtps://host:port
+				try {
+					URI uri = new URI(m_smtpHost);
+					props.put("mail.host", uri.getHost());
+					props.put("mail.smtp.port", uri.getPort());
+					if(uri.getScheme() != null && uri.getScheme().indexOf("smtps") >= 0)
+						props.put("mail.smtp.socketFactory.class",
+								"javax.net.ssl.SSLSocketFactory");
+				} catch (URISyntaxException e) {
+					String[] hostport = m_smtpHost.split(":");
+					String host = hostport[0];
+					String port = hostport[1];
+					props.put("mail.host", host);
+					props.put("mail.smtp.port", port);
+				}
+			} // Angelo Dabala' (genied) end 
+			else if (m_smtpPort > 0)
 			{
 				props.put("mail.smtp.port", String.valueOf(m_smtpPort));
 			} else if (isGmail)
@@ -282,14 +332,8 @@ public final class EMail implements Serializable
 			{
 				props.put("mail.smtp.starttls.enable", "true");
 			}
-			if (m_auth != null && m_auth.isOAuth2()) {
-				props.put("mail.smtp.auth.mechanisms", "XOAUTH2");
-			    props.put("mail.smtp.starttls.required", "true");
-			    props.put("mail.smtp.auth.login.disable","true");
-			    props.put("mail.smtp.auth.plain.disable","true");
-			    props.put("mail.debug.auth", "true");
-			}
-			session = Session.getInstance(props);
+
+			session = Session.getInstance(props, m_auth);
 			session.setDebug(CLogMgt.isLevelFinest());
 		}
 		catch (SecurityException se)
@@ -308,6 +352,7 @@ public final class EMail implements Serializable
 		Transport t = null;
 		try
 		{
+		//	m_msg = new MimeMessage(session);
 			m_msg = new SMTPMessage(session);
 			//	Addresses
 			m_msg.setFrom(m_from);
@@ -360,8 +405,14 @@ public final class EMail implements Serializable
 			m_msg.setHeader("Comments", "iDempiereMail");
 			if (m_acknowledgementReceipt)
 				m_msg.setHeader("Disposition-Notification-To", m_from.getAddress());
+		//	m_msg.setDescription("Description");
+			//	SMTP specifics
+			//m_msg.setAllow8bitMIME(true);
+			//	Send notification on Failure & Success - no way to set envid in Java yet
+		//	m_msg.setNotifyOptions (SMTPMessage.NOTIFY_FAILURE | SMTPMessage.NOTIFY_SUCCESS);
 			//	Bounce only header
 			m_msg.setReturnOption (SMTPMessage.RETURN_HDRS);
+		//	m_msg.setHeader("X-Mailer", "msgsend");
 			if (additionalHeaders.size() > 0) {
 				for (ValueNamePair vnp : additionalHeaders) {
 					m_msg.setHeader(vnp.getName(), vnp.getValue());
@@ -370,24 +421,26 @@ public final class EMail implements Serializable
 			//
 			setContent();
 			m_msg.saveChanges();
+		//	log.fine("message =" + m_msg);
+			//
+		//	Transport.send(msg);
 			t = session.getTransport("smtp");
-			if (m_auth != null) {
-				t.connect(m_smtpHost, m_smtpPort, m_auth.getPasswordAuthentication().getUserName(), m_auth.getPasswordAuthentication().getPassword());
-			} else {
-				t.connect();
-			}
+		//	log.fine("transport=" + t);
+			t.connect();
+		//	t.connect(m_smtpHost, user, password);
+		//	log.fine("transport connected");
 			ClassLoader tcl = Thread.currentThread().getContextClassLoader();
 			try {
 				Thread.currentThread().setContextClassLoader(javax.mail.Session.class.getClassLoader());
-				t.sendMessage(m_msg, m_msg.getAllRecipients());
+				Transport.send(m_msg);
 			} finally {
 				Thread.currentThread().setContextClassLoader(tcl);
 			}
+		//	t.sendMessage(msg, msg.getAllRecipients());
 			if (log.isLoggable(Level.FINE)) log.fine("Success - MessageID=" + m_msg.getMessageID());
 		}
 		catch (MessagingException me)
 		{
-			me.printStackTrace();
 			Exception ex = me;
 			StringBuilder sb = new StringBuilder("(ME)");
 			boolean printed = false;
@@ -577,13 +630,14 @@ public final class EMail implements Serializable
 	 */
 	public EMailAuthenticator createAuthenticator (String username, String password)
 	{
-		if (username == null)
+		if (username == null || password == null)
 		{
-			log.warning("Ignored - username null");
+			log.warning("Ignored - " +  username + "/" + password);
 			m_auth = null;
 		}
 		else
 		{
+		//	log.fine("setEMailUser: " + username + "/" + password);
 			m_auth = new EMailAuthenticator (username, password);
 		}
 		return m_auth;
@@ -879,14 +933,20 @@ public final class EMail implements Serializable
 	public void setMessageHTML (String subject, String message)
 	{
 		m_subject = subject;
-		StringBuilder sb = new StringBuilder("<HTML>\n")
+		StringBuffer sb = new StringBuffer("<HTML>\n")
 				.append("<HEAD>\n")
 				.append("<TITLE>\n")
 				.append(subject + "\n")
 				.append("</TITLE>\n")
 				.append("</HEAD>\n");
-			sb.append("<BODY>\n")
-				.append(message)
+			sb.append("<BODY>\n");
+			//F3P: controllo nella variabile di sistema per l'inserimento di un sottotitolo nell'email
+			//se la variabile e' impostata a false non salta il passaggio altrimenti si
+			if(STDSysConfig.isSubjectInHtmlBody(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx()))==false)
+			{
+				sb.append("<H2>").append(subject).append("</H2>\n");
+			}//F3P: end
+			sb.append(message)
 				.append("\n")
 				.append("</BODY>\n");
 		sb.append("</HTML>\n");

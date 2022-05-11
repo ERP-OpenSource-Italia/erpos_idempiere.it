@@ -192,7 +192,7 @@ public class MAssetType extends X_A_Asset_Type implements ImmutablePOSupport
 			err.addInfo("@IsInPosession@ <> @" + f + "@");
 		}
 		f = getBoolean(assetType.getIsDepreciable(), false);
-		if (f != null && f.booleanValue() != m.isDepreciated()) {
+		if (f != null && f.booleanValue() !=(m.isDepreciated() || m.isFullyDepreciated())) {	// F3P: compatibility check should be done considering both depreciated and fully depreciated
 			err.addInfo("@IsDepreciated@ <> @" + f + "@");
 		}
 		
@@ -212,8 +212,15 @@ public class MAssetType extends X_A_Asset_Type implements ImmutablePOSupport
 		if (f != null)
 			model.set_AttrValue("IsOwned", f);
 		f = getBoolean(getIsInPosession(), useDefaults);
+		
+		//F3P: Set values only if a_asset
+		if(model.get_TableName().equals(I_A_Asset.Table_Name) ||
+				model.get_TableName().equals(I_A_Asset_Type.Table_Name))
+		{
 		if (f != null)
 			model.set_AttrValue("IsInPosession", f);
+		}
+		
 		f = getBoolean(getIsDepreciable(), useDefaults);
 		if (f != null) {
 			model.set_AttrValue("IsDepreciated", f);
@@ -223,7 +230,9 @@ public class MAssetType extends X_A_Asset_Type implements ImmutablePOSupport
 			model.set_AttrValue("A_Asset_Class_ID", null);
 		}
 		
-		model.set_AttrValue("A_Asset_Type", getValue());
+		//F3P: Set values only if a_asset, change columnname A_AssetType
+		if(model.get_TableName().equals(I_A_Asset.Table_Name))
+			model.set_AttrValue("A_AssetType", getValue());
 		
 		return true;
 	}

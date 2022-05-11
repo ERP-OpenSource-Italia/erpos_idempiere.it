@@ -336,6 +336,26 @@ public class MPriceList extends X_M_PriceList implements ImmutablePOSupport
 	}	//	getPriceListVersion
 
 	/**
+	 * 	Get Price List Version
+	 *	@param valid date where PLV must be valid or today if null
+	 *	@return PLV
+	 */
+	public List<MPriceListVersion> getPriceListVersion ()
+	{
+		final String whereClause = "M_PriceList_ID=?";
+		List<MPriceListVersion> lplv = new Query(getCtx(), I_M_PriceList_Version.Table_Name, whereClause, get_TrxName())
+					.setParameters(getM_PriceList_ID())
+					.setOnlyActiveRecords(true)
+					.setOrderBy("ValidFrom DESC")
+					.list();
+		if (lplv == null)
+			log.warning("None found M_PriceList_ID=" + getM_PriceList_ID());
+		else
+			if (log.isLoggable(Level.FINE)) log.fine(lplv.toString());
+		return lplv;
+	}	//	getPriceListVersion
+
+	/**
 	 * 	Get Standard Currency Precision
 	 *	@return precision
 	 */

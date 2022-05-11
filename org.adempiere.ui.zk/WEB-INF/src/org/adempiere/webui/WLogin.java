@@ -19,14 +19,18 @@ import java.util.Properties;
 
 import javax.servlet.ServletRequest;
 
+import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.part.AbstractUIPart;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.LoginWindow;
 import org.zkoss.web.servlet.Servlets;
+import org.zkoss.zhtml.Text;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.metainfo.PageDefinition;
 import org.zkoss.zul.Borderlayout;
+import org.zkoss.zul.Div;
 import org.zkoss.zul.East;
 import org.zkoss.zul.North;
 import org.zkoss.zul.South;
@@ -47,10 +51,12 @@ public class WLogin extends AbstractUIPart
 	private Borderlayout layout;
 	private Window browserWarningWindow;
 	private LoginWindow loginWindow;
+	private boolean isChangeRole;  // FIN: (st) 20/09/2017 need to know if its a role change
 
-    public WLogin(IWebClient app)
+	public WLogin(IWebClient app, boolean isChangeRole)  // FIN: (st) 20/09/2017 need to know if its a role change
     {
         this.app = app;
+        //this.isChangeRole = isChangeRole;
     }
 
     protected Component doCreatePart(Component parent)
@@ -62,7 +68,26 @@ public class WLogin extends AbstractUIPart
 
         loginWindow = (LoginWindow) loginPage.getFellow("loginWindow");
         loginWindow.init(app);
+        /*loginWindow.init(app, isChangeRole);  // FIN: (st) 20/09/2017 need to know if its a role change
 
+        if (!AEnv.isBrowserSupported())
+        {
+        	//TODO: localization
+        	String msg = "You might experience slow performance and user interface anomalies using your current browser to access the application. We recommend the use of Firefox, Google Chrome or Apple Safari.";
+        	browserWarningWindow = new Window();
+        	Div div = new Div();
+        	div.setStyle("font-size: 9pt");
+        	div.appendChild(new Text(msg));
+        	browserWarningWindow.appendChild(div);
+        	browserWarningWindow.setPosition("top,right");
+        	ZKUpdateUtil.setWidth(browserWarningWindow, "550px");
+        	browserWarningWindow.setPage(page);
+        	browserWarningWindow.doOverlapped();
+        }
+        		
+		if(layout == null) // FIN: (st) 20/09/2017 layout may already be destroyed because of sso autologin
+			return null;        */
+        
         boolean mobile = false;        
 		if (Executions.getCurrent().getBrowser("mobile") !=null) {
 			mobile = true;
@@ -118,11 +143,6 @@ public class WLogin extends AbstractUIPart
 		return layout;
 	}
 
-	/**
-	 * Show change role window
-	 * @param locale
-	 * @param properties env context
-	 */
 	public void changeRole(Locale locale, Properties properties) {
 		loginWindow.changeRole(locale, properties);
 	}

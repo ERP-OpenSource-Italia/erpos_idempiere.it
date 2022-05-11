@@ -300,6 +300,17 @@ public class CalloutPayment extends CalloutEngine
 	{
 		if (isCalloutActive ()) // assuming it is resetting value
 			return "";
+		
+		//F3P: if current table is C_PaySelectionLine, check if exists OverUnderAmt column
+		boolean bIsPaySelectionLine = mTab.getTableName().equalsIgnoreCase(X_C_PaySelectionLine.Table_Name);
+		
+		if(bIsPaySelectionLine && mTab.getField("OverUnderAmt") == null)
+		{
+			log.severe("Column C_PaySelectionLine.OverUnderAmt not found.");
+			return "";
+		}
+		//F3P end
+		
 		int C_Invoice_ID = Env.getContextAsInt (ctx, WindowNo, "C_Invoice_ID");
 		// New Payment
 		if (Env.getContextAsInt (ctx, WindowNo, "C_Payment_ID") == 0
@@ -452,7 +463,8 @@ public class CalloutPayment extends CalloutEngine
 		BigDecimal DiscountAmt = (BigDecimal)mTab.getValue ("DiscountAmt");
 		if (DiscountAmt == null)
 			DiscountAmt = Env.ZERO;
-		BigDecimal WriteOffAmt = (BigDecimal)mTab.getValue ("WriteOffAmt");
+		
+		BigDecimal WriteOffAmt = (BigDecimal)mTab.getValue ("WriteOffAmt");		
 		if (WriteOffAmt == null)
 			WriteOffAmt = Env.ZERO;
 		BigDecimal OverUnderAmt = (BigDecimal)mTab.getValue ("OverUnderAmt");
@@ -460,8 +472,44 @@ public class CalloutPayment extends CalloutEngine
 			OverUnderAmt = Env.ZERO;
 		if (log.isLoggable(Level.FINE)) log.fine ("Pay=" + PayAmt + ", Discount=" + DiscountAmt + ", WriteOff="
 			+ WriteOffAmt + ", OverUnderAmt=" + OverUnderAmt);
-
-		Timestamp ConvDate = (Timestamp)mTab.getValue ("DateTrx");		
+		// Get Currency Info
+		
+		//F3P: paySelectionLine
+		// Get Currency Info
+		/*Integer curr_int = (Integer) mTab.getValue ("C_Currency_ID");
+		if (curr_int == null)
+			curr_int = Integer.valueOf(0);
+		int C_Currency_ID = curr_int.intValue ();
+		Timestamp ConvDate = (Timestamp)mTab.getValue ("DateTrx");
+		*/
+		int C_Currency_ID = 0; 
+		Timestamp ConvDate = null;
+		
+		if(bIsPaySelectionLine == false)
+		{
+			// F3P: changed to read values from context and not field
+			C_Currency_ID = Env.getContextAsInt(ctx, WindowNo, "C_Currency_ID");			
+			ConvDate = Env.getContextAsDate(ctx, WindowNo, "DateTrx");
+		}
+		else
+		{
+			int C_PaySelection_ID = (Integer)mTab.getValue(I_C_PaySelectionLine.COLUMNNAME_C_PaySelection_ID);
+			
+			MPaySelection paySelection = PO.get(ctx, I_C_PaySelection.Table_Name, C_PaySelection_ID, null);
+			
+			ConvDate = Env.getContextAsDate(ctx, WindowNo, I_C_PaySelection.COLUMNNAME_PayDate);
+			C_Currency_ID = paySelection.getC_BankAccount().getC_Currency_ID();
+		}
+		//F3P end
+		
+		MCurrency currency = MCurrency.get (ctx, C_Currency_ID);
+		
+		int C_ConversionType_ID = 0;
+		Integer ii = (Integer)mTab.getValue ("C_ConversionType_ID");
+		if (ii != null)
+			C_ConversionType_ID = ii.intValue ();
+		int AD_Client_ID = Env.getContextAsInt (ctx, WindowNo, "AD_Client_ID");
+		int AD_Org_ID = Env.getContextAsInt (ctx, WindowNo, "AD_Org_ID");
 		// Get Currency Rate
 		BigDecimal CurrencyRate = Env.ONE;
 		if ((C_Currency_ID > 0 && C_Currency_Invoice_ID > 0 && C_Currency_ID != C_Currency_Invoice_ID)
@@ -489,7 +537,8 @@ public class CalloutPayment extends CalloutEngine
 				+ InvoiceOpenAmt);
 		}
 		// Currency Changed - convert all
-		if (colName.equals ("C_Currency_ID"))
+		if (colName.equals ("C_Currency_ID")
+			|| colName.equals ("C_ConversionType_ID"))
 		{
 			if (oldValue != null && oldValue instanceof Integer)
 			{
@@ -591,8 +640,13 @@ public class CalloutPayment extends CalloutEngine
 					WriteOffAmt).subtract (OverUnderAmt);
 				mTab.setValue ("PayAmt", PayAmt);
 			}
+			
+			//F3P: set IsOverUnderPayment check
+			if(OverUnderAmt.compareTo(Env.ZERO) != 0)
+				mTab.setValue("IsOverUnderPayment", Boolean.TRUE);
+			else
+				mTab.setValue("IsOverUnderPayment", Boolean.FALSE);
 		}
-
 		if (colName.equals(I_C_Payment.COLUMNNAME_C_Currency_ID) || colName.equals(I_C_Payment.COLUMNNAME_PayAmt) 
 				|| colName.equals(I_C_Payment.COLUMNNAME_IsOverrideCurrencyRate) ) {
 			int baseCurrencyId = Env.getContextAsInt(ctx, "$C_Currency_ID");

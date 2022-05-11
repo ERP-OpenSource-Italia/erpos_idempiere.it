@@ -720,4 +720,23 @@ public abstract class SvrProcess implements ProcessCall
 			processUI.statusUpdate(message);
 		}
 	}
+	
+	// F3P: needed to support loading PI.
+	/**
+	 *  Support for manually setting ProcessInfo & trx. Needed by ExtReporting module 
+	 */
+	public void changeProcessInfo(ProcessInfo pi,Properties ctx)
+	{
+		if(pi != null)
+			m_pi = pi;
+		
+		if(ctx != null)
+			m_ctx = ctx;
+	}
+	
+	public void setTrx(Trx trx)
+	{
+		m_trx = trx; 
+	}	
+	//F3P: end
 }   //  SvrProcess

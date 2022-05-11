@@ -421,4 +421,12 @@ public class UseLifeImpl
 		}
 		*/ // end commented by @win
 	} //	class Callout
+	
+	//F3P: Start
+	@Override
+	public boolean hasColumn(String sColumnName)
+	{
+		return m_obj.hasColumn(sColumnName);
+	}
+	//F3P: End
  }

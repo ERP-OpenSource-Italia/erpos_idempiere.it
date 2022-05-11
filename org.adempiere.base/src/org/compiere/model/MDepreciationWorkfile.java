@@ -3,12 +3,12 @@ package org.compiere.model;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.logging.Level;
 
-import org.adempiere.base.Core;
+import org.apache.commons.collections.keyvalue.MultiKey;
+import org.compiere.util.CCache;
 import org.compiere.util.CLogMgt;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
@@ -16,14 +16,15 @@ import org.compiere.util.Env;
 import org.compiere.util.TimeUtil;
 import org.idempiere.fa.feature.UseLife;
 import org.idempiere.fa.feature.UseLifeImpl;
-import org.idempiere.fa.service.api.DepreciationDTO;
-import org.idempiere.fa.service.api.DepreciationFactoryLookupDTO;
-import org.idempiere.fa.service.api.IDepreciationMethod;
+
+import it.idempiere.base.util.STDSysConfig;
 
 
 /**
  *  Depreciation Workfile Model
  *	@author	Teo Sarca, SC ARHIPAC SERVICE SRL
+ *
+ *  @author Silvano Trinchero, FreePath srl (www.freepath.it)
  */
 public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 	implements UseLife
@@ -208,13 +209,9 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 			return false;
 		}
 		
-		Collection<MDepreciationWorkfile> workFiles = MDepreciationWorkfile.forA_Asset_ID(getCtx(), getA_Asset_ID(), get_TrxName());
-		for(MDepreciationWorkfile assetwk : workFiles) {	
 		// check if is fully depreciated
-			BigDecimal remainingAmt_C = assetwk.getA_Depreciation_Workfile_ID() == getA_Depreciation_Workfile_ID() 
-					? getRemainingCost(null, false) : assetwk.getRemainingCost(null, false);
-			BigDecimal remainingAmt_F = assetwk.getA_Depreciation_Workfile_ID() == getA_Depreciation_Workfile_ID()
-					? getRemainingCost(null, true) : assetwk.getRemainingCost(null, true);
+		BigDecimal remainingAmt_C = getRemainingCost(null, false);
+		BigDecimal remainingAmt_F = getRemainingCost(null, true);
 		if(remainingAmt_C.signum() == 0 && remainingAmt_F.signum() == 0)
 		{
 			//if A_Asset_Cost is 0 have a voided addition, in this case asset is not full depreciated 
@@ -222,14 +219,11 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 			{
 			 return false;	
 			}
-		}
-			else
-			{
-				return false;
-			}
+			//
+			return true;
 		}
 		
-		return true;
+		return false;
 	}
 	
 	/**
@@ -238,7 +232,6 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 	public MDepreciationWorkfile(MAsset asset, String postingType, MAssetGroupAcct assetgrpacct)
 	{
 		this(asset.getCtx(), 0, asset.get_TrxName());
-		setC_AcctSchema_ID(assetgrpacct.getC_AcctSchema_ID());
 		setA_Asset_ID(asset.getA_Asset_ID());
 		setAD_Org_ID(asset.getAD_Org_ID()); //@win added
 		setA_Asset_Cost(asset.getA_Asset_Cost());
@@ -250,6 +243,10 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 		setPostingType(postingType);
 		//
 		// Copy UseLife values from asset group to workfile
+		if (assetgrpacct == null)
+		{
+			assetgrpacct = MAssetGroupAcct.forA_Asset_Group_ID(asset.getCtx(), asset.getA_Asset_Group_ID(), postingType);
+		}
 		UseLifeImpl.copyValues(this, assetgrpacct);
 		
 		//
@@ -330,34 +327,6 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 	}
 	
 	/**
-	 * 
-	 * @param ctx
-	 * @param A_Asset_ID
-	 * @param postingType
-	 * @param trxName
-	 * @param Account Schema
-	 * @return workfile
-	 * @see #get(Properties, int, String, String)
-	 */
-	public static MDepreciationWorkfile get (Properties ctx, int A_Asset_ID, String postingType,  String trxName, int C_AcctSchema_ID)
-	{
-		if (A_Asset_ID <= 0 || postingType == null)
-		{
-			return null;
-		}
-		
-		final String whereClause = COLUMNNAME_A_Asset_ID+"=?"
-									+" AND "+COLUMNNAME_PostingType+"=? AND " +  COLUMNNAME_C_AcctSchema_ID + "=?" ;
-
-		int acctSchemaId =  C_AcctSchema_ID==0 ? MClient.get(ctx).getAcctSchema().get_ID() : C_AcctSchema_ID;
-		MDepreciationWorkfile wk = new Query(ctx, MDepreciationWorkfile.Table_Name, whereClause, trxName)
-				.setParameters(new Object[]{A_Asset_ID, postingType,acctSchemaId})
-				.firstOnly();
-				
-		return wk;
-	}
-	
-	/**
 	 * Get/load workfile from cache (if trxName is null)
 	 * @param ctx
 	 * @param A_Asset_ID
@@ -367,14 +336,66 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 	 */
 	public static MDepreciationWorkfile get (Properties ctx, int A_Asset_ID, String postingType, String trxName)
 	{
-		return get(ctx, A_Asset_ID, postingType, trxName, 0);		
+		if (A_Asset_ID <= 0 || postingType == null)
+		{
+			return null;
+		}
+		
+		final MultiKey key = new MultiKey(A_Asset_ID, postingType);
+		/* Cristiano Lazzaro (genied)
+		if (trxName == null)
+		{
+			MDepreciationWorkfile wk = s_cacheAsset.get(key);
+			if (wk != null)
+				return wk;
+		}
+		*/ //genied end
+		/* @win temporary change as this code is causing duplicate create MDepreciationWorkfile on asset addition
+		final String whereClause = COLUMNNAME_A_Asset_ID+"=?"
+									+" AND "+COLUMNNAME_PostingType+"=? AND "+COLUMNNAME_A_QTY_Current+">?";
+		MDepreciationWorkfile wk = new Query(ctx, MDepreciationWorkfile.Table_Name, whereClause, trxName)
+											.setParameters(new Object[]{A_Asset_ID, postingType, 0})
+											.firstOnly();
+		*/
+		final String whereClause = COLUMNNAME_A_Asset_ID+"=?"
+									+" AND "+COLUMNNAME_PostingType+"=? ";
+		MDepreciationWorkfile wk = new Query(ctx, MDepreciationWorkfile.Table_Name, whereClause, trxName)
+				.setParameters(new Object[]{A_Asset_ID, postingType})
+				.firstOnly();
+		
+		
+		if (trxName == null && wk != null)
+		{
+			s_cacheAsset.put(key, wk);
+		}
+		return wk;
 	}
+	/** Static cache: Asset/PostingType -> Workfile */
+	private static CCache<MultiKey, MDepreciationWorkfile>
+	s_cacheAsset = new CCache<MultiKey, MDepreciationWorkfile>(Table_Name, Table_Name+"_Asset", 10); 
 	
 	/**	Returns the date of the last action
 	 */
 	public Timestamp getLastActionDate()
 	{
-		return TimeUtil.getMonthLastDay(TimeUtil.addMonths(getDateAcct(), -1));
+		// F3P: Changed to return the date of the last processed Exp
+		//return TimeUtil.getMonthLastDay(TimeUtil.addMonths(getDateAcct(), -1));
+		String whereClause = MDepreciationExp.COLUMNNAME_A_Asset_ID+"=?"
+				+ " AND "+MDepreciationExp.COLUMNNAME_PostingType+"=?"
+				+ " AND "+MDepreciationExp.COLUMNNAME_Processed+"=? AND IsActive=?";
+		Object	params[] = new Object[]{getA_Asset_ID(), getPostingType(), true, true};
+		//
+		MDepreciationExp depexp = new Query(getCtx(), MDepreciationExp.Table_Name, whereClause, get_TrxName())
+								.setParameters(params)
+								.setOrderBy(MDepreciationExp.COLUMNNAME_A_Period
+										+","+MDepreciationExp.COLUMNNAME_DateAcct)
+										.first();
+		
+		if (depexp != null)
+			return depexp.getDateAcct();			
+		else
+			return null;
+		//F3P end
 	}
 	
 	/**	Check if the asset is depreciated at the specified date
@@ -384,7 +405,7 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 	public boolean isDepreciated(Timestamp date)
 	{
 		Timestamp lastActionDate = getLastActionDate();
-		boolean isDepr = !date.after(lastActionDate);		// date <= lastActionDate
+		boolean isDepr = lastActionDate != null && !date.after(lastActionDate);		// date <= lastActionDate
 		
 		if (log.isLoggable(Level.FINE)) log.fine("LastActionDate=" + lastActionDate + ", GivenDate=" + date + " => isDepreciated=" + isDepr);
 		return isDepr;
@@ -396,7 +417,7 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 	 */
 	public MAssetAcct getA_AssetAcct(Timestamp dateAcct, String trxName)
 	{
-		return MAssetAcct.forA_Asset_ID(getCtx(), getC_AcctSchema_ID(), getA_Asset_ID(), getPostingType(), dateAcct, trxName);
+		return MAssetAcct.forA_Asset_ID(getCtx(), getA_Asset_ID(), getPostingType(), dateAcct, trxName);
 	}
 
 	/**	Returns the current cost of FAs. It is calculated as the difference between acquisition value and the value that you (A_Salvage_Value)
@@ -593,14 +614,16 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 	 */
 	public void setA_Current_Period()
 	{
+		// F3P: changed to get the acct date and period from then first non-processed,
+		//	except for the last record wich increases the acct date
+		/*		
 		String whereClause = MDepreciationExp.COLUMNNAME_A_Asset_ID+"=?"
 					+" AND "+MDepreciationExp.COLUMNNAME_PostingType+"=?"
 					+" AND "+MDepreciationExp.COLUMNNAME_Processed+"=? AND IsActive=?"
-					+" AND "+MDepreciationExp.COLUMNNAME_C_AcctSchema_ID+"=?"
 		;
 		//
 		MDepreciationExp depexp = new Query(getCtx(), MDepreciationExp.Table_Name, whereClause, get_TrxName())
-									.setParameters(new Object[]{getA_Asset_ID(), getPostingType(), true, true, getC_AcctSchema_ID()})
+									.setParameters(new Object[]{getA_Asset_ID(), getPostingType(), true, true})
 									.setOrderBy(MDepreciationExp.COLUMNNAME_A_Period+" DESC"
 												+","+MDepreciationExp.COLUMNNAME_DateAcct+" DESC")
 									.first();
@@ -614,7 +637,38 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 		{
 			log.info("There are no records from which to infer its");
 		}
-
+		*/
+		String whereClause = MDepreciationExp.COLUMNNAME_A_Asset_ID+"=?"
+				+ " AND "+MDepreciationExp.COLUMNNAME_PostingType+"=?"
+				+ " AND "+MDepreciationExp.COLUMNNAME_Processed+"=? AND IsActive=?";
+		Object	params[] = new Object[]{getA_Asset_ID(), getPostingType(), false, true};
+		//
+		MDepreciationExp depexp = new Query(getCtx(), MDepreciationExp.Table_Name, whereClause, get_TrxName())
+									.setParameters(params)
+									.setOrderBy(MDepreciationExp.COLUMNNAME_A_Period
+										+","+MDepreciationExp.COLUMNNAME_DateAcct)
+									.first();
+		
+		if (depexp != null)
+		{
+			setA_Current_Period(depexp.getA_Period());
+			setDateAcct(depexp.getDateAcct());			
+		}
+		else
+		{	
+			params[2] = true; // Processed = true
+			String	sCountQuery = "SELECT count('ok') FROM " + MDepreciationExp.Table_Name + " WHERE " + whereClause; 
+			int 		iCountExp = DB.getSQLValue(get_TrxName(),sCountQuery,params);
+			
+			// 2 possible situations:
+			//	1. no record at all, do nothing (as previous)
+			//	2. last record closed, increase date by 1 (as previous)
+			
+			if(iCountExp > 0)
+				incA_Current_Period();
+			else
+				log.info("There are no records from which to infer its");
+		}
 	}
 	
 	/** Build depreciation flag - if true, the depreciation should be built after save */ 
@@ -625,17 +679,26 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 	 * and create new ones again.
 	 * WARNING: IS NOT modifying workfile (this)
 	 */
-
-	public void buildDepreciation()
+	//F3P return boolean
+	public boolean buildDepreciation()
 	{
 		if (!isDepreciated())
 		{
-			return;
+			return false;
 		}
+		
+		// F3P: should we build zero-amt entries ?
+		boolean	bSkipZeroValues = STDSysConfig.isFADepreciationExpSkipZeroValues(getAD_Client_ID(),getAD_Org_ID());
 		
 		StringBuilder sb = new StringBuilder();
 		load(get_TrxName()); // reload workfile
+		getAsset(true); // F3P: reload asset
+		
 		MAssetAcct assetacct = getA_AssetAcct(null, get_TrxName()); 
+		// F3P: Asset Acct may be null
+		if(assetacct == null)
+			return false;
+		
 		// TODO: teo_sarca: need to evaluate what happens when we change Depreciation method !!!
 		MDepreciation depreciation_C = MDepreciation.get(getCtx(), assetacct.getA_Depreciation_ID());
 		MDepreciation depreciation_F = MDepreciation.get(getCtx(), assetacct.getA_Depreciation_F_ID());
@@ -655,49 +718,13 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 		//logging
 		if(CLogMgt.isLevelFine())
 		{
-			sb.append("currentPeriod=" + getA_Current_Period() + ", AssetServiceDate=" + getAssetServiceDate() + "\n");
+			sb.append("currentPeriod=" + getA_Current_Period() + ", AssetServiceDate=" + getAssetDepreciationDate() + "\n");
 			sb.append("offset: C|F=" + offset_C + "|" + offset_F + "\n");
 			sb.append("life: C|F=" + lifePeriods_C + "|" + lifePeriods_F + " + offset =" + lifePeriods + "\n");
 		}
 		
 		truncDepreciation();
 		int A_Current_Period = getA_Current_Period();
-		
-		// lookup for implement of IDepreciationMethod
-		DepreciationFactoryLookupDTO depreciationFactoryLookupDTO = new DepreciationFactoryLookupDTO();
-		depreciationFactoryLookupDTO.depreciationType = depreciation_C.getDepreciationType();
-		IDepreciationMethod depreciationMethod = Core.getDepreciationMethod (depreciationFactoryLookupDTO);
-		
-		if(depreciationMethod != null) {
-			DepreciationDTO depreciationDTO = new DepreciationDTO();
-			depreciationDTO.useFullLife = new BigDecimal(this.getA_Life_Period());// at the moment, int is ok for Thai, but for other country BigDecima is suitable, need to change AD
-			depreciationDTO.useFullLifeUnit = Calendar.MONTH;
-			depreciationDTO.depreciationId = this.get_ID();
-			depreciationDTO.inServiceDate = this.getA_Asset().getAssetServiceDate();
-			depreciationDTO.accountDate = this.getDateAcct();
-			depreciationDTO.startPeriodDepreciation = this.getA_Current_Period();
-			lifePeriods = (int)depreciationMethod.getCountPeriod(depreciationDTO);
-			
-			// it's safe, at the moment, core disable setting of lifePeriods_F
-			lifePeriods_C = lifePeriods;
-			lifePeriods_F = lifePeriods;
-		}
-		
-		Timestamp startDateAcct = getDateAcct();
-		if (getAssetDepreciationDate() != null)
-		{
-			if (getAssetDepreciationDate().compareTo(getDateAcct()) >= 0)
-			{
-				if (TimeUtil.getMonthLastDay(startDateAcct).compareTo(getAssetDepreciationDate()) == 0)
-				{
-					startDateAcct = TimeUtil.addMonths(getAssetDepreciationDate(), 1);
-					++A_Current_Period;
-				}
-				else
-					startDateAcct = getAssetDepreciationDate();					
-			}
-		}
-		
 		for (int currentPeriod = A_Current_Period, cnt = 1; currentPeriod <= lifePeriods; currentPeriod++, cnt++)
 		{
 			exp_C = Env.ZERO;
@@ -705,50 +732,46 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 			
 			String help = "" + accumDep_C + "|" + accumDep_F + " + ";
 			
-			if (lifePeriods_C > currentPeriod ||  !depreciation_C.requireLastPeriodAdjustment())
+			if (lifePeriods_C > currentPeriod || !depreciation_C.requireLastPeriodAdjustment())
 			{
 				setFiscal(false);
-				exp_C = depreciation_C.invoke(this, assetacct, currentPeriod, accumDep_C, depreciationMethod);
+				exp_C = depreciation_C.invoke(this, assetacct, currentPeriod, accumDep_C);
 				accumDep_C = accumDep_C.add(exp_C);
 			}
 			else if (lifePeriods_C == currentPeriod)
 			{	// last period
-				if (depreciationMethod != null && depreciationMethod.isPeriodAdjustment()) {
-					exp_C = depreciation_C.invoke(this, assetacct, currentPeriod, accumDep_C, depreciationMethod);
-				}else {
-					exp_C = assetCost.subtract(accumDep_C);
-				}
+				exp_C = assetCost.subtract(accumDep_C);
 				accumDep_C = assetCost;
 			}
 			
 			if (lifePeriods_F > currentPeriod || !depreciation_F.requireLastPeriodAdjustment())
 			{
 				setFiscal(true);
-				exp_F = depreciation_F.invoke(this, assetacct, currentPeriod, accumDep_F, depreciationMethod);
+				exp_F = depreciation_F.invoke(this, assetacct, currentPeriod, accumDep_F);
 				accumDep_F = accumDep_F.add(exp_F);
 			}
 			else if (lifePeriods_F == currentPeriod)
 			{	// last period (fiscal)
-				if (depreciationMethod != null && depreciationMethod.isPeriodAdjustment()) {
-					exp_C = depreciation_C.invoke(this, assetacct, currentPeriod, accumDep_C, depreciationMethod);
-				}else {
-					exp_F = assetCost.subtract(accumDep_F);
-				}
+				exp_F = assetCost.subtract(accumDep_F);
 				accumDep_F = assetCost;
 			}
 			
+			// F3P: Skip creation of zero-values ?
+			if(bSkipZeroValues && exp_C.signum() <= 0 && exp_F.signum() <= 0)
+				continue;
+			// end F3P
+			
 			help += "" + exp_C + "|" + exp_F + " = " + accumDep_C + "|" + accumDep_F;
 			
-			// added by zuhri
-			int months = 0; 
-			
-			months = months + (currentPeriod - A_Current_Period);
-			Timestamp dateAcct = TimeUtil.getMonthLastDay(TimeUtil.addMonths(startDateAcct, months));
-			
+			// F3P: changed to use the exposed funtion
+			//months = months + (currentPeriod - A_Current_Period);
+			//Timestamp dateAcct = TimeUtil.getMonthLastDay(TimeUtil.addMonths(getDateAcct(), months));
+			Timestamp dateAcct = getAcctDateForDepreciationPeriod(currentPeriod);
+			//F3P:end
 			MDepreciationExp.createDepreciation (this, currentPeriod, dateAcct,
 													exp_C, exp_F,
 													accumDep_C, accumDep_F,
-													help, get_TrxName());
+													help, depreciation_C, get_TrxName());// F3P: changed to manage description creation
 			if (log.isLoggable(Level.FINE)) 
 			{
 				String info = "" + cnt + ": period=" + currentPeriod + "/" + lifePeriods_C + "|" + lifePeriods_F
@@ -761,8 +784,23 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 		if (log.isLoggable(Level.FINE)) log.fine(sb.toString());
 		
 		m_buildDepreciation = false;
+		return true;
 	}	//	buildDepreciation
 	
+	// F3P: exposed method to determine account date based on period
+	/** 
+	 * Method to obtain the account date based on the current period.
+	 * This function is useful during depreciation build run.
+	 * 
+	 * @param currentPeriod	current period of the loop 
+	 * @return accounting date for the period in input
+	 */
+	
+	public Timestamp	getAcctDateForDepreciationPeriod(int currentPeriod)
+	{
+		return TimeUtil.getMonthLastDay(TimeUtil.addMonths(getDateAcct(), currentPeriod - getA_Current_Period()));
+	}
+	//F3P end
 
 	
 	/**
@@ -780,9 +818,8 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 							+" AND "+MDepreciationExp.COLUMNNAME_A_Period+">=?"
 							+" AND "+MDepreciationExp.COLUMNNAME_A_Asset_ID+"=?"
 							+" AND "+MDepreciationExp.COLUMNNAME_PostingType+"=?"
-							+" AND "+MDepreciationExp.COLUMNNAME_C_AcctSchema_ID+"=?"
 		;
-		Object[] params = new Object[]{false, A_Current_Period, getA_Asset_ID(), getPostingType(), getC_AcctSchema_ID()};
+		Object[] params = new Object[]{false, A_Current_Period, getA_Asset_ID(), getPostingType()};
 		int no = DB.executeUpdateEx(sql, params, trxName);
 		if (log.isLoggable(Level.FINE)) log.fine("sql=" + sql + "\nDeleted #" + no);
 	}	//	truncDepreciation
@@ -866,4 +903,19 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 			return false;
 		return is_ValueChanged(index);
 	}
+	
+	//F3P:Start
+	@Override
+	public boolean hasColumn(String sColumnName)
+	{
+		boolean bExists = false;
+		
+		int index = get_ColumnIndex(sColumnName);
+		
+		if(index >= 0)
+			bExists = true;
+		
+		return bExists;
+	}
+	//F3P:End
 }	//	MDepreciationWorkfile

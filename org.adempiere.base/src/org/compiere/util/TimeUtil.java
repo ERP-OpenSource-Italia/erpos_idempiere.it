@@ -1,3 +1,4 @@
+
 /******************************************************************************
  * Product: Adempiere ERP & CRM Smart Business Solution                        *
  * Copyright (C) 1999-2006 ComPiere, Inc. All Rights Reserved.                *
@@ -16,13 +17,21 @@
  *****************************************************************************/
 package org.compiere.util;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.BitSet;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Properties;
+import java.util.logging.Level;
 
 import org.compiere.model.MCountry;
+import org.compiere.model.MResource;
+import org.compiere.model.MResourceType;
+import org.compiere.model.MUOM;
+import org.compiere.model.MUOMConversion;
 
 
 /**
@@ -33,6 +42,14 @@ import org.compiere.model.MCountry;
  */
 public class TimeUtil
 {
+	/**It works assuming this constants*/
+	/** Days = D */
+	public static final String UOMPERIOD_Days = "D";
+	/** Months = M */
+	public static final String UOMPERIOD_Months = "M";
+	/** Years = Y */
+	public static final String UOMPERIOD_Years = "Y";
+	
 	/**
 	 * 	Get earliest time of a day (truncate)
 	 *  @param time day and time
@@ -637,6 +654,24 @@ public class TimeUtil
 	/** Truncate Year - Y			*/
 	public static final String	TRUNC_YEAR = "Y";
 	
+	//Nectosoft
+	/**
+	 * keep current day
+	 */
+	public static final int	DAY_Current = 0;
+	/**
+	 * set to first day of month
+	 */
+	public static final int	DAY_First = 1;
+	/**
+	 * set to last day of month
+	 */
+	public static final int	DAY_Last = 2;
+	
+	/**	Logging								*/
+	private static CLogger	s_log = CLogger.getCLogger(TimeUtil.class);
+	//Nectosoft end
+	
 	/**
 	 * 	Get truncated day/time
 	 *  @param dayTime day
@@ -791,7 +826,9 @@ public class TimeUtil
 	 * @param day Day; if null current time will be used
 	 * @param offset months offset
 	 * @return Day + offset (time will be 00:00)
-	 * @return Teo Sarca, SC ARHIPAC SERVICE SRL
+	 * @return Teo Sarca, SC ARHIPAC SERVICE SRL
+
+
 	 */
 	static public Timestamp addMonths (Timestamp day, int offset)
 	{
@@ -849,7 +886,7 @@ public class TimeUtil
 		}
 
 		final String sql = "SELECT Date1 FROM C_NonBusinessDay WHERE IsActive='Y' AND AD_Client_ID=? AND Date1 BETWEEN ? AND ? AND COALESCE(C_Country_ID,0) IN (0, ?)";
-		List<Object> nbd = DB.getSQLValueObjectsEx(trxName, sql, clientID, startDate, endDate, MCountry.getDefault().getC_Country_ID());
+		List<Object> nbd = DB.getSQLValueObjectsEx(trxName, sql, clientID, startDate, endDate, MCountry.getDefault(Env.getCtx()).getC_Country_ID());
 
 		GregorianCalendar cal = new GregorianCalendar();
 		cal.setTime(startDate);
@@ -877,6 +914,310 @@ public class TimeUtil
 		if (negative)
 			retValue = retValue * -1;
 		return retValue;
+	}
+	
+	//Nectosoft
+	/**
+	 * 	Return Passed date + months (truncates) keep day if within range otherwise last day
+	 * 	@param date Date
+	 * 	@param months offset
+	 * 	@param fixDay one of DAY_Keey, DAY_First, DAY_Last
+	 * 	@return date + months at 00:00
+	 */
+	static public Timestamp addMonths(Timestamp date, int months, int fixDay)
+	{
+		if (months == 0)
+		{
+			return date;
+		}
+		if (date == null)
+		{
+			date = new Timestamp(System.currentTimeMillis());
+		}
+		//
+		GregorianCalendar cal = new GregorianCalendar();
+		cal.setTime(date);
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		int day = cal.get(Calendar.DAY_OF_MONTH); 	// save current day
+		cal.set(Calendar.DAY_OF_MONTH, 1); 			// set to first day of month
+		cal.add(Calendar.MONTH, months);			// add specified months
+		int lastDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+		if(fixDay != DAY_First)
+		{
+			if(day > lastDay || fixDay == DAY_Last) day = lastDay;
+			cal.set(Calendar.DAY_OF_MONTH, day); 			// set to original day or last day of month
+		}
+		
+		return new Timestamp (cal.getTimeInMillis());
+
+	}
+
+	static public Timestamp calcWorkingDateTo(int R_Resource_ID, Timestamp dateFrom, BigDecimal qty)
+	{
+		MResource res = new MResource(Env.getCtx(), R_Resource_ID, null);
+		MResourceType rty = res.getResourceType();
+		int timeWorked = res.getDailyCapacity().intValue();
+		if(timeWorked == 0)
+		{
+			s_log.log(Level.WARNING, "Daily capacity not set");
+		}
+		int tothours = convertToHours(Env.getCtx(), res.getC_UOM_ID(), qty);
+		int totdays = (timeWorked != 0) ? tothours/timeWorked : 0;
+
+		GregorianCalendar gc = new GregorianCalendar();
+		gc.setTime(dateFrom);
+		
+		int ndays=0;
+		while (ndays < totdays)
+		{
+			Timestamp testDay = new Timestamp(gc.getTimeInMillis()); 
+			if (isHoliday(testDay) == false && rty.isDayAvailable(testDay) == true)
+			{
+				ndays++;
+			}
+			gc.add(Calendar.DAY_OF_YEAR, 1);
+		}
+		return new Timestamp(gc.getTimeInMillis());
+	}
+
+	static public long calcWorkingDays(int R_Resource_ID, Timestamp dateFrom, Timestamp dateTo)
+	{
+		MResource res = new MResource(Env.getCtx(), R_Resource_ID, null);
+		MResourceType rty = res.getResourceType();
+
+		GregorianCalendar gcFrom = new GregorianCalendar();
+		gcFrom.setTime(dateFrom);
+
+		GregorianCalendar gcTo = new GregorianCalendar();
+		gcTo.setTime(dateTo);
+
+		long ndays = 0;
+		
+		while(gcFrom.before(gcTo))
+		{
+			Timestamp testDay = new Timestamp(gcFrom.getTimeInMillis()); 
+			if (isHoliday(testDay) == false && rty.isDayAvailable(testDay) == true)
+			{
+				ndays++;
+			}
+			gcFrom.add(Calendar.DAY_OF_YEAR, 1);
+		}
+		return ndays;
+	}
+	
+	/**
+	 * Calculate working days between two dates and convert them based on UOM on resource
+	 * @param R_Resource_ID
+	 * @param dateFrom
+	 * @param dateTo
+	 * @return working days converted to resource's UOM
+	 */
+	static public BigDecimal calcWorkingTime(int R_Resource_ID, Timestamp dateFrom, Timestamp dateTo)
+	{
+		MResource res = new MResource(Env.getCtx(), R_Resource_ID, null);
+		
+		long timeWorked = calcWorkingDays(R_Resource_ID, dateFrom, dateTo);
+		timeWorked = timeWorked * res.getDailyCapacity().longValue();
+
+		BigDecimal workedtime = MUOMConversion.convert(Env.getCtx(), getHour_UOM_ID(Env.getCtx()), res.getC_UOM_ID(), new BigDecimal(timeWorked));
+		return workedtime;
+	}
+	
+	static public BigDecimal calcWorkingHours(int R_Resource_ID, Timestamp dateFrom, Timestamp dateTo)
+	{
+		BigDecimal workedTime = Env.ZERO;
+		
+		if(TimeUtil.isSameDay(dateFrom, dateTo))
+		{
+			workedTime = diffDateInHours(dateFrom, dateTo);
+		}
+		else
+		{
+			MResource res = new MResource(Env.getCtx(), R_Resource_ID, null);
+			MResourceType mResourceType = res.getResourceType();
+					
+			Calendar calendar = GregorianCalendar.getInstance(); // creates a new calendar instance
+			
+			calendar.setTime(dateFrom);   // assigns calendar to given date 
+			int hoursDateFrom = calendar.get(Calendar.HOUR_OF_DAY); // gets hour in 24h format
+			int minuteDateFrom = calendar.get(Calendar.MINUTE);
+			calendar.setTime(mResourceType.getTimeSlotEnd());
+			int hoursSlotEnd = calendar.get(Calendar.HOUR_OF_DAY);
+			int minuteSlotEnd = calendar.get(Calendar.MINUTE);
+			
+			int diffHours = hoursSlotEnd-hoursDateFrom;
+			if(minuteSlotEnd>minuteDateFrom)
+				diffHours++;
+			if(diffHours > 0)
+				workedTime=workedTime.add(new BigDecimal(diffHours));
+			
+			calendar.setTime(dateTo);
+			int hoursDateTo = calendar.get(Calendar.HOUR_OF_DAY);
+			int minuteDateTo = calendar.get(Calendar.MINUTE);
+			calendar.setTime(mResourceType.getTimeSlotStart());
+			int hoursSlotStart = calendar.get(Calendar.HOUR_OF_DAY);
+			int minuteSlotStart = calendar.get(Calendar.MINUTE);
+			
+			diffHours = hoursDateTo-hoursSlotStart;
+			if(minuteDateTo>minuteSlotStart)
+				diffHours++;
+			
+			if(diffHours > 0)
+				workedTime=workedTime.add(new BigDecimal(diffHours));
+			
+			int nDays = diffDateInHours(dateFrom, dateTo).divide(new BigDecimal(24),0,RoundingMode.DOWN).intValue();
+			if(nDays > 1)
+			{
+				int slotHours = mResourceType.getTimeSlotHours();
+				workedTime=workedTime.add(new BigDecimal(slotHours*(nDays-1)));
+			}
+		}
+		
+		return workedTime;
+	}
+	
+	static public BigDecimal diffDateInHours(Timestamp dateFrom, Timestamp dateTo)
+	{
+		long diff= dateTo.getTime()-dateFrom.getTime();
+		return new BigDecimal(diff).divide(new BigDecimal(1000*60*60),0,RoundingMode.UP);
+	}
+	
+	static public BigDecimal diffDateInDays(Timestamp dateFrom, Timestamp dateTo)
+	{
+		long diff= dateTo.getTime()-dateFrom.getTime();
+		return new BigDecimal(diff).divide(new BigDecimal(86400000),0,RoundingMode.UP);
+	}
+	
+	static public int diffDateInYears(Timestamp dateFrom, Timestamp dateTo)
+	{
+		Calendar calendarFrom = Calendar.getInstance();
+		Calendar calendarTo = Calendar.getInstance();
+		
+		calendarFrom.setTimeInMillis(dateFrom.getTime());
+		calendarTo.setTimeInMillis(dateTo.getTime());
+		
+		int yearFrom = calendarFrom.get(Calendar.YEAR);
+		int yearTo = calendarTo.get(Calendar.YEAR);
+		
+		int yearDifference = yearTo-yearFrom;
+		
+		calendarTo.set(Calendar.YEAR,yearFrom);
+		
+		if(calendarTo.before(calendarFrom))
+			yearDifference--;
+		
+		return yearDifference;
+	}
+
+
+	static public boolean isHoliday(Timestamp day)
+	{
+		try
+		{
+			String sql = "SELECT 1 " +  
+					"FROM C_NONBUSINESSDAY BD " + 
+					"INNER JOIN C_CALENDAR CL ON CL.C_CALENDAR_ID = BD.C_CALENDAR_ID " +  
+					"INNER JOIN AD_CLIENTINFO CI ON CI.C_CALENDAR_ID = CL.C_CALENDAR_ID " +  
+					"WHERE CI.AD_CLIENT_ID = ? AND BD.DATE1 = ?";
+			
+			int ris = DB.getSQLValueEx(null, sql, Env.getAD_Client_ID(Env.getCtx()), day);
+			return ris == -1 ? false: true;
+		}
+		catch (Exception e)
+		{
+			s_log.log(Level.SEVERE, "", e);
+			return false;
+		}
+	}
+
+	/**
+	 *	Convert qty to target UOM and round.
+	 *  @param ctx context
+	 *  @param C_UOM_ID from UOM
+	 *  @param qty qty
+	 *  @return hours - 0 if not found
+	 */
+	static public int convertToHours(Properties ctx,
+		int C_UOM_ID, BigDecimal qty)
+	{
+		if (qty == null)
+			return 0;
+		int C_UOM_To_ID = getHour_UOM_ID(ctx);
+		if (C_UOM_ID == C_UOM_To_ID)
+			return qty.intValue();
+		//
+		BigDecimal result = MUOMConversion.convert (ctx, C_UOM_ID, C_UOM_To_ID, qty);
+		if (result == null)
+			return 0;
+		return result.intValue();
+	}	//	convert
+
+	public static int getHour_UOM_ID (Properties ctx)
+	{
+		String sql = "SELECT C_UOM_ID FROM C_UOM WHERE IsActive='Y' AND X12DE355=?";
+		return DB.getSQLValue(null, sql, MUOM.X12_HOUR);
+	}	//	getMinute_UOM_ID
+	//Nectosoft end
+	
+	public static boolean isDateSuperimposed(Timestamp dateFrom1,Timestamp dateTo1,
+			Timestamp dateFrom2,Timestamp dateTo2)
+	{
+		if((dateFrom1.before(dateTo2) || dateFrom1.equals(dateTo2))
+				&& (dateTo1.after(dateFrom2) ||  dateTo1.equals(dateFrom2)))
+			return true;
+		else
+			return false;
+	}
+	
+	/**
+	 * Partendo da una data tsStartDate restituisce un timestamp che rappresenta
+	 * la prima data utile successiva definita secondo sUom e nNPeriod. La data viene poi spostata all'ultimo
+	 * del mese se bLastMonthDay e' true.
+	 * 
+	 * @param sUomPeriod
+	 * @param nNPeriod
+	 * @param tsStartDate
+	 * @param bLastMonthDay
+	 * @return
+	 */
+	public static Timestamp getNextDate(String sUomPeriod, int nNPeriod, Timestamp tsStartDate,boolean bLastMonthDay)
+	{				
+		int fieldAdd =  -1;
+		int nLastDay = -1;
+		int actualDay = -1;
+		
+		if(sUomPeriod.equals(UOMPERIOD_Days))
+			fieldAdd = Calendar.DAY_OF_MONTH;
+		else if (sUomPeriod.equals(UOMPERIOD_Months))
+			fieldAdd = Calendar.MONTH;
+		else if (sUomPeriod.equals(UOMPERIOD_Years))
+			fieldAdd = Calendar.YEAR;
+		
+		Calendar cal = Calendar.getInstance();
+		cal.setTimeInMillis(tsStartDate.getTime());
+		if(fieldAdd != Calendar.DAY_OF_MONTH)
+		{
+			actualDay = cal.get(Calendar.DAY_OF_MONTH);
+			cal.set(Calendar.DAY_OF_MONTH, 1);
+		}
+		cal.add(fieldAdd, nNPeriod);
+		
+		if (bLastMonthDay && fieldAdd != Calendar.DAY_OF_MONTH)
+		{
+			nLastDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+			cal.set(Calendar.DAY_OF_MONTH, nLastDay);
+		}
+		else if (fieldAdd != Calendar.DAY_OF_MONTH)
+		{
+			nLastDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+			if(nLastDay >= actualDay)
+				cal.set(Calendar.DAY_OF_MONTH, actualDay);
+		}
+				
+		return new Timestamp(cal.getTimeInMillis());			
 	}
 
 }	//	TimeUtil

@@ -49,6 +49,7 @@ import java.util.logging.Level;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.DBException;
 import org.adempiere.util.ServerContext;
 import org.compiere.Adempiere;
@@ -64,6 +65,9 @@ import org.compiere.util.SecureEngine;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
+
+import it.idempiere.base.util.STDSysConfig;
+import it.idempiere.base.util.SavedFromUI;
 
 /**
  *	Grid Table Model for JDBC access including buffering.
@@ -2181,6 +2185,142 @@ public class GridTable extends AbstractTableModel
 	 */
 	private char dataSavePO (int Record_ID) throws Exception
 	{
+		// F3P: replaced with buildSavePO
+		
+		PO po = buildSavePO(Record_ID, true);
+		
+		if(po == null)
+			return SAVE_ERROR;
+
+		/* F3P: po is added to list of object saved from ui, 
+		 * so we can have a way to check if an object is being 
+		 * saved from ui or from a process.
+		 * After po.save() the object will be removed from the list.
+		 * 
+		 * This code is also being surrounded with a try/catch block to 
+		 * avoid that an object is not removed from the list in case of exception
+		 */
+		try
+		{
+			SavedFromUI.add(po); // F3P: add po
+			
+			if (!po.save())
+			{
+				SavedFromUI.remove(po); // F3P: remove po
+							
+				String msg = "SaveError";
+				String info = "";
+				ValueNamePair ppE = CLogger.retrieveError();
+				if (ppE != null)
+				{
+					msg = ppE.getValue();
+					info = ppE.getName();
+					if ("DBExecuteError".equals(msg))
+						info = "DBExecuteError:" + info;
+				}
+				fireDataStatusEEvent(msg, info, true);
+				return SAVE_ERROR;
+			}
+			else if (m_virtual && po.get_ID() > 0)
+			{
+				//update ID
+				MSort sort = m_sort.get(m_rowChanged);
+				int oldid = sort.index;
+				if (oldid != po.get_ID())
+				{
+					sort.index = po.get_ID();
+					Object[] data = m_virtualBuffer.remove(oldid);
+					data[m_indexKeyColumn] = sort.index;
+					m_virtualBuffer.put(sort.index, data);
+				}
+			}
+		}
+		finally
+		{
+			SavedFromUI.remove(po);	// F3P: removed even if exception occur
+		}		
+		
+		//	Refresh - update buffer
+		String whereClause = po.get_WhereClause(true);
+		if (log.isLoggable(Level.FINE)) log.fine("Reading ... " + whereClause);
+		StringBuffer refreshSQL = new StringBuffer(m_SQL_Select)
+			.append(" WHERE ").append(whereClause);
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		try
+		{
+			pstmt = DB.prepareStatement(refreshSQL.toString(), get_TrxName());
+			rs = pstmt.executeQuery();
+			if (rs.next())
+			{
+				Object[] rowDataDB = readData(rs);
+				//	update buffer
+				setDataAtRow(m_rowChanged, rowDataDB);
+				fireTableRowsUpdated(m_rowChanged, m_rowChanged);
+			}
+		}
+		catch (SQLException e)
+		{
+			String msg = "SaveError";
+			log.log(Level.SEVERE, refreshSQL.toString(), e);
+			fireDataStatusEEvent(msg, e.getLocalizedMessage(), true);
+			return SAVE_ERROR;
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null;
+			pstmt = null;
+		}
+
+		//	everything ok
+		m_rowData = null;
+		m_changed = false;
+		m_compareDB = true;
+		m_rowChanged = -1;
+		m_newRow = -1;
+		m_inserting = false;
+		//
+		ValueNamePair pp = CLogger.retrieveWarning();
+		if (pp != null)
+		{
+			String msg = pp.getValue();
+			String info = pp.getName();
+			fireDataStatusEEvent(msg, info, false);
+		}
+		else
+		{
+			pp = CLogger.retrieveInfo();
+			String msg = "Saved";
+			String info = "";
+			if (pp != null)
+			{
+				msg = pp.getValue();
+				info = pp.getName();
+			}
+			fireDataStatusIEvent(msg, info);
+		}
+		//
+		log.config("fini");
+		return SAVE_OK;
+	}	//	dataSavePO
+	
+	public int getRowChanged()
+	{
+		return m_rowChanged;
+	}
+	
+	/**
+	 *  Build PO for saving
+	 * 	
+	 *	@param Record_ID
+	 *  @param fireEvents send events if error
+	 *	@return PO
+	 *	@throws Exception
+	 */
+	
+	public PO buildSavePO(int Record_ID, boolean fireEvents) throws Exception
+	{
 		if (log.isLoggable(Level.FINE)) log.fine("ID=" + Record_ID);
 		//
 		Object[] rowData = getDataAtRow(m_rowChanged);
@@ -2771,14 +2911,27 @@ public class GridTable extends AbstractTableModel
 		if (po != null)
 		{
 			boolean ok = false;
+			
+			/* F3P: po is added to list of object saved from ui, 
+			 * so we can have a way to check if an object is being 
+			 * saved from ui or from a process.
+			 * After po.save() the object will be removed from the list (in finally block).
+			 */
+			
 			try
 			{
+				SavedFromUI.add(po); // F3P: add po
 				ok = po.delete(false);
 			}
 			catch (Throwable t)
 			{
 				log.log(Level.SEVERE, "Delete", t);
 			}
+			finally
+			{
+				SavedFromUI.remove(po);	// F3P: removed even if exception occur
+			}
+			
 			if (!ok)
 			{
 				ValueNamePair vp = CLogger.retrieveError();
@@ -3830,7 +3983,15 @@ public class GridTable extends AbstractTableModel
 	}	//	setFieldVFormat	
 
 	// verify if the current record has changed
-	public boolean hasChanged(int row) {
+	
+	public boolean hasChanged(int row) 
+	{
+		return hasChanged(row, false);
+	}
+	
+	// F3P: added option to allow reload if change is from the same user (model validator changed it while saving child or related record)
+	
+	public boolean hasChanged(int row, boolean reloadIfImplicitChange) {
 		// not so aggressive (it can has still concurrency problems)
 		// compare Updated, IsProcessed
 		if (getKeyID(row) > 0) {
@@ -3840,13 +4001,26 @@ public class GridTable extends AbstractTableModel
 			boolean hasUpdated = (colUpdated >= 0);
 			boolean hasProcessed = (colProcessed >= 0);
 			
+			// F3P: if colProcessed is a virtual column, don't consider it
+			
+			if(hasProcessed)
+			{
+				GridField	gf = (GridField)m_fields.get(colProcessed);
+				if(gf.isVirtualColumn())
+					hasProcessed = false;
+			}
+				
+			// end			
+			
+			// F3P: add updatedby to allow for same user check
+			
 			String columns = null;
 			if (hasUpdated && hasProcessed) {
-				columns = new String("Updated, Processed");
+				columns = new String("Updated, Processed, UpdatedBy");
 			} else if (hasUpdated) {
-				columns = new String("Updated");
+				columns = new String("Updated, UpdatedBy");
 			} else if (hasProcessed) {
-				columns = new String("Processed");
+				columns = new String("Processed, UpdatedBy");
 			} else {
 				// no columns updated or processed to compare
 				return false;
@@ -3862,6 +4036,9 @@ public class GridTable extends AbstractTableModel
 	    	PreparedStatement pstmt = null;
 	    	ResultSet rs = null;
 	    	String sql = "SELECT " + columns + " FROM " + m_tableName + " WHERE " + m_tableName + "_ID=?";
+	    	
+	    	int updatedBy = -1; // F3P: add updatedby to allow for same user check
+	    	
 	    	try
 	    	{
 	    		pstmt = DB.prepareStatement(sql, get_TrxName());
@@ -3873,6 +4050,8 @@ public class GridTable extends AbstractTableModel
 	    				dbUpdated = rs.getTimestamp(idx++);
 	    			if (hasProcessed)
 	    				dbProcessedS = rs.getString(idx++);
+	    			
+	    			updatedBy = rs.getInt("UpdatedBy"); // F3P: add updatedby to allow for same user check
 	    		}
 	    		else
 	    			if (log.isLoggable(Level.INFO)) log.info("No Value " + sql);
@@ -3887,6 +4066,8 @@ public class GridTable extends AbstractTableModel
 	    		rs = null; pstmt = null;
 	    	}
 	    	
+	    	boolean isChanged = false;
+	    	
 	    	if (hasUpdated) {
 				Timestamp memUpdated = null;
 				memUpdated = (Timestamp) getOldValue(row, colUpdated);
@@ -3894,10 +4075,10 @@ public class GridTable extends AbstractTableModel
 					memUpdated = (Timestamp) getValueAt(row, colUpdated);
 
 				if (memUpdated != null && ! memUpdated.equals(dbUpdated))
-					return true;
+					isChanged = true;
 	    	}
 	    	
-	    	if (hasProcessed) {
+	    	if (isChanged == false && hasProcessed) {
 				Boolean memProcessed = null;
 				memProcessed = (Boolean) getOldValue(row, colProcessed);
 				if (memProcessed == null){
@@ -3908,15 +4089,36 @@ public class GridTable extends AbstractTableModel
 				}
 	    			
 				Boolean dbProcessed = Boolean.TRUE;
-				if (! dbProcessedS.equals("Y"))
+				if (dbProcessedS == null || !dbProcessedS.equals("Y")) // F3P: null check added, no record result in NPE
 					dbProcessed = Boolean.FALSE;
 				if (memProcessed != null && ! memProcessed.equals(dbProcessed))
-					return true;
+					isChanged = true;
 	    	}
-		}
-
-		// @TODO: configurable aggressive - compare each column with the DB
-		return false;
+			    	}
+	    	
+	    	if(isChanged)
+	    	{
+	    		int currentUser = Env.getAD_User_ID(m_ctx);
+	    		
+	    		
+	    		// F3P: introdotta variabile per bloccare update da stesso utente	    		
+	    		// if(updatedBy == currentUser && needSave() == false) // Implcit change	    		
+	    		boolean bSameUser = (updatedBy == currentUser);	    		
+	    		
+	    		if(STDSysConfig.isBlockConcurrentUpdateSameUser(getAD_Client_ID())) // Se dobbiamo bloccare le modifiche anche se fatte dallo stesso utente, allora siamo nella condizione 'utente diverso' 
+	    			bSameUser = false;
+	    		
+	    		if(bSameUser && needSave() == false) // Implcit change
+	    		{
+	    			dataRefresh(row);
+	    			isChanged = false;
+	    		}
+	    		
+	    	return isChanged;
+	    	}
+	    	
+	    	return false;
+	    		
 	}
 
 	// verify if the current record has changed

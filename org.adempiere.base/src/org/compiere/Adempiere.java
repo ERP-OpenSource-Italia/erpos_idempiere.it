@@ -69,6 +69,11 @@ public final class Adempiere
 	static public String	DATE_VERSION	= "2020-12-20";
 	/** Database Version as date    Compared with AD_System		*/
 	static public String	DB_VERSION		= "2020-12-20";
+	
+	/** F3P: installation role config key **/
+	final static public String INSTALLATION_ROLE_KEY = "installation.role";
+	final static public String INSTALLATION_ROLE_TEST = "test";
+	private static Boolean s_isTestInstallation = null;
 
 	/** Product Name            */
 	static public final String	NAME 			= "iDempiere\u00AE";
@@ -708,4 +713,22 @@ public final class Adempiere
 		for (int i = 0; i < listeners.length; i++)
         	listeners[i].stateChange(e);
 	}
+	
+	// F3P: is a test server ?
+	
+	public static final boolean isTestInstallation()
+	{
+		if(s_isTestInstallation == null)
+		{
+			String role = System.getProperty(INSTALLATION_ROLE_KEY);
+			
+			if(role != null && role.equalsIgnoreCase(INSTALLATION_ROLE_TEST))
+				s_isTestInstallation = true;
+			else
+				s_isTestInstallation = false;
+		}
+		
+		return s_isTestInstallation;
+	}
+	
 }	//	Adempiere

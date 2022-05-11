@@ -142,9 +142,13 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 	private boolean m_locked = false;
 	private String	m_AD_Process_UU = "";
 		
+	// F3p: keep and propagate feedback container
+	private FeedbackContainer feedbackContainer;
+		
 	protected AbstractProcessDialog()
 	{
 		super();		
+		feedbackContainer = FeedbackContainer.getCurrent();
 	}
 	
 	/**
@@ -888,6 +892,18 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 	public void runProcess() 
 	{
 		Events.sendEvent(DialogEvents.ON_BEFORE_RUN_PROCESS, this, null);
+		
+		// F3P: Manage info window (cannot be managed inside thread pool executor)
+		
+		int AD_InfoWindow_ID = LITMProcess.getAD_InfoWindow_ID_DB(null, m_pi.getAD_Process_ID());
+		
+		if(AD_InfoWindow_ID > 0)
+		{
+			WProcessCtl.process(AbstractProcessDialog.this, getWindowNo(), getParameterPanel(), m_pi, null);
+			
+			onComplete();
+		}
+		else
 		future = Adempiere.getThreadPoolExecutor().submit(new DesktopRunnable(new ProcessDialogRunnable(null), getDesktop()));
 	}
 
@@ -1031,6 +1047,23 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 	{
 		hideBusyDialog();
 		updateUI();		
+		
+		ProcessInfo pi = getProcessInfo();
+		if(pi != null)
+		{
+			FeedbackContainer feedbackContainer = pi.getFeedbackContainer();
+			if(feedbackContainer != null)
+			{
+				final UIFeedbackNotifier notifier = new UIFeedbackNotifier(getWindowNo(), getMaskComponent(), feedbackContainer,true, new Callback<UIFeedbackNotifier>()
+				{
+					public void onCallback(UIFeedbackNotifier notifier) 
+					{			
+					};
+				});
+				
+				notifier.processFeedback();
+			}
+		}
 	}
 	
 	public abstract void hideBusyDialog();
@@ -1155,17 +1188,33 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 		
 		protected void doRun() 
 		{
+			PO startedFromUIPO = null;
 			ProcessInfo m_pi = getProcessInfo();
+			
 			try {
+				//F3P UI action flag
+				
+				if(m_pi.getTable_ID() > 0 && m_pi.getRecord_ID() > 0)
+				{
+					String trxName = (m_trx != null)?m_trx.getTrxName():null;
+					startedFromUIPO = StartedFromUI.add(Env.getCtx(),  m_pi.getTable_ID(), m_pi.getRecord_ID(), trxName);
+				}
+				
 				if (log.isLoggable(Level.INFO))
 					log.log(Level.INFO, "Process Info=" + m_pi + " AD_Client_ID="+ Env.getAD_Client_ID(Env.getCtx()));
+				FeedbackContainer.setCurrent(feedbackContainer); // F3P: set feedback container before invoking process (need for document events)
 				WProcessCtl.process(AbstractProcessDialog.this, getWindowNo(), getParameterPanel(), m_pi, m_trx);
 			} catch (Exception ex) {
 				m_pi.setError(true);
 				m_pi.setSummary(ex.getLocalizedMessage());
 				log.log(Level.SEVERE, ex.getLocalizedMessage(), ex);
 			} finally {
+				FeedbackContainer.setCurrent(null);
 				Executions.schedule(getDesktop(), AbstractProcessDialog.this, new Event(ON_COMPLETE, AbstractProcessDialog.this, null));
+				
+				// F3P: clear action flag
+				if(startedFromUIPO != null)
+					StartedFromUI.remove(startedFromUIPO);	
 			}		
 		}
 	}
@@ -1248,6 +1297,7 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 				{
 					MClient client = MClient.get(m_ctx, AD_Client_ID);
 					client.sendEMailAttachments(AD_User_ID, process.get_Translation("Name", Env.getAD_Language(Env.getCtx())), m_pi.getSummary() + " " + m_pi.getLogInfo(), getDownloadFiles());
+					sendEmail = false;
 				}
 				
 				if (createNotice)
@@ -1278,6 +1328,14 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 				}
 			} catch (Exception e) {
 				log.log(Level.SEVERE, e.getLocalizedMessage());				
+				
+				if (sendEmail )
+				{
+					MClient client = MClient.get(m_ctx, AD_Client_ID);
+					client.sendEMailAttachments(AD_User_ID, process.get_Translation("Name", Env.getAD_Language(Env.getCtx())), (m_pi != null ? m_pi.getSummary()+" "+m_pi.getLogInfo() : "") 
+						+ " in errore durante l'esecuzione del processo \n "+e.getMessage()  , getDownloadFiles());
+				}
+				
 			} finally {
 				instance.setIsProcessing(false);
 				instance.saveEx();
@@ -1353,6 +1411,67 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 					log.log(Level.SEVERE, e.getLocalizedMessage(), e);
 				}
 
+			}
+		});
+	}
+	
+	//F3P
+	@Override
+	public void zoom(PO po, int AD_Window_ID) {
+		String[] keyCol = po.get_KeyColumns();
+		MQuery query = new MQuery(po.get_TableName());
+		query.addRestriction(keyCol[0], MQuery.EQUAL, po.get_ID());
+		query.setRecordCount(1);
+
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				AEnv.zoom(AD_Window_ID, query);
+			}
+		});
+	}
+
+	@Override
+	public void zoom(int AD_Table_ID, int Record_ID) {
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				AEnv.zoom(AD_Table_ID, Record_ID);
+			}
+		});
+	}
+
+	@Override
+	public void zoom(MQuery query) {
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				AEnv.zoom(query);
+			}
+		});
+	}
+
+	@Override
+	public void previewReport(ReportEngine re) {
+		ReportCtl.preview(re);		
+	}
+	
+	@Override
+	public void showURL(String html) {
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				SessionManager.getAppDesktop().showURL(html, true);
+			}
+		});
+	}
+
+	@Override
+	public void sendRedirect(String html) {
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				Executions.getCurrent().sendRedirect(html, "_blank");
 			}
 		});
 	}

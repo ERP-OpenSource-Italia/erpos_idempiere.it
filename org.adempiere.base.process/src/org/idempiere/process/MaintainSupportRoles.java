@@ -105,6 +105,7 @@ public class MaintainSupportRoles extends SvrProcess {
 					} else if (ACTION_DELETE.equals(p_IsActive)) {
 						if (ur != null) {
 							ur.deleteEx(true);
+							ur.saveEx();
 							cnt++;
 						}
 					}

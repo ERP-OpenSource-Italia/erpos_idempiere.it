@@ -144,6 +144,10 @@ public class SystemIDs
 	public final static int REFERENCE_DATATYPE_TIME = 24;
 	public final static int REFERENCE_DATATYPE_URL = 40;
 	public final static int REFERENCE_DATATYPE_YES_NO = 20;
+	public final static int REFERENCE_DATATYPE_CHART = 53370;
+	public final static int REFERENCE_DATATYPE_DASHBOARD_CONTENT = 200122;
+	public final static int REFERENCE_DATATYPE_SINGLE_SELECTION_GRID = 200127;
+	public final static int REFERENCE_DATATYPE_MULTIPLE_SELECTION_GRID = 200128;
 
 	public final static int REFERENCE_ACCOUNT = 175;
 	public final static int REFERENCE_AD_LANGUAGE = 106;
@@ -162,10 +166,14 @@ public class SystemIDs
 	public final static int REFERENCE_PAYMENTRULE = 195;
 	public final static int REFERENCE_POSTED = 234;
 	public final static int REFERENCE_POSTING_TYPE = 125;
+	public final static int REFERENCE_POSTED = 234;
 	public final static int REFERENCE_SQLORDERBY = 53296;
 	public final static int REFERENCE_WFINSTANCE_STATE = 305;
 	public final static int REFERENCE_WIZARDSTATUS = 200003;
 	public final static int REFERENCE_YESNO = 319;
+	public final static int REFERENCE_WIZARDSTATUS = 200003;
+	public final static int REFERENCE_WFINSTANCE_STATE = 305;
+	public final static int REFERENCE_IMPORT_MODE = 200098;
 
 	public final static int TABLE_AD_TABLE = 100;
 	public final static int TABLE_AD_WF_PROCESS = 645;

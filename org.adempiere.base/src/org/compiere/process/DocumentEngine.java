@@ -1341,6 +1341,23 @@ public class DocumentEngine implements DocAction
 		return MRole.get(Env.getCtx(), roleId).checkActionAccess(clientId, docTypeId, options, maxIndex);
 	}
 
+	public static boolean  isValidAction(int clientId, int roleId, int docTypeId, String action) 
+	{
+		String [] option = {action}; 
+		DocumentEngine.checkActionAccess(clientId, roleId, docTypeId,option, 1);
+		boolean valid = false;
+		for(String docaction : option)
+		{
+			if(docaction != null && docaction.equals(action))
+			{
+				valid = true;
+				break;
+			}
+		}
+		
+		return valid;
+	}
+
 	/**
 	 *  Post Immediate
 	 *

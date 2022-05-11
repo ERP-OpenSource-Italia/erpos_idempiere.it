@@ -17,6 +17,7 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.List;
@@ -236,8 +237,9 @@ public class MRequisitionLine extends X_M_RequisitionLine
 		if (log.isLoggable(Level.FINE)) log.fine("M_PriceList_ID=" + M_PriceList_ID);
 		IProductPricing pp = Core.getProductPricing();
 		pp.setRequisitionLine(this, get_TrxName());
-		pp.setM_PriceList_ID(M_PriceList_ID);
+		pp.setM_PriceList_ID(M_PriceList_ID);		
 	//	pp.setPriceDate(getDateOrdered());
+		
 		//
 		setPriceActual (pp.getPriceStd());
 	}	//	setPrice
@@ -248,6 +250,14 @@ public class MRequisitionLine extends X_M_RequisitionLine
 	public void setLineNetAmt ()
 	{
 		BigDecimal lineNetAmt = getQty().multiply(getPriceActual());
+	
+		MRequisition requisition = getParent();
+		MPriceList priceList = MPriceList.get(getCtx(), requisition.getM_PriceList_ID(), get_TrxName());
+		int precision = priceList.getStandardPrecision();
+		
+		if(lineNetAmt.scale() > precision)
+			lineNetAmt = lineNetAmt.setScale(precision,  RoundingMode.HALF_UP);
+
 		super.setLineNetAmt (lineNetAmt);
 	}	//	setLineNetAmt
 	
@@ -259,8 +269,8 @@ public class MRequisitionLine extends X_M_RequisitionLine
 	 */
 	protected boolean beforeSave (boolean newRecord)
 	{
-		if (newRecord && getParent().isProcessed()) {
-			log.saveError("ParentComplete", Msg.translate(getCtx(), "M_Requisition_ID"));
+		if (newRecord && getParent().isComplete()) {
+			log.saveError("ParentComplete", Msg.translate(getCtx(), "M_RequisitionLine"));
 			return false;
 		}
 		if (getLine() == 0)
@@ -327,7 +337,7 @@ public class MRequisitionLine extends X_M_RequisitionLine
 	@Override
 	public I_M_Product getM_Product()
 	{
-		return MProduct.getCopy(getCtx(), getM_Product_ID(), get_TrxName());
+		return MProduct.get(getCtx(), getM_Product_ID());
 	}
 
 	/**

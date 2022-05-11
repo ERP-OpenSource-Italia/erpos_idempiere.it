@@ -19,6 +19,11 @@ import java.sql.ResultSet;
 import java.util.Properties;
 
 import org.adempiere.exceptions.AdempiereException;
+import org.compiere.model.MDocType;
+import org.compiere.model.MPeriod;
+import org.compiere.model.ModelValidationEngine;
+import org.compiere.model.ModelValidator;
+import org.compiere.model.PO;
 import org.compiere.process.DocAction;
 import org.compiere.process.DocumentEngine;
 import org.compiere.util.Env;
@@ -137,7 +142,7 @@ implements DocAction
 		}
 				
 		// Check if the accounts have changed in the meantime
-		MAssetAcct assetAcct = MAssetAcct.forA_Asset_ID(getCtx(),  getC_AcctSchema_ID(), getA_Asset_ID(), getPostingType(), getDateAcct(), get_TrxName());
+		MAssetAcct assetAcct = MAssetAcct.forA_Asset_ID(getCtx(), getA_Asset_ID(), getPostingType(), getDateAcct(), get_TrxName());
 		if (assetAcct.getA_Asset_Acct() != getA_Asset_Acct()
 				|| assetAcct.getA_Accumdepreciation_Acct() != getA_Accumdepreciation_Acct()
 				|| assetAcct.getA_Depreciation_Acct() != getA_Depreciation_Acct()
@@ -149,7 +154,7 @@ implements DocAction
 		}
 		//Check that at least one account is changed
 		{
-		MAssetAcct acct = MAssetAcct.forA_Asset_ID(getCtx(), getC_AcctSchema_ID(),  getA_Asset_ID(), getPostingType(), getDateAcct(), get_TrxName());
+		MAssetAcct acct = MAssetAcct.forA_Asset_ID(getCtx(), getA_Asset_ID(), getPostingType(), getDateAcct(), get_TrxName());
 		if (acct.getA_Asset_Acct() == getA_Asset_New_Acct()
 				&& acct.getA_Accumdepreciation_Acct() == getA_Accumdepreciation_New_Acct()
 				&& acct.getA_Depreciation_Acct() == getA_Depreciation_New_Acct()
@@ -200,7 +205,7 @@ implements DocAction
 
 		
 		// create new MAssetAcct
-		MAssetAcct assetAcctPrev = MAssetAcct.forA_Asset_ID(getCtx(),  getC_AcctSchema_ID(), getA_Asset_ID(), getPostingType(), getDateAcct(), get_TrxName());
+		MAssetAcct assetAcctPrev = MAssetAcct.forA_Asset_ID(getCtx(), getA_Asset_ID(), getPostingType(), getDateAcct(), get_TrxName());
 		MAssetAcct assetAcct = new MAssetAcct(getCtx(), 0, get_TrxName());
 		PO.copyValues(assetAcctPrev, assetAcct);
 		assetAcct.setA_Asset_Acct(getA_Asset_New_Acct());

@@ -319,6 +319,12 @@ public class MAttachment extends X_AD_Attachment
 		if (item == null)
 			return false;
 		item.getData(); // in case of lazy load enforce reading
+		
+		// F3P: since attachment is logically a file, make sure its a valid name
+		
+		String safeName = STDUtils.convertToSafeFilename(item.getName(), '_');
+		item.setName(safeName);
+		
 		if (m_items == null)
 			loadLOBData();
 		for (int i = 0; i < m_items.size(); i++) {
@@ -524,6 +530,15 @@ public class MAttachment extends X_AD_Attachment
 		return saveLOBData();		//	save in BinaryData
 	}	//	beforeSave
 
+	/**
+	 * 	Executed before Delete operation.
+	 *	@return true if record can be deleted
+	 */
+	protected boolean beforeDelete ()
+	{
+		return deleteLOBData();
+	}
+	
 	/**
 	 * 	Delete Entry Data in Zip File format
 	 *	@return true if saved

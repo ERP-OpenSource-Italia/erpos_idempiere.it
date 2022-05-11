@@ -110,6 +110,8 @@ public interface ModelValidator
 	public static final int TIMING_BEFORE_POST = 15;
 	/** Called after document is posted */
 	public static final int TIMING_AFTER_POST = 16;
+	/** Called before document is reposted */
+	public static final int TIMING_BEFORE_REPOST = 17;
 
 	// Correlation between constant events and list of event script model validators
 	public static String[] documentEventValidators = new String[] {
@@ -129,7 +131,8 @@ public interface ModelValidator
 		X_AD_Table_ScriptValidator.EVENTMODELVALIDATOR_DocumentAfterReverseCorrect,  // TIMING_AFTER_REVERSECORRECT = 13
 		X_AD_Table_ScriptValidator.EVENTMODELVALIDATOR_DocumentAfterReverseAccrual,  // TIMING_AFTER_REVERSEACCRUAL = 14
 		X_AD_Table_ScriptValidator.EVENTMODELVALIDATOR_DocumentBeforePost,           // TIMING_BEFORE_POST = 15
-		X_AD_Table_ScriptValidator.EVENTMODELVALIDATOR_DocumentAfterPost             // TIMING_AFTER_POST = 16
+		X_AD_Table_ScriptValidator.EVENTMODELVALIDATOR_DocumentAfterPost,            // TIMING_AFTER_POST = 16
+		X_AD_Table_ScriptValidator.EVENTMODELVALIDATOR_DocumentBeforeRepost		     // TIMING_BEFORE_REPOST = 17	
 	};
 
 	// Correlation between constant events and list of osgi event topics
@@ -150,7 +153,8 @@ public interface ModelValidator
 		IEventTopics.DOC_AFTER_REVERSECORRECT,  // TIMING_AFTER_REVERSECORRECT = 13
 		IEventTopics.DOC_AFTER_REVERSEACCRUAL,  // TIMING_AFTER_REVERSEACCRUAL = 14
 		IEventTopics.DOC_BEFORE_POST,           // TIMING_BEFORE_POST = 15
-		IEventTopics.DOC_AFTER_POST 			// TIMING_AFTER_POST = 16
+		IEventTopics.DOC_AFTER_POST, 			// TIMING_AFTER_POST = 16
+		IEventTopics.DOC_BEFORE_REPOST 			// TIMING_AFTER_POST = 17
 	};
 
 	/**

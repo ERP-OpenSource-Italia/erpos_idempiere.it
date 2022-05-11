@@ -46,6 +46,9 @@ import org.compiere.util.Msg;
  */
 public class MLanguage extends X_AD_Language
 {
+	private static final String AD_USER_DEF_WIN_TRL = "AD_UserDef_Win_Trl";
+	private static final String AD_USER_DEF_TAB_TRL = "AD_UserDef_Tab_Trl";
+	private static final String AD_USER_DEF_FIELD_TRL = "AD_UserDef_Field_Trl";
 	/**
 	 * 
 	 */
@@ -460,7 +463,7 @@ public class MLanguage extends X_AD_Language
 							.append("Createdby,UpdatedBy,Created,Updated, ")
 							.append(keyColumn).append(cols).append(") ")
 							.append("SELECT '").append(getAD_Language()).append("','N', AD_Client_ID,AD_Org_ID, ")
-							.append(AD_User_ID).append(",").append(AD_User_ID).append(", getDate(), getDate(), ")
+							.append(AD_User_ID).append(",").append(AD_User_ID).append(", SysDate, SysDate, ")
 							.append(keyColumn).append(cols)
 							.append(" FROM ").append(baseTable)
 							.append(" WHERE ").append(keyColumn).append(" NOT IN (SELECT ").append(keyColumn)
@@ -472,7 +475,11 @@ public class MLanguage extends X_AD_Language
 		// IDEMPIERE-99 Language Maintenance does not create UUIDs
 		MTable table = MTable.get(getCtx(), tableName);
 		MColumn column = table.getColumn(PO.getUUIDColumnName(tableName));
-		if (column != null)
+
+		if (column != null 
+				&& tableName.equals(AD_USER_DEF_FIELD_TRL) == false 
+				&& tableName.equals(AD_USER_DEF_TAB_TRL)  == false 
+				&& tableName.equals(AD_USER_DEF_WIN_TRL)  == false)
 			UUIDGenerator.updateUUID(column, get_TrxName());
 		//
 		StringBuilder msglog = new StringBuilder().append(tableName).append(" #").append(no);

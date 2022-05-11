@@ -29,6 +29,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.model.FreeOfCharge;
+
 
 /**
  *	Payment Term Model
@@ -181,7 +183,8 @@ public class MPaymentTerm extends X_C_PaymentTerm
 	 */
 	public boolean apply (int C_Invoice_ID)
 	{
-		MInvoice invoice = new MInvoice (getCtx(), C_Invoice_ID, get_TrxName());
+		//F3P PO.get
+		MInvoice invoice = PO.get(getCtx(), MInvoice.Table_Name, C_Invoice_ID, get_TrxName());
 		if (invoice == null || invoice.get_ID() == 0)
 		{
 			log.log(Level.SEVERE, "apply - Not valid C_Invoice_ID=" + C_Invoice_ID);
@@ -204,8 +207,9 @@ public class MPaymentTerm extends X_C_PaymentTerm
 		}
 
 		// do not apply payment term if the invoice is not on credit or if total is zero
-		if ( (! (MInvoice.PAYMENTRULE_OnCredit.equals(invoice.getPaymentRule()) || MInvoice.PAYMENTRULE_DirectDebit.equals(invoice.getPaymentRule())))
-			|| invoice.getGrandTotal().signum() == 0)
+		//if ( (! (MInvoice.PAYMENTRULE_OnCredit.equals(invoice.getPaymentRule()) || MInvoice.PAYMENTRULE_DirectDebit.equals(invoice.getPaymentRule())))
+		//	|| 
+		if(invoice.getGrandTotal().signum() == 0)
 			return false;
 			
 		if (!isValid())
@@ -245,6 +249,19 @@ public class MPaymentTerm extends X_C_PaymentTerm
 		//	Create Schedule
 		MInvoicePaySchedule ips = null;
 		BigDecimal remainder = invoice.getGrandTotal();
+		
+		// F3P: free of charge
+		
+		BigDecimal bdFreeOfCharge = FreeOfCharge.getFreeOfChargeAmt(invoice);		
+		
+		if(bdFreeOfCharge.signum() != 0)
+		{
+			remainder = remainder.subtract(bdFreeOfCharge);
+		}
+		
+		// F3P end
+		
+		
 		for (int i = 0; i < m_schedule.length; i++)
 		{
 			ips = new MInvoicePaySchedule (invoice, m_schedule[i]);
@@ -271,7 +288,7 @@ public class MPaymentTerm extends X_C_PaymentTerm
 	 *	@param C_Invoice_ID id
 	 *	@param trxName transaction
 	 */
-	private void deleteInvoicePaySchedule (int C_Invoice_ID, String trxName)
+	public void deleteInvoicePaySchedule (int C_Invoice_ID, String trxName) // F3P: useful utility, moved to public
 	{
 		Query query = new Query(Env.getCtx(), I_C_InvoicePaySchedule.Table_Name, "C_Invoice_ID=?", trxName);
 		List<MInvoicePaySchedule> ipsList = query.setParameters(C_Invoice_ID).list();
@@ -312,9 +329,10 @@ public class MPaymentTerm extends X_C_PaymentTerm
 			return false;
 		}
 		
-		// do not apply payment term if the order is not on credit or if total is zero
-		if ( (! (MOrder.PAYMENTRULE_OnCredit.equals(order.getPaymentRule()) || MOrder.PAYMENTRULE_DirectDebit.equals(order.getPaymentRule())) )
-			|| order.getGrandTotal().signum() == 0)
+		// F3P: (rportato da applyOrder) do not apply payment term if the invoice is not on credit or if total is zero
+		//if ( (! (MInvoice.PAYMENTRULE_OnCredit.equals(invoice.getPaymentRule()) || MInvoice.PAYMENTRULE_DirectDebit.equals(invoice.getPaymentRule())))
+		//	|| 
+		if(order.getGrandTotal().signum() == 0)
 			return false;
 			
 		if (!isValid())

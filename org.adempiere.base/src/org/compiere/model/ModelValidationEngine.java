@@ -899,6 +899,43 @@ public class ModelValidationEngine
 		Event event = new Event(IEventTopics.PREF_AFTER_LOAD, (Map<String, ?>)null);
 		EventManager.getInstance().sendEvent(event);
 	}
+	
+	/**
+	 * Before Load Preferences into Context for selected client.
+	 * @param ctx context
+	 * @see org.compiere.util.Login#loadPreferences(KeyNamePair, KeyNamePair, java.sql.Timestamp, String)
+	 * @see afterLoadPreferences
+	 */
+	public void beforeLoadPreferences (Properties ctx)
+	{
+		int AD_Client_ID = Env.getAD_Client_ID(ctx);
+		for (int i = 0; i < m_validators.size(); i++)
+		{
+			ModelValidator validator = m_validators.get(i);
+			if (AD_Client_ID == validator.getAD_Client_ID()
+				|| m_globalValidators.contains(validator))
+			{
+				java.lang.reflect.Method m = null;
+				try {
+					m = validator.getClass().getMethod("beforeLoadPreferences", new Class[]{Properties.class});
+				}
+				catch(NoSuchMethodException e) {
+					// ignore
+				}
+				try {
+					if (m != null)
+						m.invoke(validator, ctx);
+				}
+				catch (Exception e) {
+					log.warning("" + validator + ": " + e.getLocalizedMessage());
+				}
+			}
+		}
+
+		//osgi event handlers
+		Event event = new Event(IEventTopics.PREF_BEFORE_LOAD, (Map<String, ?>)null);
+		EventManager.getInstance().sendEvent(event);
+	}
 
 	/**
 	 * Before Save Properties for selected client.

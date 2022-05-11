@@ -176,6 +176,14 @@ public class WInOutGen extends InOutGen implements IFormController, EventListene
 		docAction = new WTableDirEditor("DocAction", true, false, true,docActionL);
 		docAction.setValue(DocAction.ACTION_Complete);
 		// docAction.addValueChangeListener(this); // IDEMPIERE-768
+		//F3P
+		String sDocAction = getDefaultDocAction();
+		
+		if(sDocAction != null)
+		{
+			docAction.setValue(sDocAction);
+		}
+		//F3P end
 		//	C_Order.C_BPartner_ID
 		MLookup bpL = MLookupFactory.get (Env.getCtx(), form.getWindowNo(), 0, 2762, DisplayType.Search);
 		fBPartner = new WSearchEditor("C_BPartner_ID", false, false, true, bpL);

@@ -140,6 +140,19 @@ public class MCtxHelpMsg extends X_AD_CtxHelpMsg implements ImmutablePOSupport {
 
 	private static int getCtxHelpID(String ctxType, int recordId) {
 		Properties ctx = Env.getCtx();
+		
+		// F3P: manage AD_CtxHelp_ID on customization
+		
+		if(ctxType ==  X_AD_CtxHelp.CTXTYPE_Tab)
+		{
+			int AD_Window_ID = DB.getSQLValue(null, "SELECT AD_Window_ID FROM AD_Tab WHERE AD_Tab_ID = ?", recordId);
+			MUserDefTab userDef = MUserDefTab.get(ctx, recordId, AD_Window_ID);
+			if(userDef != null && userDef.getAD_CtxHelp_ID() > 0)
+			{
+				return userDef.getAD_CtxHelp_ID();
+			}
+		}
+		
 		String column;
 		String table;
 		if (ctxType == X_AD_CtxHelp.CTXTYPE_Tab) {

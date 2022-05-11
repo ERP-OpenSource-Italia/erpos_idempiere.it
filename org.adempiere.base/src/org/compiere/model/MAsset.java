@@ -10,14 +10,18 @@ import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.compiere.util.DB;
 import org.compiere.util.EMail;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
 
 /**
  * Asset Model
  * @author Teo Sarca, SC ARHIPAC SERVICE SRL
+ * 
+ * @author Silvano Trinchero, FreePath srl (www.freepath.it)
  */
 @SuppressWarnings("serial")
 public class MAsset extends X_A_Asset
@@ -25,6 +29,8 @@ public class MAsset extends X_A_Asset
 {
 	/** ChangeType - Asset Group changed */
 	public static final int CHANGETYPE_setAssetGroup = Table_ID * 100 + 1;
+	
+	public static final String 	COLUMNNAME_NextMaintenanceDate = "NextMaintenanceDate";
 	
 	/**
 	 * Get Asset
@@ -94,23 +100,46 @@ public class MAsset extends X_A_Asset
 	{
 		this(match.getCtx(), 0, match.get_TrxName());
 		
+		//F3P: from adempiere
+		setFieldsFromMatchInv(match);
+	}
+	
+	//F3P: from adempiere
+	protected void setFieldsFromMatchInv(MMatchInv match)
+	{
 		MInvoiceLine invoiceLine = new MInvoiceLine(getCtx(), match.getC_InvoiceLine_ID(), get_TrxName());
 		MInOutLine inoutLine = new MInOutLine(getCtx(), match.getM_InOutLine_ID(), get_TrxName());
 		
 		setIsOwned(true);
 		setIsInPosession(true);
-		setA_Asset_CreateDate(inoutLine.getM_InOut().getMovementDate());
-		//Fixed Asset should created in Organization as per the PO, MR, invoice and the asset addition document was recorded in.
-		setAD_Org_ID(invoiceLine.getAD_Org_ID());
+		
+		//F3P: from adempiere
+		MInvoice invoice = invoiceLine.getParent();
+		MInOut inout = inoutLine.getParent();
+		
+		setA_Asset_CreateDate(inout.getMovementDate());
+		
 		// Asset Group:
 		int A_Asset_Group_ID = invoiceLine.getA_Asset_Group_ID();
 		MProduct product = MProduct.get(getCtx(), invoiceLine.getM_Product_ID());
 		if (A_Asset_Group_ID <= 0) {
 			A_Asset_Group_ID = product.getA_Asset_Group_ID();
 		}
-		setA_Asset_Group_ID(A_Asset_Group_ID);
+		
+		// F3P: changed asset group assignment
+		// setA_Asset_Group_ID(A_Asset_Group_ID);
+		
+		if(A_Asset_Group_ID <= 0)
+			throw new AdempiereException("@Invalid@: @A_Asset_Group@");
+		
+		MAssetGroup	mAssetGroup = new MAssetGroup(getCtx(), A_Asset_Group_ID, get_TrxName());	
+		setAssetGroup(mAssetGroup);
+		
+		// F3P end
+		
+		
 		setHelp(Msg.getMsg(MClient.get(getCtx()).getAD_Language(), "CreatedFromInvoiceLine", 
-				new Object[] {invoiceLine.getC_Invoice().getDocumentNo(), invoiceLine.getLine()}));
+				new Object[] {invoice.getDocumentNo(), invoiceLine.getLine()}));
 		
 		String name = "";
 		if (inoutLine.getM_Product_ID()>0)
@@ -119,13 +148,65 @@ public class MAsset extends X_A_Asset
 			setM_Product_ID(inoutLine.getM_Product_ID());
 			setM_AttributeSetInstance_ID(inoutLine.getM_AttributeSetInstance_ID());
 		}
-		MBPartner bp = new MBPartner(getCtx(), invoiceLine.getC_Invoice().getC_BPartner_ID(), null);
-		name += bp.getName()+"-"+invoiceLine.getC_Invoice().getDocumentNo();
+		MBPartner bp = new MBPartner(getCtx(), invoice.getC_BPartner_ID(), get_TrxName());// Angelo Dabala' (genied) set transaction
+		name += bp.getName()+"-"+invoice.getDocumentNo();
 		if (log.isLoggable(Level.FINE)) log.fine("name=" + name);
-		setValue(name);
+		//setValue(name);//F3P: not set value
 		setName(name);
 		setDescription(invoiceLine.getDescription());
 	}
+	
+	//nectosoft
+	/**
+	 * Construct from MInvoiceLine
+	 * @param invLine Invoice line
+	 * @author Angelo Dabala' (genied)
+	 */
+	protected MAsset (MInvoiceLine invoiceLine)
+	{
+		this(invoiceLine.getCtx(), 0, invoiceLine.get_TrxName());
+		
+		setIsOwned(true);
+		setIsInPosession(true);
+		
+		MInvoice invoice = invoiceLine.getParent();
+		
+		setA_Asset_CreateDate(invoice.getDateInvoiced());
+		setDescription(invoiceLine.getDescription());
+		// Asset Group:
+		int A_Asset_Group_ID = invoiceLine.getA_Asset_Group_ID();
+		if (A_Asset_Group_ID <= 0) {
+			MProduct product = MProduct.get(getCtx(), invoiceLine.getM_Product_ID());
+			A_Asset_Group_ID = product.getA_Asset_Group_ID();
+		}
+		
+		if(A_Asset_Group_ID <= 0)
+			throw new AdempiereException("@Invalid@: @A_Asset_Group@");
+		
+		MAssetGroup	mAssetGroup = new MAssetGroup(getCtx(), A_Asset_Group_ID, get_TrxName());	
+		setAssetGroup(mAssetGroup);
+		
+		setHelp(Msg.getMsg(MClient.get(getCtx()).getAD_Language(), "CreatedFromInvoiceLine", new Object[] { invoice.getDocumentNo(), invoiceLine.getLine() }));
+
+		MProduct product = new MProduct(getCtx(), invoiceLine.getM_Product_ID(), get_TrxName());
+		MBPartner bp = new MBPartner(getCtx(), invoice.getC_BPartner_ID(), get_TrxName());
+		String name = "";
+		if (invoiceLine.getM_Product_ID()>0)
+		{
+			name += product.getName() + "-";
+			setM_Product_ID(invoiceLine.getM_Product_ID());
+			setM_AttributeSetInstance_ID(invoiceLine.getM_AttributeSetInstance_ID());
+		}
+		else if(invoiceLine.getC_Charge_ID()>0) // F3P: manage charge name
+		{
+			MCharge charge = new MCharge(getCtx(), invoiceLine.getC_Charge_ID(), get_TrxName());
+			name += charge.getName() + "-";
+		}
+		name += bp.getName()+"-"+invoice.getDocumentNo();
+		if (log.isLoggable(Level.FINE)) log.fine("name=" + name);
+		setName(name);
+	}
+	//nectosoft end
 
 	/**
 	 * Construct from MIFixedAsset (import)
@@ -153,7 +234,12 @@ public class MAsset extends X_A_Asset
 		MProduct product = ifa.getProduct();
 		if (product != null) {
 			setM_Product_ID(product.getM_Product_ID());
-			setA_Asset_Group_ID(ifa.getA_Asset_Group_ID());
+			// F3P: A_AssetGroup
+			// setA_Asset_Group_ID(ifa.getA_Asset_Group_ID());
+			
+			MAssetGroup	mAssetGroup = new MAssetGroup(ifa.getCtx(), ifa.getA_Asset_Group_ID(), ifa.get_TrxName());
+			setAssetGroup(mAssetGroup);
+			//F3P:end
 			MAttributeSetInstance asi = MAttributeSetInstance.create(getCtx(), product, get_TrxName());
 			setM_AttributeSetInstance_ID(asi.getM_AttributeSetInstance_ID());
 		}
@@ -161,8 +247,6 @@ public class MAsset extends X_A_Asset
 		setDateAcct(ifa.getDateAcct());
 		setName(ifa.getName());
 		setDescription(ifa.getDescription());
-
-		setI_FixedAsset(ifa);
 	}
 
 	/**
@@ -180,16 +264,95 @@ public class MAsset extends X_A_Asset
 		setDescription(project.getDescription());
 	}
 	
-	public MAsset(MInOut mInOut, MInOutLine sLine, int deliveryCount) {
+	public MAsset(MInOut mInOut, MInOutLine sLine, int deliveryCount)
+	{
 		this(mInOut.getCtx(), 0, mInOut.get_TrxName());
+		
+		//F3P: from adempiere
+		MProduct product = sLine.getProduct(); 
+		setValueNameDescription(mInOut, deliveryCount, product, mInOut.getBPartner());
+		setAssetServiceDate(mInOut.getMovementDate());
+		setC_BPartner_ID(mInOut.getC_BPartner_ID());
+		setC_BPartner_Location_ID(mInOut.getC_BPartner_Location_ID());
+		setAD_User_ID(mInOut.getAD_User_ID());
+		
+		//Line
+		setM_Product_ID(product.getM_Product_ID());
+		setA_Asset_Group_ID(product.getA_Asset_Group_ID());
+		//F3P:end
+		
 		setIsOwned(false);
 		setIsInPosession(false);
 		setA_Asset_CreateDate(new Timestamp(System.currentTimeMillis()));
-		setHelp(Msg.getMsg(MClient.get(getCtx()).getAD_Language(), "CreatedFromShipment: ", new Object[] { mInOut.getDocumentNo()}));
+		
+		//setHelp(Msg.getMsg(MClient.get(getCtx()).getAD_Language(), "CreatedFromShipment: ", new Object[] { mInOut.getDocumentNo()}));
+		setHelp(sLine.getDescription());//F3P: from adempiere
+		
 		setDateAcct(new Timestamp(System.currentTimeMillis()));
 		setDescription(sLine.getDescription());
 		
+		// F3P: Set asset type		
+		MAssetType	mAssetType = MAssetType.get(getCtx(), getAssetGroup().getA_Asset_Type_ID());
+		
+		setA_Asset_Type_ID(getAssetGroup().getA_Asset_Type_ID());		
+		mAssetType.update(SetGetUtil.wrap(this), true);
+		
+		//F3P:from adempiere
+		// Guarantee & Version
+		setGuaranteeDate(TimeUtil.addDays(mInOut.getMovementDate(), product.getGuaranteeDays()));
+		setVersionNo(product.getVersionNo());
+		if (sLine.getM_AttributeSetInstance_ID() != 0)
+		{
+			MAttributeSetInstance asi = new MAttributeSetInstance (getCtx(), sLine.getM_AttributeSetInstance_ID(), get_TrxName()); 
+			setM_AttributeSetInstance_ID(asi.getM_AttributeSetInstance_ID());
+			setLot(asi.getLot());
+			setSerNo(asi.getSerNo());
+		}
+		
+		if(deliveryCount == 0)
+			setQty(sLine.getMovementQty());
+		else
+			setQty(BigDecimal.ONE);
+		
+		setM_InOutLine_ID(sLine.getM_InOutLine_ID());
+		
+		//	Activate
+		MAssetGroup ag = MAssetGroup.get(getCtx(), getA_Asset_Group_ID());
+		if (!ag.isCreateAsActive())
+			setIsActive(false);
+		//F3P:end
 	}
+	
+	//F3P: from adempiere
+	/**
+	 * 	Set Value, Name, Description
+	 *	@param shipment shipment
+	 *	@param deliveryCount count
+	 *	@param product product
+	 *	@param partner partner
+	 */
+	public void setValueNameDescription (MInOut shipment,  
+		int deliveryCount, MProduct product, MBPartner partner)
+	{
+		String documentNo = "_" + shipment.getDocumentNo();
+		if (deliveryCount > 1)
+			documentNo += "_" + deliveryCount;
+		//	Value
+		String value = partner.getValue() + "_" + product.getValue();
+		if (value.length() > 40-documentNo.length())
+			value = value.substring(0,40-documentNo.length()) + documentNo;
+		setValue(value);
+		
+		//	Name		MProduct.afterSave
+		String name = partner.getName() + " - " + product.getName();
+		if (name.length() > 60)
+			name = name.substring(0,60);
+		setName(name);
+		//	Description
+		String description = product.getDescription();
+		setDescription(description);
+	}	//	setValueNameDescription
+	//F3P:end
 
 	/**
 	 * Create Asset from Inventory
@@ -331,11 +494,20 @@ public class MAsset extends X_A_Asset
 	
 	protected boolean beforeSave (boolean newRecord)
 	{
+		// F3P: if its a new record (from a copy) reset the status to new
+		if(newRecord)
+		{
+			setProcessed(false);
+			setA_Asset_Status(A_ASSET_STATUS_New);
+		}
+		//F3P:end
 		// Set parent asset:
+		/* F£P: nonsense, turned off
 		if (getA_Parent_Asset_ID() <= 0)
 		{
 			setA_Parent_Asset_ID(getA_Asset_ID());
 		}	
+		*/
 		// Fix inventory number:
 		String invNo = getInventoryNo();
 		if(invNo != null)
@@ -410,6 +582,7 @@ public class MAsset extends X_A_Asset
 		
 		//
 		// Set parent
+		/* F3P:  Nonsense
 		if(getA_Parent_Asset_ID() <= 0)
 		{
 			int A_Asset_ID = getA_Asset_ID();
@@ -417,6 +590,7 @@ public class MAsset extends X_A_Asset
 			DB.executeUpdateEx("UPDATE A_Asset SET A_Parent_Asset_ID=A_Asset_ID WHERE A_Asset_ID=" + A_Asset_ID, get_TrxName());
 			if (log.isLoggable(Level.FINE)) log.fine("A_Parent_Asset_ID=" + getA_Parent_Asset_ID());
 		}
+		*/
 		
 		//
 		// Set inventory number:
@@ -445,34 +619,28 @@ public class MAsset extends X_A_Asset
 			// for each asset group acounting create an asset accounting and a workfile too
 			for (MAssetGroupAcct assetgrpacct :  MAssetGroupAcct.forA_Asset_Group_ID(getCtx(), getA_Asset_Group_ID()))
 			{			
-				if (assetgrpacct.getAD_Org_ID() == 0 || assetgrpacct.getAD_Org_ID() == getAD_Org_ID()) 
-				{
-					if (getI_FixedAsset() != null && assetgrpacct.getC_AcctSchema_ID() != getI_FixedAsset().getC_AcctSchema_ID())
-						continue;
-					
-					// Asset Accounting
-					MAssetAcct assetacct = new MAssetAcct(this, assetgrpacct);
-					assetacct.setAD_Org_ID(getAD_Org_ID()); //added by @win
-					assetacct.saveEx();
-					
-					// Asset Depreciation Workfile
-					MDepreciationWorkfile assetwk = new MDepreciationWorkfile(this, assetacct.getPostingType(), assetgrpacct);
-					assetwk.setAD_Org_ID(getAD_Org_ID()); //added by @win
-					assetwk.setUseLifeYears(assetgrpacct.getUseLifeYears());
-					assetwk.setUseLifeMonths(assetgrpacct.getUseLifeMonths());
-					assetwk.setUseLifeYears_F(assetgrpacct.getUseLifeYears_F());
-					assetwk.setUseLifeMonths_F(assetgrpacct.getUseLifeMonths_F());
-					assetwk.saveEx();
-					
-					// Change Log
-					MAssetChange.createAndSave(getCtx(), "CRT", new PO[]{this, assetwk, assetacct}, null);
-				}
+				// Asset Accounting
+				MAssetAcct assetacct = new MAssetAcct(this, assetgrpacct);
+				assetacct.setAD_Org_ID(getAD_Org_ID()); //added by @win
+				assetacct.saveEx(get_TrxName()); //F3P: from adempiere add trx
+				
+				// Asset Depreciation Workfile
+				MDepreciationWorkfile assetwk = new MDepreciationWorkfile(this, assetacct.getPostingType(), assetgrpacct);
+				assetwk.setAD_Org_ID(getAD_Org_ID()); //added by @win
+				assetwk.setUseLifeYears(0);
+				assetwk.setUseLifeMonths(0);
+				assetwk.setUseLifeYears_F(0);
+				assetwk.setUseLifeMonths_F(0);
+				assetwk.saveEx(get_TrxName()); //F3P: from adempiere add trx
+				
+				// Change Log
+				MAssetChange.createAndSave(getCtx(), "CRT", new PO[]{this, assetwk, assetacct}, get_TrxName());	// Angelo Dabala' (genied) set transaction
 			}
 			
 		}
 		else
 		{
-			MAssetChange.createAndSave(getCtx(), "UPD", new PO[]{this}, null);
+			MAssetChange.createAndSave(getCtx(), "UPD", new PO[]{this}, get_TrxName());	// Angelo Dabala' (genied) set transaction
 		}
 		
 		//
@@ -519,7 +687,7 @@ public class MAsset extends X_A_Asset
 		String status = getA_Asset_Status();
 		setProcessed(!status.equals(A_ASSET_STATUS_New));
 //		setIsDisposed(!status.equals(A_ASSET_STATUS_New) && !status.equals(A_ASSET_STATUS_Activated));
-		setIsDisposed(status.equals(A_ASSET_STATUS_Disposed));
+		setIsDisposed(status.equals(A_ASSET_STATUS_Disposed) || status.equals(A_ASSET_STATUS_Sold)); // F3P: added 'sold'
 		setIsFullyDepreciated(status.equals(A_ASSET_STATUS_Depreciated));
 		if(isFullyDepreciated() || status.equals(A_ASSET_STATUS_Disposed))
 		{
@@ -613,6 +781,7 @@ public class MAsset extends X_A_Asset
 	public void setA_Accumulated_Depr(BigDecimal A_Accumulated_Depr)		{	m_A_Accumulated_Depr = A_Accumulated_Depr; }
 	public BigDecimal getA_Accumulated_Depr_F()								{	return m_A_Accumulated_Depr_F;	}
 	public void setA_Accumulated_Depr_F(BigDecimal A_Accumulated_Depr_F)	{	m_A_Accumulated_Depr_F = A_Accumulated_Depr_F; }
+
 	
 	private MIFixedAsset m_I_FixedAsset = null;
 	public MIFixedAsset getI_FixedAsset()										{	return m_I_FixedAsset;	}
@@ -658,4 +827,26 @@ public class MAsset extends X_A_Asset
 		// TODO: Adding this method to compile correctly and future research
 		return false;
 	}
+	
+	// F3P: compatibility function to manage the changed column name
+	public Timestamp getNextMaintenanceDate () 
+	{
+		if(get_ColumnIndex(COLUMNNAME_NextMaintenenceDate) >= 0)
+		{
+			return getNextMaintenenceDate();
+		}
+		else			
+			return (Timestamp)get_Value(COLUMNNAME_NextMaintenanceDate);
+	}
+	
+	public void setNextMaintenanceDate(Timestamp NextMaintenanceDate) 
+	{
+		if(get_ColumnIndex(COLUMNNAME_NextMaintenenceDate) >= 0)
+		{
+			setNextMaintenenceDate(NextMaintenanceDate);
+		}
+		else			
+			set_ValueOfColumn(COLUMNNAME_NextMaintenanceDate, NextMaintenanceDate);
+	}
+	//F3P:end
 }

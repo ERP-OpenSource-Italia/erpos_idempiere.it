@@ -672,6 +672,19 @@ public class SetGetUtil
 				public Properties getCtx() {
 					return po.getCtx();
 				}
+				//F3P start
+				public boolean hasColumn(String sColumnName)
+				{
+					boolean bExists = false;
+					
+					int index = po.get_ColumnIndex(sColumnName);
+					
+					if(index >= 0)
+						bExists = true;
+					
+					return bExists;
+				}
+				//F3P end
 			};
 		}
 		else
@@ -792,5 +805,23 @@ public class SetGetUtil
 			}
 			return true;
 		}
+		
+		//F3P start
+		/**
+		 * @param	sColumnName	
+		 * @return true if column exists
+		 */
+		public boolean hasColumn(String sColumnName)
+		{
+			boolean bExists = false;
+			
+			GridField field = tab.getField(sColumnName);
+			
+			if(field != null)
+				bExists = true;
+			
+			return bExists;
+		}
+		//F3P end
 	}
 }

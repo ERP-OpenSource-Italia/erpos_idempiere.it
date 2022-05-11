@@ -2,8 +2,12 @@ package org.compiere.model;
 
 import java.io.File;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -17,6 +21,7 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
 import org.compiere.util.Trx;
 import org.idempiere.fa.exceptions.AssetAlreadyDepreciatedException;
 import org.idempiere.fa.exceptions.AssetException;
@@ -29,6 +34,8 @@ import org.idempiere.fa.util.POCacheLocal;
 /**
  *  Asset Addition Model
  *	@author Teo Sarca, SC ARHIPAC SERVICE SRL
+ *
+ *  @author Silvano Trinchero, FreePath srl (www.freepath.it)
  *
  * TODO: BUG: REG in depexp creates a zero if they have more sites Addition during 0?!
  */
@@ -122,7 +129,18 @@ public class MAssetAddition extends X_A_Asset_Addition
 		MAsset asset = assetAdd.createAsset();
 		asset.dump();
 		//@win add
-		
+		// F3P: copy life years from asset group to asset addition, all assetGroup not only first
+		List<MAssetGroupAcct> lstGroupAcct = MAssetGroupAcct.forA_Asset_Group_ID(assetAdd.getCtx(), asset.getA_Asset_Group_ID());
+				
+		for(MAssetGroupAcct groupAcct:lstGroupAcct)
+		{
+			if(groupAcct.getPostingType().equals(assetAdd.getPostingType()))
+			{
+				assetAdd.setDeltaUseLifeYears(groupAcct.getUseLifeYears());
+				assetAdd.setDeltaUseLifeYears_F(groupAcct.getUseLifeYears_F());
+			}
+		}
+		//F3P:end
 		} else {
 			assetAdd.setA_Asset_ID(match.getC_InvoiceLine().getA_Asset_ID());
 			assetAdd.setA_CreateAsset(false);
@@ -130,6 +148,159 @@ public class MAssetAddition extends X_A_Asset_Addition
 		assetAdd.saveEx();
 		return assetAdd;
 	}
+	
+	//nectosoft
+	/**
+	 * Create Asset and asset Addition from InvoiceLine.
+	 * MAssetAddition is saved.
+	 * @param invLine invoice line
+	 * @return asset addition
+	 * @author Angelo Dabala' (genied)
+	 */
+	public static MAssetAddition createAsset(MInvoiceLine invLine)
+	{
+		MAssetAddition assetAdd = new MAssetAddition(invLine);
+		assetAdd.dump();
+				
+		MAsset asset = assetAdd.createAsset();
+		asset.dump();
+		
+		// F3P: copy life years from asset group to asset addition
+				
+		List<MAssetGroupAcct>	lstGroupAcct = MAssetGroupAcct.forA_Asset_Group_ID(assetAdd.getCtx(), asset.getA_Asset_Group_ID());
+				
+		for(MAssetGroupAcct groupAcct:lstGroupAcct)
+		{
+			if(groupAcct.getPostingType().equals(assetAdd.getPostingType()))
+			{
+				assetAdd.setDeltaUseLifeYears(groupAcct.getUseLifeYears());
+				assetAdd.setDeltaUseLifeYears_F(groupAcct.getUseLifeYears_F());
+			}
+		}
+		
+		assetAdd.saveEx();
+		
+		return assetAdd;
+	}
+	
+	public MAssetAddition(MInvoiceLine invLine) {
+		this(invLine.getCtx(), 0, invLine.get_TrxName());
+		setAD_Org_ID(invLine.getAD_Org_ID());
+		setPostingType(POSTINGTYPE_Actual);
+		setA_SourceType(A_SOURCETYPE_Invoice);
+		setInvoice(invLine); // set both c_invoice_id and c_invoiceline_id
+		//setM_InOutLine_ID(invLine.getM_InOutLine_ID());
+		setM_Product_ID(invLine.getM_Product_ID());
+		setC_Charge_ID(invLine.getC_Charge_ID()); // F3P: managed charge
+		setM_AttributeSetInstance_ID(invLine.getM_AttributeSetInstance_ID());
+		setA_QTY_Current(invLine.getQtyInvoiced());
+		setLine(invLine.getLine());
+		//setM_Locator_ID()
+		setA_CapvsExp(invLine.getA_CapvsExp());
+		// TODO calculate and add non deductible tax
+		setAssetAmtEntered(invLine.getLineNetAmt());
+		setAssetSourceAmt(invLine.getLineNetAmt());
+		setC_Currency_ID(invLine.getParent().getC_Currency_ID());
+		
+		int C_ConversionType_ID = invLine.getParent().getC_ConversionType_ID();
+		
+		if(C_ConversionType_ID <= 0)
+		{
+			C_ConversionType_ID = MConversionType.getDefault(invLine.getAD_Client_ID());
+		}
+		
+		setC_ConversionType_ID(C_ConversionType_ID);
+		setDateDoc(invLine.getParent().getDateInvoiced());
+		SetGetModel model = SetGetUtil.wrap(this);
+		setTaxAmount(model,getC_InvoiceLine_ID());		
+		BigDecimal	bdEnteredAmount = getAssetAmtEntered(), 
+				bdTaxAmount = getAssetSourceTaxAmt();
+		setAssetSourceAmt(bdEnteredAmount.add(bdTaxAmount));
+	}
+
+	/** InvoiceLine Cache */
+	private final POCacheLocal<MInvoiceLine> m_cacheInvoiceLine = POCacheLocal.newInstance(this, MInvoiceLine.class);
+
+	private void setInvoice(MInvoiceLine invLine)
+	{
+		setC_InvoiceLine_ID(invLine.getC_InvoiceLine_ID());
+		setC_Invoice_ID(invLine.getC_Invoice_ID());
+		m_cacheInvoiceLine.set(invLine);
+	}
+	
+	private MInvoiceLine getInvoiceLine(boolean requery)
+	{
+		return m_cacheInvoiceLine.get(requery);
+	}
+	
+	//nectosoft end
+	
+	// F3P: set tax value
+	public void setTaxAmount()
+	{		
+		setTaxAmount(SetGetUtil.wrap(this), getC_InvoiceLine_ID());
+	}
+	
+	public static void setTaxAmount(SetGetModel model,int C_InvoiceLine_ID)
+	{
+		final String SQL_TAX_RATE = "select issalestax, rate from C_Tax " +
+									" where C_Tax_ID = ? " +
+									"			and issummary = 'N' " +
+									"			and issalestax = 'Y' " +
+									" union all " +
+									" select issalestax, rate from C_Tax " +
+									" where Parent_Tax_ID = ? " +
+									" and isactive = 'Y' " +																		
+									" and issalestax = 'Y' ",
+					SQL_TAX_ID = "select C_Tax_ID FROM C_InvoiceLine WHERe C_InvoiceLine_ID = ? ";
+		
+		String 			trxName = model.get_TrxName();		
+		int 				C_Tax_ID = DB.getSQLValue(trxName, SQL_TAX_ID, C_InvoiceLine_ID);
+		
+		if(C_Tax_ID <= 0)
+			C_Tax_ID = Env.getContextAsInt(model.getCtx(), "C_Tax_ID");
+		
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;		
+		BigDecimal bdRate = Env.ZERO;
+		
+		try
+		{
+			pstmt = DB.prepareStatement(SQL_TAX_RATE,trxName);
+			
+			pstmt.setInt(1,C_Tax_ID);
+			pstmt.setInt(2,C_Tax_ID);
+			rs = pstmt.executeQuery();
+			
+			while(rs.next())
+				bdRate = bdRate.add(rs.getBigDecimal("rate"));			
+		}
+		catch(SQLException e)
+		{
+			s_log.severe(e.getMessage());
+			bdRate = null;
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null;
+			pstmt = null;
+		}
+		
+		BigDecimal	bdEnteredAmount = SetGetUtil.get_AttrValueAsBigDecimal(model, COLUMNNAME_AssetAmtEntered);
+		
+		int iPrecision = 2;
+		int C_Currency_ID = SetGetUtil.get_AttrValueAsInt(model, "C_Currency_ID"); 
+		
+		if(C_Currency_ID > 0)
+			iPrecision = MCurrency.getStdPrecision(model.getCtx(), C_Currency_ID);		
+		
+		BigDecimal		bdTax = bdEnteredAmount.multiply(bdRate.divide(new BigDecimal(100)));
+		bdTax = bdTax.setScale(iPrecision,RoundingMode.HALF_UP);
+		
+		SetGetUtil.set_AttrValueEx(model, COLUMNNAME_AssetSourceTaxAmt, bdTax);
+	}
+	//F3P end
 	
 	/**
 	 * Create Asset and asset Addition from MIFixedAsset. MAssetAddition is saved. 
@@ -177,6 +348,10 @@ public class MAssetAddition extends X_A_Asset_Addition
 		asset.saveEx();
 		asset.dump();
 		
+		// Copy UseLife values from asset group to workfile
+		MAssetGroupAcct assetgrpacct = MAssetGroupAcct.forA_Asset_Group_ID(asset.getCtx(), asset.getA_Asset_Group_ID(), assetAdd.getPostingType());
+		assetAdd.setDeltaUseLifeYears(assetgrpacct.getUseLifeYears());
+		assetAdd.setDeltaUseLifeYears_F(assetgrpacct.getUseLifeYears_F());
 		assetAdd.setA_Asset(asset);
 		assetAdd.saveEx();
 		//@win add
@@ -195,7 +370,20 @@ public class MAssetAddition extends X_A_Asset_Addition
 			String sourceType = getA_SourceType();
 			if (A_SOURCETYPE_Invoice.equals(sourceType))
 			{
-				asset = new MAsset(getMatchInv(false));
+				// F3P
+				if(getM_MatchInv_ID() > 0)
+				{
+					// asset = new MAsset(getMatchInv(false));
+					MMatchInv matchInv = getMatchInv(false);
+					
+					asset = PO.create(matchInv.getCtx(), MAsset.Table_Name, matchInv.get_TrxName()); 
+					asset.setFieldsFromMatchInv(matchInv);
+				}
+				else
+				{
+					asset = new MAsset(getInvoiceLine(false));
+				}
+				//F3P:end
 				asset.saveEx();
 				setA_Asset(asset);
 			}
@@ -256,7 +444,8 @@ public class MAssetAddition extends X_A_Asset_Addition
 		setSourceAmt(project.getProjectBalanceAmt());
 		setDateDoc(new Timestamp (System.currentTimeMillis()));
 		setA_CreateAsset(true); //added by @win as create from project will certainly for createnew
-	
+		setDeltaUseLifeYears(I_ZERO);
+		setDeltaUseLifeYears_F(I_ZERO);
 		setC_DocType_ID();
 		
 		Timestamp dateAcct = new Timestamp (System.currentTimeMillis());
@@ -298,7 +487,14 @@ public class MAssetAddition extends X_A_Asset_Addition
 		setDateDoc(ifa.getAssetServiceDate());
 		setM_Locator_ID(ifa.getM_Locator_ID());
 		
-	
+		boolean isAccmDeprAdjust = (ifa.getA_Accumulated_Depr().compareTo(Env.ZERO) > 0) ? true : false;
+		setA_Accumulated_Depr_Adjust(isAccmDeprAdjust);
+		setA_Period_Start(ifa.getA_Current_Period());
+		
+		setA_Accumulated_Depr(ifa.getA_Accumulated_Depr());
+		setA_Accumulated_Depr_F(ifa.getA_Accumulated_Depr_F());
+		setDeltaUseLifeYears((int)(ifa.getUseLifeMonths() / 12));
+		setDeltaUseLifeYears_F((int)(ifa.getUseLifeMonths_F() / 12));
 		
 		setA_CapvsExp(MAssetAddition.A_CAPVSEXP_Capital); //added by zuhri, import must be in Capital
 		setA_CreateAsset(true); //added by zuhri, import must be create asset
@@ -361,7 +557,7 @@ public class MAssetAddition extends X_A_Asset_Addition
 		setC_Currency_ID(mi.getC_InvoiceLine().getC_Invoice().getC_Currency_ID());
 		setC_ConversionType_ID(mi.getC_InvoiceLine().getC_Invoice().getC_ConversionType_ID());
 		setDateDoc(mi.getM_InOutLine().getM_InOut().getMovementDate());
-		setDateAcct(mi.getDateAcct());
+		setDateAcct(mi.getM_InOutLine().getM_InOut().getMovementDate());
 		setAD_Org_ID(mi.getAD_Org_ID());
 		m_cacheMatchInv.set(mi);
 	}
@@ -375,13 +571,12 @@ public class MAssetAddition extends X_A_Asset_Addition
 	public static boolean setM_MatchInv(SetGetModel model, int M_MatchInv_ID)
 	{
 		boolean newRecord = false;
-		String trxName = null;
+		String trxName = model.get_TrxName();
+		
 		if (model instanceof PO)
 		{
 			PO po = (PO)model;
 			newRecord = po.is_new();
-			trxName = po.get_TrxName();
-			
 		}
 		
 		if (s_log.isLoggable(Level.FINE)) s_log.fine("Entering: model=" + model + ", M_MatchInv_ID=" + M_MatchInv_ID + ", newRecord=" + newRecord + ", trxName=" + trxName);
@@ -433,7 +628,19 @@ public class MAssetAddition extends X_A_Asset_Addition
 		*/
 		SetGetUtil.updateColumns(model, null, query, trxName);
 		
-		s_log.fine("Leaving: RETURN TRUE");
+		//F3P: from adempiere
+		int C_InvoiceLine_ID = SetGetUtil.get_AttrValueAsInt(model, COLUMNNAME_C_InvoiceLine_ID);
+		setTaxAmount(model,C_InvoiceLine_ID);		
+		
+		// adjust source amount
+		
+		BigDecimal	bdEnteredAmount = SetGetUtil.get_AttrValueAsBigDecimal(model, COLUMNNAME_AssetAmtEntered),
+					bdTaxAmount = SetGetUtil.get_AttrValueAsBigDecimal(model, COLUMNNAME_AssetSourceTaxAmt);
+		
+		SetGetUtil.set_AttrValueEx(model, COLUMNNAME_AssetSourceAmt, bdEnteredAmount.add(bdTaxAmount));
+		//F3P end
+		
+		if (s_log.isLoggable(Level.FINE)) s_log.fine("Leaving: RETURN TRUE");
 		return true;
 	}
 	
@@ -453,8 +660,6 @@ public class MAssetAddition extends X_A_Asset_Addition
 	 */
 	private void setAssetValueAmt()
 	{
-		if (A_SOURCETYPE_Imported.equals(getA_SourceType()))
-			return;
 		getDateAcct();
 		MConversionRateUtil.convertBase(SetGetUtil.wrap(this),
 				COLUMNNAME_DateAcct,
@@ -561,12 +766,15 @@ public class MAssetAddition extends X_A_Asset_Addition
 			throw new AssetException("New document has nulls");
 		}
 
-		// Only New assets can be activated
-		if (isA_CreateAsset() && !MAsset.A_ASSET_STATUS_New.equals(asset.getA_Asset_Status()))
-		{
-			if (!A_SOURCETYPE_Imported.equals(getA_SourceType()))
-				throw new AssetException("Only new assets can be activated");
-		}
+		if(getPostingType().equals(POSTINGTYPE_Actual)) // F3P: only 'actual' posting type can activate the asset
+    {
+        // Only New assets can be activated
+        if (isA_CreateAsset() && !MAsset.A_ASSET_STATUS_New.equals(asset.getA_Asset_Status())) 
+        {
+            throw new AssetException("Only new assets can be activated");
+        }
+    }
+		
 		//
 		// Validate Source - Project
 		if (A_SOURCETYPE_Project.equals(getA_SourceType()))
@@ -653,37 +861,36 @@ public class MAssetAddition extends X_A_Asset_Addition
 		//loading asset
 		MAsset asset = getA_Asset(!m_justPrepared); // requery if not just prepared
 		if (log.isLoggable(Level.FINE)) log.fine("asset=" + asset);
-		
 
-		// Setting locator if is CreateAsset
-		if (isA_CreateAsset() && getM_Locator_ID() > 0)
+		// F3P: added check to block usage of accumulated_depr if this is an addition and not a creation,
+		// 	unless the 'allow accumulated_depr always" is true
+		
+		if(getPostingType().equals(POSTINGTYPE_Actual)) // F3P: only 'actual' postings can activate the asset
 		{
-			asset.setM_Locator_ID(getM_Locator_ID());
+			boolean	bAllowAccumulateDeprAlways = MSysConfig.getBooleanValue("FA_ADDITION_ALLOW_ACCDEPR_ALWAYS", false,getAD_Client_ID(),getAD_Org_ID());
+			
+			if(!bAllowAccumulateDeprAlways)
+			{		
+				if( (getA_Accumulated_Depr().signum() != 0 ||
+						 getA_Accumulated_Depr_F().signum() != 0 ||
+						 getA_Period_Start() > 0 ||
+						 isA_Accumulated_Depr_Adjust()) && 
+						 (	asset.getA_Asset_Status() != null && 
+								asset.getA_Asset_Status().equals(X_A_Asset.A_ASSET_STATUS_New) == false))
+				{
+					throw new AssetException("@FA_Error_Addition_AssetAlreadyCreated@");
+				}
+			}
+			//F3P:end
 		}
 		
-		// Creating/Updating asset product
-		updateA_Asset_Product(false);
-		//
-		// Changing asset status to Activated or Depreciated
-		if (isA_CreateAsset())
-		{
-			asset.setAssetServiceDate(getDateDoc());
-		}
-		asset.changeStatus(MAsset.A_ASSET_STATUS_Activated, getDateAcct());
-		asset.saveEx();
-
 		//
 		// Get/Create Asset Workfile:
 		// If there Worksheet creates a new file in this asset
 		MDepreciationWorkfile assetwk = MDepreciationWorkfile.get(getCtx(), getA_Asset_ID(), getPostingType(), get_TrxName());
 		if (assetwk == null)
 		{
-			for (MAssetGroupAcct assetgrpacct :  MAssetGroupAcct.forA_Asset_Group_ID(getCtx(), asset.getA_Asset_Group_ID(), getPostingType()))
-			{
-				if (A_SOURCETYPE_Imported.equals(getA_SourceType()) && assetgrpacct.getC_AcctSchema_ID() != getI_FixedAsset().getC_AcctSchema_ID())
-					continue;
-				assetwk = new MDepreciationWorkfile(asset, getPostingType(), assetgrpacct);
-			}
+			assetwk = new MDepreciationWorkfile(asset, getPostingType(), null);
 		}
 		if (log.isLoggable(Level.FINE)) log.fine("workfile: " + assetwk);
 		//
@@ -695,73 +902,74 @@ public class MAssetAddition extends X_A_Asset_Addition
 		}
 		*/
 		//
-		for (MDepreciationWorkfile assetworkFile :  MDepreciationWorkfile.forA_Asset_ID(getCtx(), getA_Asset_ID(), get_TrxName()))
-		{
-			if (A_SOURCETYPE_Imported.equals(getA_SourceType()) && assetworkFile.getC_AcctSchema_ID() != getI_FixedAsset().getC_AcctSchema_ID())
-				continue;
-			
-			assetworkFile.setDateAcct(getDateAcct());
-			if (A_SOURCETYPE_Imported.equals(getA_SourceType())) {
-				assetworkFile.adjustCost(getI_FixedAsset().getA_Asset_Cost(), getA_QTY_Current(), isA_CreateAsset());
-			} else {
-				if (assetworkFile.getC_AcctSchema().getC_Currency_ID() != getC_Currency_ID()) 
-				{				
-					BigDecimal convertedAssetCost  =  MConversionRate.convert(getCtx(), getAssetSourceAmt(),
-							getC_Currency_ID(), assetworkFile.getC_AcctSchema().getC_Currency_ID() ,
-							getDateAcct(), getC_ConversionType_ID(),
-							getAD_Client_ID(), getAD_Org_ID());
-					assetworkFile.adjustCost(convertedAssetCost, getA_QTY_Current(), isA_CreateAsset()); // reset if isA_CreateAsset
-				} else {
-					assetworkFile.adjustCost(getAssetSourceAmt(), getA_QTY_Current(), isA_CreateAsset()); // reset if isA_CreateAsset
-				}				
-			}
-			// Do we have entries that are not processed and before this date:
-			if (this.getA_CapvsExp().equals(A_CAPVSEXP_Capital)) { 
-			//@win modification to asset value and use life should be restricted to Capital
-			MDepreciationExp.checkExistsNotProcessedEntries(assetworkFile.getCtx(), assetworkFile.getA_Asset_ID(), getDateAcct(), assetworkFile.getPostingType(), assetworkFile.get_TrxName());
-			//
-			if (this.getA_Salvage_Value().signum() > 0) {
-				if (A_SOURCETYPE_Imported.equals(getA_SourceType())) {
-					assetworkFile.setA_Salvage_Value(this.getA_Salvage_Value());
-				} else {
-					if (assetworkFile.getC_AcctSchema().getC_Currency_ID() != getC_Currency_ID()) 
-					{
-						BigDecimal salvageValue = MConversionRate.convert(getCtx(), this.getA_Salvage_Value(),
-								getC_Currency_ID(), assetworkFile.getC_AcctSchema().getC_Currency_ID() ,
-								getDateAcct(), getC_ConversionType_ID(),
-								getAD_Client_ID(), getAD_Org_ID());
-						assetworkFile.setA_Salvage_Value(salvageValue);
-					} else{
-						assetworkFile.setA_Salvage_Value(this.getA_Salvage_Value());
-					}
-				}
-			}
-			assetworkFile.setDateAcct(getDateAcct());
-			assetworkFile.setProcessed(true);
-			assetworkFile.saveEx();
-			}
-			//@win set initial depreciation period = 1 
-			if (isA_CreateAsset())
-			{
-				if (assetworkFile.getA_Current_Period() == 0)
-				{
-					assetworkFile.setA_Current_Period(1);
-					assetworkFile.saveEx();
-				}
-			}
-			//
-			// Rebuild depreciation:
-			assetworkFile.buildDepreciation();
-		}		
-				
-		
+		// Do we have entries that are not processed and before this date:
+		if (this.getA_CapvsExp().equals(A_CAPVSEXP_Capital)) { 
+		//@win modification to asset value and use life should be restricted to Capital
+		MDepreciationExp.checkExistsNotProcessedEntries(assetwk.getCtx(), assetwk.getA_Asset_ID(), getDateAcct(), assetwk.getPostingType(), assetwk.get_TrxName());
+		//
+		if (this.getA_Salvage_Value().signum() > 0) {
+			assetwk.setA_Salvage_Value(this.getA_Salvage_Value());
+		}
+		assetwk.adjustCost(getAssetValueAmt(), getA_QTY_Current(), isA_CreateAsset()); // reset if isA_CreateAsset
+		assetwk.adjustUseLife(getDeltaUseLifeYears(), getDeltaUseLifeYears_F(), isA_CreateAsset()); // reset if isA_CreateAsset
+		assetwk.setDateAcct(getDateAcct());
+		assetwk.setProcessed(true);
+		assetwk.saveEx();
+		} 
 		MAssetChange.createAddition(this, assetwk);
 		
+		if(getPostingType().equals(POSTINGTYPE_Actual)) // F3P: only 'actual' postings can activate the asset
+		{
+			// Setting locator if is CreateAsset
+			if (isA_CreateAsset() && getM_Locator_ID() > 0)
+			{
+				asset.setM_Locator_ID(getM_Locator_ID());
+			}
+			
+			// Creating/Updating asset product
+			updateA_Asset_Product(false);
+			//
+			// Changing asset status to Activated or Depreciated
+			if (isA_CreateAsset())
+			{
+				asset.setAssetServiceDate(getDateDoc());
+			}
+			asset.changeStatus(MAsset.A_ASSET_STATUS_Activated, getDateAcct());
+			asset.saveEx();
+		}
 		
-		// Accumulated depreciation (if any):
+		//@win set initial depreciation period = 1 
+		if (isA_CreateAsset() && !isA_Accumulated_Depr_Adjust())
+		{
+			assetwk.setA_Current_Period(1);
+			assetwk.saveEx();
+		}
+		//
 		/*
 		if (isA_Accumulated_Depr_Adjust())
 		{
+			if (isA_CreateAsset() && isA_Accumulated_Depr_Adjust())
+			{
+				assetwk.setA_Current_Period(getA_Period_Start());
+				assetwk.setA_Accumulated_Depr(getA_Accumulated_Depr());
+				assetwk.setA_Accumulated_Depr_F(getA_Accumulated_Depr_F());
+				assetwk.saveEx();
+			}
+		}
+		*/
+		// Accumulated depreciation (if any):
+		if (isA_Accumulated_Depr_Adjust())
+		{
+			// F3P: need to obtain data for description
+			
+			MAssetAcct										assetAcct = assetwk.getA_AssetAcct(getDateAcct(), assetwk.get_TrxName());
+			MDepreciation depreciation = null; 
+			
+			if(assetAcct != null)
+			{
+				depreciation = MDepreciation.get(getCtx(), assetAcct.getA_Depreciation_ID());
+			}
+			
 			Collection<MDepreciationExp> expenses = MDepreciationExp.createDepreciation(assetwk,
 														1, // PeriodNo
 														getDateAcct(),
@@ -769,7 +977,8 @@ public class MAssetAddition extends X_A_Asset_Addition
 														null,	// Accum Amt
 														null,	// Accum Amt (F)
 														null,	// Help
-														null);
+														depreciation,
+														get_TrxName());
 			for (MDepreciationExp exp : expenses)
 			{
 				exp.setA_Asset_Addition_ID(getA_Asset_Addition_ID());
@@ -779,12 +988,20 @@ public class MAssetAddition extends X_A_Asset_Addition
 			if (isA_CreateAsset() && isA_Accumulated_Depr_Adjust())
 			{
 				assetwk.setA_Current_Period(getA_Period_Start());
+				
+				// F3P: sum 1 month to the acctdate to avoid re-creating the same date				
+				assetwk.setDateAcct(TimeUtil.addMonths(getDateAcct(), 1));
+				
 				assetwk.saveEx();
 			}
 		}
-		*/
 		
-		
+		// Rebuild depreciation:
+		assetwk.buildDepreciation();
+		// F3P: update acct date and period based on depreciation just built
+		assetwk.setA_Current_Period();
+		assetwk.saveEx();
+		//F3P:end
 		//
 		updateSourceDocument(false);
 		
@@ -857,6 +1074,7 @@ public class MAssetAddition extends X_A_Asset_Addition
 		
 		// adjust the asset value
 		assetwk.adjustCost(getAssetValueAmt().negate(), getA_QTY_Current().negate(), false);
+		assetwk.adjustUseLife(0 - getDeltaUseLifeYears(), 0 - getDeltaUseLifeYears_F(), false);
 		assetwk.saveEx();
 		
 		//
@@ -1041,7 +1259,7 @@ public class MAssetAddition extends X_A_Asset_Addition
 		final String sourceType = getA_SourceType();
 		//
 		// Invoice: mark C_InvoiceLine.A_Processed='Y' and set C_InvoiceLine.A_Asset_ID
-		if (A_SOURCETYPE_Invoice.equals(sourceType) && isProcessed())
+		if (A_SOURCETYPE_Invoice.equals(sourceType) && isProcessed() && getC_InvoiceLine_ID() > 0) // F3P: check if invoice line is present
 		{
 			int C_InvoiceLine_ID = getC_InvoiceLine_ID();
 			MInvoiceLine invoiceLine = new MInvoiceLine(getCtx(), C_InvoiceLine_ID, get_TrxName());
@@ -1159,7 +1377,9 @@ public class MAssetAddition extends X_A_Asset_Addition
 	
 	public boolean hasZeroValues()
 	{
-		return				
+		return
+				getDeltaUseLifeYears() <= 0 || getDeltaUseLifeYears_F() <= 0
+				|| getDeltaUseLifeYears() != getDeltaUseLifeYears_F() ||
 				 getAssetValueAmt().signum() <= 0
 		;
 	}
@@ -1194,16 +1414,13 @@ public class MAssetAddition extends X_A_Asset_Addition
 		{
 			setA_CreateAsset(false);
 		}
-		else if (A_SOURCETYPE_Imported.equals(getA_SourceType()))
-		{
-			setA_CreateAsset(true);
-		}
 		else
 		{
-			final String sql = "SELECT COUNT(*) FROM A_Asset_Addition WHERE A_Asset_ID=? AND A_CreateAsset='Y'"
+			final String sql = "SELECT COUNT(*) FROM A_Asset_Addition WHERE A_Asset_ID=? AND A_CreateAsset='Y'" // F3P: check for posting type too
 							+" AND DocStatus<>'VO' AND IsActive='Y'"
-							+" AND A_Asset_Addition_ID<>?";
-			int cnt = DB.getSQLValueEx(null, sql, getA_Asset_ID(), getA_Asset_Addition_ID());
+							+" AND PostingType = ? "
+							+" AND A_Asset_Addition_ID<>? ";
+			int cnt = DB.getSQLValueEx(get_TrxName(), sql, getA_Asset_ID(), getPostingType(), getA_Asset_Addition_ID());// Angelo Dabala' (genied) set transaction
 			if(isA_CreateAsset())
 			{
 				// A_CreateAsset='Y' must be unique

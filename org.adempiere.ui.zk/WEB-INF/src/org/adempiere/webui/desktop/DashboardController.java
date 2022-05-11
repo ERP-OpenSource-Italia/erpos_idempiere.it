@@ -854,6 +854,19 @@ public class DashboardController implements EventListener<Event> {
 		if (!process.processIt(pi, null) && pi.getClassName() != null) 
 			throw new IllegalStateException("Process failed: (" + pi.getClassName() + ") " + pi.getSummary());
 	
+		//F3P if selected use printformat of process
+		ReportEngine re = null;
+		if(process.getAD_PrintFormat_ID()>0)
+		{
+			MPrintFormat format = (MPrintFormat) process.getAD_PrintFormat();
+			String TableName = MTable.getTableName(process.getCtx(), format.getAD_Table_ID());
+			MQuery queryPf = MQuery.get (process.getCtx(), pi.getAD_PInstance_ID(), TableName);
+			PrintInfo info = new PrintInfo(pi);
+			
+			re = new ReportEngine(process.getCtx(), format, queryPf, info);
+		}
+		 
+		if (re == null)//F3P End
 		//	Report
 		ReportEngine re = ReportEngine.get(Env.getCtx(), pi);
 		if (re == null)

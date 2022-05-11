@@ -17,6 +17,7 @@
 
 package org.adempiere.process;
 
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
@@ -30,6 +31,7 @@ import org.compiere.model.MInOutLine;
 import org.compiere.model.MInvoiceLine;
 import org.compiere.model.MRMA;
 import org.compiere.model.MRMALine;
+import org.compiere.model.MUOMConversion;
 import org.compiere.model.Query;
 import org.compiere.process.DocAction;
 import org.compiere.process.ProcessInfoParameter;
@@ -45,6 +47,8 @@ import org.compiere.util.Msg;
  * @author Teo Sarca
  * 			<li>BF [ 2818523 ] Invoice and Shipment are not matched in case of RMA
  * 				https://sourceforge.net/tracker/?func=detail&aid=2818523&group_id=176962&atid=879332
+ * @author Angelo Dabala', nectosoft (ported from italian localization)
+ *          <li> Adjust QtyEntered if UOM is different
  */
 public class InOutGenerateRMA extends SvrProcess
 {
@@ -185,6 +189,7 @@ public class InOutGenerateRMA extends SvrProcess
                 shipLine.setM_RMALine_ID(rmaLine.get_ID());
                 shipLine.setLine(rmaLine.getLine());
                 shipLine.setDescription(rmaLine.getDescription());
+                shipLine.setQty(rmaLine.getQty());
                 
                 if (rmaLine.getC_Charge_ID() != 0)
                 {
@@ -198,10 +203,16 @@ public class InOutGenerateRMA extends SvrProcess
                 	shipLine.setM_Product_ID(rmaLine.getM_Product_ID());
                     shipLine.setM_AttributeSetInstance_ID(rmaLine.getM_AttributeSetInstance_ID());
                     shipLine.setM_Locator_ID(rmaLine.getM_Locator_ID());
+                    
+                    // Angelo Dabala' (genied) nectosoft: Adjust QtyEntered if UOM is different
+                    BigDecimal QtyEntered = MUOMConversion.convertProductTo (rma.getCtx(), shipLine.getM_Product_ID(),
+                    		shipLine.getC_UOM_ID(), shipLine.getMovementQty());
+                    if(QtyEntered != null)
+                    	shipLine.setQtyEntered(QtyEntered);
+
                 }
                 
-                shipLine.setC_UOM_ID(rmaLine.getC_UOM_ID());
-                shipLine.setQty(rmaLine.getQty());
+                shipLine.setC_UOM_ID(rmaLine.getC_UOM_ID());                
                 shipLine.setC_Project_ID(rmaLine.getC_Project_ID());
                 shipLine.setC_Campaign_ID(rmaLine.getC_Campaign_ID());
                 shipLine.setC_Activity_ID(rmaLine.getC_Activity_ID());
@@ -249,7 +260,7 @@ public class InOutGenerateRMA extends SvrProcess
         	log.log(Level.WARNING, msglog.toString());
         }
         
-        StringBuilder processMsg = new StringBuilder().append(shipment.getDocumentNo());
+        StringBuffer processMsg = new StringBuffer().append(shipment.getDocumentNo());
         
         if (!shipment.processIt(p_docAction))
         {

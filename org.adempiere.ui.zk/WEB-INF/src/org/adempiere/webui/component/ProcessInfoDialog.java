@@ -150,7 +150,19 @@ public class ProcessInfoDialog extends Window implements EventListener<Event> {
 				summary = Msg.parseTranslation(Env.getCtx(), summary);
 			
 			if (summary != null && summary.trim().length() > 0 && !summary.trim().equalsIgnoreCase("Report")){
-				pnlMessage.appendChild(new Text(summary));
+				//pnlMessage.appendChild(new Text(summary));
+
+				Text tSummary = new Text();
+				
+				// F3P: allow html in summary using #HTML# marker. Cannot be @HTML@ because summary is processed by context
+				if(summary.indexOf("#HTML#") > 0)
+				{
+					summary = summary.replaceAll("#HTML#", "");
+					tSummary.setEncode(false);	
+				}
+				tSummary.setValue(summary);
+				
+				pnlMessage.appendChild(tSummary);
 			}
 		}
 				
@@ -210,6 +222,12 @@ public class ProcessInfoDialog extends Window implements EventListener<Event> {
 	 * just pass false, other pass true to avoid duplicate message 
 	 */
 	public static void showProcessInfo (ProcessInfo pi, int windowNo, final Component comp, boolean needFillLogFromDb) {						
+		
+		// F3P: dont show info for InfoWindow processes
+		
+		//if(LITMProcess.getAD_InfoWindow_ID_DB(null, pi.getAD_Process_ID()) > 0)
+		//	return;
+		
 		ProcessInfoDialog dialog = new ProcessInfoDialog(AEnv.getDialogHeader(Env.getCtx(), windowNo),AEnv.getDialogHeader(Env.getCtx(), windowNo), pi, needFillLogFromDb);
 		final ISupportMask supportMask = LayoutUtils.showWindowWithMask(dialog, comp, LayoutUtils.OVERLAP_PARENT);;
 		dialog.addEventListener(DialogEvents.ON_WINDOW_CLOSE, new EventListener<Event>() {

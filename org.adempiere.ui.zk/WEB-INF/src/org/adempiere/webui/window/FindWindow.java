@@ -1657,6 +1657,11 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
 	{
 		if (in == null)
 			return null;
+		
+		// F3P: parse string with env to support context-aware variables
+		in = parseStringWithEnv(in);
+		//F3P end
+		
 		int dt = field.getDisplayType();
 		try
 		{
@@ -2875,6 +2880,64 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
 	{
 		return isvalid;
 	}
+
+	// F3P: parse string with env, supporting sql value
+	private String parseStringWithEnv(String in)
+	{
+		// F3P: parse... form GridField.getDefault
+	
+		if(in.startsWith("|@|"))
+		{
+			in = in.substring(3);
+			Properties ctx = Env.getCtx();
+			
+			if (in.startsWith("@SQL="))
+			{				
+				String defStr = null;
+				
+				String sql = in.substring(5);			//	w/o tag
+				//sql = Env.parseContext(m_vo.ctx, m_vo.WindowNo, sql, false, true);	//	replace variables
+				//hengsin, capture unparseable error to avoid subsequent sql exception
+				sql = Env.parseContext(ctx, m_targetWindowNo, sql, false, false);	//	replace variables
+				if (sql.equals(""))
+				{
+					log.log(Level.WARNING, "SQL variable parse failed: "
+						+ in);
+				}
+				else
+				{
+					try
+					{
+						PreparedStatement stmt = DB.prepareStatement(sql, null);
+						ResultSet rs = stmt.executeQuery();
+						if (rs.next())
+							defStr = rs.getString(1);
+						else
+							log.log(Level.WARNING, "SQL parse - no Result: " + sql);
+						rs.close();
+						stmt.close();
+					}
+					catch (SQLException e)
+					{
+						log.log(Level.WARNING, "SQL parse " + sql, e);
+					}
+				}
+				
+				if (defStr != null && defStr.length() > 0)
+				{
+					log.fine("[SQL] =" + defStr);
+					in = defStr;
+				}
+			}	//	SQL Statement
+			else
+			{
+				in = Env.parseContext(ctx, m_targetWindowNo, in, false, false);
+			}
+		}
+		
+		return in;
+	}
+	// F3P end	
 
 	/** START DEVCOFFEE **/
 	/**

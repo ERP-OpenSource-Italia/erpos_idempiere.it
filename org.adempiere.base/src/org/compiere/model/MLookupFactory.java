@@ -1037,6 +1037,69 @@ public class MLookupFactory
 		}
 		return list;
 	}
+	
+	// F3P: added to get select clause, may require addi
+	
+	public static String getDisplayBaseQuery(Language language,
+				String ColumnName, String BaseTable, String tableAlias, String selectPrefix, String selectSuffix)
+	{
+		String KeyColumn = MQuery.getZoomColumnName(ColumnName);
+		String TableName = MQuery.getZoomTableName(ColumnName);
+		
+		if(tableAlias == null)
+			tableAlias = BaseTable;
+
+		ArrayList<LookupDisplayColumn> list = getListIdentifiers(TableName);
+
+		//  Do we have columns ?
+		if (list == null || list.size() == 0)
+		{
+			s_log.log(Level.SEVERE, "No Identifier records found: " + ColumnName);
+			return "";
+		}
+
+		// set isTranslated
+		boolean isTranslated = false;
+		for (LookupDisplayColumn ldc : list) {
+			if (!isTranslated && ldc.IsTranslated) {
+				isTranslated = true;
+				break;
+			}
+		}
+		
+		//
+		StringBuilder embedSQL = new StringBuilder("SELECT ");
+		
+		if(selectPrefix != null)
+			embedSQL.append(selectPrefix).append(',');
+
+		StringBuilder displayColumn = getDisplayColumn(language, tableAlias, list, BaseTable);
+		embedSQL.append(displayColumn.toString());
+		
+		if(selectSuffix != null)
+			embedSQL.append(',').append(selectSuffix);
+		
+		embedSQL.append(" FROM ").append(TableName);
+		
+		if(tableAlias.equals(BaseTable) == false) // Add alias
+			embedSQL.append(' ').append(tableAlias);
+		
+		//  Translation
+		if (   isTranslated && !Env.isBaseLanguage(language, TableName)
+			&& !(TableName+"_Trl").equalsIgnoreCase(BaseTable))  // IDEMPIERE-1070
+		{
+			embedSQL.append(" INNER JOIN ").append(TableName).append("_TRL ON (")
+				.append(TableName).append(".").append(KeyColumn)
+				.append("=").append(TableName).append("_Trl.").append(KeyColumn)
+				.append(" AND ").append(TableName).append("_Trl.AD_Language=")
+				.append(DB.TO_STRING(language.getAD_Language())).append(")");
+		}
+		
+		embedSQL.append(' ');
+		
+		//
+		return embedSQL.toString();		
+	}
 
 }   //  MLookupFactory
 

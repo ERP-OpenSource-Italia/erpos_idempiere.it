@@ -227,6 +227,11 @@ public class GridTabRowRenderer implements RowRenderer<Object[]>, RowRendererExt
 		}
 		
 		if (gridField.isEncryptedField())
+		/*int fieldDisplayType = gridField.getDisplayType();
+
+		//F3P check also display type to encrypt field
+		if ((fieldDisplayType  == DisplayType.String || fieldDisplayType == DisplayType.PrinterName) 
+				&& gridField.isEncryptedField())//F3P End*/
 		{
 			return "********";
 		}		

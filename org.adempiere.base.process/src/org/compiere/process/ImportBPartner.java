@@ -24,17 +24,23 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.DBException;
 import org.adempiere.model.ImportValidator;
 import org.adempiere.process.ImportProcess;
+import org.compiere.model.I_C_BP_BankAccount;
+import org.compiere.model.MBPBankAccount;
 import org.compiere.model.MBPartner;
 import org.compiere.model.MBPartnerLocation;
 import org.compiere.model.MContactInterest;
 import org.compiere.model.MLocation;
 import org.compiere.model.MUser;
 import org.compiere.model.ModelValidationEngine;
+import org.compiere.model.Query;
 import org.compiere.model.X_I_BPartner;
 import org.compiere.util.DB;
+
+import it.idempiere.base.util.SavedFromImport;
 
 /**
  *	Import BPartners from I_BPartner
@@ -60,6 +66,9 @@ implements ImportProcess
 
 	/** Effective						*/
 	private Timestamp		m_DateValue = null;
+	
+	private final String OPERATION_INSERT = "i";
+	private final String OPERATION_UPDATE = "u";
 
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -111,9 +120,9 @@ implements ImportProcess
 				.append("SET AD_Client_ID = COALESCE (AD_Client_ID, ").append(m_AD_Client_ID).append("),")
 						.append(" AD_Org_ID = COALESCE (AD_Org_ID, 0),")
 						.append(" IsActive = COALESCE (IsActive, 'Y'),")
-						.append(" Created = COALESCE (Created, getDate()),")
+						.append(" Created = COALESCE (Created, SysDate),")
 						.append(" CreatedBy = COALESCE (CreatedBy, 0),")
-						.append(" Updated = COALESCE (Updated, getDate()),")
+						.append(" Updated = COALESCE (Updated, SysDate),")
 						.append(" UpdatedBy = COALESCE (UpdatedBy, 0),")
 						.append(" I_ErrorMsg = ' ',")
 						.append(" I_IsImported = 'N' ")
@@ -131,10 +140,10 @@ implements ImportProcess
 				.append(" AND I_IsImported<>'Y'").append(clientCheck);
 		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Group Default=" + no);
-		//
+		//F3P add lower
 		sql = new StringBuilder ("UPDATE I_BPartner i ")
 				.append("SET C_BP_Group_ID=(SELECT C_BP_Group_ID FROM C_BP_Group g")
-				.append(" WHERE i.GroupValue=g.Value AND g.AD_Client_ID=i.AD_Client_ID) ")
+				.append(" WHERE lower(i.GroupValue)=lower(g.Value) AND g.AD_Client_ID=i.AD_Client_ID) ")
 				.append("WHERE C_BP_Group_ID IS NULL")
 				.append(" AND I_IsImported<>'Y'").append(clientCheck);
 		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
@@ -149,7 +158,7 @@ implements ImportProcess
 
 		//	Set Country
 		/**
-		sql = new StringBuilder ("UPDATE I_BPartner i "
+		sql = new StringBuffer ("UPDATE I_BPartner i "
 			+ "SET CountryCode=(SELECT CountryCode FROM C_Country c WHERE c.IsDefault='Y'"
 			+ " AND c.AD_Client_ID IN (0, i.AD_Client_ID) AND ROWNUM=1) "
 			+ "WHERE CountryCode IS NULL AND C_Country_ID IS NULL"
@@ -157,10 +166,10 @@ implements ImportProcess
 		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
 		log.fine("Set Country Default=" + no);
 		 **/
-		//
+		//F3P add lower
 		sql = new StringBuilder ("UPDATE I_BPartner i ")
 				.append("SET C_Country_ID=(SELECT C_Country_ID FROM C_Country c")
-				.append(" WHERE i.CountryCode=c.CountryCode AND c.AD_Client_ID IN (0, i.AD_Client_ID)) ")
+				.append(" WHERE lower(i.CountryCode)=lower(c.CountryCode) AND c.AD_Client_ID IN (0, i.AD_Client_ID)) ")
 				.append("WHERE C_Country_ID IS NULL")
 				.append(" AND I_IsImported<>'Y'").append(clientCheck);
 		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
@@ -182,10 +191,10 @@ implements ImportProcess
 				.append(" AND I_IsImported<>'Y'").append(clientCheck);
 		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Set Region Default=" + no);
-		//
+		//F3P add lower
 		sql = new StringBuilder ("UPDATE I_BPartner i ")
 				.append("Set C_Region_ID=(SELECT C_Region_ID FROM C_Region r")
-				.append(" WHERE r.Name=i.RegionName AND r.C_Country_ID=i.C_Country_ID")
+				.append(" WHERE lower(r.Name)=lower(i.RegionName) AND r.C_Country_ID=i.C_Country_ID")
 				.append(" AND r.AD_Client_ID IN (0, i.AD_Client_ID)) ")
 				.append("WHERE C_Region_ID IS NULL")
 				.append(" AND I_IsImported<>'Y'").append(clientCheck);
@@ -202,9 +211,10 @@ implements ImportProcess
 		if (log.isLoggable(Level.CONFIG)) log.config("Invalid Region=" + no);
 
 		//	Set Greeting
+		//F3P add lower
 		sql = new StringBuilder ("UPDATE I_BPartner i ")
 				.append("SET C_Greeting_ID=(SELECT C_Greeting_ID FROM C_Greeting g")
-				.append(" WHERE i.BPContactGreeting=g.Name AND g.AD_Client_ID IN (0, i.AD_Client_ID)) ")
+				.append(" WHERE lower(i.BPContactGreeting)=lower(g.Name) AND g.AD_Client_ID IN (0, i.AD_Client_ID)) ")
 				.append("WHERE C_Greeting_ID IS NULL AND BPContactGreeting IS NOT NULL")
 				.append(" AND I_IsImported<>'Y'").append(clientCheck);
 		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
@@ -218,40 +228,47 @@ implements ImportProcess
 		if (log.isLoggable(Level.CONFIG)) log.config("Invalid Greeting=" + no);
 
 		//	Existing User ?
+		//	F3P check also bp.value
+		//	F3P add lower
 		sql = new StringBuilder ("UPDATE I_BPartner i ")
 				.append("SET (C_BPartner_ID,AD_User_ID)=")
 				.append("(SELECT C_BPartner_ID,AD_User_ID FROM AD_User u ")
-				.append("WHERE i.EMail=u.EMail AND u.AD_Client_ID=i.AD_Client_ID) ")
+				.append("INNER JOIN C_BPartner bp on u.C_BPartner_ID = bp.C_BPartner_ID ")
+				.append("WHERE lower(i.EMail)=lower(u.EMail) AND u.AD_Client_ID=i.AD_Client_ID ")
+				.append("AND lower(bp.Value) = lower(i.Value)) ")
 				.append("WHERE i.EMail IS NOT NULL AND I_IsImported='N'").append(clientCheck);
 		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Found EMail User=" + no);
 
 		//	Existing BPartner ? Match Value
+		//	F3P add lower
 		sql = new StringBuilder ("UPDATE I_BPartner i ")
 				.append("SET C_BPartner_ID=(SELECT C_BPartner_ID FROM C_BPartner p")
-				.append(" WHERE i.Value=p.Value AND p.AD_Client_ID=i.AD_Client_ID) ")
+				.append(" WHERE lower(i.Value)=lower(p.Value) AND p.AD_Client_ID=i.AD_Client_ID) ")
 				.append("WHERE C_BPartner_ID IS NULL AND Value IS NOT NULL")
 				.append(" AND I_IsImported='N'").append(clientCheck);
 		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Found BPartner=" + no);
 
 		//	Existing Contact ? Match Name
+		//	F3P add lower
 		sql = new StringBuilder ("UPDATE I_BPartner i ")
 				.append("SET AD_User_ID=(SELECT AD_User_ID FROM AD_User c")
-				.append(" WHERE i.ContactName=c.Name AND i.C_BPartner_ID=c.C_BPartner_ID AND c.AD_Client_ID=i.AD_Client_ID) ")
+				.append(" WHERE lower(i.ContactName)=lower(c.Name) AND i.C_BPartner_ID=c.C_BPartner_ID AND c.AD_Client_ID=i.AD_Client_ID) ")
 				.append("WHERE C_BPartner_ID IS NOT NULL AND AD_User_ID IS NULL AND ContactName IS NOT NULL")
 				.append(" AND I_IsImported='N'").append(clientCheck);
 		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Found Contact=" + no);
 
-//		Existing Location ? Exact Match
+		//	Existing Location ? Exact Match
+		//	F3P add lower
 		sql = new StringBuilder ("UPDATE I_BPartner i ")
 				.append("SET C_BPartner_Location_ID=(SELECT C_BPartner_Location_ID")
 				.append(" FROM C_BPartner_Location bpl INNER JOIN C_Location l ON (bpl.C_Location_ID=l.C_Location_ID)")
 				.append(" WHERE i.C_BPartner_ID=bpl.C_BPartner_ID AND bpl.AD_Client_ID=i.AD_Client_ID")
-				.append(" AND (i.Address1=l.Address1 OR (i.Address1 IS NULL AND l.Address1 IS NULL))")
-				.append(" AND (i.Address2=l.Address2 OR (i.Address2 IS NULL AND l.Address2 IS NULL))")
-				.append(" AND (i.City=l.City OR (i.City IS NULL AND l.City IS NULL))")
+				.append(" AND (lower(i.Address1)=lower(l.Address1) OR (i.Address1 IS NULL AND l.Address1 IS NULL))")
+				.append(" AND (lower(i.Address2)=lower(l.Address2) OR (i.Address2 IS NULL AND l.Address2 IS NULL))")
+				.append(" AND (lower(i.City)=lower(l.City) OR (i.City IS NULL AND l.City IS NULL))")
 				.append(" AND (i.Postal=l.Postal OR (i.Postal IS NULL AND l.Postal IS NULL))")
 				.append(" AND (i.Postal_Add=l.Postal_Add OR (l.Postal_Add IS NULL AND l.Postal_Add IS NULL))")
 				.append(" AND (i.C_Region_ID=l.C_Region_ID OR (l.C_Region_ID IS NULL AND i.C_Region_ID IS NULL))")
@@ -262,12 +279,66 @@ implements ImportProcess
 		if (log.isLoggable(Level.FINE)) log.fine("Found Location=" + no);
 
 		//	Interest Area
+		//	F3P add lower
 		sql = new StringBuilder ("UPDATE I_BPartner i ") 
 				.append("SET R_InterestArea_ID=(SELECT R_InterestArea_ID FROM R_InterestArea ia ")
-				.append("WHERE i.InterestAreaName=ia.Name AND ia.AD_Client_ID=i.AD_Client_ID) ")
+				.append("WHERE lower(i.InterestAreaName)=lower(ia.Name) AND ia.AD_Client_ID=i.AD_Client_ID) ")
 				.append("WHERE R_InterestArea_ID IS NULL AND InterestAreaName IS NOT NULL")
 				.append(" AND I_IsImported='N'").append(clientCheck);
 		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
+		log.fine("Set Interest Area=" + no);
+		
+		// F3P: tax group (Global Tax Validator)
+		
+		sql = new StringBuilder ("UPDATE I_BPartner i ")
+				.append("SET C_TaxGroup_ID=(SELECT C_TaxGroup_ID FROM C_TaxGroup t")
+				.append(" WHERE lower(i.TaxGroupValue)=lower(t.Value) AND t.AD_Client_ID=i.AD_Client_ID) ")
+				.append("WHERE C_TaxGroup_ID IS NULL AND TaxGroupValue IS NOT NULL ")
+				.append(" AND I_IsImported<>'Y'").append(clientCheck);
+		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
+		log.fine("Set TaxGroup=" + no);
+		//
+		sql = new StringBuilder ("UPDATE I_BPartner ")
+				.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid TaxGroup, ' ")
+				.append("WHERE C_TaxGroup_ID IS NULL AND TaxGroupValue IS NOT NULL ")
+				.append(" AND I_IsImported<>'Y'").append(clientCheck);
+		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
+		log.config("Invalid TaxGroup=" + no);
+		
+	// F3P: payment term
+		
+		sql = new StringBuilder ("UPDATE I_BPartner i ")
+				.append("SET C_PaymentTerm_ID=(SELECT C_PaymentTerm_ID FROM C_PaymentTerm t")
+				.append(" WHERE lower(i.PaymentTermValue)=lower(t.Value) AND t.AD_Client_ID=i.AD_Client_ID) ")
+				.append("WHERE C_PaymentTerm_ID IS NULL AND PaymentTermValue IS NOT NULL ")
+				.append(" AND I_IsImported<>'Y'").append(clientCheck);
+		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
+		log.fine("Set PaymentTerm=" + no);
+		//
+		sql = new StringBuilder ("UPDATE I_BPartner ")
+				.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid PaymentTem, ' ")
+				.append("WHERE C_PaymentTerm_ID IS NULL AND PaymentTermValue IS NOT NULL ")
+				.append(" AND I_IsImported<>'Y'").append(clientCheck);
+		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
+		log.config("Invalid PaymentTerm=" + no);
+		
+		// F3P: PO_PaymentTerm
+		
+		sql = new StringBuilder ("UPDATE I_BPartner i ")
+				.append("SET PO_PaymentTerm_ID=(SELECT C_PaymentTerm_ID FROM C_PaymentTerm t")
+				.append(" WHERE lower(i.PO_PaymentTermValue)=lower(t.Value) AND t.AD_Client_ID=i.AD_Client_ID) ")
+				.append("WHERE PO_PaymentTerm_ID IS NULL AND PO_PaymentTermValue IS NOT NULL ")
+				.append(" AND I_IsImported<>'Y'").append(clientCheck);
+		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
+		log.fine("Set PaymentTerm=" + no);
+		//
+		sql = new StringBuilder ("UPDATE I_BPartner ")
+				.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid PO PaymentTerm, ' ")
+				.append("WHERE PO_PaymentTerm_ID IS NULL AND PO_PaymentTermValue IS NOT NULL ")
+				.append(" AND I_IsImported<>'Y'").append(clientCheck);
+		no = DB.executeUpdateEx(sql.toString(), get_TrxName());
+		log.config("Invalid PO PaymentTerm=" + no);
+		
 		if (log.isLoggable(Level.FINE)) log.fine("Set Interest Area=" + no);
 
 		// Value is mandatory error
@@ -310,6 +381,7 @@ implements ImportProcess
 
 			while (rs.next())
 			{	
+				String lastOperationType = "";
 				// Remember Value - only first occurance of the value is BP
 				String New_BPValue = rs.getString("Value") ;
 
@@ -332,12 +404,13 @@ implements ImportProcess
 						
 						setTypeOfBPartner(impBP,bp);
 						
-						if (bp.save())
+						if (SavedFromImport.save(bp))
 						{
 							impBP.setC_BPartner_ID(bp.getC_BPartner_ID());
 							msglog = new StringBuilder("Insert BPartner - ").append(bp.getC_BPartner_ID());
 							if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
 							noInsert++;
+							lastOperationType=OPERATION_INSERT;
 						}
 						else
 						{
@@ -374,11 +447,12 @@ implements ImportProcess
 						setTypeOfBPartner(impBP,bp);
 						
 						//
-						if (bp.save())
+						if (SavedFromImport.save(bp))
 						{
 							msglog = new StringBuilder("Update BPartner - ").append(bp.getC_BPartner_ID());
 							if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
 							noUpdate++;
+							lastOperationType=OPERATION_UPDATE;
 						}
 						else
 						{
@@ -404,7 +478,7 @@ implements ImportProcess
 						location.setAddress2(impBP.getAddress2());
 						location.setPostal(impBP.getPostal());
 						location.setPostal_Add(impBP.getPostal_Add());
-						if (!location.save())
+						if (!SavedFromImport.save(location))
 							log.warning("Location not updated");
 						else
 							bpl.setC_Location_ID(location.getC_Location_ID());
@@ -415,62 +489,62 @@ implements ImportProcess
 						if (impBP.getFax() != null)
 							bpl.setFax(impBP.getFax());
 						ModelValidationEngine.get().fireImportValidate(this, impBP, bpl, ImportValidator.TIMING_AFTER_IMPORT);
-						bpl.saveEx();
+						SavedFromImport.save(bpl);
 					}
-					else 	//	New Location
-						if (impBP.getC_Country_ID() != 0
+					//	New Location
+					else if (impBP.getC_Country_ID() != 0
 								&& impBP.getAddress1() != null 
 								&& impBP.getCity() != null)
+					{
+						MLocation location = new MLocation(getCtx(), impBP.getC_Country_ID(), 
+								impBP.getC_Region_ID(), impBP.getCity(), get_TrxName());
+						location.setAddress1(impBP.getAddress1());
+						location.setAddress2(impBP.getAddress2());
+						location.setPostal(impBP.getPostal());
+						location.setPostal_Add(impBP.getPostal_Add());
+						if (SavedFromImport.save(location)){
+							msglog = new StringBuilder("Insert Location - ").append(location.getC_Location_ID());
+							if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
+						}	
+						else
 						{
-							MLocation location = new MLocation(getCtx(), impBP.getC_Country_ID(), 
-									impBP.getC_Region_ID(), impBP.getCity(), get_TrxName());
-							location.setAddress1(impBP.getAddress1());
-							location.setAddress2(impBP.getAddress2());
-							location.setPostal(impBP.getPostal());
-							location.setPostal_Add(impBP.getPostal_Add());
-							if (location.save()){
-								msglog = new StringBuilder("Insert Location - ").append(location.getC_Location_ID());
-								if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
-							}	
-							else
-							{
-								rollback();
-								noInsert--;
-								sql = new StringBuilder ("UPDATE I_BPartner i ")
-										.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||")
-								.append("'Cannot Insert Location, ' ")
-								.append("WHERE I_BPartner_ID=").append(impBP.getI_BPartner_ID());
-								DB.executeUpdateEx(sql.toString(), get_TrxName());
-								continue;
-							}
-							//
-							bpl = new MBPartnerLocation (bp);
-							bpl.setC_Location_ID(location.getC_Location_ID());
-							bpl.setPhone(impBP.getPhone());
-							bpl.setPhone2(impBP.getPhone2());
-							bpl.setFax(impBP.getFax());
-							ModelValidationEngine.get().fireImportValidate(this, impBP, bpl, ImportValidator.TIMING_AFTER_IMPORT);
-							if (bpl.save())
-							{
-								msglog = new StringBuilder("Insert BP Location - ").append(bpl.getC_BPartner_Location_ID());
-								if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
-								impBP.setC_BPartner_Location_ID(bpl.getC_BPartner_Location_ID());
-							}
-							else
-							{
-								rollback();
-								noInsert--;
-								sql = new StringBuilder ("UPDATE I_BPartner i ")
-										.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||")
-								.append("'Cannot Insert BPLocation, ' ")
-								.append("WHERE I_BPartner_ID=").append(impBP.getI_BPartner_ID());
-								DB.executeUpdateEx(sql.toString(), get_TrxName());
-								continue;
-							}
+							rollback();
+							noInsert--;
+							sql = new StringBuilder ("UPDATE I_BPartner i ")
+									.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||")
+							.append("'Cannot Insert Location, ' ")
+							.append("WHERE I_BPartner_ID=").append(impBP.getI_BPartner_ID());
+							DB.executeUpdateEx(sql.toString(), get_TrxName());
+							continue;
 						}
-				}
+						//
+						bpl = new MBPartnerLocation (bp);
+						bpl.setC_Location_ID(location.getC_Location_ID());
+						bpl.setPhone(impBP.getPhone());
+						bpl.setPhone2(impBP.getPhone2());
+						bpl.setFax(impBP.getFax());
+						ModelValidationEngine.get().fireImportValidate(this, impBP, bpl, ImportValidator.TIMING_AFTER_IMPORT);
+						if (SavedFromImport.save(bpl))
+						{
+							msglog = new StringBuilder("Insert BP Location - ").append(bpl.getC_BPartner_Location_ID());
+							if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
+							impBP.setC_BPartner_Location_ID(bpl.getC_BPartner_Location_ID());
+						}
+						else
+						{
+							rollback();
+							noInsert--;
+							sql = new StringBuilder ("UPDATE I_BPartner i ")
+									.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||")
+							.append("'Cannot Insert BPLocation, ' ")
+							.append("WHERE I_BPartner_ID=").append(impBP.getI_BPartner_ID());
+							DB.executeUpdateEx(sql.toString(), get_TrxName());
+							continue;
+						}
+					}
 
-				Old_BPValue = New_BPValue ;
+					Old_BPValue = New_BPValue ;
+				}
 
 				//	****	Create/Update Contact	****
 				MUser user = null;
@@ -515,7 +589,7 @@ implements ImportProcess
 					if (bpl != null)
 						user.setC_BPartner_Location_ID(bpl.getC_BPartner_Location_ID());
 					ModelValidationEngine.get().fireImportValidate(this, impBP, user, ImportValidator.TIMING_AFTER_IMPORT);
-					if (user.save())
+					if (SavedFromImport.save(user))
 					{
 						msglog = new StringBuilder("Update BP Contact - ").append(user.getAD_User_ID());
 						if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
@@ -553,7 +627,7 @@ implements ImportProcess
 						if (bpl != null)
 							user.setC_BPartner_Location_ID(bpl.getC_BPartner_Location_ID());
 						ModelValidationEngine.get().fireImportValidate(this, impBP, user, ImportValidator.TIMING_AFTER_IMPORT);
-						if (user.save())
+						if (SavedFromImport.save(user))
 						{
 							msglog = new StringBuilder("Insert BP Contact - ").append(user.getAD_User_ID());
 							if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
@@ -578,16 +652,36 @@ implements ImportProcess
 					MContactInterest ci = MContactInterest.get(getCtx(), 
 							impBP.getR_InterestArea_ID(), user.getAD_User_ID(), 
 							true, get_TrxName());
-					ci.saveEx();		//	don't subscribe or re-activate
+					SavedFromImport.save(ci);//	don't subscribe or re-activate
 				}
-				//
+				
+				try
+				{
+					ModelValidationEngine.get().fireImportValidate(this, impBP, null, ImportValidator.TIMING_AFTER_IMPORT);
+				}
+				catch(AdempiereException e)
+				{
+					rollback();
+					if (OPERATION_INSERT.equals(lastOperationType)){
+						noInsert--;
+					}else if (OPERATION_UPDATE.equals(lastOperationType)) {
+						noUpdate--;
+					}
+					sql = new StringBuilder ("UPDATE I_BPartner i "
+							+ "SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||")
+					.append("'Cannot Update BPartner BankAccount, "+e.getMessage()+"' ")
+					.append("WHERE I_BPartner_ID=").append(impBP.getI_BPartner_ID());
+					DB.executeUpdateEx(sql.toString(), get_TrxName());
+					commitEx();
+					continue;
+				}
+				
 				impBP.setI_IsImported(true);
 				impBP.setProcessed(true);
 				impBP.setProcessing(false);
-				impBP.saveEx();
+				SavedFromImport.saveEx(impBP);
 				commitEx();
 			}	//	for all I_Product
-			DB.close(rs, pstmt);
 		}
 		catch (SQLException e)
 		{
@@ -601,7 +695,7 @@ implements ImportProcess
 			rs = null; pstmt = null;
 			//	Set Error to indicator to not imported
 			sql = new StringBuilder ("UPDATE I_BPartner ")
-					.append("SET I_IsImported='N', Updated=getDate() ")
+					.append("SET I_IsImported='N', Updated=SysDate ")
 					.append("WHERE I_IsImported<>'Y'").append(clientCheck);
 			no = DB.executeUpdateEx(sql.toString(), get_TrxName());
 			addLog (0, null, new BigDecimal (no), "@Errors@");
@@ -619,6 +713,28 @@ implements ImportProcess
 		return msgreturn.toString();
 	}
 
+	// F3P
+	
+	protected MBPBankAccount getBPBankAccountFromIBAN(int C_BPartner_ID, String WSC_IBAN)
+	{
+		Query q = new Query(getCtx(), I_C_BP_BankAccount.Table_Name, "C_BPartner_ID = ? AND WSC_IBAN = ?", get_TrxName())
+		.setOnlyActiveRecords(true)
+		.setApplyAccessFilter(true)
+		.setParameters(C_BPartner_ID, WSC_IBAN);
+		
+		return q.first();
+	}
+	
+	protected MBPBankAccount getBPBankAccountFromName(int C_BPartner_ID, String A_Name)
+	{
+		Query q = new Query(getCtx(), I_C_BP_BankAccount.Table_Name, "C_BPartner_ID = ? AND A_Name = ?", get_TrxName())
+		.setOnlyActiveRecords(true)
+		.setApplyAccessFilter(true)
+		.setParameters(C_BPartner_ID, A_Name);
+		
+		return q.first();
+	}
+		
 
 	//@Override
 	public String getImportTableName()

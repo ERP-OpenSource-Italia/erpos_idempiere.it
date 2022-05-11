@@ -147,7 +147,7 @@ public class CalloutInvoiceBatch extends CalloutEngine
 					double CreditLimit = rs.getDouble("SO_CreditLimit");
 					if (CreditLimit != 0)
 					{
-						double CreditAvailable = rs.getDouble("CreditAvailable");
+						double CreditAvailable = CreditLimit - it.idempiere.base.model.LITMBPartner.getTotalOpenBalanceDB(C_BPartner_ID, true, null).doubleValue();
 						if (!rs.wasNull() && CreditAvailable < 0)
 							mTab.fireDataStatusEEvent("CreditLimitOver",
 								DisplayType.getNumberFormat(DisplayType.Amount).format(CreditAvailable),

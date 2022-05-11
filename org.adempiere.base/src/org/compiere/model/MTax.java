@@ -244,6 +244,7 @@ public class MTax extends X_C_Tax implements ImmutablePOSupport
 			.setParameters(getC_Tax_ID())
 			.setOnlyActiveRecords(true)
 			.setClient_ID()
+			.setOrderBy("Rate") // F3P: sort by ascending rate, to have a guarantee order compatible with rounding by delta
 			.list();	
 		//red1 - end -
 		if (list.size() > 0 && is_Immutable())
@@ -327,38 +328,36 @@ public class MTax extends X_C_Tax implements ImmutablePOSupport
 	 *	@param scale scale 
 	 *	@return  tax amount
 	 */
+	
+	// F3P: non utilizziamo la versione originale perche' provocherebbe un errore nel calcolo (la somma per singole componenti, ognuna arrontondata, e' errata a priori)
+	
 	public BigDecimal calculateTax (BigDecimal amount, boolean taxIncluded, int scale)
 	{
 		//	Null Tax
 		if (isZeroTax())
 			return Env.ZERO;
+		
+		BigDecimal multiplier = getRate().divide(Env.ONEHUNDRED, 12, RoundingMode.HALF_UP);		
 
-		MTax[] taxarray;
-		if (isSummary())
-			taxarray = getChildTaxes(false);
-		else
-			taxarray = new MTax[] {this};
 
-		BigDecimal tax = Env.ZERO;		
-		for (MTax taxc : taxarray) {
-			BigDecimal multiplier = taxc.getRate().divide(Env.ONEHUNDRED, 12, RoundingMode.HALF_UP);		
-			if (!taxIncluded)	//	$100 * 6 / 100 == $6 == $100 * 0.06
-			{
-				BigDecimal itax = amount.multiply(multiplier).setScale(scale, RoundingMode.HALF_UP);
-				tax = tax.add(itax);
-			}
-			else			//	$106 - ($106 / (100+6)/100) == $6 == $106 - ($106/1.06)
-			{
-				multiplier = multiplier.add(Env.ONE);
-				BigDecimal base = amount.divide(multiplier, 12, RoundingMode.HALF_UP); 
+		BigDecimal tax = null;		
+		if (!taxIncluded)	//	$100 * 6 / 100 == $6 == $100 * 0.06
+		{
+			tax = amount.multiply (multiplier);
+		}
+		else			//	$106 - ($106 / (100+6)/100) == $6 == $106 - ($106/1.06)
+		{
+			multiplier = multiplier.add(Env.ONE);
+			BigDecimal base = amount.divide(multiplier, 12, RoundingMode.HALF_UP); 
 				BigDecimal itax = amount.subtract(base).setScale(scale, RoundingMode.HALF_UP);
 				tax = tax.add(itax);
 			}
 		}
+		BigDecimal finalTax = tax.setScale(scale, RoundingMode.HALF_UP);
 		if (log.isLoggable(Level.FINE)) log.fine("calculateTax " + amount 
-			+ " (incl=" + taxIncluded + ",scale=" + scale 
-			+ ") = " + tax + " [" + tax + "]");
-		return tax;
+			+ " (incl=" + taxIncluded + ",mult=" + multiplier + ",scale=" + scale 
+			+ ") = " + finalTax + " [" + tax + "]");
+		return finalTax;
 	}	//	calculateTax
 
 	@Override

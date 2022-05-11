@@ -274,6 +274,8 @@ public class MWFProcess extends X_AD_WF_Process
 		//
 		MWFActivity[] activities = getActivities (true, true, trxName);	//	requery active
 		String closedState = null;
+		boolean suspended = false;
+		boolean running = false;
 		for (int i = 0; i < activities.length; i++)
 		{
 			MWFActivity activity = activities[i];
@@ -375,6 +377,10 @@ public class MWFProcess extends X_AD_WF_Process
 		if (closedState != null)
 		{
 			setWFState(closedState);
+			getPO();
+			//hengsin: remove lock/unlock in workflow which is causing deadlock in many place
+			//if (m_po != null)
+				//m_po.unlock(null);
 		}
 		else if (suspended)
 			setWFState(WFSTATE_Suspended);
@@ -501,6 +507,18 @@ public class MWFProcess extends X_AD_WF_Process
 		MWFResponsible resp = MWFResponsible.get(getCtx(), getAD_WF_Responsible_ID());
 		//	(1) User - Directly responsible
 		int AD_User_ID = resp.getAD_User_ID();
+		
+		if(WorkReqMWFResponsible.isRule(resp))
+		{
+			int nRuleId = WorkReqMWFResponsible.getAD_Rule_ID(resp);
+			
+			if(resp.getResponsibleType().equals(WorkReqMWFResponsible.RESPONSIBLETYPE_RuleUser))
+			{
+				AD_User_ID = WorkReqMWFResponsible.evaluateRuleResp(this, null, getWorkflow(), null, getCtx(), nRuleId, getPO());
+			}
+			else
+				throw new AdempiereException("Workflow responsbile support only user rules");
+		}
 		
 		//	Invoker - get Sales Rep or last updater of Document
 		if (AD_User_ID == 0 && resp.isInvoker())

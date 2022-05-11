@@ -52,6 +52,8 @@ import org.compiere.util.Language;
 import org.compiere.util.Msg;
 import org.compiere.util.ValueNamePair;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *  Account Viewer State - maintains State information for the Account Viewer
  *  Based on class AcctViewerData
@@ -541,9 +543,16 @@ public class WAcctViewerData
 			rm.addColumn(new RColumn(ctx, "C_Currency_ID", DisplayType.TableDir));
 			rm.addColumn(new RColumn(ctx, "AmtSourceDr", DisplayType.Amount));
 			rm.addColumn(new RColumn(ctx, "AmtSourceCr", DisplayType.Amount));
-			rm.addColumn(new RColumn(ctx, "Rate", DisplayType.Amount,
-				"CASE WHEN (AmtSourceDr + AmtSourceCr) = 0 THEN 0"
-				+ " ELSE (AmtAcctDr + AmtAcctCr) / (AmtSourceDr + AmtSourceCr) END"));
+			// F3P: if we have currency conversion info on table, use it, else standard calculation
+			
+			if(STDSysConfig.hasFactAcctCurrencyRate(AD_Client_ID))
+				rm.addColumn(new RColumn(ctx, "Rate", DisplayType.Amount,
+						"CASE WHEN (AmtSourceDr + AmtSourceCr) = 0 THEN 0"
+						+ " ELSE (CASE WHEN DivideRate > 0 THEN DivideRate ELSE (AmtAcctDr + AmtAcctCr) / (AmtSourceDr + AmtSourceCr) END) END"));				
+			else
+				rm.addColumn(new RColumn(ctx, "Rate", DisplayType.Amount,
+					"CASE WHEN (AmtSourceDr + AmtSourceCr) = 0 THEN 0"
+					+ " ELSE (AmtAcctDr + AmtAcctCr) / (AmtSourceDr + AmtSourceCr) END"));
 		}
 		
 		//	Remaining Keys

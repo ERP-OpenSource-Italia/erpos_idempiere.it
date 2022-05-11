@@ -29,9 +29,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.logging.Level;
 
+import org.adempiere.model.ImportValidator;
 import org.compiere.model.MPriceList;
 import org.compiere.model.MPriceListVersion;
 import org.compiere.model.MProductPrice;
+import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.X_I_PriceList;
 import org.compiere.model.X_M_ProductPriceVendorBreak;
 import org.compiere.process.ProcessInfoParameter;
@@ -45,7 +47,7 @@ import org.compiere.util.Env;
  *
  * 	@author 	Carlos Ruiz
  */
-public class ImportPriceList extends SvrProcess
+public class ImportPriceList extends SvrProcess implements ImportProcess
 {
 	/**	Client to be imported to		*/
 	private int				m_AD_Client_ID = 0;
@@ -55,6 +57,7 @@ public class ImportPriceList extends SvrProcess
 	private boolean			p_importPriceList  = true;
 	private boolean			p_importPriceStd = true;
 	private boolean			p_importPriceLimit = true;
+	private boolean			p_forceCreateProductPrice = false;
 	
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -75,6 +78,8 @@ public class ImportPriceList extends SvrProcess
 				p_importPriceStd = "Y".equals(para[i].getParameter());
 			else if (name.equals("IsImportPriceLimit"))
 				p_importPriceLimit = "Y".equals(para[i].getParameter());
+			else if (name.equals("IsForceCreateProductPrice"))
+				p_forceCreateProductPrice = "Y".equals(para[i].getParameter());
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -103,7 +108,7 @@ public class ImportPriceList extends SvrProcess
 		//	Delete Old Imported
 		if (m_deleteOldImported)
 		{
-			sql = new StringBuilder("DELETE FROM I_PriceList "
+			sql = new StringBuilder("DELETE I_PriceList "
 				+ "WHERE I_IsImported='Y'").append(clientCheck);
 			no = DB.executeUpdate(sql.toString(), get_TrxName());
 			if (log.isLoggable(Level.INFO)) log.info("Delete Old Impored =" + no);
@@ -114,9 +119,9 @@ public class ImportPriceList extends SvrProcess
 			.append("SET AD_Client_ID = COALESCE (AD_Client_ID, ").append(m_AD_Client_ID).append("),")
 			.append(" AD_Org_ID = COALESCE (AD_Org_ID, 0),")
 			.append(" IsActive = COALESCE (IsActive, 'Y'),")
-			.append(" Created = COALESCE (Created, getDate()),")
+			.append(" Created = COALESCE (Created, SysDate),")
 			.append(" CreatedBy = COALESCE (CreatedBy, 0),")
-			.append(" Updated = COALESCE (Updated, getDate()),")
+			.append(" Updated = COALESCE (Updated, SysDate),")
 			.append(" UpdatedBy = COALESCE (UpdatedBy, 0),")
 			.append(" EnforcePriceLimit = COALESCE (EnforcePriceLimit, 'N'),")
 			.append(" IsSOPriceList = COALESCE (IsSOPriceList, 'N'),")
@@ -127,6 +132,9 @@ public class ImportPriceList extends SvrProcess
 			.append("WHERE I_IsImported<>'Y' OR I_IsImported IS NULL");
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info("Reset=" + no);
+		
+		//F3P: fire import model validator
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_BEFORE_VALIDATE);
 
 		//	Set Optional BPartner
 		sql = new StringBuilder ("UPDATE I_PriceList ")
@@ -153,6 +161,25 @@ public class ImportPriceList extends SvrProcess
 			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		log.fine("Set Product from Value=" + no);
+		
+		sql = new StringBuilder("UPDATE I_PriceList ")
+				  .append("SET M_Product_ID=(SELECT MAX(M_Product_ID) FROM C_BPartner_Product bpp ")
+				  .append(" WHERE bpp.C_BPartner_ID = I_PriceList.C_BPartner_ID AND lower(I_PriceList.ProductValue)=lower(bpp.VendorProductNo) ")
+				  .append(" AND I_PriceList.AD_Client_ID=bpp.AD_Client_ID ) ")
+				  .append(" WHERE M_Product_ID IS NULL AND ProductValue IS NOT NULL AND C_BPartner_ID IS NOT NULL ")
+				  .append(" AND I_IsImported<>'Y' ").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set Product from C_BPartner_Product=" + no);
+		
+		sql = new StringBuilder("UPDATE I_PriceList ")
+				  .append(" SET M_Product_ID=(SELECT MAX(M_Product_ID) FROM M_Product_PO ppo ")
+				  .append(" WHERE ppo.C_BPartner_ID = I_PriceList.C_BPartner_ID AND lower(I_PriceList.ProductValue)=lower(ppo.VendorProductNo) ")
+				  .append(" AND I_PriceList.AD_Client_ID=ppo.AD_Client_ID ) ")
+				  .append(" WHERE M_Product_ID IS NULL AND ProductValue IS NOT NULL AND C_BPartner_ID IS NOT NULL ")
+				  .append(" AND I_IsImported<>'Y' ").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		log.fine("Set Product from C_BPartner_Product=" + no);
+			
 		sql = new StringBuilder ("UPDATE I_PriceList ")
 			  .append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid Product, ' ")
 			  .append("WHERE M_Product_ID IS NULL AND (ProductValue IS NOT NULL)")
@@ -183,7 +210,7 @@ public class ImportPriceList extends SvrProcess
 		
 		/* UOM For Future USE
 		//	Set UOM (System/own)
-		sql = new StringBuilder ("UPDATE I_PriceList "
+		sql = new StringBuffer ("UPDATE I_PriceList "
 			+ "SET X12DE355 = "
 			+ "(SELECT MAX(X12DE355) FROM C_UOM u WHERE u.IsDefault='Y' AND u.AD_Client_ID IN (0,I_PriceList.AD_Client_ID)) "
 			+ "WHERE X12DE355 IS NULL AND C_UOM_ID IS NULL"
@@ -191,14 +218,14 @@ public class ImportPriceList extends SvrProcess
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		log.fine("Set UOM Default=" + no);
 		//
-		sql = new StringBuilder ("UPDATE I_PriceList "
+		sql = new StringBuffer ("UPDATE I_PriceList "
 			+ "SET C_UOM_ID = (SELECT C_UOM_ID FROM C_UOM u WHERE u.X12DE355=I_PriceList.X12DE355 AND u.AD_Client_ID IN (0,I_PriceList.AD_Client_ID)) "
 			+ "WHERE C_UOM_ID IS NULL"
 			+ " AND I_IsImported<>'Y'").append(clientCheck);
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		log.info("Set UOM=" + no);
 		//
-		sql = new StringBuilder ("UPDATE I_PriceList "
+		sql = new StringBuffer ("UPDATE I_PriceList "
 			+ "SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=Invalid UOM, ' "
 			+ "WHERE C_UOM_ID IS NULL"
 			+ " AND I_IsImported<>'Y'").append(clientCheck);
@@ -261,6 +288,9 @@ public class ImportPriceList extends SvrProcess
 		if (no != 0)
 			log.warning("No Mandatory BreakValue=" + no);
 
+		//F3P: fire import model validator
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);
+
 		commitEx();
 		
 		//	-------------------------------------------------------------------
@@ -283,7 +313,7 @@ public class ImportPriceList extends SvrProcess
 			//	Set Imported = Y
 			pstmt_setImported = DB.prepareStatement
 				("UPDATE I_PriceList SET I_IsImported='Y', M_PriceList_ID=?, M_PriceList_Version_ID=?, "
-				+ "Updated=getDate(), Processed='Y' WHERE I_PriceList_ID=?", get_TrxName());
+				+ "Updated=SysDate, Processed='Y' WHERE I_PriceList_ID=?", get_TrxName());
 
 			//
 			pstmt = DB.prepareStatement(sql.toString(), get_TrxName());
@@ -308,6 +338,10 @@ public class ImportPriceList extends SvrProcess
 				if (newPriceList)			//	Insert new Price List
 				{
 					pricelist = new MPriceList(imp);
+					
+					//F3P: fire import model validator
+					ModelValidationEngine.get().fireImportValidate(this, imp, pricelist, ImportValidator.TIMING_BEFORE_IMPORT);
+					
 					if (pricelist.save())
 					{
 						M_PriceList_ID = pricelist.getM_PriceList_ID();
@@ -346,6 +380,10 @@ public class ImportPriceList extends SvrProcess
 					pricelistversion.setValidFrom(imp.getValidFrom());
 					pricelistversion.setName(pricelist.getName() + " " + imp.getValidFrom());
 					pricelistversion.setM_DiscountSchema_ID(m_discountschema_id);
+					
+					//F3P: fire import model validator
+					ModelValidationEngine.get().fireImportValidate(this, imp, pricelistversion, ImportValidator.TIMING_BEFORE_IMPORT);
+					
 					if (pricelistversion.save())
 					{
 						M_PriceList_Version_ID = pricelistversion.getM_PriceList_Version_ID();
@@ -368,7 +406,8 @@ public class ImportPriceList extends SvrProcess
 				// @TODO: C_UOM is intended for future USE - not useful at this moment
 				
 				// If bpartner then insert/update into M_ProductPriceVendorBreak, otherwise insert/update M_ProductPrice
-				if (imp.getC_BPartner_ID() > 0) {
+				if (imp.getC_BPartner_ID() > 0
+						&& p_forceCreateProductPrice == false) {
 					// M_ProductPriceVendorBreak
 					int M_ProductPriceVendorBreak_ID = DB.getSQLValue(get_TrxName(), 
 							"SELECT M_ProductPriceVendorBreak_ID " +
@@ -393,6 +432,10 @@ public class ImportPriceList extends SvrProcess
 					if (p_importPriceLimit) ppvb.setPriceLimit(imp.getPriceLimit());
 					if (p_importPriceList) ppvb.setPriceList(imp.getPriceList());
 					if (p_importPriceStd) ppvb.setPriceStd(imp.getPriceStd());
+					
+					//F3P: fire import model validator
+					ModelValidationEngine.get().fireImportValidate(this, imp, ppvb, ImportValidator.TIMING_BEFORE_IMPORT);
+					
 					if (ppvb.save())
 					{
 						if (isInsert)
@@ -424,6 +467,10 @@ public class ImportPriceList extends SvrProcess
 								, p_importPriceLimit?imp.getPriceLimit():Env.ZERO);
 						isInsert = true;
 					}
+					
+					//F3P: fire import model validator
+					ModelValidationEngine.get().fireImportValidate(this, imp, pp, ImportValidator.TIMING_BEFORE_IMPORT);
+					
 					if (pp.save())
 					{
 						log.finer("Insert/Update Product Price");
@@ -463,7 +510,7 @@ public class ImportPriceList extends SvrProcess
 
 		//	Set Error to indicator to not imported
 		sql = new StringBuilder ("UPDATE I_PriceList ")
-			.append("SET I_IsImported='N', Updated=getDate() ")
+			.append("SET I_IsImported='N', Updated=SysDate ")
 			.append("WHERE I_IsImported<>'Y'").append(clientCheck);
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		addLog (0, null, new BigDecimal (no), "@Errors@");
@@ -475,5 +522,16 @@ public class ImportPriceList extends SvrProcess
 		addLog (0, null, new BigDecimal (noUpdateppvb), "@M_ProductPriceVendorBreak_ID@: @Updated@");
 		return "";
 	}	//	doIt
+
+
+	@Override
+	public String getImportTableName() {
+		return X_I_PriceList.Table_Name;
+	}
+
+	@Override
+	public String getWhereClause() {
+		return " AND AD_Client_ID=" + m_AD_Client_ID;
+	}
 
 }	//	ImportProduct
