@@ -1198,7 +1198,13 @@ public class MMovement extends X_M_Movement implements DocAction, DocOptions
 		{
 			options[index++] = ACTION_ReActivate;
 		}
-		
+		else if (docStatus.equals(DocumentEngine.STATUS_Drafted)
+					|| docStatus.equals(DocumentEngine.STATUS_InProgress)
+					|| docStatus.equals(DocumentEngine.STATUS_Invalid))
+		{
+			options[index++] = DocumentEngine.ACTION_Prepare;
+		}
+
 		return index;
 	}	
 	
