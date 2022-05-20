@@ -125,7 +125,8 @@ public class LoginPanel extends Window implements EventListener<Event>
     protected ConfirmPanel pnlButtons; 
     protected boolean email_login = MSysConfig.getBooleanValue(MSysConfig.USE_EMAIL_FOR_LOGIN, false);
     protected String validLstLanguage = null;
-    
+    protected Checkbox chkNoDocStatus;
+
     public LoginPanel(Properties ctx, LoginWindow loginWindow)
     {
         this.ctx = ctx;
@@ -297,6 +298,19 @@ public class LoginPanel extends Window implements EventListener<Event>
     	td.setSclass(ITheme.LOGIN_FIELD_CLASS);
     	tr.appendChild(td);
     	td.appendChild(chkSelectRole);
+    	
+    	//LS disabilita DocStatus
+    	tr = new Tr();
+        tr.setId("rowNoDocStatus");
+        table.appendChild(tr);
+        td = new Td();
+    	tr.appendChild(td);
+    	td.setSclass(ITheme.LOGIN_LABEL_CLASS);
+    	td.appendChild(new Label(""));
+    	td = new Td();
+    	td.setSclass(ITheme.LOGIN_FIELD_CLASS);
+    	tr.appendChild(td);
+    	td.appendChild(chkNoDocStatus);
 
     	if (MSystem.isZKRememberUserAllowed()) {
         	tr = new Tr();
@@ -401,6 +415,11 @@ public class LoginPanel extends Window implements EventListener<Event>
 
         chkSelectRole = new Checkbox(Msg.getMsg(Language.getBaseAD_Language(), "SelectRole"));
         chkSelectRole.setId("chkSelectRole");
+        
+        //LS
+        chkNoDocStatus = new Checkbox(Msg.getMsg(Language.getBaseAD_Language(), "Disattiva Cruscotti"));
+        chkNoDocStatus.setId("chkNoDocStatus");
+        //LS END
         
         btnResetPassword = new A(Msg.getMsg(Language.getBaseAD_Language(), "ForgotMyPassword"));
         btnResetPassword.setId("btnResetPassword");
@@ -523,6 +542,7 @@ public class LoginPanel extends Window implements EventListener<Event>
     	lblLanguage.setValue(Msg.getMsg(language, "Language"));
     	chkRememberMe.setLabel(Msg.getMsg(language, "RememberMe"));
     	chkSelectRole.setLabel(Msg.getMsg(language, "SelectRole"));
+    	//LS TODO chkNoDocStatus
     	btnResetPassword.setLabel(Msg.getMsg(language, "ForgotMyPassword"));
     	lblLogin.setValue(Msg.getMsg(language, "Login"));
     	pnlButtons.getButton(ConfirmPanel.A_OK).setLabel(Util.cleanAmp(Msg.getMsg(language, ConfirmPanel.A_OK)));
@@ -610,6 +630,13 @@ public class LoginPanel extends Window implements EventListener<Event>
             else
             	wndLogin.loginOk(userId, chkSelectRole.isChecked(), clientsKNPairs);
 
+            //LS
+            if(chkNoDocStatus.isChecked())
+            	Env.setContext(ctx, "#LSNoDocStatus", "Y");
+            else
+            	Env.setContext(ctx, "#LSNoDocStatus", "N");
+            //LS END
+            
             Locale locale = language.getLocale();
             currSess.setAttribute(Attributes.PREFERRED_LOCALE, locale);
             try {
@@ -618,7 +645,6 @@ public class LoginPanel extends Window implements EventListener<Event>
 				logger.log(Level.WARNING, e.getLocalizedMessage(), e);
 			}
             Locales.setThreadLocal(locale);
-
             String timeoutText = getUpdateTimeoutTextScript();
             if (!Strings.isEmpty(timeoutText))
             	Clients.response("browserTimeoutScript", new AuScript(null, timeoutText));
