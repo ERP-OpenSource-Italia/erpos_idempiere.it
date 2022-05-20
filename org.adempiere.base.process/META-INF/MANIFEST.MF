@@ -1,0 +1,20 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: iDempiere Processes
+Bundle-SymbolicName: org.adempiere.base.process
+Bundle-Version: 6.2.0.qualifier
+Comment: Bundle-RequiredExecutionEnvironment: JavaSE-11
+Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version>=1.11))"
+Require-Bundle: org.adempiere.base;bundle-version="0.0.0"
+Export-Package: org.adempiere.process,
+ org.compiere.process,
+ org.idempiere.process
+Import-Package: javax.mail;version="1.5",
+ javax.mail.internet;version="1.5",
+ javax.servlet;version="2.5.0",
+ javax.servlet.http;version="2.5.0",
+ org.apache.commons.collections.keyvalue;version="3.2.0"
+Eclipse-RegisterBuddy: org.adempiere.base
+Bundle-ClassPath: .
+Automatic-Module-Name: org.adempiere.base.process
+Bundle-Vendor: iDempiere Community

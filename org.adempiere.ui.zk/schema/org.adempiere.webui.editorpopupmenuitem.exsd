@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Schema file written by PDE -->
+<schema targetNamespace="org.adempiere.ui.zk" xmlns="http://www.w3.org/2001/XMLSchema">
+<annotation>
+      <appinfo>
+         <meta.schema plugin="org.adempiere.ui.zk" id="org.adempiere.webui.editorpopupmenuitem" name="Editor Popup Menu Items"/>
+      </appinfo>
+      <documentation>
+         Extension point to add new menu (o replace standard ones) items on popup menu of editors.
+      </documentation>
+   </annotation>
+
+   <element name="extension">
+      <annotation>
+         <appinfo>
+            <meta.element />
+         </appinfo>
+      </annotation>
+      <complexType>
+         <attribute name="point" type="string" use="required">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="id" type="string">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+            </annotation>
+         </attribute>
+         <attribute name="name" type="string">
+            <annotation>
+               <documentation>
+                  
+               </documentation>
+               <appinfo>
+                  <meta.attribute translatable="true"/>
+               </appinfo>
+            </annotation>
+         </attribute>
+      </complexType>
+   </element>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="since"/>
+      </appinfo>
+      <documentation>
+         4.1.0
+      </documentation>
+   </annotation>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="examples"/>
+      </appinfo>
+      <documentation>
+         &lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;scr:component xmlns:scr=&quot;http://www.osgi.org/xmlns/scr/v1.1.0&quot; name=&quot;it.adempiere.localization.ui.zk.editorpopupitemfactory&quot;&gt;
+   &lt;implementation class=&quot;it.adempiere.localization.webui.extension.LocalizationEditorPopupMenuItemFactory&quot;/&gt;
+   &lt;service&gt;
+      &lt;provide interface=&quot;org.adempiere.webui.factory.IEditorPopupMenuItemFactory&quot;/&gt;
+   &lt;/service&gt;
+   &lt;property name=&quot;service.ranking&quot; type=&quot;Integer&quot; value=&quot;10&quot;/&gt;
+&lt;/scr:component&gt;
+
+      </documentation>
+   </annotation>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="apiinfo"/>
+      </appinfo>
+      <documentation>
+         The class attribute must represent an implementor of:
+org.adempiere.webui.factory.IEditorPopupMenuItemFactory
+      </documentation>
+   </annotation>
+
+
+   <annotation>
+      <appinfo>
+         <meta.section type="copyright"/>
+      </appinfo>
+      <documentation>
+         Product: Adempiere ERP &amp; CRM Smart Business Solution
+Copyright (C) 2016 ERP OpenSoure Italia
+This program is free software; you can redistribute it and/or modify it
+under the terms version 2 of the GNU General Public License as published
+by the Free Software Foundation. This program is distributed in the hope
+that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU General Public License for more details.
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
+
+      </documentation>
+   </annotation>
+
+</schema>

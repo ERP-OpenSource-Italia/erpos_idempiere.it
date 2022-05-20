@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="fitnesse.jar" sourcepath="C:/Users/STRINC~1/AppData/Local/Temp/.org.sf.feeling.decompiler1571039721165/source/fitnesse-20190716-sources-1571048944498.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

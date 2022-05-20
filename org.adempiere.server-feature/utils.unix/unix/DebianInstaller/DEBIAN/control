@@ -1,0 +1,12 @@
+Package: idempiere
+Version: 6.2
+Section: web
+Priority: extra
+Architecture: all
+Pre-Depends: openjdk-11-jdk|openjdk-12-jdk, postgresql-11|postgresql-10|postgresql-contrib-9.6, adduser
+Suggests: firefox
+Installed-Size: 968668
+Maintainer: Carlos Ruiz  <carg67@gmail.com>
+Description: iDempiere ERP
+             iDempiere Business Suite ERP/CRM/SCM
+Homepage: http://www.idempiere.org/

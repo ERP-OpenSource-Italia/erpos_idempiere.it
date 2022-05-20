@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright (C) 2009 Low Heng Sin
+Copyright (C) 2009 Idalica Corporation
+-->
+<zk>
+
+<style>
+	.loginLinksBox {
+		padding: 0;
+		margin: 0;
+		padding-left: 3px;
+		font-size: 8pt;
+		background-color: transparent;
+	}
+</style>
+
+<div class="loginLinksBox"
+	style="position: absolute; bottom: 30px;">
+
+	<toolbarbutton href="https://www.erp-opensource.it" image="/theme/default/images/powered-by-erpos.png"
+		tooltiptext="Powered by ERP OpenSource Italia" target="_blank"
+		/>
+</div>
+
+</zk>
