@@ -164,18 +164,32 @@ public class MQuery implements Serializable
 				//-------------------------------------------------------------
 				if (P_String != null)
 				{
-					if (P_String_To == null)
+					//LS Backporting 7.1 multiselction search
+					if (Reference_ID == DisplayType.ChosenMultipleSelectionList)
 					{
-						if (P_String.indexOf('%') == -1)
-							query.addRestriction(ParameterName, MQuery.EQUAL, 
-								P_String, Name, Info);
+						String columnName = TableName + "." + ParameterName;		
+						int cnt = DB.getSQLValueEx(null, "SELECT Count(*) From AD_Column WHERE IsActive='Y' AND AD_Client_ID=0 AND Upper(ColumnName)=? AND AD_Reference_ID=?", ParameterName.toUpperCase(), DisplayType.ChosenMultipleSelectionList);
+						if (cnt > 0)
+							query.addRestriction(DB.intersectClauseForCSV(columnName, P_String), MQuery.EQUAL, Name, Info);
 						else
-							query.addRestriction(ParameterName, MQuery.LIKE, 
-								P_String, Name, Info);
-					}
+							query.addRestriction(DB.inClauseForCSV(columnName, P_String), MQuery.EQUAL, Name, Info);
+					} 
 					else
-						query.addRangeRestriction(ParameterName, 
-							P_String, P_String_To, Name, Info, Info_To);
+					{
+						if (P_String_To == null)
+						{
+							if (P_String.indexOf('%') == -1)
+								query.addRestriction(ParameterName, MQuery.EQUAL, 
+									P_String, Name, Info);
+							else
+								query.addRestriction(ParameterName, MQuery.LIKE, 
+									P_String, Name, Info);
+						}
+						else
+							query.addRangeRestriction(ParameterName, 
+								P_String, P_String_To, Name, Info, Info_To);
+					}
+					//LS END
 				}
 				//	Number
 				else if (P_Number != null || P_Number_To != null)
@@ -235,6 +249,22 @@ public class MQuery implements Serializable
 		return query;
 	}	//	get
 	
+	
+	//LS Backporting 7.1 multiselction search
+	public void addRestriction (String whereClause, String Operator, String InfoName, String InfoDisplay)
+	{
+		if (whereClause == null || whereClause.trim().length() == 0)
+			return;
+		Restriction r = new Restriction (whereClause, true, 0);
+		r.Operator = Operator;
+		if (InfoName != null)
+			r.InfoName = InfoName;
+		if (InfoDisplay != null)
+			r.InfoDisplay = InfoDisplay.trim();
+		m_list.add(r);
+		m_newRecord = whereClause.equals(NEWRECORD);
+	}
+	//LS END
 	
 	/**
 	 * 	Get Zoom Column Name.

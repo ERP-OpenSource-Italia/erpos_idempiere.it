@@ -172,4 +172,8 @@ public class SystemIDs
 	public final static int SCHEDULE_10_MINUTES = 200002;
 	public final static int SCHEDULE_15_MINUTES = 200003;
 	
+	//LS Backporting 7.1 multiselction search
+	
+	public final static int REFERENCE_DATATYPE_CHOSEN_MULTIPLE_SELECTION_LIST = 200161;
+	//LS END
 }

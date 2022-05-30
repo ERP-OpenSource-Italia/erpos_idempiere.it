@@ -29,4 +29,10 @@ public interface IServicesHolder<T> {
 	 */
 	public List<T> getServices();
 
+	/**
+	 * Get list of service reference, sorted by service.ranking (from highest to lowest ranking).
+	 * If you want to cache service, cache IServiceReferenceHolder instead of the actual service object
+	 * @return list of {@link IServiceReferenceHolder}
+	 */
+	public List<IServiceReferenceHolder<T>> getServiceReferences();
 }

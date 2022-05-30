@@ -20,6 +20,7 @@ import org.adempiere.webui.editor.WAssignmentEditor;
 import org.adempiere.webui.editor.WBinaryEditor;
 import org.adempiere.webui.editor.WButtonEditor;
 import org.adempiere.webui.editor.WChartEditor;
+import org.adempiere.webui.editor.WChosenboxListEditor;
 import org.adempiere.webui.editor.WDashboardContentEditor;
 import org.adempiere.webui.editor.WDateEditor;
 import org.adempiere.webui.editor.WDatetimeEditor;
@@ -41,9 +42,9 @@ import org.adempiere.webui.editor.WTimeEditor;
 import org.adempiere.webui.editor.WUnknownEditor;
 import org.adempiere.webui.editor.WUrlEditor;
 import org.adempiere.webui.editor.WYesNoEditor;
-import org.adempiere.webui.info.WInfoPAttributeEditor;
 import org.adempiere.webui.editor.grid.selection.WGridTabMultiSelectionEditor;
 import org.adempiere.webui.editor.grid.selection.WGridTabSingleSelectionEditor;
+import org.adempiere.webui.info.WInfoPAttributeEditor;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.util.DisplayType;
@@ -221,6 +222,10 @@ public class DefaultEditorFactory implements IEditorFactory2 {
         else if (displayType == DisplayType.MultipleSelectionGrid)
         {
         	editor = new WGridTabMultiSelectionEditor(gridField, tableEditor);
+        }
+        else if (displayType == DisplayType.ChosenMultipleSelectionList )
+        {
+        	editor = new WChosenboxListEditor(gridField, tableEditor);
         }
         else
         {
