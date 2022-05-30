@@ -59,13 +59,13 @@ public class DefaultEditorFactory implements IEditorFactory2 {
 	
 	@Override
 	public WEditor getEditor(GridTab gridTab, GridField gridField,
-			boolean tableEditor) {
-		return getEditor(gridTab, gridField, tableEditor, false, 0, null);
+			boolean tableEditor,boolean searchWindow) {
+		return getEditor(gridTab, gridField, tableEditor, false, 0, null,false);
 	}
 
 	@Override
 	public WEditor getEditor(GridTab gridTab, GridField gridField,
-			boolean tableEditor, boolean infoEditor, int WindowNo, Properties ctx) {
+			boolean tableEditor, boolean infoEditor, int WindowNo, Properties ctx,boolean searchWindow) {
 		if (gridField == null)
         {
             return null;
@@ -225,7 +225,10 @@ public class DefaultEditorFactory implements IEditorFactory2 {
         }
         else if (displayType == DisplayType.ChosenMultipleSelectionList )
         {
-        	editor = new WChosenboxListEditor(gridField, tableEditor);
+        	if(searchWindow)
+        		editor = new WChosenboxListEditor(gridField, tableEditor);
+        	else
+        		editor = new WSearchEditor(gridField);
         }
         else
         {
