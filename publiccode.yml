@@ -1,0 +1,62 @@
+# This repository adheres to the publiccode.yml standard by including this 
+# metadata file that makes public software easily discoverable.
+# More info at https://github.com/italia/publiccode.yml
+
+publiccodeYmlVersion: '0.2'
+categories:
+  - erp
+description:
+  it:
+    features:
+      - |-
+        Amministrazione e Finanza, Logistica e Magazzino, Produzione, Gestione
+        Acquisti, Vendite
+    genericName: ERP
+    longDescription: |
+      iDempiere è la suite più robusta, flessibile, affidabile e dinamica
+      esistente al mondo, un ERP-CRM-SCM senza pari, una soluzione integrata per
+      aziende manifatturiere o distribuzione di Medie o Grandi dimensioni e per
+      la pubblica amministrazione
+
+      Il modello flessibile, i flussi di lavoro, i documenti e le transazione si
+      adattano alle esigenze del business, a differenza delle applicazioni
+      tradizionali che impongono alle aziende di adattarsi al modello del
+      software. 
+
+
+      Visita https://www.erp-opensource.it/ per maggiori dettagli
+    shortDescription: 'iDempiere, la soluzione ERP open source per la tua azienda'
+developmentStatus: stable
+it:
+  conforme:
+    gdpr: false
+    lineeGuidaDesign: false
+    misureMinimeSicurezza: false
+    modelloInteroperabilita: false
+  countryExtensionVersion: '0.2'
+  piattaforme:
+    anpr: false
+    cie: false
+    pagopa: false
+    spid: false
+legal:
+  license: GPL-2.0-only
+localisation:
+  availableLanguages:
+    - it
+  localisationReady: true
+maintenance:
+  contacts:
+    - email: info@erp-opensource.it
+      name: Stefano Coletta
+      phone: '+390516307411'
+  type: community
+name: Idempiere Italia
+platforms:
+  - web
+  - windows
+  - linux
+releaseDate: '2019-01-04'
+softwareType: standalone/other
+softwareVersion: '6.2'
+url: 'https://github.com/ERP-OpenSource-Italia/erpos_idempiere.it'
