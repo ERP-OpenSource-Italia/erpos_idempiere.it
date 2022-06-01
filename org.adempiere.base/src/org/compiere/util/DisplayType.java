@@ -21,8 +21,10 @@ import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_AMOUNT;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_ASSIGNMENT;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_BINARY;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_BUTTON;
+import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_CHART;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_COLOR;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_COSTPRICE;
+import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_DASHBOARD_CONTENT;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_DATE;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_DATETIME;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_FILENAME;
@@ -34,6 +36,7 @@ import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_LIST;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_LOCATION;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_LOCATOR;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_MEMO;
+import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_MULTIPLE_SELECTION_GRID;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_NUMBER;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_PAYMENT;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_PRINTNAME;
@@ -41,6 +44,7 @@ import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_PRODUCTATTRIBUTE;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_QUANTITY;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_ROWID;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_SEARCH;
+import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_SINGLE_SELECTION_GRID;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_STRING;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_TABLE;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_TABLEDIR;
@@ -49,10 +53,6 @@ import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_TEXTLONG;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_TIME;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_URL;
 import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_YES_NO;
-import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_CHART;
-import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_DASHBOARD_CONTENT;
-import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_SINGLE_SELECTION_GRID;
-import static org.compiere.model.SystemIDs.REFERENCE_DATATYPE_MULTIPLE_SELECTION_GRID;
 
 import java.text.DateFormat;
 import java.text.DecimalFormat;
@@ -61,9 +61,11 @@ import java.text.SimpleDateFormat;
 import java.util.Currency;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.logging.Level;
 
 import org.adempiere.base.IDisplayTypeFactory;
+import org.adempiere.base.IServiceReferenceHolder;
 import org.adempiere.base.Service;
 import org.compiere.model.MLanguage;
 
@@ -155,6 +157,14 @@ public final class DisplayType
 	public static final int SingleSelectionGrid = REFERENCE_DATATYPE_SINGLE_SELECTION_GRID;
 	
 	public static final int MultipleSelectionGrid = REFERENCE_DATATYPE_MULTIPLE_SELECTION_GRID;
+	
+	//LS Backporting 7.1 multiselction search
+	public final static int REFERENCE_DATATYPE_CHOSEN_MULTIPLE_SELECTION_LIST = 200161;
+
+	public static final int ChosenMultipleSelectionList = REFERENCE_DATATYPE_CHOSEN_MULTIPLE_SELECTION_LIST;
+	 
+	//LS END
+ 
 
 	/**
 	 *	- New Display Type
@@ -268,12 +278,13 @@ public final class DisplayType
 	public static boolean isText(int displayType)
 	{
 		if (displayType == String || displayType == Text
-			|| displayType == TextLong || displayType == Memo
-			|| displayType == FilePath || displayType == FileName
-			|| displayType == URL || displayType == PrinterName
-			|| displayType == SingleSelectionGrid || displayType == Color
-			|| displayType == MultipleSelectionGrid)
-			return true;
+				|| displayType == TextLong || displayType == Memo
+				|| displayType == FilePath || displayType == FileName
+				|| displayType == URL || displayType == PrinterName
+				|| displayType == SingleSelectionGrid || displayType == Color
+				|| displayType == MultipleSelectionGrid
+				|| displayType == ChosenMultipleSelectionList)
+				return true;
 		
 		List<IDisplayTypeFactory> factoryList = Service.locator().list(IDisplayTypeFactory.class).getServices();
 		for(IDisplayTypeFactory factory : factoryList){
@@ -312,8 +323,9 @@ public final class DisplayType
 	public static boolean isLookup(int displayType)
 	{
 		if (displayType == List || displayType == Table
-			|| displayType == TableDir || displayType == Search)
-			return true;
+				|| displayType == TableDir || displayType == Search
+				|| displayType == ChosenMultipleSelectionList)
+				return true;
 		
 		List<IDisplayTypeFactory> factoryList = Service.locator().list(IDisplayTypeFactory.class).getServices();
 		for(IDisplayTypeFactory factory : factoryList){
@@ -763,5 +775,41 @@ public final class DisplayType
 		return currencyFormatter;
 	}   //  getCurrencyFormat
 
-
+	
+	//LS Backporting 7.1 multiselction search
+	private final static CCache<Integer, IServiceReferenceHolder<IDisplayTypeFactory>> s_displayTypeFactoryCache = new CCache<>(null, "IDisplayTypeFactory", 100, false);
+	
+	private static List<IServiceReferenceHolder<IDisplayTypeFactory>> getDisplayTypeFactories() {
+		 return Service.locator().list(IDisplayTypeFactory.class).getServiceReferences();
+	}
+	
+	/**
+	 *	Returns true if DisplayType is a List.
+	 *  (stored as Text)
+	 *  @param displayType Display Type
+	 *  @return true if List
+	 */
+	public static boolean isList(int displayType)
+	{
+		if (DisplayType.List == displayType  
+				|| DisplayType.ChosenMultipleSelectionList == displayType
+				|| DisplayType.Payment == displayType)
+			return true;
+		
+		IServiceReferenceHolder<IDisplayTypeFactory> cache = s_displayTypeFactoryCache.get(displayType);
+		if (cache != null) {
+			IDisplayTypeFactory service = cache.getService();
+			if (service != null)
+				return service.isList(displayType);
+		}
+		Optional<IServiceReferenceHolder<IDisplayTypeFactory>> found = getDisplayTypeFactories().stream()
+					.filter(e -> e.getService() != null && e.getService().isList(displayType))
+					.findFirst();
+		if (found.isPresent()) {
+			s_displayTypeFactoryCache.put(displayType, found.get());
+			return true;
+		}
+		
+		return false;
+	}	//	isList
 }	//	DisplayType

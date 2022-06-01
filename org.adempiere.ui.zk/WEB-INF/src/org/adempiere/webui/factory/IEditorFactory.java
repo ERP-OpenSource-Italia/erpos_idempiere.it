@@ -30,5 +30,5 @@ public interface IEditorFactory {
 	 * @param tableEditor
 	 * @return WEditor
 	 */
-	public WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor);
+	public WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor,boolean searchWindow);
 }

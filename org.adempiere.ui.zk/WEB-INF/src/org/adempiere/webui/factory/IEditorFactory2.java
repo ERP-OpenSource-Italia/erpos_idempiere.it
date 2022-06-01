@@ -21,6 +21,6 @@ public interface IEditorFactory2 extends IEditorFactory
 	 * @param ctx	context (mandatory for editor for info window)
 	 * @return WEditor
 	 */
-	public WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor, boolean infoEditor, int WindowNo, Properties ctx);
+	public WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor, boolean infoEditor, int WindowNo, Properties ctx,boolean searchWindow);
 
 }

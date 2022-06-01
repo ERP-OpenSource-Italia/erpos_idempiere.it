@@ -1420,5 +1420,23 @@ public class DB_Oracle implements AdempiereDatabase
 		if (toIndex == -1)
 			return info;
 		return info.substring(fromIndex + 1, toIndex);
+	}
+
+	@Override
+	public String getNameOfConstraintError(Exception e) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public String subsetClauseForCSV(String columnName, String csv) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public String intersectClauseForCSV(String columnName, String csv) {
+		// TODO Auto-generated method stub
+		return null;
 	}	
 }   //  DB_Oracle
