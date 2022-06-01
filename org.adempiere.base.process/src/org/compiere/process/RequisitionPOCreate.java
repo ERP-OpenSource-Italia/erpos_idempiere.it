@@ -220,7 +220,7 @@ public class RequisitionPOCreate extends SvrProcess
 			
 			PreparedStatement pstmt = null;
 			ResultSet rs = null;
-			boolean error= false;
+//			boolean error= false;
 			
 			Map<Integer,MRequisition> knownRequisition = new HashMap<>();
 			
@@ -259,7 +259,7 @@ public class RequisitionPOCreate extends SvrProcess
 			}
 			catch (Exception e)
 			{
-				error = true;
+//				error = true;
 				log.log(Level.SEVERE, sql, e);
 				addLog(e.getMessage());
 			}
@@ -542,6 +542,8 @@ public class RequisitionPOCreate extends SvrProcess
 				m_order.setDescription(msgsd.toString());
 			}
 			
+			setOrderCustomFields(rLine, C_BPartner_ID);
+			
 			//	Prepare Save
 			m_order.saveEx();
 			m_orders_generated.add(m_order);
@@ -669,6 +671,9 @@ public class RequisitionPOCreate extends SvrProcess
 		//	Prepare Save
 		m_M_Product_ID = rLine.getM_Product_ID();
 		m_M_AttributeSetInstance_ID = rLine.getM_AttributeSetInstance_ID();
+		
+		setOrderLineCustomFields(rLine);
+		
 		m_orderLine.saveEx();
 	}	//	newLine
 
@@ -760,4 +765,17 @@ public class RequisitionPOCreate extends SvrProcess
 		}
 		return orderClause.toString();
 	}
+	
+	/*LS set custom fields metods*/
+	protected void setOrderCustomFields(MRequisitionLine rLine, int C_BPartner_ID)
+	{
+		return;
+	}
+	
+	protected void setOrderLineCustomFields(MRequisitionLine rLine)
+	{
+		return;
+	}
+	/*LS END*/
+	
 }	//	RequisitionPOCreate
