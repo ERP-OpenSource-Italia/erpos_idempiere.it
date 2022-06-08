@@ -637,7 +637,7 @@ public class VSortTab extends CPanel implements APanelTab
 		log.fine("");
 		boolean ok = true;
 		StringBuilder info = new StringBuilder();
-		StringBuffer sql = null;
+		StringBuilder sql = null;
 		//	noList - Set SortColumn to null and optional YesNo Column to 'N'
 		for (int i = 0; i < noModel.getSize(); i++)
 		{
@@ -647,7 +647,7 @@ public class VSortTab extends CPanel implements APanelTab
 			if(pp.getSortNo() == 0 && (m_ColumnYesNoName == null || !pp.isYes()))
 				continue; // no changes
 			//
-			sql = new StringBuffer();
+			sql = new StringBuilder();
 			sql.append("UPDATE ").append(m_TableName)
 			.append(" SET ").append(m_ColumnSortName).append("=0");
 			if (m_ColumnYesNoName != null)
@@ -676,7 +676,7 @@ public class VSortTab extends CPanel implements APanelTab
 			if(pp.getSortNo() == index && (m_ColumnYesNoName == null || pp.isYes()))
 				continue; // no changes
 			//
-			sql = new StringBuffer();
+			sql = new StringBuilder();
 			sql.append("UPDATE ").append(m_TableName)
 			.append(" SET ").append(m_ColumnSortName).append("=").append(index);
 			if (m_ColumnYesNoName != null)

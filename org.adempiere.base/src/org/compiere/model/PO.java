@@ -4630,10 +4630,10 @@ public abstract class PO
 	 *	@param xml optional string buffer
 	 *	@return updated/new string buffer header is only added once
 	 */
-	public StringBuffer get_xmlString (StringBuffer xml)
+	public StringBuilder get_xmlString (StringBuilder xml)
 	{
 		if (xml == null)
-			xml = new StringBuffer();
+			xml = new StringBuilder();
 		else
 			xml.append(Env.NL);
 		//
@@ -5158,5 +5158,107 @@ public abstract class PO
 	public boolean columnExists(String columnName) {
 		return columnExists(columnName, false);
 	}
+	
+	/** Creates a new model (equivalent to new MInvoice(ctx,0,trxName); )
+	 * 
+	 * @param ctx	context
+	 * @param tableName	tablename of the model to be created
+	 * @param trxName transaction
+	 * @return the new model, or null if the table does not exists
+	 */
+	public static <T extends PO> T create(Properties ctx,String tableName, String trxName)
+	{
+		return get(ctx,tableName, 0, trxName);
+	}
+	
+	/** Get a model from database, by primary key
+	 * 
+	 * @param ctx	context of the new object
+	 * @param tableName tablename of the model to be created
+	 * @param ID primary key value
+	 * @param trxName transaction
+	 * @return  the new model, or null if the table does not exists
+	 */
+	public static <T extends PO> T get(Properties ctx,String tableName,int ID,String trxName)
+	{
+		return get(ctx, tableName, ID, trxName, true);
+	}
+	
+	/** Get a model from database, by primary key
+	 * 
+	 * @param ctx	context of the new object
+	 * @param tableName tablename of the model to be created
+	 * @param ID primary key value
+	 * @param trxName transaction
+	 * @param readWrite if true PO is reload with the trx
+	 * @return  the new model, or null if the table does not exists
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T extends PO> T get(Properties ctx,String tableName,int ID,String trxName, boolean readWrite)
+	{
+		if(ID > 0 && readWrite == false)
+		{
+			String key = getCacheKey(tableName, ID);
+			
+			if(s_cache.containsKey(key))
+				return (T)s_cache.get(key);
+		}
+				
+		T po = null;
+		MTable table = MTable.get(ctx, tableName);
+		
+		if(table != null)
+		{
+			po = (T) table.getPO(ID,trxName);
+			
+			if(po != null && po.get_ID() > 0)
+				cachePO(po);
+		}
+		
+		return po;
+	}
+	
+	/** Get a model from database using the current row of the result set
+	 * 
+	 * @param ctx	context of the new object
+	 * @param tableName tablename of the model to be created
+	 * @param rs result set from where data will be read
+	 * @param trxName transaction
+	 * @return  the new model, or null if the table does not exists
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T extends PO> T get(Properties ctx,String tableName,ResultSet rs,String trxName)
+	{
+		T po = null;
+		MTable table = MTable.get(ctx, tableName);
+		
+		if(table != null)
+		{
+			po = (T) table.getPO(rs,trxName);
+			
+			if(po != null)
+				cachePO(po);
+		}
+		
+		return po;
+	}	
+	
+	private static void cachePO(PO po)
+	{
+		String key = getCacheKey(po.get_TableName(), po.get_ID());		
+		s_cache.put(key,po);
+	}
+	
+	private static String getCacheKey(String tableName,int id)
+	{
+		StringBuilder sbKey = new StringBuilder(tableName);
+		sbKey.append('|').append(id);
+		
+		return sbKey.toString();
+	}
+	
+	/**	Cache						*/
+	private static CCache<String,PO>	s_cache	= new CCache<String,PO>("POCache", 200, 5, true);	//	5 minutes
+	
 
 }   //  PO

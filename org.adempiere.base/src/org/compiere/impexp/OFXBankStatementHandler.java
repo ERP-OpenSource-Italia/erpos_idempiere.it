@@ -60,8 +60,8 @@ public abstract class OFXBankStatementHandler extends DefaultHandler
 {
 
 	protected MBankStatementLoader 	m_controller;
-	protected StringBuffer			m_errorMessage;
-	protected StringBuffer			m_errorDescription;
+	protected StringBuilder			m_errorMessage;
+	protected StringBuilder			m_errorDescription;
 	protected BufferedReader 		m_reader = null;
 	
 	protected SAXParser 			m_parser;
@@ -78,7 +78,7 @@ public abstract class OFXBankStatementHandler extends DefaultHandler
 	protected Timestamp 			m_dateLastRun = null;
 	protected Timestamp 			m_statementDate = null;
 
-	StringBuffer 					m_valueBuffer = new StringBuffer();
+	StringBuilder 					m_valueBuffer = new StringBuilder();
 	
 
 
@@ -181,8 +181,8 @@ public abstract class OFXBankStatementHandler extends DefaultHandler
 		boolean result = false;
 		if (controller == null)
 		{
-			m_errorMessage = new StringBuffer("ErrorInitializingParser");
-			m_errorDescription = new StringBuffer("ImportController is a null reference");
+			m_errorMessage = new StringBuilder("ErrorInitializingParser");
+			m_errorDescription = new StringBuilder("ImportController is a null reference");
 			return result;
 		}
 		this.m_controller = controller;
@@ -194,13 +194,13 @@ public abstract class OFXBankStatementHandler extends DefaultHandler
 		}
 		catch(ParserConfigurationException e)
 		{
-			m_errorMessage = new StringBuffer("ErrorInitializingParser");
-			m_errorDescription = new StringBuffer("Unable to configure SAX parser: ").append(e.getMessage());
+			m_errorMessage = new StringBuilder("ErrorInitializingParser");
+			m_errorDescription = new StringBuilder("Unable to configure SAX parser: ").append(e.getMessage());
 		}
 		catch(SAXException e)
 		{
-			m_errorMessage = new StringBuffer("ErrorInitializingParser");
-			m_errorDescription = new StringBuffer("Unable to initialize SAX parser: ").append(e.getMessage());
+			m_errorMessage = new StringBuilder("ErrorInitializingParser");
+			m_errorDescription = new StringBuilder("Unable to initialize SAX parser: ").append(e.getMessage());
 		}
 		
 		if (!result)
@@ -258,8 +258,8 @@ public abstract class OFXBankStatementHandler extends DefaultHandler
 		}
 		catch(IOException e)
 		{
-			m_errorMessage = new StringBuffer("ErrorReadingData");
-			m_errorDescription = new StringBuffer(e.getMessage());
+			m_errorMessage = new StringBuilder("ErrorReadingData");
+			m_errorDescription = new StringBuilder(e.getMessage());
 			closeBufferedReader();
 			return result;
 		}
@@ -320,13 +320,13 @@ public abstract class OFXBankStatementHandler extends DefaultHandler
 		}
 		catch(SAXException e)
 		{
-			m_errorMessage = new StringBuffer("ErrorParsingData");
-			m_errorDescription = new StringBuffer(e.getMessage());
+			m_errorMessage = new StringBuilder("ErrorParsingData");
+			m_errorDescription = new StringBuilder(e.getMessage());
 		}
 		catch(IOException e)
 		{
-			m_errorMessage = new StringBuffer("ErrorReadingData");
-			m_errorDescription = new StringBuffer(e.getMessage());
+			m_errorMessage = new StringBuilder("ErrorReadingData");
+			m_errorDescription = new StringBuilder(e.getMessage());
 		} finally {
 			closeBufferedReader();
 		}
@@ -564,7 +564,7 @@ public abstract class OFXBankStatementHandler extends DefaultHandler
 		 */
 		if (!validOFX)
 		{
-			m_errorDescription = new StringBuffer("Invalid OFX syntax: ").append(qName);
+			m_errorDescription = new StringBuilder("Invalid OFX syntax: ").append(qName);
 			throw new SAXException("Invalid OFX syntax: " + qName);
 		}
 		if (qName.equals(XML_STMTTRN_TAG))
@@ -572,7 +572,7 @@ public abstract class OFXBankStatementHandler extends DefaultHandler
 			m_line = new StatementLine(m_routingNo, m_bankAccountNo, m_currency);
 		}
 		
-		m_valueBuffer=new StringBuffer();
+		m_valueBuffer=new StringBuilder();
 		
 	}	//	startElement
 	
@@ -749,7 +749,7 @@ public abstract class OFXBankStatementHandler extends DefaultHandler
 		catch(Exception e)
 		{
 			
-			m_errorDescription = new StringBuffer("Invalid data: ").append(value).append(" <-> ").append(e.getMessage());
+			m_errorDescription = new StringBuilder("Invalid data: ").append(value).append(" <-> ").append(e.getMessage());
 			throw new SAXException("Invalid data: " + value);
 		}
 		
@@ -759,8 +759,8 @@ public abstract class OFXBankStatementHandler extends DefaultHandler
 			{
 				if (!m_controller.saveLine())
 				{
-					m_errorMessage = new StringBuffer().append(m_controller.getErrorMessage());
-						m_errorDescription = new StringBuffer(m_controller.getErrorDescription());
+					m_errorMessage = new StringBuilder().append(m_controller.getErrorMessage());
+						m_errorDescription = new StringBuilder(m_controller.getErrorDescription());
 					throw new SAXException(m_errorMessage.toString());
 				}
 			}

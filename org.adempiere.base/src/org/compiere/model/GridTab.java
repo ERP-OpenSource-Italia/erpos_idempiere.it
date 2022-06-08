@@ -56,6 +56,9 @@ import org.compiere.util.Msg;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 
+import it.idempiere.base.model.LITMGridTab;
+import it.idempiere.base.util.BaseEnvHelper;
+
 /**
  *	Tab Model.
  *  - a combination of AD_Tab (the display attributes) and AD_Table information.
@@ -231,6 +234,12 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	public static final String CTX_IsSortTab = "_TabInfo_IsSortTab";
 	public static final String CTX_IsLookupOnlySelection = "_TabInfo_IsLookupOnlySelection";
 	public static final String CTX_IsAllowAdvancedLookup = "_TabInfo_IsAllowAdvancedLookup";
+	
+	// F3P: added to support sql callouts
+	public static final String SQL_PREFIX = "@sql:";
+	
+	//F3P 
+	boolean m_bIsCopiedFromUI = false;
 
 	//private HashMap<Integer,Integer>	m_PostIts = null;
 
@@ -2905,6 +2914,12 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		//
 		if (isProcessed() && !field.isAlwaysUpdateable() && !field.isKey())		//	only active records
 			return "";			//	"DocProcessed";
+		
+		//LS stop callout when copy
+		if(m_bIsCopiedFromUI && LITMGridTab.isLS_OverwriteCallout(field.getGridTab()) == false)
+		{
+			return "";
+		}
 
 		Object value = field.getValue();
 		Object oldValue = field.getOldValue();
@@ -2979,7 +2994,48 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 						activeCallouts.remove(cmd);
 					}
 	
-				} else {
+				} else if(cmd.toLowerCase().startsWith(SQL_PREFIX)) {
+					MRule rule = MRule.get(m_vo.ctx, cmd.substring(SQL_PREFIX.length()));
+					
+					if (rule == null) 
+					{
+						retValue = "Callout " + cmd + " not found"; 
+						log.log(Level.SEVERE, retValue);
+						return retValue;
+					}
+					if ( !(rule.getEventType().equals(MRule.EVENTTYPE_Callout) 
+						  && rule.getRuleType().equals(MRule.RULETYPE_SQL))) {
+						retValue = "Callout " + cmd
+							+ " must be of type SQL and event Callout"; 
+						log.log(Level.SEVERE, retValue);
+						return retValue;
+					}
+					
+					String sSQL = rule.getScript();
+					
+					try
+					{
+						activeCallouts.add(cmd);
+						
+						if(log.isLoggable(Level.INFO))
+						{
+							log.log(Level.INFO, "SQL Callout: " + cmd);
+						}
+						
+						BaseEnvHelper.executeAndFill(sSQL, this, m_vo.ctx);
+					}
+					catch(Exception e)
+					{
+						log.log(Level.SEVERE, "", e);
+						retValue = 	"Callout Invalid: " + e.toString();
+						return retValue;
+					}
+					finally
+					{
+						activeCallouts.remove(cmd);
+					}
+				// F3P end sql callout			
+				}else {
 	
 					Callout call = null;
 					String method = null;

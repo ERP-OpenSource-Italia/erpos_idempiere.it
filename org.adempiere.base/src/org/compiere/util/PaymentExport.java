@@ -42,7 +42,7 @@ public interface PaymentExport
 	 *  This method is preserved for backward compatibility (old non-OSGi way via fragment),
 	 *  new interfaces can leave this method unimplemented and must implement the other methods
 	 */
-	public default int exportToFile (MPaySelectionCheck[] checks, File file, StringBuffer err) {
+	public default int exportToFile (MPaySelectionCheck[] checks, File file, StringBuilder err) {
 		return exportToFile (checks, false, (String)null, file, err);
 	}
 
@@ -53,7 +53,7 @@ public interface PaymentExport
 	 *  @param file file to export checks
 	 *  @return number of lines
 	 */
-	public default int exportToFile (MPaySelectionCheck[] checks, boolean depositBatch, String paymentRule, File file, StringBuffer err) {
+	public default int exportToFile (MPaySelectionCheck[] checks, boolean depositBatch, String paymentRule, File file, StringBuilder err) {
 		return exportToFile (checks, file, err);
 	}
 

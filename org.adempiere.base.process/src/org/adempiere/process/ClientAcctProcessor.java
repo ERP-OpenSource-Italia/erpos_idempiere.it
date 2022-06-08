@@ -64,7 +64,7 @@ public class ClientAcctProcessor extends SvrProcess
 	private int  p_AD_Table_ID;
 
 	/**	Last Summary				*/
-	private StringBuffer 		m_summary = new StringBuffer();
+	private StringBuilder 		m_summary = new StringBuilder();
 	/** Client info					*/
 	private MClient 			m_client = null;
 	/**	Accounting Schema			*/
@@ -119,7 +119,6 @@ public class ClientAcctProcessor extends SvrProcess
 			}
 			//nectosoft end
 		else	//	only specific accounting schema
-			else //	only specific accounting schema
 			{
 			m_ass = new MAcctSchema[] {new MAcctSchema (getCtx(), p_C_AcctSchema_ID, get_TrxName())};
 			}

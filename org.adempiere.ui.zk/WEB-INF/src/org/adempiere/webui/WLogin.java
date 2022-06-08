@@ -53,7 +53,7 @@ public class WLogin extends AbstractUIPart
 	private LoginWindow loginWindow;
 	private boolean isChangeRole;  // FIN: (st) 20/09/2017 need to know if its a role change
 
-	public WLogin(IWebClient app, boolean isChangeRole)  // FIN: (st) 20/09/2017 need to know if its a role change
+	public WLogin(IWebClient app)  // FIN: (st) 20/09/2017 need to know if its a role change
     {
         this.app = app;
         //this.isChangeRole = isChangeRole;

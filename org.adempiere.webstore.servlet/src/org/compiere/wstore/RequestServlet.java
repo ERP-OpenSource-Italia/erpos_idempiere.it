@@ -352,7 +352,7 @@ public class RequestServlet extends HttpServlet
 		}	//	Requests
 
 		//	Send EMail to Customer
-		StringBuffer message = new StringBuffer(req.getSummary());
+		StringBuilder message = new StringBuilder(req.getSummary());
 		String result = req.getResult();
 		if (result != null && result.length() > 0)
 			message.append("\n----------\n")

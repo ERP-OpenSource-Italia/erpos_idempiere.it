@@ -37,11 +37,11 @@ public class WindowAccessElementHandler extends AbstractElementHandler {
 		log.info(elementValue);
 		int roleid =0;
 		int windowid =0;		
-		StringBuffer sqlB = null;
+		StringBuilder sqlB = null;
 		Attributes atts = element.attributes;
 		if (atts.getValue("rolename")!=null){
 			String name = atts.getValue("rolename");		
-			sqlB = new StringBuffer ("SELECT AD_Role_ID FROM AD_Role WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_Role_ID FROM AD_Role WHERE Name= ?");
 			roleid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 			if (roleid <= 0) {
 				element.defer = true;
@@ -51,7 +51,7 @@ public class WindowAccessElementHandler extends AbstractElementHandler {
 		
 		if (atts.getValue("windowname")!=null){
 			String name = atts.getValue("windowname");		
-			sqlB = new StringBuffer ("SELECT AD_Window_ID FROM AD_Window WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_Window_ID FROM AD_Window WHERE Name= ?");
 			windowid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 			if (windowid <= 0)  {
 				element.defer = true;
@@ -59,7 +59,7 @@ public class WindowAccessElementHandler extends AbstractElementHandler {
 			}
 		}
 		
-		sqlB = new StringBuffer ("SELECT count(*) FROM AD_Window_Access WHERE AD_Role_ID=? and AD_Window_ID=?");		
+		sqlB = new StringBuilder ("SELECT count(*) FROM AD_Window_Access WHERE AD_Role_ID=? and AD_Window_ID=?");		
 		int count = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),roleid,windowid);
 		@SuppressWarnings("unused")
 		int AD_Backup_ID = -1;
@@ -67,7 +67,7 @@ public class WindowAccessElementHandler extends AbstractElementHandler {
 		String Object_Status = null;
 		if (count>0){		   	
 			Object_Status = "Update";			
-			sqlB = new StringBuffer ("UPDATE AD_Window_Access ")
+			sqlB = new StringBuilder ("UPDATE AD_Window_Access ")
 					.append( "SET isActive = '" + atts.getValue("isActive") )
 					.append( "', isReadWrite = '" + atts.getValue("isReadWrite") )
 					.append( "' WHERE AD_Role_ID = " + roleid )
@@ -80,7 +80,7 @@ public class WindowAccessElementHandler extends AbstractElementHandler {
 		else{
 			Object_Status = "New";
 			AD_Backup_ID =0;
-			sqlB = new StringBuffer ("INSERT INTO AD_Window_Access") 
+			sqlB = new StringBuilder ("INSERT INTO AD_Window_Access") 
 					.append( "(AD_Client_ID, AD_Org_ID, CreatedBy, UpdatedBy, " ) 
 					.append( "AD_Role_ID, AD_Window_ID, isActive, isReadWrite) " )
 					.append( "VALUES(" ) 

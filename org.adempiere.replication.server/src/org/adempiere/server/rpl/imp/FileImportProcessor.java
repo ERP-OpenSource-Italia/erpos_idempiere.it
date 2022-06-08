@@ -78,7 +78,7 @@ public class FileImportProcessor implements IImportProcessor {
         }
         
 		Document documentToBeImported = XMLHelper.createDocumentFromFile(folder + fileName);
-		StringBuffer result = new StringBuffer();
+		StringBuilder result = new StringBuilder();
 		
 		ImportHelper impHelper = new ImportHelper( ctx );
 		impHelper.importXMLDocument(result, documentToBeImported, trxName );

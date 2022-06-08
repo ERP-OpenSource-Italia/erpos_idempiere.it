@@ -155,7 +155,7 @@ public class SetDocAction extends TableFixture {
 				
 				// Now validate the expected status according to DocAction
 
-				StringBuffer expected = new StringBuffer();
+				StringBuilder expected = new StringBuilder();
 				if (validateResult(docAction, ((DocAction) gpo).getDocStatus(), expected)) {
 					right(i, 1);
 				} else {
@@ -186,7 +186,7 @@ public class SetDocAction extends TableFixture {
 		}
 	}
 
-	private boolean validateResult(String docAction, String docStatus, StringBuffer expected) {
+	private boolean validateResult(String docAction, String docStatus, StringBuilder expected) {
 
 		// Now validate the expected status according to DocAction
 		if (DocAction.ACTION_Unlock.equals(docAction)) {

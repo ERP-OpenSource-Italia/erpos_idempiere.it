@@ -32,6 +32,7 @@ import org.compiere.model.MProcess;
 import org.compiere.model.MSession;
 import org.compiere.model.PO;
 import org.compiere.model.Query;
+import org.compiere.util.CLogger;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Ini;
@@ -52,6 +53,8 @@ public class ProcessInfo implements Serializable
 	 * 
 	 */
 	private static final long serialVersionUID = -4600747909096993053L;
+
+	private static final CLogger logger = CLogger.getCLogger(ProcessInfo.class);
 
 	/**
 	 *  Constructor
@@ -139,7 +142,7 @@ public class ProcessInfo implements Serializable
 	private File 			    m_pdf_report = null;
 	
 	/**	Record IDs				*/
-	private int[]				m_Record_IDs;
+	private List <Integer>		m_Record_IDs = null;
 
 	/** Export					*/
 	private boolean				m_export = false;
@@ -839,12 +842,12 @@ public class ProcessInfo implements Serializable
 		m_exportFile = exportFile;
 	}
 	
-	public int[] getRecord_IDs()
+	public List<Integer> getRecord_IDs()
 	{
 		return m_Record_IDs;
 	}
 	
-	public void setRecord_IDs(int[] Record_IDs)
+	public void setRecord_IDs(List<Integer> Record_IDs)
 	{
 		m_Record_IDs = Record_IDs;
 	}

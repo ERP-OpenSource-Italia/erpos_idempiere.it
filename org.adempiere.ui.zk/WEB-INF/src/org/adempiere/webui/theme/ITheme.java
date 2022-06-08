@@ -24,6 +24,8 @@ public interface ITheme {
 	//theme resource url prefix. ~./ is the zk url prefix for resources loaded from classpath (typically at src/web folder)
 	public static final String THEME_PATH_PREFIX_V8 = "~./theme/";
 	public static final String THEME_PATH_PREFIX_V7 = "/theme/"; // for backward compatibility
+	//theme resource url prefix
+		public static final String THEME_PATH_PREFIX = "/theme/";
 
 	//css for login window and box
 	public static final String LOGIN_WINDOW_CLASS = "login-window";

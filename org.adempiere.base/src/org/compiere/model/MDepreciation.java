@@ -2,14 +2,19 @@ package org.compiere.model;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.compiere.util.CLogMgt;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
+import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
 import org.idempiere.cache.ImmutablePOSupport;
 import org.idempiere.cache.IntPOCopyCache;
 import org.idempiere.cache.POCopyCache;
@@ -180,6 +185,76 @@ public class MDepreciation extends X_A_Depreciation implements ImmutablePOSuppor
 	{
 		return !"ARH_ZERO".equals(getDepreciationType());
 	}
+	
+	/**
+	 * Calculate the value of depreciation over time
+	 * @param assetwk -  Fixed Assets worksheet
+	 * @param assetAcct - FA default accounting elements
+	 * @param A_Current_Period - current period
+	 * @param Accum_Dep accumulated depreciation until present period
+	 * @return amortized value
+	 */
+	public BigDecimal invoke(MDepreciationWorkfile assetwk, MAssetAcct assetAcct,
+								int A_Current_Period, BigDecimal Accum_Dep)
+	{
+		String depreciationType = getDepreciationType();
+		BigDecimal retValue = null;
+		//~ int offset = getFixMonthOffset();
+		//~ A_Current_Period += offset;
+		
+		if(CLogMgt.isLevelFinest())
+		{
+			if (log.isLoggable(Level.FINE)) log.fine("Entering: DepreciationType=" + depreciationType 
+						+ ", assetwk=" + assetwk+ ", assetacct=" + assetAcct 
+						+ ", A_Current_Period=" + A_Current_Period //+ " (offset=" + offset + ")"
+						+ ", Accum_Dep=" + Accum_Dep
+			);
+		}
+		
+		if (!canInvoke(assetwk, assetAcct, A_Current_Period, Accum_Dep))
+		{
+			return BigDecimal.ZERO;
+		}
+		if (depreciationType.equalsIgnoreCase("SL"))
+		{
+			retValue = apply_SL(assetwk, assetAcct, A_Current_Period, Accum_Dep);
+		}
+		else if (depreciationType.equalsIgnoreCase("ARH_VAR"))
+		{
+			retValue = apply_ARH_VAR(assetwk, assetAcct, A_Current_Period, Accum_Dep);
+		}
+		else if (depreciationType.equalsIgnoreCase("ARH_AD1"))
+		{
+			retValue = apply_ARH_AD1(assetwk, assetAcct, A_Current_Period, Accum_Dep);
+		}
+		else if (depreciationType.equalsIgnoreCase("ARH_AD2"))
+		{
+			retValue = apply_ARH_AD2(assetwk, assetAcct, A_Current_Period, Accum_Dep);
+		}
+		else if (depreciationType.equalsIgnoreCase("ARH_ZERO"))
+		{
+			retValue = apply_ARH_ZERO(assetwk, assetAcct, A_Current_Period, Accum_Dep);
+		}
+		// F3P: table method
+		else if(depreciationType.equalsIgnoreCase("TAB"))
+		{
+			retValue = applyF3P_Table(assetwk, assetAcct, A_Current_Period, Accum_Dep);
+		}
+		else
+		{
+			throw new AssetNotSupportedException(COLUMNNAME_DepreciationType, depreciationType);
+		}
+		//
+		if (retValue == null)
+		{
+			retValue = BigDecimal.ZERO;
+		}
+		retValue = retValue.setScale(getPrecision(), RoundingMode.HALF_UP);
+		//
+		if (log.isLoggable(Level.FINE)) log.fine("Leaving: retValue=" + retValue);
+		return retValue;
+	}	//	invoke
+
 
 	/**
 	 * Calculate the value of depreciation over time
@@ -749,5 +824,28 @@ public class MDepreciation extends X_A_Depreciation implements ImmutablePOSuppor
 		}
 		
 		return sDescription;
+	}
+	
+	 /** Column name FixMonthOffset */
+    public static final String COLUMNNAME_FixMonthOffset = "FixMonthOffset";
+	
+	/** Set Fix month offset.
+	@param FixMonthOffset 
+	Number of months (0=same, 1=following)
+	  */
+	public void setFixMonthOffset (int FixMonthOffset)
+	{
+		set_Value (COLUMNNAME_FixMonthOffset, Integer.valueOf(FixMonthOffset));
+	}
+	
+	/** Get Fix month offset.
+		@return Number of months (0=same, 1=following)
+	  */
+	public int getFixMonthOffset () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_FixMonthOffset);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
 	}
 }

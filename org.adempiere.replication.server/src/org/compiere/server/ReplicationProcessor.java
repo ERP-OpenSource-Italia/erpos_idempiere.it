@@ -49,7 +49,7 @@ import org.compiere.model.MIMPProcessorLog;
 public class ReplicationProcessor extends AdempiereServer {
 	
 	/**	Last Summary				*/
-	protected StringBuffer 		m_summary = new StringBuffer();
+	protected StringBuilder 		m_summary = new StringBuilder();
 	
 	/** Client info					*/
 	protected MClient 			m_client = null;
@@ -107,7 +107,7 @@ public class ReplicationProcessor extends AdempiereServer {
 				}
 			Env.setContext(mImportProcessor.getCtx(), "#AD_User_ID", getAD_User_ID());
 		    
-		    m_summary = new StringBuffer();
+		    m_summary = new StringBuilder();
 		    String trxName = mImportProcessor.get_TrxName();
 		    if ( trxName == null || "".equals(trxName) ) 
 		    {

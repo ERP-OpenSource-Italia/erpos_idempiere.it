@@ -75,7 +75,7 @@ public class TabElementHandler extends AbstractElementHandler
 				element.defer = true;
 				return;
 			}
-			StringBuffer sqlB = new StringBuffer ("select AD_Tab_ID from AD_Tab where AD_Window_ID = " + windowid
+			StringBuilder sqlB = new StringBuilder ("select AD_Tab_ID from AD_Tab where AD_Window_ID = " + windowid
 					+ " and Name = '"+name +"'"
 					+ " and AD_Table_ID = ?");
 			

@@ -40,6 +40,8 @@ import org.compiere.util.Env;
 import org.compiere.util.MimeType;
 import org.compiere.util.Util;
 
+import it.idempiere.base.util.STDUtils;
+
 
 /**
  *	Attachment Model.
@@ -538,6 +540,20 @@ public class MAttachment extends X_AD_Attachment
 	{
 		return deleteLOBData();
 	}
+	
+	/**
+	 * 	Delete Entry Data in Zip File format
+	 *	@return true if saved
+	 */
+	private boolean deleteLOBData()
+	{
+		if (m_items == null)
+			loadLOBData();
+		IAttachmentStore prov = provider.getAttachmentStore();
+		if (prov != null)
+			return prov.delete(this,provider);
+		return false;
+	} 	//	beforeDelete
 	
 	/**
 	 * 	Delete Entry Data in Zip File format

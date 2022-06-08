@@ -116,7 +116,7 @@ public class ConfigOracle implements IDatabaseConfig
 				String entry = entries[e].toLowerCase();
 				if (entry.indexOf("ora") != -1 && entry.endsWith("bin"))
 				{
-					StringBuffer sb = getTNS_File (entries[e].substring(0, entries[e].length()-4));
+					StringBuilder sb = getTNS_File (entries[e].substring(0, entries[e].length()-4));
 					String[] tnsnames = getTNS_Names (sb, true);
 					String[] dbNames = getTNS_Names (sb, false);
 					//fallback to tnsnames
@@ -143,7 +143,7 @@ public class ConfigOracle implements IDatabaseConfig
 		}
 		else
 		{
-			StringBuffer sb = getTNS_File (path);
+			StringBuilder sb = getTNS_File (path);
 			String[] tnsnames = getTNS_Names (sb, true);
 			String[] dbNames = getTNS_Names (sb, false);
 			//fallback to tnsnames
@@ -195,11 +195,11 @@ public class ConfigOracle implements IDatabaseConfig
 	}
 
 	/**
-	 * 	Get File tnmsnames.ora in StringBuffer
+	 * 	Get File tnmsnames.ora in StringBuilder
 	 * 	@param oraHome ORACLE_HOME
 	 * 	@return tnsnames.ora or null
 	 */
-	private StringBuffer getTNS_File (String oraHome)
+	private StringBuilder getTNS_File (String oraHome)
 	{
 		String tnsnames = oraHome + File.separator
 			+ "network" + File.separator
@@ -210,7 +210,7 @@ public class ConfigOracle implements IDatabaseConfig
 			return null;
 
 		log.fine(tnsnames);
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		FileReader fr = null;
 		try
 		{
@@ -244,7 +244,7 @@ public class ConfigOracle implements IDatabaseConfig
 	 * 	@param tnsnames content of tnsnames.ora
 	 * 	@return service names or null
 	 */
-	private String[] getTNS_Names (StringBuffer tnsnames, boolean tns)
+	private String[] getTNS_Names (StringBuilder tnsnames, boolean tns)
 	{
 		if (tnsnames == null)
 			return null;

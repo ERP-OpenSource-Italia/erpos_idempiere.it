@@ -53,7 +53,7 @@ public final class IDFinder
 	public static int get_ID (String tableName, String name, int AD_Client_ID, String trxName)
 	{
 		//construct cache key
-		StringBuffer key = new StringBuffer();
+		StringBuilder key = new StringBuilder();
 		key.append(tableName)
 			.append(".Name=")
 			.append(name);
@@ -65,7 +65,7 @@ public final class IDFinder
 			return idCache.get(key.toString());
 	
 		ArrayList<Object> params = new ArrayList<Object>();
-		StringBuffer sqlB = new StringBuffer ("select ")
+		StringBuilder sqlB = new StringBuilder ("select ")
 			.append(tableName)
 			.append("_ID from ")
 			.append(tableName)
@@ -113,7 +113,7 @@ public final class IDFinder
 			return 0;
 		
 		//construct cache key
-		StringBuffer key = new StringBuffer();
+		StringBuilder key = new StringBuilder();
 		key.append(tableName)
 			.append(".")
 			.append(columnName)
@@ -123,7 +123,7 @@ public final class IDFinder
 			key.append(" and AD_Client_ID=").append(AD_Client_ID);
 		
 		ArrayList<Object> params = new ArrayList<Object>();
-		StringBuffer sqlB = new StringBuffer ("select ")
+		StringBuilder sqlB = new StringBuilder ("select ")
 		 	.append(tableName)
 		 	.append("_ID from ")
 		 	.append(tableName)
@@ -158,7 +158,7 @@ public final class IDFinder
 	public static int get_IDWithMaster (String tableName, String name, String tableNameMaster, String nameMaster, String trxName)
 	{
 		//construct cache key
-		StringBuffer key = new StringBuffer();
+		StringBuilder key = new StringBuilder();
 		key.append(tableName)
 			.append(".Name=")
 			.append(name)
@@ -168,7 +168,7 @@ public final class IDFinder
 			.append(nameMaster);
 		
 		ArrayList<Object> params = new ArrayList<Object>();
-		StringBuffer sqlB = new StringBuffer ("select ")
+		StringBuilder sqlB = new StringBuilder ("select ")
 			.append(tableName)
 			.append("_ID from ")
 			.append(tableName)
@@ -200,7 +200,7 @@ public final class IDFinder
 		String key = tableName + "." + columnName + "=" + name + tableNameMaster + "=" + masterID;
 		
 		ArrayList<Object> params = new ArrayList<Object>();
-		StringBuffer sqlB = new StringBuffer ("select ")
+		StringBuilder sqlB = new StringBuilder ("select ")
 			.append(tableName)
 			.append("_ID from ")
 			.append(tableName)
@@ -227,7 +227,7 @@ public final class IDFinder
 	public static int get_IDWithMaster (String tableName, String name, String tableNameMaster, int masterID, String trxName)
 	{
 		//construct cache key
-		StringBuffer key = new StringBuffer();
+		StringBuilder key = new StringBuilder();
 		key.append(tableName)
 			.append(".Name=")
 			.append(name)
@@ -239,7 +239,7 @@ public final class IDFinder
 			.append(masterID);
 		
 		ArrayList<Object> params = new ArrayList<Object>();
-		StringBuffer sqlB = new StringBuffer ("select ")
+		StringBuilder sqlB = new StringBuilder ("select ")
 			.append(tableName)
 			.append("_ID from ")
 			.append(tableName)
@@ -265,7 +265,7 @@ public final class IDFinder
 	public static int getIDbyColumn (String tableName, String column, String name, int AD_Client_ID, String trxName)
 	{
 		//construct cache key
-		StringBuffer key = new StringBuffer();
+		StringBuilder key = new StringBuilder();
 		key.append(tableName)
 			.append("."+column+"=")
 			.append(name);
@@ -273,7 +273,7 @@ public final class IDFinder
 			key.append(" AND AD_Client_ID=").append(AD_Client_ID);
 		
 		ArrayList<Object> params = new ArrayList<Object>();
-		StringBuffer sql = new StringBuffer("SELECT ")
+		StringBuilder sql = new StringBuilder("SELECT ")
 			.append(tableName)
 			.append("_ID ")
 			.append("FROM ")

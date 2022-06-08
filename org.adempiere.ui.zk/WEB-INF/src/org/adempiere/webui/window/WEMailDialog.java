@@ -440,6 +440,20 @@ public class WEMailDialog extends Window implements EventListener<Event>, ValueC
 		m_to = newTo;
 		fTo.setText(m_to);
 	}	//	setTo
+	
+	// F3P: added setTo by AD_User_ID
+	
+		public void setTo(MUser mUser)
+		{
+			m_user = mUser;
+			String email = m_user.getEMail();
+			fUser.setValue(mUser.getAD_User_ID());
+			
+			if( Util.isEmpty(email) == false)
+			{
+				setTo(email.trim());
+			}
+		}
 
 	/**
 	 *  Set CC Address

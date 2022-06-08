@@ -98,7 +98,7 @@ public class FieldElementHandler extends AbstractElementHandler
 					element.parent.recordId > 0) {
 				tabid = element.parent.recordId;
 			} else {
-				StringBuffer sqlB = new StringBuffer(
+				StringBuilder sqlB = new StringBuilder(
 						"select AD_Tab_ID from AD_Tab where AD_Window_ID = "
 								+ windowid).append(" and Name = '" + tabname + "'")
 						.append(" and AD_Table_ID = ?");
@@ -109,7 +109,7 @@ public class FieldElementHandler extends AbstractElementHandler
 				}
 			}
 			if (tabid > 0) {
-				StringBuffer sqlB = new StringBuffer(
+				StringBuilder sqlB = new StringBuilder(
 						"select AD_Field_ID from AD_Field where AD_Column_ID = ")
 						.append(columnid)
 						.append(" and AD_Tab_ID = ?");

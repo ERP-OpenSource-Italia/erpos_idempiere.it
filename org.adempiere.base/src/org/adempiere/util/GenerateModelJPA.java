@@ -48,8 +48,8 @@ public class GenerateModelJPA
 	public GenerateModelJPA (int AD_Table_ID, String directory, String packageName)
 	{
 		//	create column access methods
-		StringBuffer mandatory = new StringBuffer();
-		StringBuffer sb = createColumns(AD_Table_ID, mandatory);
+		StringBuilder mandatory = new StringBuilder();
+		StringBuilder sb = createColumns(AD_Table_ID, mandatory);
 		// add header stuff
 		String tableName = createHeader(AD_Table_ID, sb, mandatory, packageName);
 		//	Save it
@@ -89,7 +89,7 @@ public class GenerateModelJPA
 	 * 	@param packageName package name
 	 * 	@return class name
 	 */
-	private String createHeader (int AD_Table_ID, StringBuffer sb, StringBuffer mandatory, String packageName)
+	private String createHeader (int AD_Table_ID, StringBuilder sb, StringBuilder mandatory, String packageName)
 	{
 		String tableName = "";
 		int accessLevel = 0;
@@ -220,9 +220,9 @@ public class GenerateModelJPA
 	 * 	@param mandatory init call for mandatory columns
 	 * 	@return set/get method
 	 */
-	private StringBuffer createColumns (int AD_Table_ID, StringBuffer mandatory)
+	private StringBuilder createColumns (int AD_Table_ID, StringBuilder mandatory)
 	{
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		String sql = "SELECT c.ColumnName, c.IsUpdateable, c.IsMandatory,"		//	1..3
 			+ " c.AD_Reference_ID, c.AD_Reference_Value_ID, DefaultValue, SeqNo, "	//	4..7
 			+ " c.FieldLength, c.ValueMin, c.ValueMax, c.VFormat, c.Callout, "	//	8..12
@@ -306,7 +306,7 @@ public class GenerateModelJPA
 	 * 	@param IsEncrypted stored encrypted
 	@return set/get method
 	 */
-	private String createColumnMethods (StringBuffer mandatory,
+	private String createColumnMethods (StringBuilder mandatory,
 		String columnName, boolean isUpdateable, boolean isMandatory,
 		int displayType, int AD_Reference_ID, int fieldLength, 
 		String defaultValue, String ValueMin, String ValueMax, String VFormat,
@@ -351,7 +351,7 @@ public class GenerateModelJPA
 			dataType = "byte[]";
 
 
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		//	****** Set Comment ******
 		sb.append("/** Set ").append(Name);
 		sb.append(".\n@param ").append(columnName).append(" ");
@@ -529,7 +529,7 @@ public class GenerateModelJPA
 		public static final String NEXTACTION_None = "N";
 		public static final String NEXTACTION_FollowUp = "F";
 	 */
-	private String addListValidation (StringBuffer sb, int AD_Reference_ID, 
+	private String addListValidation (StringBuilder sb, int AD_Reference_ID, 
 		String columnName, boolean nullable)
 	{
 		StringBuilder retValue = new StringBuilder();
@@ -645,12 +645,12 @@ public class GenerateModelJPA
 	 *	 * @param displayType int
 	@return method code
 	 */
-	private StringBuffer createKeyNamePair (String columnName, int displayType)
+	private StringBuilder createKeyNamePair (String columnName, int displayType)
 	{
 		String method = "get" + columnName + "()";
 		if (displayType != DisplayType.String)
 			method = "String.valueOf(" + method + ")";
-		StringBuffer sb = new StringBuffer("/** Get Record ID/ColumnName\n@return ID/ColumnName pair\n*/"
+		StringBuilder sb = new StringBuilder("/** Get Record ID/ColumnName\n@return ID/ColumnName pair\n*/"
 			+ "public KeyNamePair getKeyNamePair() "
 			+ "{return new KeyNamePair(get_ID(), ").append(method).append(");}");
 		return sb;
@@ -662,7 +662,7 @@ public class GenerateModelJPA
 	 * 	@param sb string buffer
 	 * 	@param fileName file name
 	 */
-	private void writeToFile (StringBuffer sb, String fileName)
+	private void writeToFile (StringBuilder sb, String fileName)
 	{
 		try
 		{

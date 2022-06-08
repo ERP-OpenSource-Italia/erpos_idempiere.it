@@ -637,6 +637,11 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
     {
         this.btnChat.setDisabled(!enabled);
     }
+    
+  //F3P custom print button
+  	private static final String	PREVIEW_BUTTON_ID = "Window - Print Preview",
+  								PRINT_BUTTON_ID = "Window - Print";
+  	
 
     public void enablePrint(boolean enabled)
     {

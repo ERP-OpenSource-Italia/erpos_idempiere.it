@@ -75,7 +75,7 @@ public class WorkflowNodeElementHandler extends AbstractElementHandler {
 
 			String workflowNodeName = atts.getValue("Name").trim();
 
-			StringBuffer sqlB = new StringBuffer(
+			StringBuilder sqlB = new StringBuilder(
 					"SELECT ad_wf_node_id FROM AD_WF_Node WHERE AD_Workflow_ID=? and Name =?");
 
 			int id = DB.getSQLValue(getTrxName(ctx), sqlB.toString(),
@@ -188,7 +188,7 @@ public class WorkflowNodeElementHandler extends AbstractElementHandler {
 			/*
 			 * FIXME: Do we need TaskName ? if
 			 * (atts.getValue("ADTaskNameID")!=null){ String name =
-			 * atts.getValue("ADTaskNameID"); sqlB = new StringBuffer ("SELECT
+			 * atts.getValue("ADTaskNameID"); sqlB = new StringBuilder ("SELECT
 			 * AD_Task_ID FROM AD_Task WHERE Name= ?"); taskid =
 			 * DB.getSQLValue(m_trxName,sqlB.toString(),name); }
 			 */

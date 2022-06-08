@@ -452,7 +452,7 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 
 		//	Set Country
 		/**
-		sql = new StringBuffer ("UPDATE I_Invoice o "
+		sql = new StringBuilder ("UPDATE I_Invoice o "
 			  + "SET CountryCode=(SELECT MAX(CountryCode) FROM C_Country c WHERE c.IsDefault='Y'"
 			  + " AND c.AD_Client_ID IN (0, o.AD_Client_ID)) "
 			  + "WHERE C_BPartner_ID IS NULL AND CountryCode IS NULL AND C_Country_ID IS NULL"
@@ -984,7 +984,7 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 
 		//F3P: errors from invoice was not logged in I_Invoice, fixed
 		//	Set Error to indicator to not imported
-		/*sql = new StringBuffer ("UPDATE I_Invoice "
+		/*sql = new StringBuilder ("UPDATE I_Invoice "
 			+ "SET I_IsImported='N', Updated=SysDate "
 			+ "WHERE I_IsImported<>'Y'").append(clientCheck);
 		no = DB.executeUpdate(sql.toString(), get_TrxName());

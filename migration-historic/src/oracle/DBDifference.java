@@ -1805,7 +1805,7 @@ public class DBDifference {
 	 * @return
 	 */
 	private String getHardcodedStuff() {
-		StringBuffer buffer = new StringBuffer();
+		StringBuilder buffer = new StringBuilder();
 		buffer = buffer
 				.append("--  BEWARE: ALL ENTRIES IN PA_MEASURE AND PA_MEASURECALC ARE DELETED \n")
 				.append("DELETE FROM PA_MEASURE;\n")

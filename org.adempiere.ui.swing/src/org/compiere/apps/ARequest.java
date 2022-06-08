@@ -93,7 +93,7 @@ public class ARequest implements ActionListener
 	private CMenuItem 	m_all = null;
 	private GraphicsConfiguration m_graphicsconfig = null;
 	/** Where Clause					*/
-	StringBuffer 		m_where = null;
+	StringBuilder 		m_where = null;
 	
 	
 	/**	Logger	*/
@@ -112,7 +112,7 @@ public class ARequest implements ActionListener
 		//
 		int activeCount = 0;
 		int inactiveCount = 0;
-		m_where = new StringBuffer();
+		m_where = new StringBuilder();
 		m_where.append("(AD_Table_ID=").append(m_AD_Table_ID)
 			.append(" AND Record_ID=").append(m_Record_ID)
 			.append(")");

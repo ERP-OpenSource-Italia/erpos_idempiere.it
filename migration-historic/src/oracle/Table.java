@@ -43,7 +43,7 @@ public class Table {
 	 * @return create table statement
 	 */
 	public String getCreateStatement() {
-		StringBuffer insert = new StringBuffer();
+		StringBuilder insert = new StringBuilder();
 		insert = insert.append("CREATE TABLE ").append(name).append("\n");
 		insert = insert.append("(").append("\n");
 		for (int i = 0; i < allTableColumns.size(); i++) {
@@ -63,7 +63,7 @@ public class Table {
 	 */
 	public String getAlterModifyStatement() {
 
-		StringBuffer alter = new StringBuffer();
+		StringBuilder alter = new StringBuilder();
 		String prefix = "ALTER TABLE " + name + " MODIFY (\n";
 		String postfix = "\n);\n";
 
@@ -119,7 +119,7 @@ public class Table {
 	 * @return alter table statement
 	 */
 	public String getAlterDropStatement() {
-		StringBuffer alter = new StringBuffer();
+		StringBuilder alter = new StringBuilder();
 		alter = alter.append("ALTER TABLE ").append(name).append("\n");
 		alter = alter.append("DROP (").append("\n");
 		for (int i = 0; i < columnsToDrop.size(); i++) {
@@ -138,7 +138,7 @@ public class Table {
 	 * @return alter table statement
 	 */
 	public String getAlterAddStatement() {
-		StringBuffer alter = new StringBuffer();
+		StringBuilder alter = new StringBuilder();
 		String prefixAdd = "ALTER TABLE " + name + " ADD (\n";
 		String prefixModify = "ALTER TABLE " + name + " MODIFY (\n";
 		String postfix = "\n);\n";

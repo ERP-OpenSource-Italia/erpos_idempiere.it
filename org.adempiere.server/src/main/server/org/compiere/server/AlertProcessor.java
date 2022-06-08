@@ -76,9 +76,9 @@ public class AlertProcessor extends AdempiereServer
 	/**	The Concrete Model			*/
 	protected MAlertProcessor		m_model = null;
 	/**	Last Summary				*/
-	protected StringBuffer 		m_summary = new StringBuffer();
+	protected StringBuilder 		m_summary = new StringBuilder();
 	/**	Last Error Msg				*/
-	protected StringBuffer 		m_errors = new StringBuffer();
+	protected StringBuilder 		m_errors = new StringBuilder();
 	/** Client info					*/
 	protected MClient 			m_client = null;
 
@@ -87,8 +87,8 @@ public class AlertProcessor extends AdempiereServer
 	 */
 	protected void doWork ()
 	{
-		m_summary = new StringBuffer();
-		m_errors = new StringBuffer();
+		m_summary = new StringBuilder();
+		m_errors = new StringBuilder();
 		//
 		int count = 0;
 		int countError = 0;

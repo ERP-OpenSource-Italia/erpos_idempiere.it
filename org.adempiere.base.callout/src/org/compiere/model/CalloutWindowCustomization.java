@@ -59,7 +59,7 @@ public class CalloutWindowCustomization extends CalloutEngine
 		ud_win.setHelp(window.get_Translation("Help", lang));
 		
 		//  what for?
-		ud_win.setIsDefault(Util.asString(window.isDefault())); // F3P: type is changed 
+		ud_win.setIsDefault(window.isDefault()); // F3P: type is changed 
 		
 		// default from menu, actual from role
 		//  Read Only

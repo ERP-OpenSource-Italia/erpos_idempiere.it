@@ -64,13 +64,13 @@ public class AmtInWords_IN implements AmtInWords
 //-------------------------- STATIC METHODS --------------------------
 
   /**
-  * Convenient method for {@link #sayNumber(StringBuffer, long)}.
+  * Convenient method for {@link #sayNumber(StringBuilder, long)}.
   *
   * @param number number to say
   * @return said number
   */
   public static String sayNumber(double number) {
-        StringBuffer result = new StringBuffer();
+        StringBuilder result = new StringBuilder();
         sayNumber(result, number);
         //result.append(" Rupiah");
         return result.toString();
@@ -84,7 +84,7 @@ public class AmtInWords_IN implements AmtInWords
    * @return said number
    * @throws IllegalArgumentException if the number equals to {@link Long#MIN_VALUE}
    */
-  public static String sayNumber(StringBuffer appendTo, double number)
+  public static String sayNumber(StringBuilder appendTo, double number)
   throws IllegalArgumentException {
 	  if (number == Double.MIN_VALUE) {
 		  throw new IllegalArgumentException("Out of range");
@@ -144,7 +144,7 @@ public class AmtInWords_IN implements AmtInWords
 
    
    
-   static void saySimpleNumber(StringBuffer appendTo, int number) {
+   static void saySimpleNumber(StringBuilder appendTo, int number) {
 	     
 		 
          assert number < 1000 && number >= 0: "Must be between 0 and 1000";
@@ -202,7 +202,7 @@ public class AmtInWords_IN implements AmtInWords
 		if (amount == null)
 			return amount;
 		//
-		StringBuffer result = new StringBuffer();
+		StringBuilder result = new StringBuilder();
 		
 		int pos = amount.lastIndexOf ('.');
 		String oldamt = amount;

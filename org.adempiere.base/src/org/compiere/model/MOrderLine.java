@@ -125,7 +125,6 @@ public class MOrderLine extends X_C_OrderLine
 	//LS Added M_PriceList_ID to C_OrderLine
 	public static final String COLUMNNAME_M_PriceList_ID = "M_PriceList_ID";
 	
-	@Override
 	public void setM_PriceList_ID(int M_PriceList_ID)
 	{
 		if(M_PriceList_ID > 0)
@@ -136,7 +135,6 @@ public class MOrderLine extends X_C_OrderLine
 		m_M_PriceList_ID = M_PriceList_ID;
 	}
 	
-	@Override
 	public int getM_PriceList_ID()
 	{
 		m_M_PriceList_ID = get_ValueAsInt(COLUMNNAME_M_PriceList_ID);
@@ -765,7 +763,7 @@ public class MOrderLine extends X_C_OrderLine
 	 */
 	public String toString ()
 	{
-		StringBuffer sb = new StringBuffer ("MOrderLine[")
+		StringBuilder sb = new StringBuilder ("MOrderLine[")
 			.append(get_ID())
 			.append(", Line=").append(getLine())
 			.append(", Ordered=").append(getQtyOrdered())

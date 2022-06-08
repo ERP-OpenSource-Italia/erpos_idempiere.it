@@ -27,11 +27,6 @@ import java.util.logging.Level;
 import org.compiere.apps.IStatusBar;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.minigrid.IMiniTable;
-import org.compiere.model.MBPartner;
-import org.compiere.model.MInOut;
-import org.compiere.model.MInOutLine;
-import org.compiere.model.MInvoice;
-import org.compiere.model.MInvoiceSchedule;
 import org.compiere.model.MOrder;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MPInstancePara;
@@ -53,7 +48,7 @@ import org.compiere.util.Trx;
 public class InvoiceGen extends GenForm
 {
 	/**	Logger			*/
-	private static CLogger log = CLogger.getCLogger(InvoiceGen.class);
+	private static final CLogger log = CLogger.getCLogger(InvoiceGen.class);
 	//
 	
 	public Object 			m_AD_Org_ID = null;
@@ -141,7 +136,6 @@ public class InvoiceGen extends GenForm
 		sql.append("(SELECT M_InOutLine_ID from M_RMALine rl where rl.M_RMA_ID=rma.M_RMA_ID ");
 		sql.append("AND rl.M_InOutLine_ID IS NOT NULL)) ");
 		sql.append("AND rma.AD_Client_ID=?");
-		sql.append("AND NOT EXISTS (select 'ko' from C_Invoice where C_Invoice.m_rma_id=rma.M_RMA_ID) "); //F3P
 
         if (m_AD_Org_ID != null)
             sql.append(" AND rma.AD_Org_ID=").append(m_AD_Org_ID);
@@ -188,24 +182,18 @@ public class InvoiceGen extends GenForm
 			//
 			while (rs.next())
 			{
-				//F3P
-				boolean bValid = validate(rs.getInt(1));
-				
-				if(bValid)
-				{// F3P end 
 				//  extend table
-					miniTable.setRowCount(row+1);
-					//  set values
-					miniTable.setValueAt(new IDColumn(rs.getInt(1)), row, 0);   //  C_Order_ID
-					miniTable.setValueAt(rs.getString(2), row, 1);              //  Org
-					miniTable.setValueAt(rs.getString(3), row, 2);              //  DocType
-					miniTable.setValueAt(rs.getString(4), row, 3);              //  Doc No
-					miniTable.setValueAt(rs.getString(5), row, 4);              //  BPartner
-					miniTable.setValueAt(rs.getTimestamp(6), row, 5);           //  DateOrdered
-					miniTable.setValueAt(rs.getBigDecimal(7), row, 6);          //  TotalLines
-					//  prepare next
-					row++;
-				}
+				miniTable.setRowCount(row+1);
+				//  set values
+				miniTable.setValueAt(new IDColumn(rs.getInt(1)), row, 0);   //  C_Order_ID
+				miniTable.setValueAt(rs.getString(2), row, 1);              //  Org
+				miniTable.setValueAt(rs.getString(3), row, 2);              //  DocType
+				miniTable.setValueAt(rs.getString(4), row, 3);              //  Doc No
+				miniTable.setValueAt(rs.getString(5), row, 4);              //  BPartner
+				miniTable.setValueAt(rs.getTimestamp(6), row, 5);           //  DateOrdered
+				miniTable.setValueAt(rs.getBigDecimal(7), row, 6);          //  TotalLines
+				//  prepare next
+				row++;
 			}
 		}
 		catch (SQLException e)
@@ -223,93 +211,6 @@ public class InvoiceGen extends GenForm
 	//	statusBar.setStatusDB(String.valueOf(miniTable.getRowCount()));
 	}   //  executeQuery
 	
-	// F3P
-	protected boolean validate(int C_Order_ID)
-	{
-		MOrder order = new MOrder (Env.getCtx(), C_Order_ID, null);
-		
-		boolean bValid = true,
-						doInvoice = false,
-						completeOrder = MOrder.INVOICERULE_AfterOrderDelivered.equals(order.getInvoiceRule());
-		
-		//	Schedule After Delivery
-		if (MOrder.INVOICERULE_CustomerScheduleAfterDelivery.equals(order.getInvoiceRule()))
-		{
-			MBPartner m_bp = new MBPartner (Env.getCtx(), order.getBill_BPartner_ID(), null);
-			
-			if (m_bp.getC_InvoiceSchedule_ID() != 0)
-			{
-				MInvoiceSchedule is = MInvoiceSchedule.get(Env.getCtx(), m_bp.getC_InvoiceSchedule_ID(), null);
-				if (is.canInvoice(order.getDateOrdered(), order.getGrandTotal()))
-					doInvoice = true;
-				else
-					bValid = false;
-			}
-		}	//	Schedule
-		
-		if(bValid)
-		{
-			//		After Delivery
-			if (doInvoice || MOrder.INVOICERULE_AfterDelivery.equals(order.getInvoiceRule()))
-			{
-				MInOut[] shipments = order.getShipments();
-				
-				boolean bValidShip = false;
-				for (int i = 0; i < shipments.length; i++)
-				{
-					MInOut ship = shipments[i];
-					if (!ship.isComplete()		//	ignore incomplete or reversals 
-						|| ship.getDocStatus().equals(MInOut.DOCSTATUS_Reversed))
-						continue;
-					
-					MInOutLine[] shipLines = ship.getLines(false);
-					for (int j = 0; j < shipLines.length; j++)
-					{
-						MInOutLine shipLine = shipLines[j];
-						if (!order.isOrderLine(shipLine.getC_OrderLine_ID()))
-							continue;
-						if (!shipLine.isInvoiced())
-							bValidShip = true;
-					}
-				}
-				
-				bValid = bValidShip;
-			}
-		}
-		
-		if(bValid)
-		{
-			//	Complete Order successful
-			if (completeOrder && MOrder.INVOICERULE_AfterOrderDelivered.equals(order.getInvoiceRule()))
-			{
-				MInOut[] shipments = order.getShipments();
-				boolean bValidShip = false;
-				for (int i = 0; i < shipments.length; i++)
-				{
-					MInOut ship = shipments[i];
-					if (!ship.isComplete()		//	ignore incomplete or reversals 
-						|| ship.getDocStatus().equals(MInOut.DOCSTATUS_Reversed))
-						continue;
-					MInOutLine[] shipLines = ship.getLines(false);
-					for (int j = 0; j < shipLines.length; j++)
-					{
-						MInOutLine shipLine = shipLines[j];
-						if (!order.isOrderLine(shipLine.getC_OrderLine_ID()))
-							continue;
-						if (!shipLine.isInvoiced())
-							bValid = true;
-					}
-				}
-				
-				bValid = bValidShip;
-			}
-		}
-		
-		return bValid;
-	}
-	
-	//F3P end
-		
 	/**
 	 *	Save Selection & return selecion Query or ""
 	 *  @return where clause like C_Order_ID IN (...)
@@ -442,25 +343,4 @@ public class InvoiceGen extends GenForm
 		
 		return info;
 	}	//	generateInvoices
-	
-	//	F3P
-	
-	@Override
-	public String getDefaultDocAction()
-	{
-		//only 'PR' and 'CO' are valid value
-		String sDocAction = super.getDefaultDocAction();
-		
-		if(sDocAction != null)
-		{
-			if((sDocAction.equalsIgnoreCase(MInvoice.ACTION_Complete) || 
-					sDocAction.equalsIgnoreCase(MInvoice.ACTION_Prepare)) == false)
-			{
-				sDocAction = null;
-			}
-		}
-		
-		return sDocAction;
-	}
-	//F3P End
 }

@@ -155,7 +155,7 @@ public class VInOutInvoiceGen extends CPanel
 
 	/** User selection */
 	private ArrayList<Integer> selection = null;
-	private StringBuffer iText = new StringBuffer();
+	private StringBuilder iText = new StringBuilder();
 	
 	
 	/**
@@ -644,7 +644,7 @@ public class VInOutInvoiceGen extends CPanel
 		tabbedPane.setSelectedIndex(1);
 		//
 		ProcessInfoUtil.setLogFromDB(pi);
-		//StringBuffer iText = new StringBuffer();
+		//StringBuilder iText = new StringBuilder();
 		iText.append("<b>").append(pi.getSummary())
 			.append("</b><br>(")
 			.append(Msg.getMsg(Env.getCtx(), "InOutGenerateInfo"))
@@ -824,7 +824,7 @@ public class VInOutInvoiceGen extends CPanel
 		tabbedPane.setSelectedIndex(1);
 		//
 		ProcessInfoUtil.setLogFromDB(pi);
-		//StringBuffer iText = new StringBuffer();
+		//StringBuilder iText = new StringBuilder();
 		iText.append("<b>").append(pi.getSummary())
 			.append("</b><br>(")
 			.append(Msg.getMsg(Env.getCtx(), "InvGenerateInfo"))

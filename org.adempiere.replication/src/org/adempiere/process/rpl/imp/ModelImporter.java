@@ -116,7 +116,7 @@ public class ModelImporter extends SvrProcess {
 	 */
 	protected String doIt() throws Exception 
 	{
-		StringBuffer result = new StringBuffer("");
+		StringBuilder result = new StringBuilder("");
 		
 		// Load XML file and parse it
 		/*String fileNameOr = org.compiere.util.Ini.findAdempiereHome()

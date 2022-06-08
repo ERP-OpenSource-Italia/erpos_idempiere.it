@@ -338,4 +338,28 @@ public interface I_R_RequestType
 	  * User who updated this records
 	  */
 	public int getUpdatedBy();
+	
+	 /** Column name R_MailText_ID */
+    public static final String COLUMNNAME_R_MailText_ID = "R_MailText_ID";
+
+	/** Set Mail Template.
+	  * Text templates for mailings
+	  */
+	public void setR_MailText_ID (int R_MailText_ID);
+
+	/** Get Mail Template.
+	  * Text templates for mailings
+	  */
+	public int getR_MailText_ID();
+	
+	 /** Column name Processor_MailText_ID */
+    public static final String COLUMNNAME_Processor_MailText_ID = "Processor_MailText_ID";
+
+	/** Set Processor Mail Text	  */
+	public void setProcessor_MailText_ID (int Processor_MailText_ID);
+
+	/** Get Processor Mail Text	  */
+	public int getProcessor_MailText_ID();
+
+	public org.compiere.model.I_R_MailText getProcessor_MailText() throws RuntimeException;
 }

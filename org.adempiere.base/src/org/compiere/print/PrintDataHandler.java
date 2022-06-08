@@ -50,7 +50,7 @@ public class PrintDataHandler extends DefaultHandler
 	/** Current Active Element Name		*/
 	private String			m_curPDEname = null;
 	/** Current Active Element Value	*/
-	private StringBuffer	m_curPDEvalue = null;
+	private StringBuilder	m_curPDEvalue = null;
 	/**	Current Active Print Data		*/
 	private PrintData		m_curPD = null;
 
@@ -100,7 +100,7 @@ public class PrintDataHandler extends DefaultHandler
 		{
 			m_curPrintFormatItemId = attributes.getValue(PrintDataElement.XML_ATTRIBUTE_PRINTFORMATITEM_ID);
 			m_curPDEname = attributes.getValue(PrintDataElement.XML_ATTRIBUTE_NAME);
-			m_curPDEvalue = new StringBuffer();
+			m_curPDEvalue = new StringBuilder();
 		}
 	}	//	startElement
 

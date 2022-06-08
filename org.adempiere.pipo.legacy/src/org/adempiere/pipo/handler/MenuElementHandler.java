@@ -52,7 +52,7 @@ public class MenuElementHandler extends AbstractElementHandler {
 
 		String name = null;
 		int idDetail = 0;
-		StringBuffer sqlB = null;
+		StringBuilder sqlB = null;
 
 		name = atts.getValue("ADMenuNameID");
 		int menuid = get_IDWithColumn(ctx, "AD_Menu", "Name", name);
@@ -168,7 +168,7 @@ public class MenuElementHandler extends AbstractElementHandler {
 				+ " AND Node_ID = " + menuid;
 		int countRecords = DB.getSQLValue(getTrxName(ctx), sql2);
 		if (countRecords > 0) {
-			StringBuffer sqlC = new StringBuffer(
+			StringBuilder sqlC = new StringBuilder(
 					"select * from AD_TREENODEMM where AD_Tree_ID = 10 and "
 							+ " Node_ID =?");
 			try {
@@ -187,12 +187,12 @@ public class MenuElementHandler extends AbstractElementHandler {
 					for (int q = 1; q <= columns; q++) {
 
 						String col_Name = meta.getColumnName(q);
-						StringBuffer sql = new StringBuffer(
+						StringBuilder sql = new StringBuilder(
 								"SELECT AD_Column_ID FROM AD_column WHERE Upper(ColumnName) = '"
 										+ col_Name + "' AND AD_Table_ID = ?");
 						int columnID = DB.getSQLValue(getTrxName(ctx), sql
 								.toString(), tableID);
-						sql = new StringBuffer(
+						sql = new StringBuilder(
 								"SELECT AD_Reference_ID FROM AD_COLUMN WHERE AD_Column_ID = "
 										+ (columnID == -1 ? "null" : columnID));
 						int referenceID = DB.getSQLValue(getTrxName(ctx), sql
@@ -208,7 +208,7 @@ public class MenuElementHandler extends AbstractElementHandler {
 						else
 							colValue = rs1.getObject(q).toString();
 
-						StringBuffer sqlD = new StringBuffer(
+						StringBuilder sqlD = new StringBuilder(
 								"INSERT INTO AD_Package_Imp_Backup"
 										+ "(AD_Client_ID, AD_Org_ID, CreatedBy, UpdatedBy, "
 										+ "AD_PACKAGE_IMP_BACKUP_ID, AD_PACKAGE_IMP_DETAIL_ID, AD_PACKAGE_IMP_ID,"
@@ -249,13 +249,13 @@ public class MenuElementHandler extends AbstractElementHandler {
 				if (log.isLoggable(Level.INFO)) log.info("get_IDWithMasterID:" + e);
 			}
 
-			sqlB = new StringBuffer("UPDATE AD_TREENODEMM ").append(
+			sqlB = new StringBuilder("UPDATE AD_TREENODEMM ").append(
 					"SET Parent_ID = " + id).append(
 					" , SeqNo = " + atts.getValue("ADParentSeqno")).append(
 					" WHERE AD_Tree_ID = 10").append(
 					" AND Node_ID = " + m_Menu.getAD_Menu_ID());
 		} else {
-			sqlB = new StringBuffer("INSERT INTO AD_TREENODEMM").append(
+			sqlB = new StringBuilder("INSERT INTO AD_TREENODEMM").append(
 					"(AD_Client_ID, AD_Org_ID, CreatedBy, UpdatedBy, ").append(
 					"Parent_ID, SeqNo, AD_Tree_ID, Node_ID)").append(
 					"VALUES(0, 0, 0, 0, ").append(

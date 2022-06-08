@@ -110,7 +110,7 @@ public class GenericPaymentExportTest extends AbstractTestCase {
 		psc.saveEx();
 		
 		GenericPaymentExport export = new GenericPaymentExport();
-		StringBuffer err = new StringBuffer();
+		StringBuilder err = new StringBuilder();
 		File file = null;
 		try {
 			file = File.createTempFile("GenericPaymentExportTest", "csv");

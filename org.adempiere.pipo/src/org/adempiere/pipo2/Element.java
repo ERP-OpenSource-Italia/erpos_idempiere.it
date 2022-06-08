@@ -58,7 +58,7 @@ public class Element {
 
 	public List<Element> childrens = new ArrayList<Element>();
 
-	public StringBuffer contents = new StringBuffer();
+	public StringBuilder contents = new StringBuilder();
 
 	/**
 	 * @param uri

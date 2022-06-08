@@ -194,7 +194,7 @@ public final class VTable extends CTable
 	 */
 	public String toString()
 	{
-		return new StringBuffer("VTable[")
+		return new StringBuilder("VTable[")
 			.append(getModel()).append("]").toString();
 	}   //  toString
 	

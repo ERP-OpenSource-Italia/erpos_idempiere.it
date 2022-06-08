@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_UserDef_Tab
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 6.2
  */
 public interface I_AD_UserDef_Tab 
 {
@@ -48,6 +48,17 @@ public interface I_AD_UserDef_Tab
 	  * Client/Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
+
+    /** Column name AD_CtxHelp_ID */
+    public static final String COLUMNNAME_AD_CtxHelp_ID = "AD_CtxHelp_ID";
+
+	/** Set Context Help	  */
+	public void setAD_CtxHelp_ID (int AD_CtxHelp_ID);
+
+	/** Get Context Help	  */
+	public int getAD_CtxHelp_ID();
+
+	public org.compiere.model.I_AD_CtxHelp getAD_CtxHelp() throws RuntimeException;
 
     /** Column name AD_Org_ID */
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
@@ -121,6 +132,19 @@ public interface I_AD_UserDef_Tab
 
 	public org.compiere.model.I_AD_UserDef_Win getAD_UserDef_Win() throws RuntimeException;
 
+    /** Column name CommitWarning */
+    public static final String COLUMNNAME_CommitWarning = "CommitWarning";
+
+	/** Set Commit Warning.
+	  * Warning displayed when saving
+	  */
+	public void setCommitWarning (String CommitWarning);
+
+	/** Get Commit Warning.
+	  * Warning displayed when saving
+	  */
+	public String getCommitWarning();
+
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
 
@@ -189,27 +213,31 @@ public interface I_AD_UserDef_Tab
 	  */
 	public boolean isActive();
 
-    /** Column name IsAllowAdvancedLookup */
-    public static final String COLUMNNAME_IsAllowAdvancedLookup = "IsAllowAdvancedLookup";
+    /** Column name IsElaborationEnable */
+    public static final String COLUMNNAME_IsElaborationEnable = "IsElaborationEnable";
 
-	/** Set Allow Advanced Lookup	  */
-	public void setIsAllowAdvancedLookup (String IsAllowAdvancedLookup);
-
-	/** Get Allow Advanced Lookup	  */
-	public String getIsAllowAdvancedLookup();
-
-    /** Column name IsLookupOnlySelection */
-    public static final String COLUMNNAME_IsLookupOnlySelection = "IsLookupOnlySelection";
-
-	/** Set Lookup Only Selection Columns.
-	  * When defined to true Lookup panel will display only selection columns. Default to false.
+	/** Set Manage Elaboration Fields.
+	  * If selected fields used for elaboration are overwritten
 	  */
-	public void setIsLookupOnlySelection (String IsLookupOnlySelection);
+	public void setIsElaborationEnable (boolean IsElaborationEnable);
 
-	/** Get Lookup Only Selection Columns.
-	  * When defined to true Lookup panel will display only selection columns. Default to false.
+	/** Get Manage Elaboration Fields.
+	  * If selected fields used for elaboration are overwritten
 	  */
-	public String getIsLookupOnlySelection();
+	public boolean isElaborationEnable();
+
+    /** Column name IsInsertRecord */
+    public static final String COLUMNNAME_IsInsertRecord = "IsInsertRecord";
+
+	/** Set Insert Record.
+	  * The user can insert a new Record
+	  */
+	public void setIsInsertRecord (String IsInsertRecord);
+
+	/** Get Insert Record.
+	  * The user can insert a new Record
+	  */
+	public String getIsInsertRecord();
 
     /** Column name IsMultiRowOnly */
     public static final String COLUMNNAME_IsMultiRowOnly = "IsMultiRowOnly";
@@ -217,12 +245,12 @@ public interface I_AD_UserDef_Tab
 	/** Set Multi Row Only.
 	  * This applies to Multi-Row view only
 	  */
-	public void setIsMultiRowOnly (boolean IsMultiRowOnly);
+	public void setIsMultiRowOnly (String IsMultiRowOnly);
 
 	/** Get Multi Row Only.
 	  * This applies to Multi-Row view only
 	  */
-	public boolean isMultiRowOnly();
+	public String getIsMultiRowOnly();
 
     /** Column name IsReadOnly */
     public static final String COLUMNNAME_IsReadOnly = "IsReadOnly";
@@ -249,6 +277,32 @@ public interface I_AD_UserDef_Tab
 	  * Default for toggle between Single- and Multi-Row (Grid) Layout
 	  */
 	public String getIsSingleRow();
+
+    /** Column name IsTranslationEnable */
+    public static final String COLUMNNAME_IsTranslationEnable = "IsTranslationEnable";
+
+	/** Set Manage Descriptive Fields.
+	  * If selected fiels name, description and help can be overwritten
+	  */
+	public void setIsTranslationEnable (boolean IsTranslationEnable);
+
+	/** Get Manage Descriptive Fields.
+	  * If selected fiels name, description and help can be overwritten
+	  */
+	public boolean isTranslationEnable();
+
+    /** Column name IsViewEnable */
+    public static final String COLUMNNAME_IsViewEnable = "IsViewEnable";
+
+	/** Set Manage Visualization Fields.
+	  * If selected fields used for visualization e window design are overwritten
+	  */
+	public void setIsViewEnable (boolean IsViewEnable);
+
+	/** Get Manage Visualization Fields.
+	  * If selected fields used for visualization e window design are overwritten
+	  */
+	public boolean isViewEnable();
 
     /** Column name Name */
     public static final String COLUMNNAME_Name = "Name";
@@ -289,21 +343,6 @@ public interface I_AD_UserDef_Tab
 	  */
 	public String getReadOnlyLogic();
 
-    /** Column name SeqNo */
-    public static final String COLUMNNAME_SeqNo = "SeqNo";
-
-	/** Set Sequence.
-	  * Method of ordering records;
- lowest number comes first
-	  */
-	public void setSeqNo (int SeqNo);
-
-	/** Get Sequence.
-	  * Method of ordering records;
- lowest number comes first
-	  */
-	public int getSeqNo();
-
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";
 
@@ -332,4 +371,26 @@ public interface I_AD_UserDef_Tab
 	  * Fully qualified SQL WHERE clause
 	  */
 	public String getWhereClause();
+	
+	 /** Column name IsLookupOnlySelection */
+    public static final String COLUMNNAME_IsLookupOnlySelection = "IsLookupOnlySelection";
+
+	/** Set Lookup Only Selection Columns.
+	  * When defined to true Lookup panel will display only selection columns. Default to false.
+	  */
+	public void setIsLookupOnlySelection (String IsLookupOnlySelection);
+
+	/** Get Lookup Only Selection Columns.
+	  * When defined to true Lookup panel will display only selection columns. Default to false.
+	  */
+	public String getIsLookupOnlySelection();
+	
+    /** Column name IsAllowAdvancedLookup */
+    public static final String COLUMNNAME_IsAllowAdvancedLookup = "IsAllowAdvancedLookup";
+
+	/** Set Allow Advanced Lookup	  */
+	public void setIsAllowAdvancedLookup (String IsAllowAdvancedLookup);
+
+	/** Get Allow Advanced Lookup	  */
+	public String getIsAllowAdvancedLookup();
 }

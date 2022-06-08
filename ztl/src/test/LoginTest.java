@@ -41,7 +41,7 @@ public class LoginTest extends ZKClientTestCase {
 				start(browser);
 				windowFocus();
 				windowMaximize();
-				Widget engine = new Widget(new StringBuffer("zk.Desktop._dt"));
+				Widget engine = new Widget(new StringBuilder("zk.Desktop._dt"));
 				
 				// remove all of unnecessary children
 				if (target.endsWith("/service.zul"))

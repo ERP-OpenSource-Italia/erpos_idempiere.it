@@ -107,7 +107,7 @@ public class Column {
 	 */
 	public String getDefinitionString() {
 
-		StringBuffer buffer = getTypeDefinitionString();
+		StringBuilder buffer = getTypeDefinitionString();
 		if (defaultValue != null && !defaultValue.equals("")) {
 			buffer = buffer.append(" DEFAULT ").append(defaultValue);
 		} else {
@@ -131,7 +131,7 @@ public class Column {
 	 */
 	public String getDefinitionStringForCreateTable() {
 
-		StringBuffer buffer = getTypeDefinitionString();
+		StringBuilder buffer = getTypeDefinitionString();
 		if (defaultValue != null && !defaultValue.equals("")) {
 			buffer = buffer.append(" DEFAULT ").append(defaultValue);
 		}
@@ -216,7 +216,7 @@ public class Column {
 	 * @return
 	 */
 	public String getDefinitionStringWithTempDefault() {
-		StringBuffer buffer = getTypeDefinitionString();
+		StringBuilder buffer = getTypeDefinitionString();
 		buffer = buffer.append(" DEFAULT ").append(tmpDefaultValue);
 		if (!isNullable) {
 			buffer = buffer.append(" NOT NULL ");
@@ -229,7 +229,7 @@ public class Column {
 	 * @return
 	 */
 	public String getSetDefaultString() {
-		StringBuffer buffer = getTypeDefinitionString();
+		StringBuilder buffer = getTypeDefinitionString();
 		if (defaultValue == null) {
 			buffer = buffer.append(" DEFAULT NULL ");
 		} else {
@@ -242,8 +242,8 @@ public class Column {
 	 * Returns a sql snippet with the column type definition
 	 * @return
 	 */
-	public StringBuffer getTypeDefinitionString() {
-		StringBuffer buffer = new StringBuffer();
+	public StringBuilder getTypeDefinitionString() {
+		StringBuilder buffer = new StringBuilder();
 		buffer = buffer.append("   ").append(columnName + " " + dataType);
 		if (charUsed != null && !charUsed.equals("")) {
 			buffer = buffer.append("(").append(charColDeclLength);
@@ -267,7 +267,7 @@ public class Column {
 	 * @return
 	 */
 	public String getNullDefinitionString() {
-		StringBuffer buffer = getTypeDefinitionString();
+		StringBuilder buffer = getTypeDefinitionString();
 		buffer = buffer.append(" NULL ");
 		return buffer.toString();
 	}

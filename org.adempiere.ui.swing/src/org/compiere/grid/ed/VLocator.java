@@ -466,7 +466,7 @@ public class VLocator extends JComponent
 			text = text.toUpperCase() + "%";
 		
 		//	Look up - see MLocatorLookup.run
-		StringBuffer sql = new StringBuffer("SELECT M_Locator_ID FROM M_Locator ")
+		StringBuilder sql = new StringBuilder("SELECT M_Locator_ID FROM M_Locator ")
 			.append(" WHERE IsActive='Y' AND UPPER(Value) LIKE ")
 			.append(DB.TO_STRING(text));
 		if (getOnly_Warehouse_ID() != 0)

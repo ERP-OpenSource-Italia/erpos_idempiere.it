@@ -48,7 +48,7 @@ public class LdapProcessor extends AdempiereServer
 	/**	The Concrete Model			*/
 	protected MLdapProcessor		m_model = null;
 	/**	Last Summary				*/
-	protected StringBuffer 		m_summary = new StringBuffer();
+	protected StringBuilder 		m_summary = new StringBuilder();
 	/** Server Socket				*/
 	protected ServerSocket 		m_serverSocket = null;
 	/** Counter						*/
@@ -73,7 +73,7 @@ public class LdapProcessor extends AdempiereServer
 		}
 		m_counter = 0;
 		//
-		m_summary = new StringBuffer(m_model.toString())
+		m_summary = new StringBuilder(m_model.toString())
 			.append(" - ");
 		//
 		

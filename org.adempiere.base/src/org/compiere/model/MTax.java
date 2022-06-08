@@ -321,14 +321,6 @@ public class MTax extends X_C_Tax implements ImmutablePOSupport
 	}	//	toString
 
 	
-	/**
-	 * 	Calculate Tax - no rounding
-	 *	@param amount amount
-	 *	@param taxIncluded if true tax is calculated from gross otherwise from net 
-	 *	@param scale scale 
-	 *	@return  tax amount
-	 */
-	
 	// F3P: non utilizziamo la versione originale perche' provocherebbe un errore nel calcolo (la somma per singole componenti, ognuna arrontondata, e' errata a priori)
 	
 	public BigDecimal calculateTax (BigDecimal amount, boolean taxIncluded, int scale)
@@ -339,7 +331,6 @@ public class MTax extends X_C_Tax implements ImmutablePOSupport
 		
 		BigDecimal multiplier = getRate().divide(Env.ONEHUNDRED, 12, RoundingMode.HALF_UP);		
 
-
 		BigDecimal tax = null;		
 		if (!taxIncluded)	//	$100 * 6 / 100 == $6 == $100 * 0.06
 		{
@@ -349,9 +340,7 @@ public class MTax extends X_C_Tax implements ImmutablePOSupport
 		{
 			multiplier = multiplier.add(Env.ONE);
 			BigDecimal base = amount.divide(multiplier, 12, RoundingMode.HALF_UP); 
-				BigDecimal itax = amount.subtract(base).setScale(scale, RoundingMode.HALF_UP);
-				tax = tax.add(itax);
-			}
+			tax = amount.subtract(base);
 		}
 		BigDecimal finalTax = tax.setScale(scale, RoundingMode.HALF_UP);
 		if (log.isLoggable(Level.FINE)) log.fine("calculateTax " + amount 
@@ -359,7 +348,7 @@ public class MTax extends X_C_Tax implements ImmutablePOSupport
 			+ ") = " + finalTax + " [" + tax + "]");
 		return finalTax;
 	}	//	calculateTax
-
+		
 	@Override
 	protected boolean beforeSave(boolean newRecord) {
 		if (isDefault()) {

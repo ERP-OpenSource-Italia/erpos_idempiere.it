@@ -284,7 +284,7 @@ public class TopicListener implements MessageListener {
 				if (log.isLoggable(Level.FINEST)) log.finest("Received message: \n" + text );
 
 				Document documentToBeImported = XMLHelper.createDocumentFromString( text );
-				StringBuffer result = new StringBuffer();
+				StringBuilder result = new StringBuilder();
 				
 				ImportHelper impHelper = new ImportHelper( ctx );
 

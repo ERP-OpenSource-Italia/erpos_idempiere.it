@@ -397,10 +397,7 @@ public class InvoicePrint extends SvrProcess
 						email.setMessageText (message);
 					}
 					//
-					File invoice = null;
-					if (!Ini.isClient())
-						invoice = new File(MInvoice.getPDFFileName(documentDir, C_Invoice_ID));
-					File attachment = re.getPDF(invoice);
+					File attachment = f_invoice;
 					if (log.isLoggable(Level.FINE)) log.fine(to + " - " + attachment);
 					email.addAttachment(attachment);
 					//

@@ -755,7 +755,7 @@ public final class WebUtil
 	static public tr createField (tr line, String FORMNAME, String PARAMETER,
 		String labelText, String inputType, Object value,
 		int sizeDisplay, int size, boolean longField, 
-		boolean mandatory, String onChange, StringBuffer script)
+		boolean mandatory, String onChange, StringBuilder script)
 	{
 		if (line == null)
 			line = new tr();

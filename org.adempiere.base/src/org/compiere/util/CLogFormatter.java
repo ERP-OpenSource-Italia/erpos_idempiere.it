@@ -176,7 +176,7 @@ public class CLogFormatter extends Formatter
 		int index = className.lastIndexOf('.');
 		if (index != -1)
 			className = className.substring(index+1);
-    	StringBuffer sb = new StringBuffer()
+    	StringBuilder sb = new StringBuilder()
 			.append(NL)
 			.append("*** ")
 			.append(new Timestamp(System.currentTimeMillis()))
@@ -257,7 +257,7 @@ public class CLogFormatter extends Formatter
 		if (thrown == null)
 			return null;
 		
-    	StringBuffer sb = new StringBuffer();
+    	StringBuilder sb = new StringBuilder();
 	    try 
 	    {
 	    	/** Print Stack		**
@@ -281,7 +281,7 @@ public class CLogFormatter extends Formatter
      *	@param hdr header
      *	@param thrown thrown
      */
-    private static void fillExceptionTrace (StringBuffer sb, String hdr, Throwable thrown)
+    private static void fillExceptionTrace (StringBuilder sb, String hdr, Throwable thrown)
     {
 		sb.append(hdr)
 			.append(thrown.toString());

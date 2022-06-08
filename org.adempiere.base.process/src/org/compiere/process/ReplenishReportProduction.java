@@ -73,7 +73,7 @@ public class ReplenishReportProduction extends SvrProcess
 	/** Document Type			*/
 	private int		p_C_DocType_ID = 0;
 	/** Return Info				*/
-	private StringBuffer	m_info = new StringBuffer();
+	private StringBuilder	m_info = new StringBuilder();
 	private int p_M_Product_Category_ID = 0;
 	private String isKanban = null;
 	
@@ -480,7 +480,7 @@ public class ReplenishReportProduction extends SvrProcess
 			line.setPrice();
 			line.saveEx();
 		}
-		m_info = new StringBuffer("#").append(noOrders).append(info.toString());
+		m_info = new StringBuilder("#").append(noOrders).append(info.toString());
 		if (log.isLoggable(Level.INFO)) log.info(m_info.toString());
 	}	//	createPO
 	
@@ -529,7 +529,7 @@ public class ReplenishReportProduction extends SvrProcess
 			line.setPrice();
 			line.saveEx();
 		}
-		m_info = new StringBuffer("#").append(noReqs).append(info.toString());
+		m_info = new StringBuilder("#").append(noReqs).append(info.toString());
 		if (log.isLoggable(Level.INFO)) log.info(m_info.toString());
 	}	//	createRequisition
 
@@ -627,12 +627,12 @@ public class ReplenishReportProduction extends SvrProcess
 		}
 		if (replenishs.length == 0)
 		{
-			m_info = new StringBuffer("No Source Warehouse");
+			m_info = new StringBuilder("No Source Warehouse");
 			log.warning(m_info.toString());
 		}
 		else
 		{
-			m_info = new StringBuffer("#").append(noMoves).append(info.toString());
+			m_info = new StringBuilder("#").append(noMoves).append(info.toString());
 			if (log.isLoggable(Level.INFO)) log.info(m_info.toString());
 		}
 	}	//	Create Inventory Movements
@@ -778,12 +778,12 @@ public class ReplenishReportProduction extends SvrProcess
 		}
 		if (replenishs.length == 0)
 		{
-			m_info = new StringBuffer("No Source Warehouse");
+			m_info = new StringBuilder("No Source Warehouse");
 			log.warning(m_info.toString());
 		}
 		else
 		{
-			m_info = new StringBuffer("#").append(noMoves).append(info.toString());
+			m_info = new StringBuilder("#").append(noMoves).append(info.toString());
 			if (log.isLoggable(Level.INFO)) log.info(m_info.toString());
 		}
 	}	//	create Distribution Order
@@ -852,7 +852,7 @@ public class ReplenishReportProduction extends SvrProcess
 			}
 
 		}
-		m_info = new StringBuffer("#").append(noProds).append(info.toString());
+		m_info = new StringBuilder("#").append(noProds).append(info.toString());
 		if (log.isLoggable(Level.INFO)) log.info(m_info.toString());
 	}	//	createRequisition
 

@@ -191,10 +191,6 @@ public class Scheduler extends AdempiereServer
 		MUser from = new MUser(getCtx(), pi.getAD_User_ID(), null);
 		
 		pi.setTransactionName(m_trx != null ? m_trx.getTrxName() : null);
-		
-		if(pi.isProcessRunning(null))
-			throw new AdempiereException("ProcessAlreadyRunning "+pi.getAD_Process_ID());
-		
 		if (!Util.isEmpty(process.getJasperReport())) 
 		{
 			pi.setExport(true);
@@ -267,9 +263,6 @@ public class Scheduler extends AdempiereServer
 				boolean email = user.isNotificationEMail();
 				boolean notice = user.isNotificationNote();
 								
-				if(pi.isError() && userIDs[i].isLogError()
-						|| pi.isError() == false && userIDs[i].isLogProcess())
-				{
 				if (notice) {
 					int AD_Message_ID = 441; // ProcessOK
 					if (isReport)

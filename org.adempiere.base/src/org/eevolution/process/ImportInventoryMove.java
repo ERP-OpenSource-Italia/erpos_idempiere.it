@@ -416,7 +416,7 @@ public class ImportInventoryMove extends SvrProcess implements ImportProcess
 	 */
 	protected Collection<X_I_Movement> getRecords(boolean imported, boolean isWithoutError)
 	{
-		final StringBuffer whereClause = new StringBuffer(X_I_Movement.COLUMNNAME_I_IsImported)
+		final StringBuilder whereClause = new StringBuilder(X_I_Movement.COLUMNNAME_I_IsImported)
 		.append("=?"); 
 		
 		if(isWithoutError)

@@ -19,6 +19,7 @@ import org.adempiere.webui.adwindow.ADWindow;
 import org.adempiere.webui.apps.ProcessDialog;
 import org.adempiere.webui.component.Window;
 import org.adempiere.webui.panel.ADForm;
+import org.adempiere.webui.panel.InfoPanel;
 import org.adempiere.webui.part.UIPart;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
@@ -215,4 +216,12 @@ public interface IDesktop extends UIPart {
 	public void setTabTitle(String title, int windowNo);
 	
 	public void renderHomeTab();
+	
+	/**
+    *
+    * @param infoId
+    * @param WindowNo
+    * @return ADWindow
+    */
+	public InfoPanel openInfo(int infoId, int WindowNo);
 }

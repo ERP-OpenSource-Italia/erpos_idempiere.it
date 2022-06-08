@@ -63,7 +63,7 @@ public class AcctProcessor extends AdempiereServer
 	/**	The Concrete Model			*/
 	protected MAcctProcessor		m_model = null;
 	/**	Last Summary				*/
-	protected StringBuffer 		m_summary = new StringBuffer();
+	protected StringBuilder 		m_summary = new StringBuilder();
 	/** Client onfo					*/
 	protected MClient 			m_client = null;
 	/**	Accounting Schemata			*/
@@ -74,7 +74,7 @@ public class AcctProcessor extends AdempiereServer
 	 */
 	protected void doWork ()
 	{
-		m_summary = new StringBuffer();
+		m_summary = new StringBuilder();
 		
 		// Prepar ctx
 		Env.setContext(getCtx(), "#AD_Client_ID", m_client.getAD_Client_ID());

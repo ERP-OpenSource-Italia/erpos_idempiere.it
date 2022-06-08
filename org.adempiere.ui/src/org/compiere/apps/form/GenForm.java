@@ -42,7 +42,7 @@ public abstract class GenForm
 	private ArrayList<Integer> selection = null;
 	
 	// F3P: zoom generated ids using this table (via mquery), instead of printing
-	private String zoomOnTableName = null;
+		private String zoomOnTableName = null;
 	
 	public void dynInit() throws Exception
 	{
@@ -74,7 +74,6 @@ public abstract class GenForm
 
 	public void setTrx(Trx trx) {
 		this.trx = trx;
-		trx.commit();
 	}
 
 	public ProcessInfo getProcessInfo() {
@@ -135,30 +134,30 @@ public abstract class GenForm
 	
 	// F3P: getter and setters
 	
-	public String getZoomOnTableName()
-	{
-		return zoomOnTableName;
-	}
-
-	public void setZoomOnTableName(String zoomOnTableName)
-	{
-		this.zoomOnTableName = zoomOnTableName;
-	}
-	
-	public static String getConfiguredDocAction()
-	{
-		String sDefaultDocAction = STDSysConfig.getDefaultDocAction(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())); 
-		
-		if(sDefaultDocAction != null)
+		public String getZoomOnTableName()
 		{
-			sDefaultDocAction = sDefaultDocAction.trim();
+			return zoomOnTableName;
+		}
+
+		public void setZoomOnTableName(String zoomOnTableName)
+		{
+			this.zoomOnTableName = zoomOnTableName;
 		}
 		
-		return sDefaultDocAction;
-	}
-	
-	public String getDefaultDocAction()
-	{
-		return GenForm.getConfiguredDocAction();
-	}
+		public static String getConfiguredDocAction()
+		{
+			String sDefaultDocAction = STDSysConfig.getDefaultDocAction(Env.getAD_Client_ID(Env.getCtx()), Env.getAD_Org_ID(Env.getCtx())); 
+			
+			if(sDefaultDocAction != null)
+			{
+				sDefaultDocAction = sDefaultDocAction.trim();
+			}
+			
+			return sDefaultDocAction;
+		}
+		
+		public String getDefaultDocAction()
+		{
+			return GenForm.getConfiguredDocAction();
+		}
 }

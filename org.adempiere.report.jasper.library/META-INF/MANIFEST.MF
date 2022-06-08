@@ -18,4 +18,5 @@ Bundle-ClassPath: .,
  lib/SparseBitSet.jar
 Automatic-Module-Name: org.adempiere.report.jasper.library
 Bundle-Vendor: iDempiere Community
-Export-Package: com.zaxxer.sparsebits
+Export-Package: com.zaxxer.sparsebits,
+ org.exolab.castor.types

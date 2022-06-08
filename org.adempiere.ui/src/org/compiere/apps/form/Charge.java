@@ -54,7 +54,7 @@ public class Charge
 	private int         m_AD_Org_ID = 0;
 	private MAcctSchema  m_acctSchema = null;
 	/**	Logger			*/
-	public static CLogger log = CLogger.getCLogger(Charge.class);
+	public static final CLogger log = CLogger.getCLogger(Charge.class);
 
 	/**
 	 *  Dynamic Init
@@ -67,9 +67,8 @@ public class Charge
 		Vector<Vector<Object>> data = new Vector<Vector<Object>>();
 		String sql = "SELECT C_ElementValue_ID,Value, Name, AccountType "
 			+ "FROM C_ElementValue "
-			+ "WHERE AccountType NOT IN ('M')"
+			+ "WHERE AccountType IN ('R','E')"
 			+ " AND IsSummary='N'"
-			+ " AND IsActive='Y'"
 			+ " AND C_Element_ID=? "
 			+ "ORDER BY 2";
 		PreparedStatement pstmt = null;

@@ -331,4 +331,3 @@ public class MSession extends X_AD_Session
 		return s_sessions.size()-1;
 	}
 }	//	MSession
-

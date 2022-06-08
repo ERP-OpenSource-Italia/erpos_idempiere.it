@@ -481,6 +481,7 @@ public class WPaySelect extends PaySelect
 		{
 			m_isOnePaymentPerInvoice = chkOnePaymentPerInv.isChecked();
 		}
+		}
 	}   //  actionPerformed
 
 	@Override

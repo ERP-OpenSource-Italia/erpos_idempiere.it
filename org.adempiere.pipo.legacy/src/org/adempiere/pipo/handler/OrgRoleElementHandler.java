@@ -36,21 +36,21 @@ public class OrgRoleElementHandler extends AbstractElementHandler {
 		log.info(elementValue);
 		int roleid =0;
 		int orgid =0;		
-		StringBuffer sqlB = null;
+		StringBuilder sqlB = null;
 		Attributes atts = element.attributes;
 		if (atts.getValue("rolename")!=null){
 			String name = atts.getValue("rolename");		
-			sqlB = new StringBuffer ("SELECT AD_Role_ID FROM AD_Role WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_Role_ID FROM AD_Role WHERE Name= ?");
 			roleid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 		}
 		
 		if (atts.getValue("orgname")!=null){
 			String name = atts.getValue("orgname");		
-			sqlB = new StringBuffer ("SELECT AD_Org_ID FROM AD_Org WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_Org_ID FROM AD_Org WHERE Name= ?");
 			orgid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 		}
 		
-		sqlB = new StringBuffer ("SELECT count(*) FROM AD_Role_OrgAccess WHERE AD_Role_ID=? and AD_Org_ID=?");		
+		sqlB = new StringBuilder ("SELECT count(*) FROM AD_Role_OrgAccess WHERE AD_Role_ID=? and AD_Org_ID=?");		
 		int count = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),roleid,orgid);
 		@SuppressWarnings("unused")
 		int AD_Backup_ID = -1;
@@ -58,7 +58,7 @@ public class OrgRoleElementHandler extends AbstractElementHandler {
 		String Object_Status = null;
 		if (count>0){		   	
 			Object_Status = "Update";			
-			sqlB = new StringBuffer ("UPDATE AD_Role_OrgAccess ")
+			sqlB = new StringBuilder ("UPDATE AD_Role_OrgAccess ")
 					.append( "SET isActive = '" + atts.getValue("isActive") )
 					.append( "', isReadOnly = '" + atts.getValue("isReadOnly") )
 					.append( "' WHERE AD_Role_ID = " + roleid )
@@ -71,7 +71,7 @@ public class OrgRoleElementHandler extends AbstractElementHandler {
 		else{
 			Object_Status = "New";
 			AD_Backup_ID =0;
-			sqlB = new StringBuffer ("INSERT INTO AD_Role_OrgAccess")
+			sqlB = new StringBuilder ("INSERT INTO AD_Role_OrgAccess")
 					.append( "(AD_Client_ID, CreatedBy, UpdatedBy, " ) 
 					.append( "AD_Role_ID, AD_Org_ID, isActive, isReadOnly) " )
 					.append( "VALUES(" ) 

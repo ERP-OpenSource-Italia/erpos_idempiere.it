@@ -83,7 +83,7 @@ public abstract class AbstractElementHandler implements ElementHandler {
      */
     public int record_log (Properties ctx, int success, String objectName,String objectType, int objectID,
     		int objectIDBackup, String objectStatus, String tableName, int AD_Table_ID) throws SAXException{    	
-    	StringBuffer recordLayout = new StringBuffer();
+    	StringBuilder recordLayout = new StringBuilder();
     	int id = 0;
     	TransformerHandler hd_document = getLogDocument(ctx);
 		AttributesImpl attsOut = new AttributesImpl();
@@ -202,12 +202,12 @@ public abstract class AbstractElementHandler implements ElementHandler {
 			colValue=null;
 			
 			    int columnID =get_IDWithMasterAndColumn (ctx, "AD_Column", "ColumnName", poInfo.getColumnName(i), "AD_Table", tableID);
-			    StringBuffer sqlD = new StringBuffer("SELECT AD_Reference_ID FROM AD_COLUMN WHERE AD_Column_ID = '"+columnID+"'");
+			    StringBuilder sqlD = new StringBuilder("SELECT AD_Reference_ID FROM AD_COLUMN WHERE AD_Column_ID = '"+columnID+"'");
 	    		int referenceID = DB.getSQLValue(getTrxName(ctx),sqlD.toString());
 	    		
 	    		idBackup = DB.getNextID (getClientId(ctx), "AD_Package_Imp_Backup", getTrxName(ctx));
 	    		
-	    		sqlD = new StringBuffer("SELECT MAX(AD_PACKAGE_IMP_DETAIL_ID) FROM AD_PACKAGE_IMP_DETAIL");
+	    		sqlD = new StringBuilder("SELECT MAX(AD_PACKAGE_IMP_DETAIL_ID) FROM AD_PACKAGE_IMP_DETAIL");
 	    		int idDetail = DB.getSQLValue(getTrxName(ctx),sqlD.toString())+1;
 	    		
 	    		if (referenceID == REFERENCE_DATATYPE_STRING || referenceID == REFERENCE_DATATYPE_TEXT || referenceID == REFERENCE_DATATYPE_MEMO || referenceID == REFERENCE_DATATYPE_LIST)
@@ -219,7 +219,7 @@ public abstract class AbstractElementHandler implements ElementHandler {
 				else
 					;//Ignore
 	    			    		
-	    		StringBuffer sqlB = new StringBuffer ("INSERT INTO AD_Package_Imp_Backup") 
+	    		StringBuilder sqlB = new StringBuilder ("INSERT INTO AD_Package_Imp_Backup") 
 	    				.append( "(AD_Client_ID, AD_Org_ID, CreatedBy, UpdatedBy, " ) 
 	    				.append( "AD_PACKAGE_IMP_BACKUP_ID, AD_PACKAGE_IMP_DETAIL_ID, AD_PACKAGE_IMP_ID," ) 
 	    				.append( " AD_TABLE_ID, AD_COLUMN_ID, AD_REFERENCE_ID, COLVALUE)" )

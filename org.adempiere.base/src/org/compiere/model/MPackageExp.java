@@ -140,4 +140,23 @@ public class MPackageExp extends X_AD_Package_Exp
 		return list;
 	}
 	
+	public static final String COLUMNNAME_EntityTypeFilter = "EntityTypeFilter";
+	
+	/** Set Entity Type Filter.
+	@param EntityTypeFilter 
+	Extract only elements having Entity Type included in the list
+	  */
+	public void setEntityTypeFilter (String EntityTypeFilter)
+	{
+		set_Value (COLUMNNAME_EntityTypeFilter, EntityTypeFilter);
+	}
+	
+	/** Get Entity Type Filter.
+		@return Extract only elements having Entity Type included in the list
+	  */
+	public String getEntityTypeFilter () 
+	{
+		return (String)get_Value(COLUMNNAME_EntityTypeFilter);
+	}
+	
 }	//	MPackageExp

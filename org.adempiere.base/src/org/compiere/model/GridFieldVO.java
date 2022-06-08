@@ -363,6 +363,8 @@ public class GridFieldVO implements Serializable, Cloneable
 					vo.AD_FieldStyle_ID = rs.getInt (i);
 				else if (columnName.equalsIgnoreCase("PA_DashboardContent_ID"))
 					vo.PA_DashboardContent_ID = rs.getInt (i);
+				else if (columnName.equalsIgnoreCase("IsIdentifier"))
+					vo.IsIdentifier = "Y".equals(rs.getString(i));
 				else if (columnName.equalsIgnoreCase("placeholder"))
 					vo.Placeholder = rs.getString(i);
 				else if (columnName.equalsIgnoreCase("IsHtml"))
@@ -796,6 +798,9 @@ public class GridFieldVO implements Serializable, Cloneable
 
 	/* Allow to show field in Quick Form */
 	public boolean IsQuickForm = false;
+	
+	//LS
+	public boolean IsIdentifier = false;
 
 	/**
 	 *  Set Context including contained elements

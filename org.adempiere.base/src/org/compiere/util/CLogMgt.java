@@ -26,20 +26,18 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
 import java.util.logging.Filter;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
-import org.adempiere.base.Service;
+import org.adempiere.base.Core;
 import org.compiere.Adempiere;
+import org.compiere.db.AdempiereDatabase;
 import org.compiere.db.CConnection;
 import org.compiere.model.MClient;
 import org.idempiere.distributed.IClusterMember;
@@ -515,41 +513,23 @@ public class CLogMgt
 	 *  @param sb buffer to append or null
 	 *  @return Info as multiple Line String
 	 */
-	public static StringBuffer getInfo (StringBuffer sb)
+	public static StringBuilder getInfo (StringBuilder sb)
 	{
 		if (sb == null)
-			sb = new StringBuffer();
+			sb = new StringBuilder();
 		final String eq = " = ";
 		sb.append(getMsg("Host")).append(eq)        .append(getServerInfo()).append(NL);
 		sb.append(getMsg("Database")).append(eq)    .append(getDatabaseInfo()).append(NL);
 		sb.append(getMsg("Schema")).append(eq)      .append(CConnection.get().getDbUid()).append(NL);
 		//
-		sb.append(getMsg("AD_User_ID")).append(eq)  .append(Env.getContext(Env.getCtx(), "#AD_User_Name")).append(NL);
-		sb.append(getMsg("AD_Role_ID")).append(eq)  .append(Env.getContext(Env.getCtx(), "#AD_Role_Name")).append(NL);
+		sb.append(getMsg("AD_User_ID")).append(eq)  .append(Env.getContext(Env.getCtx(), Env.AD_USER_NAME)).append(NL);
+		sb.append(getMsg("AD_Role_ID")).append(eq)  .append(Env.getContext(Env.getCtx(), Env.AD_ROLE_NAME)).append(NL);
 		//
-		sb.append(getMsg("AD_Client_ID")).append(eq).append(Env.getContext(Env.getCtx(), "#AD_Client_Name")).append(NL);
-		sb.append(getMsg("AD_Org_ID")).append(eq)   .append(Env.getContext(Env.getCtx(), "#AD_Org_Name")).append(NL);
+		sb.append(getMsg("AD_Client_ID")).append(eq).append(Env.getContext(Env.getCtx(), Env.AD_CLIENT_NAME)).append(NL);
+		sb.append(getMsg("AD_Org_ID")).append(eq)   .append(Env.getContext(Env.getCtx(), Env.AD_ORG_NAME)).append(NL);
 		//
-		sb.append(getMsg("Date")).append(eq)        .append(Env.getContext(Env.getCtx(), "#Date")).append(NL);
+		sb.append(getMsg("Date")).append(eq)        .append(Env.getContext(Env.getCtx(), Env.DATE)).append(NL);
 		sb.append(getMsg("Printer")).append(eq)     .append(Env.getContext(Env.getCtx(), "#Printer")).append(NL);
-		//
-		Manifest mf = ZipUtil.getManifest("CClient.jar");
-		if (mf == null)
-			mf = ZipUtil.getManifest("CTools.jar");
-		if (mf != null)
-		{
-			Attributes atts = mf.getMainAttributes();
-			if (atts != null)
-			{
-				Iterator<?> it = atts.keySet().iterator();
-				while (it.hasNext())
-				{
-					Object key = it.next();
-					if (key.toString().startsWith("Impl") || key.toString().startsWith("Spec"))
-						sb.append(key).append(eq).append(atts.get(key)).append(NL);
-				}
-			}
-		}
 		// Show Implementation Vendor / Version - teo_sarca, [ 1622855 ]
 		sb.append(getMsg("ImplementationVendor")).append(eq).append(org.compiere.Adempiere.getImplementationVendor()).append(NL);
 		sb.append(getMsg("ImplementationVersion")).append(eq).append(org.compiere.Adempiere.getImplementationVersion()).append(NL);
@@ -581,7 +561,7 @@ public class CLogMgt
 		//
 		//cluster info
 		if (Env.getAD_Client_ID(Env.getCtx()) == 0) {
-			IClusterService service = Service.locator().locate(IClusterService.class).getService();
+			IClusterService service = Core.getClusterService();
 			if (service != null) {
 				IClusterMember local = service.getLocalMember();
 				Collection<IClusterMember> members = service.getMembers();				
@@ -622,10 +602,10 @@ public class CLogMgt
 	 *  @param ctx Environment
 	 *  @return System Info
 	 */
-	public static StringBuffer getInfoDetail (StringBuffer sb, Properties ctx)
+	public static StringBuilder getInfoDetail (StringBuilder sb, Properties ctx)
 	{
 		if (sb == null)
-			sb = new StringBuffer();
+			sb = new StringBuilder();
 		if (ctx == null)
 			ctx = Env.getCtx();
 		//  Envoronment
@@ -690,18 +670,6 @@ public class CLogMgt
 		//  Host
 		sb.append(cc.getAppsHost());
 		
-		if (Ini.isClient())
-		{
-			sb.append(" (");
-
-			//  Server
-			if (!cc.getAppsHost().equalsIgnoreCase("MyAppsServer") && cc.isAppsServerOK(false))
-				sb.append(CConnection.get().getServerVersion());
-			else
-				sb.append(getMsg("NotActive"));
-			//
-			sb.append(")\n  ");
-		}
 		//
 		return sb.toString();
 	}   //  getServerInfo
@@ -713,8 +681,8 @@ public class CLogMgt
 	private static String getDatabaseInfo()
 	{
 		StringBuilder sb = new StringBuilder();
-		sb.append(CConnection.get().getDbHost()).append(" : ")
-			.append(CConnection.get().getDbPort()).append(" / ")
+		sb.append(CConnection.get().getDbHost()).append(":")
+			.append(CConnection.get().getDbPort()).append("/")
 			.append(CConnection.get().getDbName());
 		
 		AdempiereDatabase db = DB.getDatabase();

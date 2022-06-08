@@ -38,7 +38,9 @@ import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.apps.BusyDialog;
 import org.adempiere.webui.apps.ProcessDialog;
 import org.adempiere.webui.apps.WReport;
+import org.adempiere.webui.component.DesktopTabpanel;
 import org.adempiere.webui.component.Tab;
+import org.adempiere.webui.component.Tab.DecorateInfo;
 import org.adempiere.webui.component.Tabpanel;
 import org.adempiere.webui.component.ToolBar;
 import org.adempiere.webui.component.ToolBarButton;
@@ -47,10 +49,12 @@ import org.adempiere.webui.event.DrillEvent;
 import org.adempiere.webui.event.MenuListener;
 import org.adempiere.webui.event.ZKBroadCastManager;
 import org.adempiere.webui.event.ZoomEvent;
+import org.adempiere.webui.factory.InfoManager;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.panel.BroadcastMessageWindow;
 import org.adempiere.webui.panel.HeaderPanel;
 import org.adempiere.webui.panel.HelpController;
+import org.adempiere.webui.panel.InfoPanel;
 import org.adempiere.webui.panel.TimeoutPanel;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
@@ -60,6 +64,7 @@ import org.adempiere.webui.window.FDialog;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.model.I_AD_Preference;
+import org.compiere.model.MInfoWindow;
 import org.compiere.model.MMenu;
 import org.compiere.model.MPreference;
 import org.compiere.model.MQuery;
@@ -1128,5 +1133,30 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
     	}
 		return ! Util.isEmpty(action);
     }
+	
+    @Override
+	public InfoPanel openInfo(int infoId, int WindowNo) {
+		
+		InfoPanel infoPanel = null;
+		
+		if(WindowNo > 0)
+			infoPanel = InfoManager.create(WindowNo, infoId);
+		else
+			infoPanel = InfoManager.create(infoId);
+			
+		if (infoPanel != null) {
+			DesktopTabpanel tabPanel = new DesktopTabpanel();
+			infoPanel.setParent(tabPanel);
+			String title = infoPanel.getTitle();
+			infoPanel.setTitle(null);
+			preOpenNewTab();
+			windowContainer.addWindow(tabPanel, title, true, DecorateInfo.get(MInfoWindow.get(infoId, null)));
+			infoPanel.focus();
+		} else {
+			FDialog.error(0, "NotValid");
+		}
+		
+		return infoPanel;
+	}	
 
 }

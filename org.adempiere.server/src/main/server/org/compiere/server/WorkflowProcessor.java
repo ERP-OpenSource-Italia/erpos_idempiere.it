@@ -63,7 +63,7 @@ public class WorkflowProcessor extends AdempiereServer
 	/**	The Concrete Model			*/
 	protected	MWorkflowProcessor	m_model = null;
 	/**	Last Summary				*/
-	protected StringBuffer 		m_summary = new StringBuffer();
+	protected StringBuilder 		m_summary = new StringBuilder();
 	/** Client onfo					*/
 	protected MClient 			m_client = null;
 	
@@ -72,7 +72,7 @@ public class WorkflowProcessor extends AdempiereServer
 	 */
 	protected void doWork ()
 	{
-		m_summary = new StringBuffer();
+		m_summary = new StringBuilder();
 		//
 		wakeup();
 		dynamicPriority();

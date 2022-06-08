@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for I_Invoice
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 6.2
  */
 public interface I_I_Invoice 
 {
@@ -871,4 +871,17 @@ public interface I_I_Invoice
 	  * User who updated this records
 	  */
 	public int getUpdatedBy();
+	
+	/** Column name PriceList */
+    public static final String COLUMNNAME_PriceList = "PriceList";
+
+	/** Set List Price.
+	  * List Price 
+	  */
+	public void setPriceList (BigDecimal PriceList);
+
+	/** Get List Price.
+	  * List Price 
+	  */
+	public BigDecimal getPriceList();
 }

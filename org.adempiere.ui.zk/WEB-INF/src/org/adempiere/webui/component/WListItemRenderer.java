@@ -116,7 +116,7 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	 * @param columnIndex	The index of the column for which details are to be retrieved.
 	 * @return	The details of the column at the specified index.
 	 */
-	private WTableColumn getColumn(int columnIndex)
+	public WTableColumn getColumn(int columnIndex)
 	{
 		try
 		{
@@ -883,6 +883,35 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 		}
 
 	}
+	
+	//F3P: identifier
+		private String	cellFactoryIdentifier;
+		
+		private List<ListitemEventListener> listitemListeners = null;
+	
+	// F3P: Listeners to be added to list items
+	
+		public void addListitemEventListener(String evtnm, EventListener<Event> listener)
+		{
+			ListitemEventListener lile = new ListitemEventListener(evtnm,listener);
+			
+			if(listitemListeners == null)
+				listitemListeners = new ArrayList<>();
+			
+			listitemListeners.add(lile);		
+		}
+		
+		private static class ListitemEventListener
+		{
+			private ListitemEventListener(String evnm, EventListener<Event> listener)
+			{
+				this.event = evnm;
+				this.listener = listener;
+			}
+					
+			private String event;
+			private EventListener<Event> listener;
+		}
 }
 
 

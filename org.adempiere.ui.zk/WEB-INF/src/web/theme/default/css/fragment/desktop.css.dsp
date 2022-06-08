@@ -58,11 +58,7 @@
 	float: right;
 }
 .desktop-user-panel.mobile .desktop-header-font.desktop-header-username {
-	font-weight: 300;
-	clear: both;
-	display: inline-block;
-	overflow: hidden;
-	white-space: nowrap;
+	font-weight: 600;
 }
 
 .desktop-layout {

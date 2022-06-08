@@ -336,7 +336,7 @@ public class InfoGeneral extends Info
 				if (columnSql == null || columnSql.length() == 0)
 					columnSql = columnName;
 				//  Default
-				StringBuffer colSql = new StringBuffer(columnSql);
+				StringBuilder colSql = new StringBuilder(columnSql);
 				Class<?> colClass = null;
 				//
 				if (isKey)
@@ -362,11 +362,11 @@ public class InfoGeneral extends Info
 				else if (displayType == DisplayType.List)
 				{
 					if (Env.isBaseLanguage(Env.getCtx(), "AD_Ref_List"))
-						colSql = new StringBuffer("(SELECT l.Name FROM AD_Ref_List l WHERE l.AD_Reference_ID=")
+						colSql = new StringBuilder("(SELECT l.Name FROM AD_Ref_List l WHERE l.AD_Reference_ID=")
 							.append(AD_Reference_Value_ID).append(" AND l.Value=").append(columnSql)
 							.append(") AS ").append(columnName);
 					else
-						colSql = new StringBuffer("(SELECT t.Name FROM AD_Ref_List l, AD_Ref_List_Trl t "
+						colSql = new StringBuilder("(SELECT t.Name FROM AD_Ref_List l, AD_Ref_List_Trl t "
 							+ "WHERE l.AD_Ref_List_ID=t.AD_Ref_List_ID AND l.AD_Reference_ID=")
 							.append(AD_Reference_Value_ID).append(" AND l.Value=").append(columnSql)
 							.append(" AND t.AD_Language='").append(Env.getAD_Language(Env.getCtx()))
@@ -417,7 +417,7 @@ public class InfoGeneral extends Info
 	 */
 	protected String getSQLWhere()
 	{
-		StringBuffer sql = new StringBuffer();
+		StringBuilder sql = new StringBuilder();
 		addSQLWhere (sql, 0, textField1.getText().toUpperCase());
 		addSQLWhere (sql, 1, textField2.getText().toUpperCase());
 		addSQLWhere (sql, 2, textField3.getText().toUpperCase());
@@ -431,7 +431,7 @@ public class InfoGeneral extends Info
 	 * 	@param index index
 	 * 	@param value value
 	 */
-	private void addSQLWhere(StringBuffer sql, int index, String value)
+	private void addSQLWhere(StringBuilder sql, int index, String value)
 	{
 		if (!(value.equals("") || value.equals("%")) && index < m_queryColumns.size())
 		{

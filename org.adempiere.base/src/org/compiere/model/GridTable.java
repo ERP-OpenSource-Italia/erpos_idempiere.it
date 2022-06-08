@@ -2243,226 +2243,6 @@ public class GridTable extends AbstractTableModel
 		//	Refresh - update buffer
 		String whereClause = po.get_WhereClause(true);
 		if (log.isLoggable(Level.FINE)) log.fine("Reading ... " + whereClause);
-		StringBuffer refreshSQL = new StringBuffer(m_SQL_Select)
-			.append(" WHERE ").append(whereClause);
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement(refreshSQL.toString(), get_TrxName());
-			rs = pstmt.executeQuery();
-			if (rs.next())
-			{
-				Object[] rowDataDB = readData(rs);
-				//	update buffer
-				setDataAtRow(m_rowChanged, rowDataDB);
-				fireTableRowsUpdated(m_rowChanged, m_rowChanged);
-			}
-		}
-		catch (SQLException e)
-		{
-			String msg = "SaveError";
-			log.log(Level.SEVERE, refreshSQL.toString(), e);
-			fireDataStatusEEvent(msg, e.getLocalizedMessage(), true);
-			return SAVE_ERROR;
-		}
-		finally
-		{
-			DB.close(rs, pstmt);
-			rs = null;
-			pstmt = null;
-		}
-
-		//	everything ok
-		m_rowData = null;
-		m_changed = false;
-		m_compareDB = true;
-		m_rowChanged = -1;
-		m_newRow = -1;
-		m_inserting = false;
-		//
-		ValueNamePair pp = CLogger.retrieveWarning();
-		if (pp != null)
-		{
-			String msg = pp.getValue();
-			String info = pp.getName();
-			fireDataStatusEEvent(msg, info, false);
-		}
-		else
-		{
-			pp = CLogger.retrieveInfo();
-			String msg = "Saved";
-			String info = "";
-			if (pp != null)
-			{
-				msg = pp.getValue();
-				info = pp.getName();
-			}
-			fireDataStatusIEvent(msg, info);
-		}
-		//
-		log.config("fini");
-		return SAVE_OK;
-	}	//	dataSavePO
-	
-	public int getRowChanged()
-	{
-		return m_rowChanged;
-	}
-	
-	/**
-	 *  Build PO for saving
-	 * 	
-	 *	@param Record_ID
-	 *  @param fireEvents send events if error
-	 *	@return PO
-	 *	@throws Exception
-	 */
-	
-	public PO buildSavePO(int Record_ID, boolean fireEvents) throws Exception
-	{
-		if (log.isLoggable(Level.FINE)) log.fine("ID=" + Record_ID);
-		//
-		Object[] rowData = getDataAtRow(m_rowChanged);
-		//
-		MTable table = MTable.get (m_ctx, m_AD_Table_ID);
-		PO po = null;
-		if (! m_importing) // Just use trx when importing
-			m_trxName = null;
-		if (Record_ID != -1)
-			po = table.getPO(Record_ID, m_trxName);
-		else	//	Multi - Key
-			po = table.getPO(getWhereClause(rowData), m_trxName);
-		//	No Persistent Object
-		if (po == null)
-			throw new ClassNotFoundException ("No Persistent Object");
-		
-		if (!po.is_new())
-		{
-			if (hasChanged(po))
-			{				
-				// return error stating that current record has changed and it cannot be saved
-				String adMessage = "CurrentRecordModified";
-				String msg = Msg.getMsg(Env.getCtx(), adMessage);
-				fireDataStatusEEvent(adMessage, msg, true);
-				return SAVE_ERROR;
-			}
-		}
-		
-		int size = m_fields.size();
-		for (int col = 0; col < size; col++)
-		{
-			GridField field = (GridField)m_fields.get (col);
-			if (field.isVirtualColumn())
-				continue;
-			String columnName = field.getColumnName ();
-			Object value = rowData[col];
-			Object oldValue = m_rowData[col];
-			//	RowID
-			if (field.getDisplayType() == DisplayType.RowID)
-				; 	//	ignore
-
-			//	Nothing changed & null
-			else if (oldValue == null && value == null)
-				;	//	ignore
-			
-			//	***	Data changed ***
-			else if (m_inserting || isValueChanged(oldValue, value) )
-			{
-				//	Check existence
-				int poIndex = po.get_ColumnIndex(columnName);
-				if (poIndex < 0)
-				{
-					//	Custom Fields not in PO
-					po.set_CustomColumn(columnName, value);
-				//	log.log(Level.SEVERE, "Column not found: " + columnName);
-					continue;
-				}
-				
-				Object dbValue = po.get_Value(poIndex);
-				if (m_inserting 
-					|| !m_compareDB
-					//	Original == DB
-					|| (oldValue == null && dbValue == null)
-					|| (oldValue != null && oldValue.equals (dbValue))
-					//	Target == DB (changed by trigger to new value already)
-					|| (value == null && dbValue == null)
-					|| (value != null && value.equals (dbValue)) 
-					|| ((oldValue != null && dbValue != null && oldValue.getClass().equals(byte[].class) && dbValue.getClass().equals(byte[].class)) && Arrays.equals((byte[])oldValue, (byte[])dbValue))
-					|| ((value != null && dbValue != null && value.getClass().equals(byte[].class) && dbValue.getClass().equals(byte[].class)) && Arrays.equals((byte[])oldValue, (byte[])dbValue)) 
-						)
-				{
-					if (!po.set_ValueNoCheck (columnName, value))
-					{
-						ValueNamePair lastError = CLogger.retrieveError();
-						if (lastError != null) {
-							String adMessage = lastError.getValue();
-							String adMessageArgument = lastError.getName().trim();
-							
-							StringBuilder info = new StringBuilder(adMessageArgument);
-							
-							if (!adMessageArgument.endsWith(";")) info.append(";");
-							info.append(field.getHeader());
-							
-							fireDataStatusEEvent(adMessage, info.toString(), true);
-						} else {
-							fireDataStatusEEvent("Set value failed", field.getHeader(), true);
-						}
-						return SAVE_ERROR;
-					}
-				}
-				//	Original != DB
-				else
-				{
-					String msg = columnName 
-						+ "= " + oldValue 
-							+ (oldValue==null ? "" : "(" + oldValue.getClass().getName() + ")")
-						+ " != DB: " + dbValue 
-							+ (dbValue==null ? "" : "(" + dbValue.getClass().getName() + ")")
-						+ " -> New: " + value 
-							+ (value==null ? "" : "(" + value.getClass().getName() + ")");
-				//	CLogMgt.setLevel(Level.FINEST);
-				//	po.dump();
-					dataRefresh(m_rowChanged);
-					fireDataStatusEEvent("SaveErrorDataChanged", msg, true);
-					return SAVE_ERROR;
-				}
-			}	//	Data changed
-
-		}	//	for every column
-
-		if (!po.save())
-		{
-			String msg = "SaveError";
-			String info = "";
-			ValueNamePair ppE = CLogger.retrieveError();
-			if (ppE != null)
-			{
-				msg = ppE.getValue();
-				info = ppE.getName();
-				if ("DBExecuteError".equals(msg))
-					info = "DBExecuteError:" + info;
-			}
-			fireDataStatusEEvent(msg, info, true);
-			return SAVE_ERROR;
-		}
-		else if (m_virtual && po.get_ID() > 0)
-		{
-			//update ID
-			MSort sort = m_sort.get(m_rowChanged);
-			int oldid = sort.index;
-			if (oldid != po.get_ID())
-			{
-				sort.index = po.get_ID();
-				Object[] data = m_virtualBuffer.remove(oldid);
-				data[m_indexKeyColumn] = sort.index;
-				m_virtualBuffer.put(sort.index, data);
-			}
-		}
-		
-		//	Refresh - update buffer
-		String whereClause = po.get_WhereClause(true);
-		if (log.isLoggable(Level.FINE)) log.fine("Reading ... " + whereClause);
 		StringBuilder refreshSQL = new StringBuilder(m_SQL_Select)
 			.append(" WHERE ").append(whereClause);
 		PreparedStatement pstmt = null;
@@ -2524,6 +2304,126 @@ public class GridTable extends AbstractTableModel
 		log.config("fini");
 		return SAVE_OK;
 	}	//	dataSavePO
+	
+	/**
+	 *  Build PO for saving
+	 * 	
+	 *	@param Record_ID
+	 *  @param fireEvents send events if error
+	 *	@return PO
+	 *	@throws Exception
+	 */
+	
+	public PO buildSavePO(int Record_ID, boolean fireEvents) throws Exception
+	{
+		if (log.isLoggable(Level.FINE)) log.fine("ID=" + Record_ID);
+		//
+		Object[] rowData = getDataAtRow(m_rowChanged);
+		//
+		MTable table = MTable.get (m_ctx, m_AD_Table_ID);
+		PO po = null;
+		if (! m_importing) // Just use trx when importing
+			m_trxName = null;
+		if (Record_ID != -1)
+			po = table.getPO(Record_ID, m_trxName);
+		else	//	Multi - Key
+			po = table.getPO(getWhereClause(rowData), m_trxName);
+		//	No Persistent Object
+		if (po == null)
+			throw new ClassNotFoundException ("No Persistent Object");
+		
+		int size = m_fields.size();
+		for (int col = 0; col < size; col++)
+		{
+			GridField field = (GridField)m_fields.get (col);
+			if (field.isVirtualColumn())
+				continue;
+			String columnName = field.getColumnName ();
+			Object value = rowData[col];
+			Object oldValue = m_rowData[col];
+			//	RowID
+			if (field.getDisplayType() == DisplayType.RowID)
+				; 	//	ignore
+
+			//	Nothing changed & null
+			else if (oldValue == null && value == null)
+				;	//	ignore
+			
+			//	***	Data changed ***
+			else if (m_inserting || isValueChanged(oldValue, value) )
+			{
+				//	Check existence
+				int poIndex = po.get_ColumnIndex(columnName);
+				if (poIndex < 0)
+				{
+					//	Custom Fields not in PO
+					po.set_CustomColumn(columnName, value);
+				//	log.log(Level.SEVERE, "Column not found: " + columnName);
+					continue;
+				}
+				
+				Object dbValue = po.get_Value(poIndex);
+				if (m_inserting 
+					|| !m_compareDB
+					//	Original == DB
+					|| (oldValue == null && dbValue == null)
+					|| (oldValue != null && oldValue.equals (dbValue))
+					//	Target == DB (changed by trigger to new value already)
+					|| (value == null && dbValue == null)
+					|| (value != null && value.equals (dbValue)) 
+					|| ((oldValue != null && dbValue != null && oldValue.getClass().equals(byte[].class) && dbValue.getClass().equals(byte[].class)) && Arrays.equals((byte[])oldValue, (byte[])dbValue))
+					|| ((value != null && dbValue != null && value.getClass().equals(byte[].class) && dbValue.getClass().equals(byte[].class)) && Arrays.equals((byte[])oldValue, (byte[])dbValue)) 
+						)
+				{
+					if (!po.set_ValueNoCheck (columnName, value))
+					{
+						ValueNamePair lastError = CLogger.retrieveError();
+						if (lastError != null) {
+							String adMessage = lastError.getValue();
+							String adMessageArgument = lastError.getName().trim();
+							
+							StringBuilder info = new StringBuilder(adMessageArgument);
+							
+							if (!adMessageArgument.endsWith(";")) info.append(";");
+							info.append(field.getHeader());
+							
+							if(fireEvents)
+								fireDataStatusEEvent(adMessage, info.toString(), true);
+						} else {
+							
+							if(fireEvents)
+								fireDataStatusEEvent("Set value failed", field.getHeader(), true);
+						}
+						return null;
+					}
+				}
+				//	Original != DB
+				else
+				{
+					String msg = columnName 
+						+ "= " + oldValue 
+							+ (oldValue==null ? "" : "(" + oldValue.getClass().getName() + ")")
+						+ " != DB: " + dbValue 
+							+ (dbValue==null ? "" : "(" + dbValue.getClass().getName() + ")")
+						+ " -> New: " + value 
+							+ (value==null ? "" : "(" + value.getClass().getName() + ")");
+				//	CLogMgt.setLevel(Level.FINEST);
+				//	po.dump();
+					
+					if(fireEvents)
+					{
+						dataRefresh(m_rowChanged);
+						fireDataStatusEEvent("SaveErrorDataChanged", msg, true);
+					}
+					return null;
+				}
+			}	//	Data changed
+
+		}	//	for every column
+		
+		return po;
+
+	}	//	dataSavePO	
 	
 	/**
 	 * 	Get Record Where Clause from data (single key or multi-parent)
@@ -4094,7 +3994,6 @@ public class GridTable extends AbstractTableModel
 				if (memProcessed != null && ! memProcessed.equals(dbProcessed))
 					isChanged = true;
 	    	}
-			    	}
 	    	
 	    	if(isChanged)
 	    	{
@@ -4114,10 +4013,12 @@ public class GridTable extends AbstractTableModel
 	    			isChanged = false;
 	    		}
 	    		
-	    	return isChanged;
+	    		return isChanged;
 	    	}
 	    	
-	    	return false;
+		}
+	    
+		return false;
 	    		
 	}
 

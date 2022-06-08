@@ -56,6 +56,9 @@ import org.idempiere.fa.service.api.DepreciationFactoryLookupDTO;
 import org.idempiere.fa.service.api.IDepreciationMethod;
 import org.idempiere.fa.service.api.IDepreciationMethodFactory;
 
+import it.idempiere.base.IAttributeSetInstanceUtil;
+import it.idempiere.base.IAttributeSetInstanceUtilFactory;
+
 /**
  * This is a facade class for the Service Locator.
  * It provides simple access to all core services.
@@ -922,6 +925,27 @@ public class Core {
 			s_dictionaryServiceReference = serviceReference;
 		}
 		return ids;
+	}
+	
+	/**
+	 * get AttributeSetInstanceUtil instance
+	 * 
+	 * @return instance of the IAttributeSetInstanceUtil or null
+	 */
+	public static IAttributeSetInstanceUtil getAttributeSetInstanceUtil() {
+
+		List<IAttributeSetInstanceUtilFactory> factoryList = 
+				Service.locator().list(IAttributeSetInstanceUtilFactory.class).getServices();
+		if (factoryList != null) {
+			for(IAttributeSetInstanceUtilFactory factory : factoryList) {
+				IAttributeSetInstanceUtil myAttributeSetInstanceUtil = factory.newAttributeSetInstanceUtil();
+				if (myAttributeSetInstanceUtil != null) {
+					return myAttributeSetInstanceUtil;
+				}
+			}
+		}
+
+		return null;
 	}
 		
 }

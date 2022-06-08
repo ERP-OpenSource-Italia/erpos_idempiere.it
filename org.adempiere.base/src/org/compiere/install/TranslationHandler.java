@@ -62,9 +62,9 @@ public class TranslationHandler extends DefaultHandler
 	/** Current ColumnName				*/
 	private String			m_curColumnName = null;
 	/** Current Value					*/
-	private StringBuffer	m_curValue = null;
+	private StringBuilder	m_curValue = null;
 	/**	SQL								*/
-	private StringBuffer	m_sql = null;
+	private StringBuilder	m_sql = null;
 
 	private Timestamp		m_time = new Timestamp(System.currentTimeMillis());
 	private int				m_updateCount = 0;
@@ -102,7 +102,7 @@ public class TranslationHandler extends DefaultHandler
 			m_curUUID = attributes.getValue(Translation.XML_ROW_ATTRIBUTE_UUID);
 			m_trl = attributes.getValue(Translation.XML_ROW_ATTRIBUTE_TRANSLATED);
 		//	log.finest( "ID=" + m_curID);
-			m_sql = new StringBuffer();
+			m_sql = new StringBuilder();
 		}
 		else if (qName.equals(Translation.XML_VALUE_TAG))
 		{
@@ -111,7 +111,7 @@ public class TranslationHandler extends DefaultHandler
 		}
 		else
 			log.severe ("UNKNOWN TAG: " + qName);
-		m_curValue = new StringBuffer();
+		m_curValue = new StringBuilder();
 	}	//	startElement
 
 	/**

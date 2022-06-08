@@ -41,8 +41,8 @@ public class Task extends Thread
 	private String          m_cmd;
 	private Process         m_child = null;
 
-	private StringBuffer    m_out = new StringBuffer();
-	private StringBuffer    m_err = new StringBuffer();
+	private StringBuilder    m_out = new StringBuilder();
+	private StringBuilder    m_err = new StringBuilder();
 
 	/** The Output Stream of process        */
 	private InputStream     m_outStream;
@@ -190,18 +190,18 @@ public class Task extends Thread
 
 	/**
 	 *  Get Out Info
-	 *  @return StringBuffer
+	 *  @return StringBuilder
 	 */
-	public StringBuffer getOut()
+	public StringBuilder getOut()
 	{
 		return m_out;
 	}   //  getOut
 
 	/**
 	 *  Get Err Info
-	 *  @return StringBuffer
+	 *  @return StringBuilder
 	 */
-	public StringBuffer getErr()
+	public StringBuilder getErr()
 	{
 		return m_err;
 	}   //  getErr

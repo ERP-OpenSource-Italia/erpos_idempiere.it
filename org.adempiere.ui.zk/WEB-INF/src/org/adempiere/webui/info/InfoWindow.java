@@ -162,6 +162,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	private Map<Integer, List<Object>> cacheOriginalValues = new HashMap<>();
 	private Map<Integer, List<Object>> temporarySelectedData = new HashMap<>(); 	
 	private WInfoWindowListItemRenderer infoWindowListItemRenderer = null;
+ 	protected EventListener<Event> listitemClickListener = null;	
+
 	
 	// F3P: export 
 	

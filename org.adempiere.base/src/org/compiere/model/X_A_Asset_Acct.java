@@ -833,4 +833,29 @@ public class X_A_Asset_Acct extends PO implements I_A_Asset_Acct, I_Persistent
 	{
 		return (Timestamp)get_Value(COLUMNNAME_ValidFrom);
 	}
+	
+	public org.compiere.model.I_A_Depreciation_Table_Header getA_Depreciation_Table_Hdr_F() throws RuntimeException
+    {
+		return (org.compiere.model.I_A_Depreciation_Table_Header)MTable.get(getCtx(), org.compiere.model.I_A_Depreciation_Table_Header.Table_Name)
+			.getPO(getA_Depreciation_Table_Hdr_F_ID(), get_TrxName());	}
+
+	/** Set Depreciation Table Fiscal.
+		@param A_Depreciation_Table_Hdr_F_ID Depreciation Table Fiscal	  */
+	public void setA_Depreciation_Table_Hdr_F_ID (int A_Depreciation_Table_Hdr_F_ID)
+	{
+		if (A_Depreciation_Table_Hdr_F_ID < 1) 
+			set_Value (COLUMNNAME_A_Depreciation_Table_Hdr_F_ID, null);
+		else 
+			set_Value (COLUMNNAME_A_Depreciation_Table_Hdr_F_ID, Integer.valueOf(A_Depreciation_Table_Hdr_F_ID));
+	}
+
+	/** Get Depreciation Table Fiscal.
+		@return Depreciation Table Fiscal	  */
+	public int getA_Depreciation_Table_Hdr_F_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_A_Depreciation_Table_Hdr_F_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
 }

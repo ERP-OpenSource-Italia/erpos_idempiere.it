@@ -100,7 +100,7 @@ public class WFMaterialReceiptTest extends AbstractTestCase {
 			nodeWait0 = new MWFNode(wf, "Wait0(AND Split)", "Wait0(AND Split)");
 			nodeWait0.setClientOrg(Env.getAD_Client_ID(ctx), 0);
 			nodeWait0.setAction(MWFNode.ACTION_WaitSleep);
-			nodeWait0.setWaitTime(0);
+			nodeWait0.setWaitTime(Env.ZERO);
 			nodeWait0.setSplitElement(MWFNode.SPLITELEMENT_AND);
 			nodeWait0.saveEx();
 			// Add transition from Complete to Wait0
@@ -131,7 +131,7 @@ public class WFMaterialReceiptTest extends AbstractTestCase {
 			nodeWaitAgain = new MWFNode(wf, "WaitAgain", "WaitAgain");
 			nodeWaitAgain.setClientOrg(Env.getAD_Client_ID(ctx), 0);
 			nodeWaitAgain.setAction(MWFNode.ACTION_WaitSleep);
-			nodeWaitAgain.setWaitTime(0); // to test wait commit must be -1, but unit tests must not commit
+			nodeWaitAgain.setWaitTime(Env.ZERO); // to test wait commit must be -1, but unit tests must not commit
 			nodeWaitAgain.saveEx();
 			// Add transition from Wait0 to WaitZeroAgain
 			fromWait0ToWaitAgain = new MWFNodeNext(nodeWait0, nodeWaitAgain.getAD_WF_Node_ID());

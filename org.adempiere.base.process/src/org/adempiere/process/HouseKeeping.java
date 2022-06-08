@@ -108,7 +108,7 @@ public class HouseKeeping extends SvrProcess{
 				sql.append(" WHERE ").append(whereClause);
 			PreparedStatement pstmt = null;
 			ResultSet rs = null;
-			StringBuffer linexml = null;
+			StringBuilder linexml = null;
 			try
 			{
 				pstmt = DB.prepareStatement(sql.toString(), get_TrxName());

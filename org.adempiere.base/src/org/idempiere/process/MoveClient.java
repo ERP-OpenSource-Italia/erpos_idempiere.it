@@ -69,8 +69,8 @@ public class MoveClient extends SvrProcess {
 	final static String insertConversionId = "INSERT INTO T_MoveClient (AD_PInstance_ID, TableName, Source_ID, Target_ID) VALUES (?, ?, ?, ?)";
 
 	private Connection externalConn;
-	private StringBuffer p_excludeTablesWhere = new StringBuffer();
-	private StringBuffer p_whereClient = new StringBuffer();
+	private StringBuilder p_excludeTablesWhere = new StringBuilder();
+	private StringBuilder p_whereClient = new StringBuilder();
 	private List<String> p_errorList = new ArrayList<String>();
 	private List<String> p_tablesVerifiedList = new ArrayList<String>();
 	private List<String> p_tablesToPreserveIDsList = new ArrayList<String>();

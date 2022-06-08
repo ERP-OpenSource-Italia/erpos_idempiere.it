@@ -84,7 +84,7 @@ public final class MSetup
 	private Properties      m_ctx;
 	private String          m_lang;
 	private int             m_WindowNo;
-	private StringBuffer    m_info;
+	private StringBuilder    m_info;
 	//
 	private String          m_clientName;
 //	private String          m_orgName;
@@ -132,7 +132,7 @@ public final class MSetup
 		m_trx.start();
 		
 		//  info header
-		m_info = new StringBuffer();
+		m_info = new StringBuilder();
 		//  Standard columns
 		String name = null;
 		String sql = null;
@@ -437,7 +437,7 @@ public final class MSetup
 		m_hasActivity = hasActivity;
 
 		//  Standard variables
-		m_info = new StringBuffer();
+		m_info = new StringBuilder();
 		String name = null;
 		StringBuilder sqlCmd = null;
 		int no = 0;

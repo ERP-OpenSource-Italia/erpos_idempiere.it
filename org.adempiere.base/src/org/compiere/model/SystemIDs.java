@@ -108,13 +108,11 @@ public class SystemIDs
 	public final static int REFERENCE_DATATYPE_ASSIGNMENT = 33;
 	public final static int REFERENCE_DATATYPE_BINARY = 23;
 	public final static int REFERENCE_DATATYPE_BUTTON = 28;
-	public final static int REFERENCE_DATATYPE_CHART = 53370;
 	public final static int REFERENCE_DATATYPE_CHOSEN_MULTIPLE_SELECTION_LIST = 200161;
 	public final static int REFERENCE_DATATYPE_CHOSEN_MULTIPLE_SELECTION_SEARCH = 200163;
 	public final static int REFERENCE_DATATYPE_CHOSEN_MULTIPLE_SELECTION_TABLE = 200162;
 	public final static int REFERENCE_DATATYPE_COLOR = 27;
 	public final static int REFERENCE_DATATYPE_COSTPRICE = 37;
-	public final static int REFERENCE_DATATYPE_DASHBOARD_CONTENT = 200122;
 	public final static int REFERENCE_DATATYPE_DATE = 15;
 	public final static int REFERENCE_DATATYPE_DATETIME = 16;
 	public final static int REFERENCE_DATATYPE_FILENAME = 39;
@@ -146,8 +144,6 @@ public class SystemIDs
 	public final static int REFERENCE_DATATYPE_YES_NO = 20;
 	public final static int REFERENCE_DATATYPE_CHART = 53370;
 	public final static int REFERENCE_DATATYPE_DASHBOARD_CONTENT = 200122;
-	public final static int REFERENCE_DATATYPE_SINGLE_SELECTION_GRID = 200127;
-	public final static int REFERENCE_DATATYPE_MULTIPLE_SELECTION_GRID = 200128;
 
 	public final static int REFERENCE_ACCOUNT = 175;
 	public final static int REFERENCE_AD_LANGUAGE = 106;
@@ -166,14 +162,10 @@ public class SystemIDs
 	public final static int REFERENCE_PAYMENTRULE = 195;
 	public final static int REFERENCE_POSTED = 234;
 	public final static int REFERENCE_POSTING_TYPE = 125;
-	public final static int REFERENCE_POSTED = 234;
 	public final static int REFERENCE_SQLORDERBY = 53296;
 	public final static int REFERENCE_WFINSTANCE_STATE = 305;
 	public final static int REFERENCE_WIZARDSTATUS = 200003;
 	public final static int REFERENCE_YESNO = 319;
-	public final static int REFERENCE_WIZARDSTATUS = 200003;
-	public final static int REFERENCE_WFINSTANCE_STATE = 305;
-	public final static int REFERENCE_IMPORT_MODE = 200098;
 
 	public final static int TABLE_AD_TABLE = 100;
 	public final static int TABLE_AD_WF_PROCESS = 645;
@@ -213,4 +205,5 @@ public class SystemIDs
 	public final static int SCHEDULE_10_MINUTES = 200002;
 	public final static int SCHEDULE_15_MINUTES = 200003;
 	
+	public final static int	TOOLBAR_BTN_ID_WINDOW_NEW = 200031;
 }

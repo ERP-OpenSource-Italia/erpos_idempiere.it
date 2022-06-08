@@ -579,7 +579,7 @@ public final class AdempierePLAF
 		char lastStart = ' ';
 		for (int i = 0; i < keys.length; i++)
 		{
-			StringBuffer sb = new StringBuffer();
+			StringBuilder sb = new StringBuilder();
 			sb.append(keys[i]).append(" = ").append(UIManager.get(keys[i]));
 			if (keys[i].toString().charAt(0) != lastStart)
 			{

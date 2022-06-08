@@ -91,7 +91,7 @@ public class FinStatement extends SvrProcess
 	private int					p_PA_Hierarchy_ID = 0;
 
 	/**	Parameter Where Clause			*/
-	private StringBuffer		m_parameterWhere = new StringBuffer();
+	private StringBuilder		m_parameterWhere = new StringBuilder();
 	/**	Account							*/ 
 	private MElementValue 		m_acct = null;
 	

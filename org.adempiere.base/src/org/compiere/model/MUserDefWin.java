@@ -262,6 +262,11 @@ public class MUserDefWin extends X_AD_UserDef_Win implements ImmutablePOSupport
 		makeImmutable();
 		return this;
 	}
+	
+	public static final String ENABLE_AGGREGATED_USERDEF = "USERCUSTOMIZATION_ENABLE_AGGREGATION";
 
-
+	public static boolean isAggregationEnabled()
+	{
+		return MSysConfig.getBooleanValue(ENABLE_AGGREGATED_USERDEF, false);
+	}
 }	//	MUserDefWin

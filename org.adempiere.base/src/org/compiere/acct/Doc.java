@@ -48,6 +48,7 @@ import org.compiere.model.MMatchInv;
 import org.compiere.model.MMatchPO;
 import org.compiere.model.MNote;
 import org.compiere.model.MPeriod;
+import org.compiere.model.MRefList;
 import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.ModelValidator;
 import org.compiere.model.PO;
@@ -735,7 +736,7 @@ public abstract class Doc
 		//F3P check if delete
 		if(isToDeleteAcct())
 		{
-			StringBuffer sql = new StringBuffer ("DELETE Fact_Acct WHERE AD_Table_ID=")
+			StringBuilder sql = new StringBuilder ("DELETE Fact_Acct WHERE AD_Table_ID=")
 			.append(get_Table_ID())
 			.append(" AND Record_ID=").append(p_po.get_ID())
 			.append(" AND C_AcctSchema_ID=").append(m_as.getC_AcctSchema_ID());
@@ -749,7 +750,7 @@ public abstract class Doc
 	//F3P
 	private boolean isToDeleteAcct()
 	{
-		StringBuffer sql = new StringBuffer ("SELECT count(1) FROM Fact_Acct WHERE AD_Table_ID=")
+		StringBuilder sql = new StringBuilder ("SELECT count(1) FROM Fact_Acct WHERE AD_Table_ID=")
 		.append(get_Table_ID())
 		.append(" AND Record_ID=").append(p_po.get_ID());
 		

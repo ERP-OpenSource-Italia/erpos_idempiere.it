@@ -18,7 +18,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Vector;
 import java.util.logging.Level;
 
@@ -26,11 +25,11 @@ import org.compiere.apps.IStatusBar;
 import org.compiere.minigrid.IMiniTable;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
-import org.compiere.model.MLookupFactory;
 import org.compiere.model.MOrder;
 import org.compiere.model.MRMA;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 
@@ -39,7 +38,7 @@ import it.idempiere.base.util.STDSysConfig;
 public abstract class CreateFrom implements ICreateFrom
 {
 	/**	Logger			*/
-	protected CLogger log = CLogger.getCLogger(getClass());
+	protected transient CLogger log = CLogger.getCLogger(getClass());
 
 	/** Loaded Order            */
 	protected MOrder p_order = null;
@@ -98,17 +97,13 @@ public abstract class CreateFrom implements ICreateFrom
 	protected ArrayList<KeyNamePair> loadOrderData (int C_BPartner_ID, boolean forInvoice, boolean sameWarehouseOnly, boolean forCreditMemo)
 	{
 		ArrayList<KeyNamePair> list = new ArrayList<KeyNamePair>();
-		
+
 		String isSOTrxParam = isSOTrx ? "Y":"N";
-		
-   	// F3P: integrated display based on selection columns		
-		/*
 		//	Display
-		StringBuffer display = new StringBuffer("o.DocumentNo||' - ' ||")
+		StringBuilder display = new StringBuilder("o.DocumentNo||' - ' ||")
 			.append(DB.TO_CHAR("o.DateOrdered", DisplayType.Date, Env.getAD_Language(Env.getCtx())))
 			.append("||' - '||")
 			.append(DB.TO_CHAR("o.GrandTotal", DisplayType.Amount, Env.getAD_Language(Env.getCtx())));
-		*/
 		//
 		String column = "ol.QtyDelivered";
 		String colBP = "o.C_BPartner_ID";
@@ -117,67 +112,16 @@ public abstract class CreateFrom implements ICreateFrom
 			column = "ol.QtyInvoiced";
 			colBP = "o.Bill_BPartner_ID";
 		}
-		
-		// F3P: integrated display based on selection columns		
-		String display = MLookupFactory.getDisplayBaseQuery(Env.getLanguage(Env.getCtx()), "C_Order_ID", "C_Order","o","o.C_Order_ID", null);		
-		
-		StringBuilder sql = new StringBuilder(display);
-				
-		List<Integer> docTypeIDs = STDSysConfig.getListDocTypeIDShowNegativeQtyOrdered(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx()));
-		
-		if(docTypeIDs == null)
-		{ 
-			sql.append(" WHERE ")
+		StringBuilder sql = new StringBuilder("SELECT o.C_Order_ID,")
+			.append(display)
+			.append(" FROM C_Order o WHERE ")
 			.append(colBP)
-			.append("=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO') AND o.C_Order_ID IN (SELECT ol.C_Order_ID FROM C_OrderLine ol ")
-			.append(" LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID") //F3P: added product link
-			.append(" WHERE ");
-			if (forCreditMemo)
-				sql.append(column).append(">0 AND (CASE WHEN ol.QtyDelivered>=ol.QtyOrdered THEN ol.QtyDelivered-ol.QtyInvoiced!=0 ELSE 1=1 END) ");
-			else
-				sql.append("ol.QtyOrdered-").append(column).append("!=0");
-
-		}
+			.append("=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO') AND o.C_Order_ID IN (SELECT ol.C_Order_ID FROM C_OrderLine ol WHERE ");
+		if (forCreditMemo)
+			sql.append(column).append(">0 AND (CASE WHEN ol.QtyDelivered>=ol.QtyOrdered THEN ol.QtyDelivered-ol.QtyInvoiced!=0 ELSE 1=1 END)) ");
 		else
-		{
-			boolean isFirst=true;
-			StringBuilder sqlDocType = new StringBuilder();
-			for(Integer docType_ID : docTypeIDs)
-			{
-				if(isFirst)
-				{
-					sqlDocType.append(docType_ID);
-					isFirst = false;
-				}
-				else
-					sqlDocType.append(",").append(docType_ID);
-			}
-			
-			sql.append(" WHERE ")
-			.append(colBP)
-			.append("=? AND o.IsSOTrx=? AND o.DocStatus IN ('CL','CO') "
-					+ "AND (o.C_DocType_ID in (").append(sqlDocType.toString()).append(")").append(
-					" OR o.C_Order_ID IN "
-						  + "(SELECT ol.C_Order_ID FROM C_OrderLine ol"
-						  + " LEFT JOIN M_Product p ON p.M_Product_ID=ol.M_Product_ID"); //F3P: added product link
-			sql.append(" WHERE ");
-			if (forCreditMemo)
-				sql.append(column).append(">0 AND (CASE WHEN ol.QtyDelivered>=ol.QtyOrdered THEN ol.QtyDelivered-ol.QtyInvoiced!=0 ELSE 1=1 END) ");
-			else
-				sql.append("ol.QtyOrdered-").append(column).append("!=0 ");
-
-		}			
-		
-		//F3P: show only service order
-		if(isShowOnlyServiceOrder() && forInvoice)
-			sql.append(" AND (ol.c_charge_id IS NOT NULL OR p.producttype <> 'I' )");
-		
-		
-		if(docTypeIDs == null)
-			sql.append(") ");
-		else
-			sql.append(")) ");	
-			
+			sql.append("ol.QtyOrdered-").append(column).append("!=0) ");
+					
 		if(sameWarehouseOnly)
 		{
 			sql = sql.append(" AND o.M_Warehouse_ID=? ");
@@ -186,10 +130,6 @@ public abstract class CreateFrom implements ICreateFrom
 			sql = sql.append("ORDER BY o.DateOrdered DESC,o.DocumentNo DESC");
 		else
 			sql = sql.append("ORDER BY o.DateOrdered,o.DocumentNo");
-		
-		// F3P: apply filter
-		sql = filterLoadOrderDataQuery(sql, C_BPartner_ID, forInvoice, sameWarehouseOnly);
-		
 		//
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -249,11 +189,10 @@ public abstract class CreateFrom implements ICreateFrom
 
 		Vector<Vector<Object>> data = new Vector<Vector<Object>>();
 		StringBuilder sql = new StringBuilder("SELECT ");
-		sql.append(forCreditMemo ? "SUM(COALESCE(m.Qty,0))," : "l.QtyOrdered-coalesce(SUM(CASE WHEN l.M_Product_ID IS NOT NULL THEN COALESCE(m.Qty,0) WHEN l.C_Charge_ID IS NOT NULL THEN " //F3P: calcolo qta rimanente anche per i charge
-			+	"(SELECT SUM(cil.QtyInvoiced) FROM C_InvoiceLine cil INNER JOIN C_Invoice ci ON (ci.C_Invoice_ID = cil.C_Invoice_ID) WHERE ci.C_Order_ID = l.C_Order_ID AND ci.DocStatus IN ('CO','CL'))ELSE 0 END),0), "); //F3P
+		sql.append(forCreditMemo ? "SUM(COALESCE(m.Qty,0))," : "l.QtyOrdered-SUM(COALESCE(m.Qty,0)),");	//	1
 		sql.append("CASE WHEN l.QtyOrdered=0 THEN 0 ELSE l.QtyEntered/l.QtyOrdered END,"	//	2
 			+ " l.C_UOM_ID,COALESCE(uom.UOMSymbol,uom.Name),"			//	3..4
-			+ " COALESCE(l.M_Product_ID,0),COALESCE(p.Name,c.Name),COALESCE(po.VendorProductNo,l.Description),"	//	5..7  F3P: changed po.VendorProductNo in COALESCE(po.VendorProductNo,l.Description) to improve readability on charge lines
+			+ " COALESCE(l.M_Product_ID,0),COALESCE(p.Name,c.Name),po.VendorProductNo,"	//	5..7
 			+ " l.C_OrderLine_ID,l.Line "								//	8..9
 			+ "FROM C_OrderLine l"
 			+ " LEFT OUTER JOIN M_Product_PO po ON (l.M_Product_ID = po.M_Product_ID AND l.C_BPartner_ID = po.C_BPartner_ID) "
@@ -268,21 +207,12 @@ public abstract class CreateFrom implements ICreateFrom
 			sql.append(" LEFT OUTER JOIN C_UOM_Trl uom ON (l.C_UOM_ID=uom.C_UOM_ID AND uom.AD_Language='")
 				.append(Env.getAD_Language(Env.getCtx())).append("')");
 		//
-		sql.append(" WHERE l.C_Order_ID=? ");			//	#1
-		
-		//F3P: show only service order if for invoice is true
-		if(isShowOnlyServiceOrder() && forInvoice)
-			sql.append(" AND (l.c_charge_id IS NOT NULL OR p.producttype <> 'I' )");
-				
-		sql.append("GROUP BY l.QtyOrdered,CASE WHEN l.QtyOrdered=0 THEN 0 ELSE l.QtyEntered/l.QtyOrdered END, "
-			+ "l.C_UOM_ID,COALESCE(uom.UOMSymbol,uom.Name),po.VendorProductNo, l.Description, " // F3P: see note above, added for the coalesce to work
+		sql.append(" WHERE l.C_Order_ID=? "			//	#1
+			+ "GROUP BY l.QtyOrdered,CASE WHEN l.QtyOrdered=0 THEN 0 ELSE l.QtyEntered/l.QtyOrdered END, "
+			+ "l.C_UOM_ID,COALESCE(uom.UOMSymbol,uom.Name),po.VendorProductNo, "
 				+ "l.M_Product_ID,COALESCE(p.Name,c.Name), l.Line,l.C_OrderLine_ID "
 			+ "ORDER BY l.Line");
 		//
-		
-		// F3P: apply filter
-		sql = filterGetOrderDataQuery(sql, C_Order_ID, forInvoice);
-		
 		if (log.isLoggable(Level.FINER)) log.finer(sql.toString());
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -355,7 +285,6 @@ public abstract class CreateFrom implements ICreateFrom
 	public void setTitle(String title) {
 		this.title = title;
 	}
-	
 	
 	/**
 	 * F3P: show only order with at least one service line or charge

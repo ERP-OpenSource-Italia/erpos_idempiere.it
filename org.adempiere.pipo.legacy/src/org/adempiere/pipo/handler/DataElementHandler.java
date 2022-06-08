@@ -245,9 +245,9 @@ public class DataElementHandler extends AbstractElementHandler {
 			String columnName = atts.getValue("name");	    	
 			int tableid = get_IDWithColumn(ctx, "AD_Table", "TableName", d_tablename);
 			int id =get_IDWithMasterAndColumn (ctx,"AD_Column", "ColumnName", columnName, "AD_Table", tableid);
-			StringBuffer sql = new StringBuffer ("SELECT IsUpdateable FROM AD_column WHERE AD_Column_ID = ?");
+			StringBuilder sql = new StringBuilder ("SELECT IsUpdateable FROM AD_column WHERE AD_Column_ID = ?");
 			String isUpdateable = DB.getSQLValueString(getTrxName(ctx), sql.toString(),id);
-			sql = new StringBuffer ("SELECT IsKey FROM AD_column WHERE AD_Column_ID = ?");
+			sql = new StringBuilder ("SELECT IsKey FROM AD_column WHERE AD_Column_ID = ?");
 			String isKey = DB.getSQLValueString(getTrxName(ctx), sql.toString(),id);
 			if (("New".equals(objectStatus)) || (isKey.equals("N") && 
 					isUpdateable.equals("Y") &&

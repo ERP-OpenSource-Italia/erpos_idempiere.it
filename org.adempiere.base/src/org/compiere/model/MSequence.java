@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Vector;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.DBException;
@@ -44,6 +45,8 @@ import org.compiere.util.Env;
 import org.compiere.util.Ini;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
+
+import it.idempiere.base.model.LITMSequence;
 
 /**
  *	Sequence Model.

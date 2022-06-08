@@ -22,14 +22,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Properties;
 import java.util.logging.Level;
 
 import org.compiere.apps.IStatusBar;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.minigrid.IMiniTable;
 import org.compiere.model.MInOut;
-import org.compiere.model.MOrder;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MPInstancePara;
 import org.compiere.model.MRMA;
@@ -43,8 +41,6 @@ import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 
-import it.idempiere.base.util.STDSysConfig;
-
 /**
  * Generate Shipment (manual) controller class
  * 
@@ -52,7 +48,7 @@ import it.idempiere.base.util.STDSysConfig;
 public class InOutGen extends GenForm
 {
 	/**	Logger			*/
-	private static CLogger log = CLogger.getCLogger(InOutGen.class);
+	private static final CLogger log = CLogger.getCLogger(InOutGen.class);
 	//
 	
 	public Object 			m_M_Warehouse_ID = null;
@@ -75,14 +71,6 @@ public class InOutGen extends GenForm
 		miniTable.addColumn("C_BPartner_ID");
 		miniTable.addColumn("DateOrdered");
 		miniTable.addColumn("TotalLines");
-		//LS
-        Properties ctx = Env.getCtx();
-        if(STDSysConfig.isInOutGenShowPOReference(Env.getAD_Client_ID(ctx), Env.getAD_Org_ID(ctx)))
-        {
-        	miniTable.addColumn("POReference");
-        	miniTable.addColumn("POReferenceDate");
-        }
-        //LS END
 		//
 		miniTable.setMultiSelection(true);
 
@@ -94,13 +82,6 @@ public class InOutGen extends GenForm
 		miniTable.setColumnClass(4, String.class, true, Msg.translate(Env.getCtx(), "C_BPartner_ID"));
 		miniTable.setColumnClass(5, Timestamp.class, true, Msg.translate(Env.getCtx(), "DateOrdered"));
 		miniTable.setColumnClass(6, BigDecimal.class, true, Msg.translate(Env.getCtx(), "TotalLines"));
-		//LS
-		if(STDSysConfig.isInOutGenShowPOReference(Env.getAD_Client_ID(ctx), Env.getAD_Org_ID(ctx)))
-		{
-			miniTable.setColumnClass(7, String.class, true, Msg.translate(Env.getCtx(), "POReference"));
-			miniTable.setColumnClass(8, Timestamp.class, true, Msg.translate(Env.getCtx(), "POReferenceDate"));
-		}
-		//LS END
 		//
 		miniTable.autoSize();
 	}
@@ -113,14 +94,9 @@ public class InOutGen extends GenForm
 	{
 	//  Create SQL
         StringBuilder sql = new StringBuilder(
-            "SELECT C_Order_ID, o.Name, dt.Name, DocumentNo, bp.Name, DateOrdered, TotalLines ");
-        //LS
-        Properties ctx = Env.getCtx();
-        if(STDSysConfig.isInOutGenShowPOReference(Env.getAD_Client_ID(ctx), Env.getAD_Org_ID(ctx)))
-        	sql.append(", ic.POReference, ic.POReferenceDate ");
-        //LS END
+            "SELECT C_Order_ID, o.Name, dt.Name, DocumentNo, bp.Name, DateOrdered, TotalLines "
 	    	// use C_Order instead of M_InOut_Candidate_v for access purposes, will be replaced later
-        sql.append("FROM C_Order ic, AD_Org o, C_BPartner bp, C_DocType dt "
+            + "FROM C_Order ic, AD_Org o, C_BPartner bp, C_DocType dt "
             + "WHERE ic.AD_Org_ID=o.AD_Org_ID"
             + " AND ic.C_BPartner_ID=bp.C_BPartner_ID"
             + " AND ic.C_DocType_ID=dt.C_DocType_ID"
@@ -216,15 +192,6 @@ public class InOutGen extends GenForm
 				miniTable.setValueAt(rs.getString(5), row, 4);              //  BPartner
 				miniTable.setValueAt(rs.getTimestamp(6), row, 5);           //  DateOrdered
 				miniTable.setValueAt(rs.getBigDecimal(7), row, 6);          //  TotalLines
-				//LS
-		        Properties ctx = Env.getCtx();
-		        if(STDSysConfig.isInOutGenShowPOReference(Env.getAD_Client_ID(ctx), Env.getAD_Org_ID(ctx))
-		        		&& (docTypeKNPair.getKey() == MOrder.Table_ID))
-		        {
-		        	miniTable.setValueAt(rs.getString(8), row, 7);
-					miniTable.setValueAt(rs.getTimestamp(9), row, 8);           //  DateOrdered
-		        }
-		        //LS END				
 				//  prepare next
 				row++;
 			}
@@ -402,8 +369,6 @@ public class InOutGen extends GenForm
 		return ((Integer)m_M_Warehouse_ID);
 	}
 	
-	//F3P
-	
 	@Override
 	public String getDefaultDocAction()
 	{
@@ -421,6 +386,4 @@ public class InOutGen extends GenForm
 		
 		return sDocAction;
 	}
-	
-	//F3P End
 }

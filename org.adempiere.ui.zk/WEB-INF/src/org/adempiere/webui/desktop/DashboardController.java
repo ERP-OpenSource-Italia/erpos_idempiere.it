@@ -57,7 +57,11 @@ import org.compiere.model.MMenu;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MPInstancePara;
 import org.compiere.model.MProcess;
+import org.compiere.model.MQuery;
 import org.compiere.model.MSysConfig;
+import org.compiere.model.MTable;
+import org.compiere.model.PrintInfo;
+import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.ProcessInfo;
 import org.compiere.util.CLogger;
@@ -854,19 +858,6 @@ public class DashboardController implements EventListener<Event> {
 		if (!process.processIt(pi, null) && pi.getClassName() != null) 
 			throw new IllegalStateException("Process failed: (" + pi.getClassName() + ") " + pi.getSummary());
 	
-		//F3P if selected use printformat of process
-		ReportEngine re = null;
-		if(process.getAD_PrintFormat_ID()>0)
-		{
-			MPrintFormat format = (MPrintFormat) process.getAD_PrintFormat();
-			String TableName = MTable.getTableName(process.getCtx(), format.getAD_Table_ID());
-			MQuery queryPf = MQuery.get (process.getCtx(), pi.getAD_PInstance_ID(), TableName);
-			PrintInfo info = new PrintInfo(pi);
-			
-			re = new ReportEngine(process.getCtx(), format, queryPf, info);
-		}
-		 
-		if (re == null)//F3P End
 		//	Report
 		ReportEngine re = ReportEngine.get(Env.getCtx(), pi);
 		if (re == null)

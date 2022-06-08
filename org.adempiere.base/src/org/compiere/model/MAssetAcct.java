@@ -106,6 +106,22 @@ public class MAssetAcct extends X_A_Asset_Acct implements ImmutablePOSupport
 		return null;
 	}
 	
+	
+	/**
+	 * Get asset accounting.
+	 * @param ctx context
+	 * @param A_Asset_ID asset
+	 * @param postingType Posting type
+	 * @param dateAcct check ValidFrom
+	 * @return asset accounting for the given asset
+	 */
+	public static MAssetAcct forA_Asset_ID (Properties ctx,int A_Asset_ID, String postingType, Timestamp dateAcct, String trxName)
+	{
+		int C_AcctSchema_ID = Env.getContextAsInt(ctx, "$C_AcctSchema_ID");
+		
+		return forA_Asset_ID(ctx, C_AcctSchema_ID, A_Asset_ID, postingType, dateAcct, trxName);
+	}
+	
 	/**
 	 * Get asset accounting.
 	 * @param ctx context

@@ -22,6 +22,7 @@ import java.util.logging.Level;
 
 import javax.xml.namespace.QName;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.util.ProcessUtil;
 import org.compiere.model.Lookup;
 import org.compiere.model.MLookup;

@@ -47,7 +47,7 @@ public class PreferenceElementHandler extends AbstractElementHandler {
 			return;
 		}
 
-		StringBuffer sqlB = new StringBuffer(
+		StringBuilder sqlB = new StringBuilder(
 				"select AD_Preference_ID from AD_Preference where ").append(
 				" Attribute = '" + atts.getValue("Attribute") + "'").append(
 				" and AD_Window_ID = ?");

@@ -28,7 +28,8 @@ import java.util.logging.Level;
 
 import org.adempiere.util.Callback;
 import org.adempiere.util.ContextRunnable;
-import org.adempiere.util.IProcessUI;
+import org.adempiere.util.FeedbackContainer;
+import org.adempiere.util.IProcessUI2;
 import org.adempiere.util.ServerContext;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.Button;
@@ -52,6 +53,7 @@ import org.adempiere.webui.factory.ButtonFactory;
 import org.adempiere.webui.info.InfoWindow;
 import org.adempiere.webui.process.WProcessInfo;
 import org.adempiere.webui.session.SessionManager;
+import org.adempiere.webui.util.UIFeedbackNotifier;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
 import org.adempiere.webui.window.MultiFileDownloadDialog;
@@ -69,14 +71,18 @@ import org.compiere.model.MPInstance;
 import org.compiere.model.MPInstanceLog;
 import org.compiere.model.MPInstancePara;
 import org.compiere.model.MProcess;
+import org.compiere.model.MQuery;
 import org.compiere.model.MReportView;
 import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MUser;
 import org.compiere.model.MUserDefProc;
+import org.compiere.model.PO;
 import org.compiere.model.Query;
 import org.compiere.model.SystemIDs;
 import org.compiere.print.MPrintFormat;
+import org.compiere.print.ReportCtl;
+import org.compiere.print.ReportEngine;
 import org.compiere.process.ProcessInfo;
 import org.compiere.process.ProcessInfoUtil;
 import org.compiere.process.ServerProcessCtl;
@@ -104,7 +110,10 @@ import org.zkoss.zul.Html;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Vlayout;
 
-public abstract class AbstractProcessDialog extends Window implements IProcessUI, EventListener<Event>
+import it.idempiere.base.model.LITMProcess;
+import it.idempiere.base.util.StartedFromUI;
+
+public abstract class AbstractProcessDialog extends Window implements IProcessUI2, EventListener<Event>
 {
 	/**
 	 * 
@@ -1260,9 +1269,9 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			
 			int AD_Client_ID = Env.getAD_Client_ID(m_ctx);
 			int AD_User_ID = Env.getAD_User_ID(m_ctx);
-			
+			MProcess process = null;
 			try {
-				MProcess process = new MProcess(m_ctx, m_pi.getAD_Process_ID(), null);	
+				process = new MProcess(m_ctx, m_pi.getAD_Process_ID(), null);	
 				if (process.isReport() && process.getJasperReport() != null) {
 					if (!Util.isEmpty(process.getJasperReport())) 
 					{

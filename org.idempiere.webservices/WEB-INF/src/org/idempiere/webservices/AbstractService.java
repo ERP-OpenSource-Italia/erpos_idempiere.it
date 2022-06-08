@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Level;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -56,6 +57,7 @@ import org.idempiere.adInterface.x10.OutputFields;
 import org.idempiere.adInterface.x10.StandardResponse;
 import org.idempiere.adInterface.x10.StandardResponseDocument;
 import org.idempiere.adinterface.CompiereService;
+import org.idempiere.adinterface.WSSysConfig;
 import org.idempiere.cache.ImmutablePOCache;
 import org.idempiere.webservices.fault.IdempiereServiceFault;
 

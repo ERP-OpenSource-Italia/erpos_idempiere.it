@@ -170,6 +170,86 @@ public class MStatusLine extends X_AD_StatusLine implements ImmutablePOSupport
 		s_cache.put(key.toString(), retValue, e -> new MStatusLine(Env.getCtx(), e));
 		return retValue;
 	}
+	
+	/**
+	 * Get the status line defined for the infowindow
+	 * @param AD_InfoWindow_ID
+	 * @param tab_ID
+	 * @param table_ID
+	 * @return first status line discovered
+	 */
+	public static MStatusLine getSL(int AD_InfoWindow_ID) {
+		StringBuilder key = new StringBuilder().append(AD_InfoWindow_ID).append("|IW");
+		MStatusLine retValue = null;
+		if (s_cache.containsKey(key.toString()))
+		{
+			retValue = s_cache.get(key.toString());
+			if (s_log.isLoggable(Level.FINEST)) s_log.finest("Cache: " + retValue);
+			return retValue;
+		}
+
+		String sql = ""
+				+ "SELECT slu.AD_StatusLine_ID "
+				+ "FROM   AD_StatusLineUsedIn slu "
+				+ "JOIN AD_StatusLine sl ON (sl.AD_StatusLine_ID = slu.AD_StatusLine_ID) "
+				+ "WHERE  slu.IsActive = 'Y' "
+				+ "       AND sl.IsActive = 'Y' "
+				+ "       AND slu.IsStatusLine = 'Y' "
+				+ "       AND slu.AD_InfoWindow_ID = ? ";
+		int slid = DB.getSQLValueEx(null, sql, AD_InfoWindow_ID);
+		
+		if (slid > 0) {
+			retValue = new MStatusLine(Env.getCtx(), slid, null);
+		}
+		s_cache.put(key.toString(), retValue);
+
+		return retValue;
+	}	
+	
+	/**
+	 * Get the widget lines defined for the info window
+	 * @param window_ID
+	 * @param tab_ID
+	 * @param table_ID
+	 * @return array of widget lines discovered for table or specific tab or general window
+	 */
+	public static MStatusLine[] getStatusLinesWidget(int AD_InfoWindow_ID) {
+		StringBuilder key = new StringBuilder().append(AD_InfoWindow_ID).append("|IW");
+		MStatusLine[] retValue = null;
+		if (s_cachew.containsKey(key.toString()))
+		{
+			retValue = s_cachew.get(key.toString());
+			if (s_log.isLoggable(Level.FINEST)) s_log.finest("Cache: " + retValue);
+			return retValue;
+		}
+
+		final String sql = ""
+				+ "SELECT DISTINCT slu.AD_StatusLine_ID, slu.SeqNo "
+				+ "FROM   AD_StatusLineUsedIn slu "
+				+ "JOIN AD_StatusLine sl ON (sl.AD_StatusLine_ID = slu.AD_StatusLine_ID) "
+				+ "WHERE  slu.IsActive = 'Y' "
+				+ "       AND sl.IsActive = 'Y' "
+				+ "       AND slu.IsStatusLine = 'N' "
+				+ "       AND slu.AD_InfoWindow_ID = ? "
+				+ "ORDER BY slu.SeqNo";
+		int[] wlids = DB.getIDsEx(null, sql, AD_InfoWindow_ID);
+		if (wlids.length > 0) {
+	        ArrayList<MStatusLine> list = new ArrayList<MStatusLine>();
+	        for (int wlid : wlids) {
+				MStatusLine wl = new MStatusLine(Env.getCtx(), wlid, null);
+				list.add(wl);
+	        }
+			//	Convert to array
+			retValue = new MStatusLine[list.size()];
+			for (int i = 0; i < retValue.length; i++)
+			{
+				retValue[i] = list.get(i);
+			}
+		}
+		s_cachew.put(key.toString(), retValue);
+
+		return retValue;
+	}
 
 	/**
 	 * Get the widget lines defined for the window&tab&table (immutable)

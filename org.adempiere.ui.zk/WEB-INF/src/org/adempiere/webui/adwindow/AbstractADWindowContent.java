@@ -35,6 +35,7 @@ import java.util.logging.Level;
 
 import org.adempiere.exceptions.DBException;
 import org.adempiere.util.Callback;
+import org.adempiere.util.FeedbackContainer;
 import org.adempiere.webui.AdempiereIdGenerator;
 import org.adempiere.webui.AdempiereWebUI;
 import org.adempiere.webui.ClientInfo;
@@ -3159,7 +3160,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 						}
 						boolean startWOasking = true;
 						boolean isProcessMandatory = true;
-						executeButtonProcess(wButton, startWOasking, table_ID, recordIdParam, isProcessMandatory);
+						executeButtonProcess(wButton, startWOasking, table_ID, recordIdParam, isProcessMandatory,null);
 					}
 				});				
 				getComponent().getParent().appendChild(win);
@@ -3285,7 +3286,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		}   //  Posted
 
 		executeButtonProcess(wButton, startWOasking, table_ID, record_ID,
-				isProcessMandatory);
+				isProcessMandatory,null);
 	} // actionButton
 
 	private Div getMask() {
@@ -3318,7 +3319,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 
 	public void executeButtonProcess(final IProcessButton wButton,
 			final boolean startWOasking, final int table_ID, final int record_ID,
-			boolean isProcessMandatory) {
+			boolean isProcessMandatory, FeedbackContainer feedbackContainer) {
 		/**
 		 *  Start Process ----
 		 */
@@ -3343,19 +3344,19 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 				@Override
 				public void onCallback(Boolean result) {
 					if (result) {
-						executeButtonProcess0(wButton, startWOasking, table_ID, record_ID);
+						executeButtonProcess0(wButton, startWOasking, table_ID, record_ID, feedbackContainer);
 					}
 				}
 			});
 		}
 		else
 		{
-			executeButtonProcess0(wButton, startWOasking, table_ID, record_ID);
+			executeButtonProcess0(wButton, startWOasking, table_ID, record_ID, feedbackContainer);
 		}
 	}
 
 	private void executeButtonProcess0(final IProcessButton wButton,
-			boolean startWOasking, int table_ID, int record_ID) {
+			boolean startWOasking, int table_ID, int record_ID, FeedbackContainer feedbackContainer) {
 		// call form
 		MProcess pr = new MProcess(ctx, wButton.getProcess_ID(), null);
 		int adFormID = pr.getAD_Form_ID();
@@ -3367,15 +3368,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 			ProcessInfo pi = new ProcessInfo (title, wButton.getProcess_ID(), table_ID, record_ID);
 			pi.setAD_User_ID (Env.getAD_User_ID(ctx));
 			pi.setAD_Client_ID (Env.getAD_Client_ID(ctx));
-			IADTabpanel adtabPanel = null;
-			if (adTabbox.getSelectedGridTab().isQuickForm())
-			{
-				adtabPanel=this.getADTab().getSelectedTabpanel();
-			}
-			else
-			{
-				adtabPanel = findADTabpanel(wButton);
-			}
+			final IADTabpanel adtabPanel = findADTabpanel(wButton);
 			GridTab gridTab = null;
 			if (adtabPanel != null)
 				gridTab = adtabPanel.getGridTab();
@@ -3403,32 +3396,7 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		}
 		else
 		{
-			IADTabpanel adtabPanel = null;
-			if (adTabbox.getSelectedGridTab().isQuickForm())
-				adtabPanel = this.getADTab().getSelectedTabpanel();
-			else
-				adtabPanel = findADTabpanel(wButton);
-
-			ProcessInfo pi = new ProcessInfo("", wButton.getProcess_ID(), table_ID, record_ID);
-			if (adtabPanel != null && adtabPanel.isGridView() && adtabPanel.getGridTab() != null)
-			{
-				int[] indices = adtabPanel.getGridTab().getSelection();
-				if (indices.length > 0)
-				{
-					List<Integer> records = new ArrayList<Integer>();
-					for (int i = 0; i < indices.length; i++)
-					{
-						int keyID = adtabPanel.getGridTab().getKeyID(indices[i]);
-						if (keyID > 0)
-							records.add(keyID);
-					}
-
-					// IDEMPIERE-3998 Set multiple selected grid records into process info
-					pi.setRecord_IDs(records);
-				}
-			}
-
-			ProcessModalDialog dialog = new ProcessModalDialog(this, curWindowNo, pi, startWOasking);
+			ProcessModalDialog dialog = new ProcessModalDialog(this, curWindowNo, wButton.getProcess_ID(), table_ID, record_ID, startWOasking, feedbackContainer);
 
 			if (dialog.isValid())
 			{
@@ -3445,9 +3413,6 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 					LayoutUtils.openOverlappedWindow(getComponent(), dialog, "middle_center");
 				}
 				dialog.focus();
-			}
-			if (adTabbox.getSelectedGridTab().isQuickForm()) {
-				adTabbox.getSelectedGridTab().dataRefreshAll(false, false);
 			}
 			else
 			{

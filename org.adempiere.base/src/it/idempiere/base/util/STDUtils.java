@@ -348,7 +348,7 @@ public class STDUtils {
 	}
 
 	public static String buildSqlINClauseString(int[] vals) {
-		StringBuffer sb = new StringBuffer("(");
+		StringBuilder sb = new StringBuilder("(");
 
 		if (vals.length > 0) {
 			for (Object o : vals) {

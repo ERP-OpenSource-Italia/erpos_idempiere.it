@@ -50,7 +50,7 @@ public class BankRegister extends SvrProcess
 
 	
 	/**	Parameter Where Clause			*/
-	private StringBuffer		m_parameterWhere = new StringBuffer();
+	private StringBuilder		m_parameterWhere = new StringBuilder();
 	
 	/**	Start Time						*/
 	private long 				m_start = System.currentTimeMillis();

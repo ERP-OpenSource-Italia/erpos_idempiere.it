@@ -34,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.Vector;
 import java.util.logging.Level;
 
@@ -55,6 +56,7 @@ import org.adempiere.webui.component.ProcessInfoDialog;
 import org.adempiere.webui.component.WListItemRenderer;
 import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.desktop.IDesktop;
 import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.event.ValueChangeEvent;
@@ -78,6 +80,7 @@ import org.compiere.model.MInfoWindow;
 import org.compiere.model.MPInstance;
 import org.compiere.model.MProcess;
 import org.compiere.model.MRole;
+import org.compiere.model.MStatusLine;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
 import org.compiere.model.X_AD_CtxHelp;
@@ -88,7 +91,9 @@ import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
+import org.compiere.util.NamePair;
 import org.compiere.util.Trx;
+import org.compiere.util.TrxRunnable;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 import org.zkoss.zk.au.out.AuEcho;
@@ -123,6 +128,10 @@ import org.zkoss.zul.ext.Sortable;
  */
 public abstract class InfoPanel extends Window implements EventListener<Event>, WTableModelListener, Sortable<Object>, IHelpContext
 {
+	
+	private final static String INSERT_TSELECTION_IW = "INSERT INTO T_Selection_InfoWindow (AD_PINSTANCE_ID, T_SELECTION_ID, COLUMNNAME , VALUE_STRING, VALUE_NUMBER , VALUE_DATE ) VALUES(?,?,?,?,?,?) ";
+	private final static String UPDATE_TSELECTION_IW = "UPDATE T_Selection_InfoWindow SET VALUE_STRING = ?, VALUE_NUMBER = ?, VALUE_DATE = ? WHERE AD_PINSTANCE_ID = ? AND T_SELECTION_ID = ? AND COLUMNNAME = ?";
+	
 	protected static final String INFO_QUERY_TIME_OUT_ERROR = "InfoQueryTimeOutError";
 	/**
 	 * 
@@ -179,6 +188,14 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	 * {@link #syncSelectedAfterRequery()}
 	*/
 	protected boolean isRequeryByRunSuccessProcess = false;
+	
+	// F3P: persistent selection and edit support
+		protected int	editAD_Pinstance_ID = -1;
+		public static final String CTX_EDIT_AD_PINSTANCE_ID = "Edit_AD_PInstance_ID";
+		public static final String CTX_EDIT_AD_PINSTANCE_ID_Compat = "Edit_AD_Pinstance_ID"; // Old value with typo for compatibility
+		protected boolean isImmediateSaveSelection;
+		protected boolean hasImmediatePersistEdit = false;
+		public static final String CTX_SOURCE_AD_PINSTANCE_ID = "Source_AD_PInstance_ID";
 	
 	
     public static InfoPanel create (int WindowNo,
@@ -464,7 +481,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	private boolean m_useDatabasePaging = false;
 	private BusyDialog progressWindow;
 	// in case double click to item. this store clicked item (maybe it's un-select item)
-	private int m_lastSelectedIndex = -1;
+	public int m_lastSelectedIndex = -1;
 	protected GridField m_gridfield;
 
 	/**
@@ -2720,6 +2737,14 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		return pageSize;
 	}
 	
+	// F3P: has selection column ? (initialize selection of row)
+	
+		protected static final String SELECTED_COLUMN_NAME = "IsSelected";	
+		protected boolean hasPreSelectionColumn = false;
+		
+		// F3P: run via process info	
+		private ProcessInfo m_runViaProcessInfo = null;
+	
 	// F3P: run via process info
 	
 	public void setRunViaProcessInfo(ProcessInfo pi)
@@ -2763,7 +2788,78 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 					DB.executeUpdateEx("DELETE FROM T_Selection WHERE AD_Pinstance_ID = ?", params, null);
 			}
 		}
-	}	
+	}
+	
+	protected List<Object> appendTSelectionInfoWindowValueParams(Object data, List<Object> parameters)
+	{
+		if (data instanceof IDColumn)
+		{
+			IDColumn id = (IDColumn) data;
+			parameters.add(null);
+			parameters.add(id.getRecord_ID());
+			parameters.add(null);
+		}					
+		else if (data instanceof String)
+		{
+			parameters.add(data);
+			parameters.add(null);
+			parameters.add(null);
+		}
+		else if (data instanceof BigDecimal || data instanceof Integer || data instanceof Double)
+		{
+			parameters.add(null);
+			if(data instanceof Double)
+			{	
+				BigDecimal value = BigDecimal.valueOf((Double)data);
+				parameters.add(value);
+			}	
+			else	
+				parameters.add(data);
+			parameters.add(null);
+		}
+		else if (data instanceof Integer)
+		{
+			parameters.add(null);
+			parameters.add((Integer)data);
+			parameters.add(null);
+		}
+		else if (data instanceof Timestamp || data instanceof Date)
+		{
+			parameters.add(null);
+			parameters.add(null);
+			if(data instanceof Date)
+			{
+				Timestamp value = new Timestamp(((Date)data).getTime());
+				parameters.add(value);
+			}
+			else 
+				parameters.add(data);
+		}
+		else if(data instanceof KeyNamePair)
+		{
+			KeyNamePair knpData = (KeyNamePair)data;
+			
+			parameters.add(null);
+			parameters.add(knpData.getKey());
+			parameters.add(null);						
+		}
+		else if(data instanceof NamePair)
+		{
+			NamePair npData = (NamePair)data;
+			
+			parameters.add(npData.getID());
+			parameters.add(null);
+			parameters.add(null);						
+		}
+		else
+		{
+			parameters.add(data);
+			parameters.add(null);
+			parameters.add(null);
+		}
+		
+		return parameters;
+	} // appendTSelectionInfoWindowValueParams
 	
 	protected void createOrUpdateImmediateEditDB(final int recordID, final String columnName, final Object value)
 	{
@@ -2798,6 +2894,25 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		});
 	}
 	
+	// LS: status bar and info
+		public static final String CTX_AD_PINSTANCE_ID = "AD_Pinstance_ID";
+		
+		protected MStatusLine m_statusLine = null;
+		protected MStatusLine[] m_quickInfoLines = null;
+		protected int m_WindowNoStatusLine = -1;
+		protected String m_lastRenderedQuickInfo = null;
+		
+		// LS: refresh opening window on close
+		
+		protected boolean m_refreshParentOnClose = false;
+		
+		//LS on full refresh, keep focus near last selected row
+		protected int frf_lastSelectedRow = -1;
+		protected int frf_totSelectedRowsBeforeLast = -1;
+		protected int frf_totRows = -1;
+		protected int frf_totSelectedRows = -1;
+		protected boolean frf_active = false;
+	
 	protected void initStatusBarAndInfo()
 	{
 		if(m_infoWindowID > 0)
@@ -2814,6 +2929,13 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			}
 		}
 	}
+	
+	
+	/**
+	 * Row on main panel currently used to update subpanels
+	 */
+	protected int mainContentRowUsedInSubcontent = -1;
+	
 	
 	// F3P: fill context before running process 
 	
@@ -2835,7 +2957,6 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		int selectedRow = -1;
 		
 		// *** Context from main content		
-		
 		
 		if(mainContentRowUsedInSubcontent >= 0)
 			selectedRow = mainContentRowUsedInSubcontent;
@@ -3003,7 +3124,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			m_lastRenderedQuickInfo = lines.toString();
 		
 		IDesktop desktop = SessionManager.getAppDesktop();
-		desktop.updateHelpQuickInfo(m_lastRenderedQuickInfo);			
+		//desktop.updateHelpQuickInfo(m_lastRenderedQuickInfo);			
 	}	
 	
 }	//	Info

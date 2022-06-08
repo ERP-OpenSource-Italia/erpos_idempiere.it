@@ -39,27 +39,27 @@ public class UserRoleElementHandler extends AbstractElementHandler {
 		int userid =0;
 		int orgid =0;
 		
-		StringBuffer sqlB = null;
+		StringBuilder sqlB = null;
 		Attributes atts = element.attributes;
 		if (atts.getValue("username")!=null){
 			String name = atts.getValue("username");		
-			sqlB = new StringBuffer ("SELECT AD_User_ID FROM AD_User WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_User_ID FROM AD_User WHERE Name= ?");
 			userid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 		}
 		
 		if (atts.getValue("rolename")!=null){
 			String name = atts.getValue("rolename");		
-			sqlB = new StringBuffer ("SELECT AD_Role_ID FROM AD_Role WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_Role_ID FROM AD_Role WHERE Name= ?");
 			roleid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 		}
 		
 		if (atts.getValue("orgname")!=null){
 			String name = atts.getValue("orgname");		
-			sqlB = new StringBuffer ("SELECT AD_Org_ID FROM AD_Org WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_Org_ID FROM AD_Org WHERE Name= ?");
 			orgid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 		}
 		
-		sqlB = new StringBuffer ("SELECT count(*) FROM AD_User_Roles WHERE AD_User_ID = ? and AD_Role_ID = ?");		
+		sqlB = new StringBuilder ("SELECT count(*) FROM AD_User_Roles WHERE AD_User_ID = ? and AD_Role_ID = ?");		
 		int count = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),userid,roleid);
 		
 		@SuppressWarnings("unused")
@@ -69,7 +69,7 @@ public class UserRoleElementHandler extends AbstractElementHandler {
 		if (count>0){
 			//AD_Backup_ID = copyRecord("AD_Role",m_Role);
 			Object_Status = "Update";			
-			sqlB = new StringBuffer ("UPDATE AD_User_Roles ")
+			sqlB = new StringBuilder ("UPDATE AD_User_Roles ")
 					.append( "SET isActive = '" + atts.getValue("isActive")+"'" )
 					.append( " WHERE AD_User_ID = " + userid )
 					.append( " and AD_Role_ID = " + roleid )
@@ -82,7 +82,7 @@ public class UserRoleElementHandler extends AbstractElementHandler {
 		else{
 			Object_Status = "New";
 			AD_Backup_ID =0;
-			sqlB = new StringBuffer ("INSERT INTO AD_User_Roles") 
+			sqlB = new StringBuilder ("INSERT INTO AD_User_Roles") 
 					.append( "(AD_Client_ID,  CreatedBy, UpdatedBy, " ) 
 					.append( "AD_User_ID, AD_Role_ID, AD_Org_ID, isActive) " )
 					.append( "VALUES(" ) 

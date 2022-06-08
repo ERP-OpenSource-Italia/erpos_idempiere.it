@@ -472,4 +472,15 @@ public interface I_A_Asset_Group_Acct
 
 	/** Get Use Life - Years (fiscal)	  */
 	public int getUseLifeYears_F();
+	
+	 /** Column name A_Depreciation_Table_Hdr_F_ID */
+    public static final String COLUMNNAME_A_Depreciation_Table_Hdr_F_ID = "A_Depreciation_Table_Hdr_F_ID";
+
+	/** Set Depreciation Table Fiscal	  */
+	public void setA_Depreciation_Table_Hdr_F_ID (int A_Depreciation_Table_Hdr_F_ID);
+
+	/** Get Depreciation Table Fiscal	  */
+	public int getA_Depreciation_Table_Hdr_F_ID();
+
+	public org.compiere.model.I_A_Depreciation_Table_Header getA_Depreciation_Table_Hdr_F() throws RuntimeException;
 }

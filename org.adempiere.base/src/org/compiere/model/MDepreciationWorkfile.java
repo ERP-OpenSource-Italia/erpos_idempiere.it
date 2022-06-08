@@ -245,7 +245,7 @@ public class MDepreciationWorkfile extends X_A_Depreciation_Workfile
 		// Copy UseLife values from asset group to workfile
 		if (assetgrpacct == null)
 		{
-			assetgrpacct = MAssetGroupAcct.forA_Asset_Group_ID(asset.getCtx(), asset.getA_Asset_Group_ID(), postingType);
+			assetgrpacct = MAssetGroupAcct.forA_Asset_Group_ID(asset.getCtx(), asset.getA_Asset_Group_ID(), postingType).get(0);
 		}
 		UseLifeImpl.copyValues(this, assetgrpacct);
 		

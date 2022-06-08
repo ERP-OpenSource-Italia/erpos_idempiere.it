@@ -34,6 +34,8 @@ public class MAssetType extends X_A_Asset_Type implements ImmutablePOSupport
 		public boolean isOwned();
 		/** Get Is Depreciated */
 		public boolean isDepreciated();
+		/** Get Is Fully Depreciated */
+		public boolean isFullyDepreciated(); // F3P: added for compatibility check
 	};
 	
 	/**		Static Cache: A_Asset_Type.A_Asset_Type_ID-> MAssetType					*/

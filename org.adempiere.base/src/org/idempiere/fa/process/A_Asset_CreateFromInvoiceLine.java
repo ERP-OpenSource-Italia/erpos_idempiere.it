@@ -411,7 +411,7 @@ public class A_Asset_CreateFromInvoiceLine extends SvrProcess {
 			charge.setDescription(acct.getDescription());
 			charge.setName(acct.getAccount().getName());
 			charge.saveEx();
-		    StringBuffer sql2 = new StringBuffer("UPDATE C_Charge_Acct ");
+		    StringBuilder sql2 = new StringBuilder("UPDATE C_Charge_Acct ");
 		    sql2.append("SET CH_Expense_Acct=").append(acct.getC_ValidCombination_ID());
 		        sql2.append(", CH_Revenue_Acct=").append(acct.getC_ValidCombination_ID());
 		        sql2.append(" WHERE C_Charge_ID=").append(charge.getC_Charge_ID());

@@ -64,7 +64,7 @@ public class Constraint {
 	 * @return alter table statement
 	 */
 	public String getAlterTableString() {
-		StringBuffer buffer = new StringBuffer();
+		StringBuilder buffer = new StringBuilder();
 
 		buffer = buffer.append("ALTER TABLE ").append(tableName);
 		buffer = buffer.append(" ADD ");
@@ -112,7 +112,7 @@ public class Constraint {
 	 * @return
 	 */
 	public String getDropString() {
-		StringBuffer buffer = new StringBuffer();
+		StringBuilder buffer = new StringBuilder();
 		buffer = buffer.append("ALTER TABLE ").append(tableName);
 		buffer = buffer.append(" DROP CONSTRAINT ").append(name).append(";");
 		return buffer.toString();

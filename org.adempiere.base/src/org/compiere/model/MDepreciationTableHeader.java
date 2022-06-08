@@ -90,5 +90,17 @@ public class MDepreciationTableHeader extends X_A_Depreciation_Table_Header
 		return retDetail;
 	}
 	
-
+	 /** Column name F3P_Depreciation_Period */
+    public static final String COLUMNNAME_F3P_Depreciation_Period = "F3P_Depreciation_Period";
+	
+	/** Get Depreciation Period.
+	@return Depreciation Period for Annual Depreciation
+	 */
+	public int getF3P_Depreciation_Period () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_F3P_Depreciation_Period);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
 }

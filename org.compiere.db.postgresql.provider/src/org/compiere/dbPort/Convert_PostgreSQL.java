@@ -286,7 +286,7 @@ public class Convert_PostgreSQL extends Convert_SQL92 {
 		Matcher m = p.matcher(sqlStatement);
 		
 		TreeMap<String, String> convertMap = (TreeMap<String, String>)getConvertMap(); 
-		StringBuffer retValue = new StringBuffer(sqlStatement.length());
+		StringBuilder retValue = new StringBuilder(sqlStatement.length());
 		while (m.find()) {
 			String arg1 = m.group(gidx_arg1);
 			String arg2 = m.group(gidx_arg2);

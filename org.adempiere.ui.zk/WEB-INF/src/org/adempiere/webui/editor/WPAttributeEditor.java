@@ -286,7 +286,7 @@ public class WPAttributeEditor extends WEditor implements ContextMenuListener
 		**/		
 	}   //  cmd_file
 
-	private void processChanges(int oldValueInt, int M_AttributeSetInstance_ID) {
+	protected void processChanges(int oldValueInt, int M_AttributeSetInstance_ID) {
 		if (log.isLoggable(Level.FINEST)) log.finest("Changed M_AttributeSetInstance_ID=" + M_AttributeSetInstance_ID);
 		m_value = new Object();				//	force re-query display
 		if (M_AttributeSetInstance_ID == 0)
@@ -342,4 +342,5 @@ public class WPAttributeEditor extends WEditor implements ContextMenuListener
 		super.setTableEditor(b);
 		getComponent().setTableEditorMode(b);
 	}
+	
 }

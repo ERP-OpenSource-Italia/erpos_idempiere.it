@@ -14,7 +14,7 @@ import org.openqa.selenium.firefox.FirefoxDriver;
 public class LoginTest {
 	private WebDriver driver;
 	private String baseUrl;
-	private StringBuffer verificationErrors = new StringBuffer();
+	private StringBuilder verificationErrors = new StringBuilder();
 	@Before
 	public void setUp() throws Exception {
 		driver = new FirefoxDriver();

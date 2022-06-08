@@ -117,6 +117,7 @@ public class DocLine
 	private int					m_C_ConversionType_ID = -1;
 	/** Period						*/
 	private int					m_C_Period_ID = -1;
+	private BigDecimal 			m_currencyRate = null;
 
 	/**
 	 *  Get Currency
@@ -1187,5 +1188,15 @@ public class DocLine
 			.append("]");
 		return sb.toString();
 	}	//	toString
+	
+	public BigDecimal getCurrencyRate()
+	{
+		return m_currencyRate;
+	}
+	
+	protected void setCurrencyRate(BigDecimal currencyRate) 
+	{
+		m_currencyRate = currencyRate;
+	}
 
 }	//	DocumentLine

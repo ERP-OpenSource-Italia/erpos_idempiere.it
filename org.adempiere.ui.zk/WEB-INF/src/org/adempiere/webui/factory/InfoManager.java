@@ -22,8 +22,11 @@ import org.adempiere.webui.info.InfoWindow;
 import org.adempiere.webui.panel.InfoPanel;
 import org.compiere.model.GridField;
 import org.compiere.model.Lookup;
+import org.compiere.model.MInfoWindow;
 import org.compiere.model.MLookup;
+import org.compiere.model.MTable;
 import org.compiere.util.CCache;
+import org.compiere.util.Env;
 import org.osgi.framework.Constants;
 
 /**
@@ -191,6 +194,25 @@ public class InfoManager
 				if (info != null)
 					break;
 			}
+		}
+        //
+        return info;
+    }
+	
+	public static InfoPanel create (int WindowNo, int AD_InfoWindow_ID)
+    {
+		InfoPanel info = null;
+        
+        MInfoWindow infoWindow = new MInfoWindow(Env.getCtx(), AD_InfoWindow_ID, (String)null);
+		String tableName = MTable.getTableName(Env.getCtx(), infoWindow.getAD_Table_ID());
+		String keyColumn = tableName + "_ID";
+
+		List<IInfoFactory> factoryList = Service.locator().list(IInfoFactory.class).getServices();
+		for(IInfoFactory factory : factoryList)
+		{
+			info = factory.create(WindowNo, tableName, keyColumn, null, false, null, AD_InfoWindow_ID, false);
+			if (info != null)
+				break;
 		}
         //
         return info;

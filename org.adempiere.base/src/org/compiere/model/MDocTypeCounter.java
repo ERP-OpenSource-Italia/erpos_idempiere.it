@@ -47,7 +47,7 @@ public class MDocTypeCounter extends X_C_DocTypeCounter implements ImmutablePOSu
 	 *	@param C_DocType_ID base document
 	 *	@return counter document C_DocType_ID or 0 or -1 if no counter doc
 	 */
-	public static int getCounterDocType_ID (Properties ctx, int C_DocType_ID)
+	public static int getCounterDocType_ID (Properties ctx, int C_DocType_ID,int AD_Org_ID)
 	{
 		//	Direct Relationship
 		MDocTypeCounter dtCounter = getCounterDocType (ctx, C_DocType_ID);
@@ -66,7 +66,7 @@ public class MDocTypeCounter extends X_C_DocTypeCounter implements ImmutablePOSu
 		String cDocBaseType = getCounterDocBaseType(dt.getDocBaseType());
 		if (cDocBaseType == null)
 			return 0;
-		MDocType[] counters = MDocType.getOfDocBaseType(ctx, cDocBaseType);
+		MDocType[] counters = MDocType.getOfDocBaseType(ctx, cDocBaseType,AD_Org_ID);
 		for (int i = 0; i < counters.length; i++)
 		{
 			MDocType counter = counters[i];
@@ -96,6 +96,62 @@ public class MDocTypeCounter extends X_C_DocTypeCounter implements ImmutablePOSu
 	
 	/**
 	 * 	Get (first) valid Counter document for document type
+	 *	@param ctx context
+	 *	@param C_DocType_ID base document
+	 *	@return counter document (may be invalid) or null
+	 */
+	public static MDocTypeCounter getCounterDocType (Properties ctx, int C_DocType_ID, int AD_Org_ID)  // F3P: added check for org
+	{
+		Integer key = Integer.valueOf(C_DocType_ID);
+		MDocTypeCounter retValue = (MDocTypeCounter)s_counter.get(key);
+		if (retValue != null)
+			return retValue;
+		
+		//	Direct Relationship
+		MDocTypeCounter temp = null;
+		String sql = "SELECT * FROM C_DocTypeCounter WHERE IsActive = 'Y' and C_DocType_ID=? AND AD_Org_ID IN (0,?) ";
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		try
+		{
+			pstmt = DB.prepareStatement (sql, null);
+			pstmt.setInt (1, C_DocType_ID);
+			pstmt.setInt (2, AD_Org_ID);  // F3P: added check for org
+
+			rs = pstmt.executeQuery ();
+			while (rs.next () && retValue == null)
+			{
+				retValue = new MDocTypeCounter (Env.getCtx(), rs, null);
+				if (!retValue.isCreateCounter() || !retValue.isValid())
+				{
+					temp = retValue; 
+					retValue = null;
+				}
+				else
+				{
+					s_counter.put(key, retValue);
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			s_log.log(Level.SEVERE, "getCounterDocType", e);
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null;
+			pstmt = null;
+		}
+		if (retValue != null)	//	valid
+			return retValue;
+		if (temp != null)		//	invalid
+			return temp;
+		return null;			//	nothing found
+	}	//	getCounterDocType
+	
+	/**
+	 * 	Get (first) valid Counter document for document type
 	 *	@param C_DocType_ID base document
 	 *	@return counter document (may be invalid) or null
 	 */
@@ -108,7 +164,7 @@ public class MDocTypeCounter extends X_C_DocTypeCounter implements ImmutablePOSu
 		
 		//	Direct Relationship
 		MDocTypeCounter temp = null;
-		String sql = "SELECT * FROM C_DocTypeCounter WHERE IsActive = 'Y' and C_DocType_ID=?";
+		String sql = "SELECT * FROM C_DocTypeCounter WHERE IsActive = 'Y' and C_DocType_ID=? ";
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try

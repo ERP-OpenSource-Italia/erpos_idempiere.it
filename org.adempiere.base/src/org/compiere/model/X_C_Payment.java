@@ -81,6 +81,9 @@ public class X_C_Payment extends PO implements I_C_Payment, I_Persistent
         } */
     }
 
+    /** X */
+	public static final String TRXTYPE_X = "X";
+	
     /** Load Constructor */
     public X_C_Payment (Properties ctx, ResultSet rs, String trxName)
     {
@@ -939,6 +942,9 @@ public class X_C_Payment extends PO implements I_C_Payment, I_Persistent
 	public static final String CREDITCARDTYPE_Discover = "N";
 	/** Purchase Card = P */
 	public static final String CREDITCARDTYPE_PurchaseCard = "P";
+	/** Riba = R */
+	public static final String TENDERTYPE_Riba = "R";
+	
 	/** Set Credit Card.
 		@param CreditCardType 
 		Credit Card (Visa, MC, AmEx)

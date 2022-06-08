@@ -1069,7 +1069,7 @@ queued-job-count = 0  (class javax.print.attribute.standard.QueuedJobCount)
 			for (int row = -1; row < m_printData.getRowCount(); row++)
 			{
 				printColIndex = -1;
-				StringBuffer sb = new StringBuffer();
+				StringBuilder sb = new StringBuilder();
 				if (row != -1)
 					m_printData.setRowIndex(row);
 
@@ -1142,11 +1142,11 @@ queued-job-count = 0  (class javax.print.attribute.standard.QueuedJobCount)
 	/**
 	 * 	Add Content to CSV string.
 	 *  Encapsulate/mask content in " if required
-	 * 	@param sb StringBuffer to add to
+	 * 	@param sb StringBuilder to add to
 	 * 	@param delimiter delimiter
 	 * 	@param content column value
 	 */
-	private void createCSVvalue (StringBuffer sb, char delimiter, String content)
+	private void createCSVvalue (StringBuilder sb, char delimiter, String content)
 	{
 		//	nothing to add
 		if (content == null || content.length() == 0)

@@ -23,14 +23,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for AD_UserDef_Tab
  *  @author iDempiere (generated) 
- *  @version Release 8.2 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20201220L;
+	private static final long serialVersionUID = 20190106L;
 
     /** Standard Constructor */
     public X_AD_UserDef_Tab (Properties ctx, int AD_UserDef_Tab_ID, String trxName)
@@ -41,7 +41,12 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 			setAD_Tab_ID (0);
 			setAD_UserDef_Tab_ID (0);
 			setAD_UserDef_Win_ID (0);
-			setIsMultiRowOnly (false);
+			setIsElaborationEnable (false);
+// N
+			setIsTranslationEnable (false);
+// N
+			setIsViewEnable (false);
+// N
         } */
     }
 
@@ -68,10 +73,35 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 
     public String toString()
     {
-      StringBuilder sb = new StringBuilder ("X_AD_UserDef_Tab[")
-        .append(get_ID()).append(",Name=").append(getName()).append("]");
+      StringBuffer sb = new StringBuffer ("X_AD_UserDef_Tab[")
+        .append(get_ID()).append("]");
       return sb.toString();
     }
+
+	public org.compiere.model.I_AD_CtxHelp getAD_CtxHelp() throws RuntimeException
+    {
+		return (org.compiere.model.I_AD_CtxHelp)MTable.get(getCtx(), org.compiere.model.I_AD_CtxHelp.Table_Name)
+			.getPO(getAD_CtxHelp_ID(), get_TrxName());	}
+
+	/** Set Context Help.
+		@param AD_CtxHelp_ID Context Help	  */
+	public void setAD_CtxHelp_ID (int AD_CtxHelp_ID)
+	{
+		if (AD_CtxHelp_ID < 1) 
+			set_Value (COLUMNNAME_AD_CtxHelp_ID, null);
+		else 
+			set_Value (COLUMNNAME_AD_CtxHelp_ID, Integer.valueOf(AD_CtxHelp_ID));
+	}
+
+	/** Get Context Help.
+		@return Context Help	  */
+	public int getAD_CtxHelp_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_AD_CtxHelp_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
 
 	public org.compiere.model.I_AD_Process getAD_Process() throws RuntimeException
     {
@@ -196,6 +226,23 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 		return ii.intValue();
 	}
 
+	/** Set Commit Warning.
+		@param CommitWarning 
+		Warning displayed when saving
+	  */
+	public void setCommitWarning (String CommitWarning)
+	{
+		set_Value (COLUMNNAME_CommitWarning, CommitWarning);
+	}
+
+	/** Get Commit Warning.
+		@return Warning displayed when saving
+	  */
+	public String getCommitWarning () 
+	{
+		return (String)get_Value(COLUMNNAME_CommitWarning);
+	}
+
 	/** Set Description.
 		@param Description 
 		Optional short description of the record
@@ -247,66 +294,21 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 		return (String)get_Value(COLUMNNAME_Help);
 	}
 
-	/** IsAllowAdvancedLookup AD_Reference_ID=319 */
-	public static final int ISALLOWADVANCEDLOOKUP_AD_Reference_ID=319;
-	/** Yes = Y */
-	public static final String ISALLOWADVANCEDLOOKUP_Yes = "Y";
-	/** No = N */
-	public static final String ISALLOWADVANCEDLOOKUP_No = "N";
-	/** Set Allow Advanced Lookup.
-		@param IsAllowAdvancedLookup Allow Advanced Lookup	  */
-	public void setIsAllowAdvancedLookup (String IsAllowAdvancedLookup)
-	{
-
-		set_Value (COLUMNNAME_IsAllowAdvancedLookup, IsAllowAdvancedLookup);
-	}
-
-	/** Get Allow Advanced Lookup.
-		@return Allow Advanced Lookup	  */
-	public String getIsAllowAdvancedLookup () 
-	{
-		return (String)get_Value(COLUMNNAME_IsAllowAdvancedLookup);
-	}
-
-	/** IsLookupOnlySelection AD_Reference_ID=319 */
-	public static final int ISLOOKUPONLYSELECTION_AD_Reference_ID=319;
-	/** Yes = Y */
-	public static final String ISLOOKUPONLYSELECTION_Yes = "Y";
-	/** No = N */
-	public static final String ISLOOKUPONLYSELECTION_No = "N";
-	/** Set Lookup Only Selection Columns.
-		@param IsLookupOnlySelection 
-		When defined to true Lookup panel will display only selection columns. Default to false.
+	/** Set Manage Elaboration Fields.
+		@param IsElaborationEnable 
+		If selected fields used for elaboration are overwritten
 	  */
-	public void setIsLookupOnlySelection (String IsLookupOnlySelection)
+	public void setIsElaborationEnable (boolean IsElaborationEnable)
 	{
-
-		set_Value (COLUMNNAME_IsLookupOnlySelection, IsLookupOnlySelection);
+		set_Value (COLUMNNAME_IsElaborationEnable, Boolean.valueOf(IsElaborationEnable));
 	}
 
-	/** Get Lookup Only Selection Columns.
-		@return When defined to true Lookup panel will display only selection columns. Default to false.
+	/** Get Manage Elaboration Fields.
+		@return If selected fields used for elaboration are overwritten
 	  */
-	public String getIsLookupOnlySelection () 
+	public boolean isElaborationEnable () 
 	{
-		return (String)get_Value(COLUMNNAME_IsLookupOnlySelection);
-	}
-
-	/** Set Multi Row Only.
-		@param IsMultiRowOnly 
-		This applies to Multi-Row view only
-	  */
-	public void setIsMultiRowOnly (boolean IsMultiRowOnly)
-	{
-		set_Value (COLUMNNAME_IsMultiRowOnly, Boolean.valueOf(IsMultiRowOnly));
-	}
-
-	/** Get Multi Row Only.
-		@return This applies to Multi-Row view only
-	  */
-	public boolean isMultiRowOnly () 
-	{
-		Object oo = get_Value(COLUMNNAME_IsMultiRowOnly);
+		Object oo = get_Value(COLUMNNAME_IsElaborationEnable);
 		if (oo != null) 
 		{
 			 if (oo instanceof Boolean) 
@@ -314,6 +316,54 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 			return "Y".equals(oo);
 		}
 		return false;
+	}
+
+	/** IsInsertRecord AD_Reference_ID=319 */
+	public static final int ISINSERTRECORD_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISINSERTRECORD_Yes = "Y";
+	/** No = N */
+	public static final String ISINSERTRECORD_No = "N";
+	/** Set Insert Record.
+		@param IsInsertRecord 
+		The user can insert a new Record
+	  */
+	public void setIsInsertRecord (String IsInsertRecord)
+	{
+
+		set_Value (COLUMNNAME_IsInsertRecord, IsInsertRecord);
+	}
+
+	/** Get Insert Record.
+		@return The user can insert a new Record
+	  */
+	public String getIsInsertRecord () 
+	{
+		return (String)get_Value(COLUMNNAME_IsInsertRecord);
+	}
+
+	/** IsMultiRowOnly AD_Reference_ID=319 */
+	public static final int ISMULTIROWONLY_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISMULTIROWONLY_Yes = "Y";
+	/** No = N */
+	public static final String ISMULTIROWONLY_No = "N";
+	/** Set Multi Row Only.
+		@param IsMultiRowOnly 
+		This applies to Multi-Row view only
+	  */
+	public void setIsMultiRowOnly (String IsMultiRowOnly)
+	{
+
+		set_Value (COLUMNNAME_IsMultiRowOnly, IsMultiRowOnly);
+	}
+
+	/** Get Multi Row Only.
+		@return This applies to Multi-Row view only
+	  */
+	public String getIsMultiRowOnly () 
+	{
+		return (String)get_Value(COLUMNNAME_IsMultiRowOnly);
 	}
 
 	/** IsReadOnly AD_Reference_ID=319 */
@@ -337,7 +387,12 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 	  */
 	public String getIsReadOnly () 
 	{
-		return (String)get_Value(COLUMNNAME_IsReadOnly);
+		Object val = get_Value(COLUMNNAME_IsReadOnly);
+		
+		if(val instanceof Boolean)
+			return (boolean) val ? "Y" : "N";
+		else
+			return (String)get_Value(COLUMNNAME_IsReadOnly);
 	}
 
 	/** IsSingleRow AD_Reference_ID=319 */
@@ -361,7 +416,61 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 	  */
 	public String getIsSingleRow () 
 	{
-		return (String)get_Value(COLUMNNAME_IsSingleRow);
+		Object val = get_Value(COLUMNNAME_IsSingleRow);
+		
+		if(val instanceof Boolean)
+			return (boolean) val ? "Y" : "N";
+		else
+			return
+					(String)get_Value(COLUMNNAME_IsSingleRow);
+	}
+
+	/** Set Manage Descriptive Fields.
+		@param IsTranslationEnable 
+		If selected fiels name, description and help can be overwritten
+	  */
+	public void setIsTranslationEnable (boolean IsTranslationEnable)
+	{
+		set_Value (COLUMNNAME_IsTranslationEnable, Boolean.valueOf(IsTranslationEnable));
+	}
+
+	/** Get Manage Descriptive Fields.
+		@return If selected fiels name, description and help can be overwritten
+	  */
+	public boolean isTranslationEnable () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsTranslationEnable);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Manage Visualization Fields.
+		@param IsViewEnable 
+		If selected fields used for visualization e window design are overwritten
+	  */
+	public void setIsViewEnable (boolean IsViewEnable)
+	{
+		set_Value (COLUMNNAME_IsViewEnable, Boolean.valueOf(IsViewEnable));
+	}
+
+	/** Get Manage Visualization Fields.
+		@return If selected fields used for visualization e window design are overwritten
+	  */
+	public boolean isViewEnable () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsViewEnable);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
 	}
 
 	/** Set Name.
@@ -415,26 +524,6 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 		return (String)get_Value(COLUMNNAME_ReadOnlyLogic);
 	}
 
-	/** Set Sequence.
-		@param SeqNo 
-		Method of ordering records; lowest number comes first
-	  */
-	public void setSeqNo (int SeqNo)
-	{
-		set_Value (COLUMNNAME_SeqNo, Integer.valueOf(SeqNo));
-	}
-
-	/** Get Sequence.
-		@return Method of ordering records; lowest number comes first
-	  */
-	public int getSeqNo () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_SeqNo);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
 	/** Set Sql WHERE.
 		@param WhereClause 
 		Fully qualified SQL WHERE clause
@@ -450,5 +539,50 @@ public class X_AD_UserDef_Tab extends PO implements I_AD_UserDef_Tab, I_Persiste
 	public String getWhereClause () 
 	{
 		return (String)get_Value(COLUMNNAME_WhereClause);
+	}
+	
+	/** IsLookupOnlySelection AD_Reference_ID=319 */
+	public static final int ISLOOKUPONLYSELECTION_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISLOOKUPONLYSELECTION_Yes = "Y";
+	/** No = N */
+	public static final String ISLOOKUPONLYSELECTION_No = "N";
+	/** Set Lookup Only Selection Columns.
+		@param IsLookupOnlySelection 
+		When defined to true Lookup panel will display only selection columns. Default to false.
+	  */
+	public void setIsLookupOnlySelection (String IsLookupOnlySelection)
+	{
+
+		set_Value (COLUMNNAME_IsLookupOnlySelection, IsLookupOnlySelection);
+	}
+
+	/** Get Lookup Only Selection Columns.
+		@return When defined to true Lookup panel will display only selection columns. Default to false.
+	  */
+	public String getIsLookupOnlySelection () 
+	{
+		return (String)get_Value(COLUMNNAME_IsLookupOnlySelection);
+	}
+	
+	/** IsAllowAdvancedLookup AD_Reference_ID=319 */
+	public static final int ISALLOWADVANCEDLOOKUP_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISALLOWADVANCEDLOOKUP_Yes = "Y";
+	/** No = N */
+	public static final String ISALLOWADVANCEDLOOKUP_No = "N";
+	/** Set Allow Advanced Lookup.
+		@param IsAllowAdvancedLookup Allow Advanced Lookup	  */
+	public void setIsAllowAdvancedLookup (String IsAllowAdvancedLookup)
+	{
+
+		set_Value (COLUMNNAME_IsAllowAdvancedLookup, IsAllowAdvancedLookup);
+	}
+
+	/** Get Allow Advanced Lookup.
+		@return Allow Advanced Lookup	  */
+	public String getIsAllowAdvancedLookup () 
+	{
+		return (String)get_Value(COLUMNNAME_IsAllowAdvancedLookup);
 	}
 }

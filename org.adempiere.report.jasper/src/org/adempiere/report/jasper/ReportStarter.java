@@ -28,6 +28,9 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -47,6 +50,7 @@ import javax.print.attribute.PrintRequestAttributeSet;
 import javax.print.attribute.standard.Copies;
 import javax.print.attribute.standard.JobName;
 
+import org.adempiere.base.IServiceReferenceHolder;
 import org.adempiere.base.Service;
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.DBException;
@@ -71,6 +75,7 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Ini;
 import org.compiere.util.Language;
+import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
 import org.compiere.utils.DigestOfFile;
@@ -98,6 +103,7 @@ import net.sf.jasperreports.engine.export.JRPrintServiceExporter;
 import net.sf.jasperreports.engine.export.JRTextExporter;
 import net.sf.jasperreports.engine.export.JRXlsExporter;
 import net.sf.jasperreports.engine.export.JRXmlExporter;
+import net.sf.jasperreports.engine.export.ooxml.JRXlsxExporter;
 import net.sf.jasperreports.engine.fill.JRBaseFiller;
 import net.sf.jasperreports.engine.fill.JRFiller;
 import net.sf.jasperreports.engine.fill.JRSwapFileVirtualizer;
@@ -119,6 +125,7 @@ import net.sf.jasperreports.export.SimplePrintServiceExporterConfiguration;
 import net.sf.jasperreports.export.SimpleTextExporterConfiguration;
 import net.sf.jasperreports.export.SimpleWriterExporterOutput;
 import net.sf.jasperreports.export.SimpleXlsReportConfiguration;
+import net.sf.jasperreports.export.SimpleXlsxReportConfiguration;
 import net.sf.jasperreports.export.SimpleXmlExporterOutput;
 
 /**
@@ -264,7 +271,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
 		return subreportsTemp;
 	}
 
-    /**
+	/**
      * @author rlemeill
      * @param reportLocation http string url ex: http://adempiereserver.domain.com/webApp/standalone.jrxml
      * @return downloaded File (or already existing one)
@@ -279,59 +286,72 @@ public class ReportStarter implements ProcessCall, ClientProcess
 
     		String[] tmps = reportLocation.split("/");
     		String cleanFile = tmps[tmps.length-1];
-    		String localFile = System.getProperty("java.io.tmpdir") + System.getProperty("file.separator") + cleanFile;
-    		String downloadedLocalFile = System.getProperty("java.io.tmpdir") + System.getProperty("file.separator")+"TMP" + cleanFile;
+    		String localFile = getLocalDownloadFolder() + cleanFile;
+    		String downloadedLocalFile = getLocalDownloadFolder() + "TMP_" + cleanFile;
 
     		reportFile = new File(localFile);
-
-
     		if (reportFile.exists())
-    		{
-    			String localMD5hash = DigestOfFile.GetLocalMD5Hash(reportFile);
-    			String remoteMD5Hash = getRemoteMD5(reportLocation);
-    			if (log.isLoggable(Level.INFO)) log.info("MD5 for local file is "+localMD5hash );
-    			if ( remoteMD5Hash != null)
+    		{    			
+    			String remoteMD5Hash = getRemoteMD5(reportLocation);    			
+    			if (!Util.isEmpty(remoteMD5Hash, true))
     			{
-    				if (localMD5hash.equals(remoteMD5Hash))
+    				String localMD5hash = DigestOfFile.getMD5Hash(reportFile);
+    				if (log.isLoggable(Level.INFO)) log.info("MD5 for local file is "+localMD5hash );
+    				if (localMD5hash.equals(remoteMD5Hash.trim()))
     				{
-    					if (log.isLoggable(Level.INFO)) log.info(" no need to download: local report is up-to-date");
+    					if (log.isLoggable(Level.INFO)) log.info("MD5 match: local report file is up-to-date");
+    					return reportFile;
     				}
     				else
     				{
-    					if (log.isLoggable(Level.INFO)) log.info(" report on server is different that local one, download and replace");
+    					if (log.isLoggable(Level.INFO)) log.info("MD5 is different, download and replace");
     					downloadedFile = getRemoteFile(reportLocation, downloadedLocalFile);
-    					reportFile.delete();
-    					downloadedFile.renameTo(reportFile);
+    					if (downloadedFile != null)
+    					{
+    						Path to = reportFile.toPath();
+    						Path from = downloadedFile.toPath();
+    						Files.copy(from, to, StandardCopyOption.REPLACE_EXISTING);
+    						return to.toFile();
+    					}
+    					else
+    					{
+    						return null;
+    					}
     				}
     			}
     			else
     			{
-    				log.warning("Remote hashing is not available did you deployed webApp.ear?");
     				downloadedFile = getRemoteFile(reportLocation, downloadedLocalFile);
-    				//    				compare hash of existing and downloaded
-    				if ( DigestOfFile.md5localHashCompare(reportFile,downloadedFile) )
+    				if (downloadedFile == null)
+    					return null;
+    				
+    				// compare hash of existing and downloaded
+    				if ( DigestOfFile.md5HashCompare(reportFile,downloadedFile) )
     				{
     					//nothing file are identical
-    					if (log.isLoggable(Level.INFO)) log.info(" no need to replace your existing report");
+    					if (log.isLoggable(Level.INFO)) log.info("MD5 match: local report file is up-to-date");
+    					return reportFile;
     				}
     				else
     				{
-    					if (log.isLoggable(Level.INFO)) log.info(" report on server is different that local one, replacing");
-    					reportFile.delete();
-    					downloadedFile.renameTo(reportFile);
+    					if (log.isLoggable(Level.INFO)) log.info("MD5 is different, replace with downloaded file");
+    					Path to = reportFile.toPath();
+						Path from = downloadedFile.toPath();
+						Files.copy(from, to, StandardCopyOption.REPLACE_EXISTING);
+						return to.toFile();
     				}
     			}
     		}
     		else
     		{
     			reportFile = getRemoteFile(reportLocation,localFile);
+    			return reportFile;
     		}
 
     	}
     	catch (Exception e) {
 			throw new AdempiereException("Unknown exception: "+ e.getLocalizedMessage());
-    	}
-    	return reportFile;
+    	}    	
     }
 
     private String getRemoteMD5(String reportLocation) {
@@ -521,7 +541,7 @@ public class ReportStarter implements ProcessCall, ClientProcess
         	params.put("RESOURCE_DIR", resourcePath);
         }
 
-        if (jasperReport != null && pi.getTable_ID() > 0 && Record_ID <= 0 && pi.getRecord_IDs() != null && pi.getRecord_IDs().length > 0)
+        if (jasperReport != null && pi.getTable_ID() > 0 && Record_ID <= 0 && pi.getRecord_IDs() != null && pi.getRecord_IDs().size()> 0)
         {
         	try
             {        		
@@ -1346,11 +1366,11 @@ public class ReportStarter implements ProcessCall, ClientProcess
 	 * @return File
 	 */
 	private File getAttachmentEntryFile(MAttachmentEntry entry) {
-		String localFile = System.getProperty("java.io.tmpdir") + System.getProperty("file.separator") + entry.getName();
-		String downloadedLocalFile = System.getProperty("java.io.tmpdir") + System.getProperty("file.separator")+"TMP" + entry.getName();
+		String localFile = getLocalDownloadFolder() + entry.getName();
+		String downloadedLocalFile = getLocalDownloadFolder()+"TMP_" + entry.getName();
 		File reportFile = new File(localFile);
 		if (reportFile.exists()) {
-			String localMD5hash = DigestOfFile.GetLocalMD5Hash(reportFile);
+			String localMD5hash = DigestOfFile.getMD5Hash(reportFile);
 			String entryMD5hash = DigestOfFile.getMD5Hash(entry.getData());
 			if (localMD5hash.equals(entryMD5hash))
 			{

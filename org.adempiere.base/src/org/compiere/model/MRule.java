@@ -22,6 +22,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 
+import javax.script.Bindings;
 import javax.script.ScriptEngine;
 
 import org.adempiere.base.Core;
@@ -282,6 +283,38 @@ public class MRule extends X_AD_Rule implements ImmutablePOSupport
 					engine.put(convertKey(key, windowNo), ((Double)value).doubleValue());
 				else
 					engine.put(convertKey(key, windowNo), value);
+			}
+		}
+	}
+	
+	/**************************************************************************
+	 *	Set Context ctx to the engine based on windowNo
+	 *  @param engine ScriptEngine
+	 *  @param ctx context
+	 *  @param windowNo window number
+	 */
+	public static void setContext(Bindings bindings, Properties ctx, int windowNo) {
+		Enumeration<Object> en = ctx.keys();
+		while (en.hasMoreElements())
+		{
+			String key = en.nextElement().toString();
+			//  filter
+			if (key == null || key.length() == 0
+					|| key.startsWith("P")              //  Preferences
+					|| (key.indexOf('|') != -1 && !key.startsWith(String.valueOf(windowNo)))    //  other Window Settings
+					|| (key.indexOf('|') != -1 && key.indexOf('|') != key.lastIndexOf('|')) //other tab
+			)
+				continue;
+			Object value = ctx.get(key);
+			if (value != null) {
+				if (value instanceof Boolean)
+					bindings.put(convertKey(key, windowNo), ((Boolean)value).booleanValue());
+				else if (value instanceof Integer)
+					bindings.put(convertKey(key, windowNo), ((Integer)value).intValue());
+				else if (value instanceof Double)
+					bindings.put(convertKey(key, windowNo), ((Double)value).doubleValue());
+				else
+					bindings.put(convertKey(key, windowNo), value);
 			}
 		}
 	}

@@ -223,4 +223,19 @@ public interface I_AD_StatusLineUsedIn
 	  * User who updated this records
 	  */
 	public int getUpdatedBy();
+	
+	 /** Column name AD_InfoWindow_ID */
+    public static final String COLUMNNAME_AD_InfoWindow_ID = "AD_InfoWindow_ID";
+
+	/** Set Info Window.
+	  * Info and search/select Window
+	  */
+	public void setAD_InfoWindow_ID (int AD_InfoWindow_ID);
+
+	/** Get Info Window.
+	  * Info and search/select Window
+	  */
+	public int getAD_InfoWindow_ID();
+
+	public org.compiere.model.I_AD_InfoWindow getAD_InfoWindow() throws RuntimeException;
 }

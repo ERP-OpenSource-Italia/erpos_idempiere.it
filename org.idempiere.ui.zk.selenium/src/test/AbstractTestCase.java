@@ -19,7 +19,7 @@ import org.openqa.selenium.firefox.FirefoxDriver;
 public class AbstractTestCase {
 
 	protected WebDriver driver;
-	protected StringBuffer verificationErrors = new StringBuffer();
+	protected StringBuilder verificationErrors = new StringBuilder();
 	private String baseUrl;
 
 	@Before

@@ -55,7 +55,7 @@ public class BaseEnvHelper
 	
 	public static String parseStringWithEnv(Properties ctx,String sString,int WindowNo,int TabNo)
 	{
-		StringBuffer			sParsed = new StringBuffer();
+		StringBuilder			sParsed = new StringBuilder();
 		
 		if(sString != null && sString.length() != 0)
 		{

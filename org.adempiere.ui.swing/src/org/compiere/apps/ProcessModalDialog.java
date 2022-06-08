@@ -108,7 +108,7 @@ public class ProcessModalDialog extends CDialog
 	private boolean m_autoStart;
 	private int 		    m_AD_Process_ID;
 	private String		    m_Name = null;
-	private StringBuffer	m_messageText = new StringBuffer();
+	private StringBuilder	m_messageText = new StringBuilder();
 	private String          m_ShowHelp = null; // Determine if a Help Process Window is shown
 	private boolean m_valid = true;
 	private String			m_AD_Process_UU;

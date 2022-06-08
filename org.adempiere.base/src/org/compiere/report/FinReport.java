@@ -94,7 +94,7 @@ public class FinReport extends SvrProcess
 	/**	Index of m_C_Period_ID in m_periods		**/
 	private int					m_reportPeriod = -1;
 	/**	Parameter Where Clause			*/
-	private StringBuffer		m_parameterWhere = new StringBuffer();
+	private StringBuilder		m_parameterWhere = new StringBuilder();
 	/**	The Report Columns				*/
 	private MReportColumn[] 	m_columns;
 	/** The Report Lines				*/

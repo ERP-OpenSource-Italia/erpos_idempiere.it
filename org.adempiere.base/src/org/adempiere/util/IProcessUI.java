@@ -57,7 +57,7 @@ public interface IProcessUI {
 	 * 
 	 * Example Usage in process:
 	 * <pre>
-	 * 	    final StringBuffer answer = new StringBuffer();
+	 * 	    final StringBuilder answer = new StringBuilder();
 	 *		aProcessMonitor.ask(adMessage, new Callback<String>() {				
 	 *			@Override
 	 *			public void onCallback(String result) {

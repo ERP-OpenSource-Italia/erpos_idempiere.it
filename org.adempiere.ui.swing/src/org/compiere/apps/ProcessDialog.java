@@ -134,7 +134,7 @@ public class ProcessDialog extends CFrame
 	private boolean		    m_IsReport = false;
 	private int[]		    m_ids = null;
 	private boolean	        m_isLocked = false;
-	private StringBuffer	m_messageText = new StringBuffer();
+	private StringBuilder	m_messageText = new StringBuilder();
 	private String          m_ShowHelp = null; // Determine if a Help Process Window is shown
 	/**	Logger			*/
 	private static CLogger log = CLogger.getCLogger(ProcessDialog.class);

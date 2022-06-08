@@ -330,7 +330,7 @@ public class MAssetAddition extends X_A_Asset_Addition
 	 * @param	project
 	 * @return asset addition
 	 */
-	public static MAssetAddition createAsset(MProject project, MProduct product)
+	public static MAssetAddition  createAsset(MProject project, MProduct product)
 	{
 		MAssetAddition assetAdd = new MAssetAddition(project);
 		assetAdd.dump();
@@ -349,12 +349,16 @@ public class MAssetAddition extends X_A_Asset_Addition
 		asset.dump();
 		
 		// Copy UseLife values from asset group to workfile
-		MAssetGroupAcct assetgrpacct = MAssetGroupAcct.forA_Asset_Group_ID(asset.getCtx(), asset.getA_Asset_Group_ID(), assetAdd.getPostingType());
-		assetAdd.setDeltaUseLifeYears(assetgrpacct.getUseLifeYears());
-		assetAdd.setDeltaUseLifeYears_F(assetgrpacct.getUseLifeYears_F());
-		assetAdd.setA_Asset(asset);
-		assetAdd.saveEx();
-		//@win add
+		List<MAssetGroupAcct> assetsgrpacct = MAssetGroupAcct.forA_Asset_Group_ID(asset.getCtx(), asset.getA_Asset_Group_ID(), assetAdd.getPostingType());
+		
+		for(MAssetGroupAcct assetgrpacct: assetsgrpacct)
+		{
+			assetAdd.setDeltaUseLifeYears(assetgrpacct.getUseLifeYears());
+			assetAdd.setDeltaUseLifeYears_F(assetgrpacct.getUseLifeYears_F());
+			assetAdd.setA_Asset(asset);
+			assetAdd.saveEx();
+			//@win add
+		}
 		
 		return assetAdd;
 	}

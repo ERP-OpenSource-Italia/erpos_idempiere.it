@@ -70,7 +70,7 @@ public class ReportViewColElementHandler extends AbstractElementHandler {
 			}
 			
 			String functionColumn = getStringValue(atts, "FunctionColumn");
-			StringBuffer sql = new StringBuffer("SELECT AD_Reportview_Col_ID FROM AD_Reportview_Col ")
+			StringBuilder sql = new StringBuilder("SELECT AD_Reportview_Col_ID FROM AD_Reportview_Col ")
 				.append(" WHERE AD_Column_ID ");
 			if (AD_Column_ID > 0)
 				sql.append(" = " + AD_Column_ID);

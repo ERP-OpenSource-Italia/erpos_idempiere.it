@@ -46,11 +46,11 @@ import org.compiere.util.Env;
 public class PackRollProcess extends SvrProcess {
 	/** Package from Record */
 	private int m_AD_Package_Imp_ID = 0;
-	StringBuffer sql = null;
-	StringBuffer sqlB = null;
+	StringBuilder sql = null;
+	StringBuilder sqlB = null;
 	String columnIDName = null;
-	StringBuffer sqlC = null;
-	StringBuffer sqlD = null;
+	StringBuilder sqlC = null;
+	StringBuilder sqlD = null;
 
 	/**
 	 * Prepare - e.g., get Parameters.
@@ -164,7 +164,7 @@ public class PackRollProcess extends SvrProcess {
 								else if (columnName.equals("Updated"))
 								{
 									// Format Date
-									sqlC = new StringBuffer("UPDATE "
+									sqlC = new StringBuilder("UPDATE "
 											+ tableName + " SET " + columnName
 											+ " = getDate() WHERE "
 											+ columnIDName + " = " + recordID);
@@ -177,7 +177,7 @@ public class PackRollProcess extends SvrProcess {
 								// Update "UpdatedBy" field with current user
 								else if (columnName.equals("UpdatedBy")) {
 
-									sqlC = new StringBuffer("UPDATE "
+									sqlC = new StringBuilder("UPDATE "
 											+ tableName + " SET " + columnName
 											+ " = '"
 											+ Env.getAD_User_ID(Env.getCtx())
@@ -207,7 +207,7 @@ public class PackRollProcess extends SvrProcess {
 										if (backup.getColValue().toString().equals("null")) {
 											;// Ignore null values
 										} else {
-											sqlC = new StringBuffer("UPDATE "
+											sqlC = new StringBuilder("UPDATE "
 													+ tableName
 													+ " SET "
 													+ columnName
@@ -220,7 +220,7 @@ public class PackRollProcess extends SvrProcess {
 									} else if (v_AD_Reference_ID == DisplayType.YesNo
 											|| v_AD_Reference_ID == DisplayType.Button) {
 
-										sqlC = new StringBuffer("UPDATE "
+										sqlC = new StringBuilder("UPDATE "
 												+ tableName
 												+ " SET "
 												+ columnName
@@ -243,7 +243,7 @@ public class PackRollProcess extends SvrProcess {
 											|| v_AD_Reference_ID == DisplayType.PAttribute)
 									{
 
-										sqlC = new StringBuffer("UPDATE "
+										sqlC = new StringBuilder("UPDATE "
 												+ tableName
 												+ " SET "
 												+ columnName
@@ -258,7 +258,7 @@ public class PackRollProcess extends SvrProcess {
 											|| v_AD_Reference_ID == DisplayType.Number
 											|| v_AD_Reference_ID == DisplayType.Quantity)
 									{
-										sqlC = new StringBuffer("UPDATE "
+										sqlC = new StringBuilder("UPDATE "
 												+ tableName
 												+ " SET "
 												+ columnName
@@ -277,7 +277,7 @@ public class PackRollProcess extends SvrProcess {
 										} catch (Exception e) {}
 										if (ts != null) 
 										{
-											sqlC = new StringBuffer("UPDATE "
+											sqlC = new StringBuilder("UPDATE "
 													+ tableName
 													+ " SET "
 													+ columnName
@@ -321,7 +321,7 @@ public class PackRollProcess extends SvrProcess {
 							columnIDName = "Node_ID";
 						else
 							columnIDName = tableName + "_ID";
-						sqlC=new StringBuffer(" UPDATE ")
+						sqlC=new StringBuilder(" UPDATE ")
 						.append(tableName)
 						.append(" SET IsActive = 'N' WHERE ")
 						.append(columnIDName)

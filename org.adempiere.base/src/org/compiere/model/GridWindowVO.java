@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -36,6 +37,14 @@ import org.compiere.util.Env;
  */
 public class GridWindowVO implements Serializable
 {
+	
+	private static final CLogger log = CLogger.getCLogger(GridWindowVO.class);
+
+	
+	/**	Window Cache		*/
+	private static CCache<Integer,GridWindowVO>	s_windowsvo
+		= new CCache<Integer,GridWindowVO>(I_AD_Window.Table_Name, I_AD_Window.Table_Name+"|GridWindowVO", 10);
+	
 	/**
 	 * 
 	 */
@@ -63,6 +72,44 @@ public class GridWindowVO implements Serializable
 	{
 		return create (ctx, WindowNo, AD_Window_ID, 0);
 	}   //  create
+	
+	/**
+	 * 
+	 * @param AD_Window_ID
+	 * @param windowNo
+	 * @return {@link GridWindowVO}
+	 */
+	public static GridWindowVO get(int AD_Window_ID, int windowNo)
+	{
+		return get(AD_Window_ID, windowNo, -1);
+	}
+	
+	/**
+	 * 
+	 * @param AD_Window_ID
+	 * @param windowNo
+	 * @param AD_Menu_ID
+	 * @return {@link GridWindowVO}
+	 */
+	public static GridWindowVO get(int AD_Window_ID, int windowNo, int AD_Menu_ID) 
+	{
+		GridWindowVO mWindowVO = s_windowsvo.get(AD_Window_ID);
+		if (mWindowVO != null)
+		{
+			mWindowVO = mWindowVO.clone(windowNo);
+			if (log.isLoggable(Level.INFO)) log.info("Cached=" + mWindowVO);
+		}
+		if (mWindowVO == null)
+		{
+			if (log.isLoggable(Level.CONFIG)) log.config("create local");
+			mWindowVO = GridWindowVO.create (Env.getCtx(), windowNo, AD_Window_ID, AD_Menu_ID);
+			if (mWindowVO != null) 
+			{
+				s_windowsvo.put(AD_Window_ID, mWindowVO);
+			}
+		}
+		return mWindowVO;
+	}
 
 	/**
 	 *  Create Window Value Object
@@ -211,9 +258,9 @@ public class GridWindowVO implements Serializable
 			// F3P: implemented missing field
 			// IsDefault has practical use here ?
 			
-			if(userDef.getIsReadOnly() != null)
+			if(userDef.isReadOnly())
 			{
-				if (userDef.getIsReadOnly().equals("Y"))
+				if (userDef.isReadOnly())
 					vo.IsReadWrite = "Y";
 				else
 					vo.IsReadWrite = "N";

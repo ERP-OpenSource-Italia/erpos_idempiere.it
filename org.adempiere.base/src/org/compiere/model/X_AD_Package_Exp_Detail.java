@@ -923,6 +923,8 @@ public class X_AD_Package_Exp_Detail extends PO implements I_AD_Package_Exp_Deta
 	public static final String TYPE_ImportFormat = "IMP";
 	/** Application or Module = M */
 	public static final String TYPE_ApplicationOrModule = "M";
+	/** Code Snipit = SNI */
+	public static final String TYPE_CodeSnipit = "SNI";
 	/** Process/Report = P */
 	public static final String TYPE_ProcessReport = "P";
 	/** ReportView = R */

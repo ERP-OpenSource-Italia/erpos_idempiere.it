@@ -62,7 +62,7 @@ public class WorkflowNodeNextConditionElementHandler extends
 			String workflowNodeNextName = atts
 					.getValue("ADWorkflowNodeNextNameID");
 
-			StringBuffer sqlB = new StringBuffer(
+			StringBuilder sqlB = new StringBuilder(
 					"SELECT ad_wf_node_id FROM AD_WF_Node WHERE AD_Workflow_ID=? and Name =?");
 
 			int wfNodeId = DB.getSQLValue(getTrxName(ctx), sqlB.toString(),
@@ -81,12 +81,12 @@ public class WorkflowNodeNextConditionElementHandler extends
 				return;
 			}
 
-			sqlB = new StringBuffer(
+			sqlB = new StringBuilder(
 					"SELECT  ad_wf_nodenext_id FROM AD_WF_NodeNext  WHERE ad_wf_node_id =? and ad_wf_next_id =?");
 			int wfNodeNextTablePKId = DB.getSQLValue(getTrxName(ctx), sqlB
 					.toString(), wfNodeId, wfNodeNextId);
 
-			sqlB = new StringBuffer(
+			sqlB = new StringBuilder(
 					"SELECT  ad_wf_nextcondition_id FROM AD_WF_NextCondition  WHERE ad_wf_nodenext_id =?");
 			int id = DB.getSQLValue(getTrxName(ctx), sqlB.toString(),
 					wfNodeNextTablePKId);
@@ -106,7 +106,7 @@ public class WorkflowNodeNextConditionElementHandler extends
 				AD_Backup_ID = 0;
 			}
 
-			sqlB = new StringBuffer(
+			sqlB = new StringBuilder(
 					"SELECT  AD_Column.ad_column_id FROM AD_Column, AD_Table WHERE AD_Column.ad_table_id = AD_Table.ad_table_id and AD_Table.name = '"
 							+ atts.getValue("ADTableNameID")
 							+ "' and AD_Column.name = ?");

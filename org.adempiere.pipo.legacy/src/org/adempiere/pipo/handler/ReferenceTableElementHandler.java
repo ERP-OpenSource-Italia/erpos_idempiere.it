@@ -62,14 +62,14 @@ public class ReferenceTableElementHandler extends AbstractElementHandler {
 				element.parent.recordId > 0) {
 				AD_Reference_ID = element.parent.recordId;
 			} else {
-				StringBuffer sqlB = new StringBuffer(
+				StringBuilder sqlB = new StringBuilder(
 					"SELECT AD_Reference_ID FROM AD_Reference WHERE Name= ?");
 				AD_Reference_ID = DB.getSQLValue(getTrxName(ctx), sqlB.toString(), name);
 			}
 			if (AD_Reference_ID <= 0 && atts.getValue("AD_Reference_ID") != null && Integer.parseInt(atts.getValue("AD_Reference_ID")) <= PackOut.MAX_OFFICIAL_ID)
 				AD_Reference_ID = Integer.parseInt(atts.getValue("AD_Reference_ID"));
 			
-			StringBuffer sqlB = new StringBuffer(
+			StringBuilder sqlB = new StringBuilder(
 					"SELECT Count(*) FROM AD_Ref_Table WHERE AD_Reference_ID= ?");
 			int count = DB.getSQLValue(getTrxName(ctx), sqlB.toString(), AD_Reference_ID);
 			int tableId = get_IDWithColumn(ctx, "AD_Table", "TableName", atts
@@ -145,7 +145,7 @@ public class ReferenceTableElementHandler extends AbstractElementHandler {
 			String OrderByClause = atts.getValue("OrderByClause").replaceAll("'", "''");
 			String WhereClause = atts.getValue("WhereClause").replaceAll("'","''");
 			if (count > 0) {
-				sqlB = new StringBuffer("UPDATE AD_Ref_Table ").append(
+				sqlB = new StringBuilder("UPDATE AD_Ref_Table ").append(
 						"SET AD_Table_ID = " + tableId).append(
 						", AD_Display = " + DisplayId).append(
 						", AD_Key = " + keyId).append(
@@ -169,7 +169,7 @@ public class ReferenceTableElementHandler extends AbstractElementHandler {
 					throw new POSaveFailedException("ReferenceTable");
 				}
 			} else {
-				sqlB = new StringBuffer("INSERT INTO AD_Ref_Table")
+				sqlB = new StringBuilder("INSERT INTO AD_Ref_Table")
 						.append(
 								"(AD_Client_ID, AD_Org_ID, CreatedBy, UpdatedBy, ")
 						.append(

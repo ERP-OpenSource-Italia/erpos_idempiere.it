@@ -403,7 +403,7 @@ public class VPayPrint extends PayPrint implements FormPanel, ActionListener, Ve
 
 		//  Create File
 		int no = 0;
-		StringBuffer err = new StringBuffer("");
+		StringBuilder err = new StringBuilder("");
 		if (m_PaymentExportClass == null || m_PaymentExportClass.trim().length() == 0) {
 			m_PaymentExportClass = "org.compiere.util.GenericPaymentExport";
 		}

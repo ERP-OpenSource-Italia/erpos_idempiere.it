@@ -26,14 +26,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for AD_Workflow
  *  @author iDempiere (generated) 
- *  @version Release 8.2 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_AD_Workflow extends PO implements I_AD_Workflow, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20201220L;
+	private static final long serialVersionUID = 20190106L;
 
     /** Standard Constructor */
     public X_AD_Workflow (Properties ctx, int AD_Workflow_ID, String trxName)
@@ -87,8 +87,8 @@ public class X_AD_Workflow extends PO implements I_AD_Workflow, I_Persistent
 
     public String toString()
     {
-      StringBuilder sb = new StringBuilder ("X_AD_Workflow[")
-        .append(get_ID()).append(",Name=").append(getName()).append("]");
+      StringBuffer sb = new StringBuffer ("X_AD_Workflow[")
+        .append(get_ID()).append("]");
       return sb.toString();
     }
 
@@ -386,24 +386,25 @@ public class X_AD_Workflow extends PO implements I_AD_Workflow, I_Persistent
 		return (String)get_Value(COLUMNNAME_DocValueLogic);
 	}
 
+
 	/** Set Duration.
 		@param Duration 
 		Normal Duration in Duration Unit
 	  */
-	public void setDuration (int Duration)
+	public void setDuration (BigDecimal Duration)
 	{
-		set_Value (COLUMNNAME_Duration, Integer.valueOf(Duration));
+		set_Value (COLUMNNAME_Duration, Duration);
 	}
 
 	/** Get Duration.
 		@return Normal Duration in Duration Unit
 	  */
-	public int getDuration () 
+	public BigDecimal getDuration () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_Duration);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_Duration);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	/** DurationUnit AD_Reference_ID=299 */
@@ -569,19 +570,19 @@ public class X_AD_Workflow extends PO implements I_AD_Workflow, I_Persistent
 
 	/** Set Moving Time.
 		@param MovingTime Moving Time	  */
-	public void setMovingTime (int MovingTime)
+	public void setMovingTime (BigDecimal MovingTime)
 	{
-		set_Value (COLUMNNAME_MovingTime, Integer.valueOf(MovingTime));
+		set_Value (COLUMNNAME_MovingTime, MovingTime);
 	}
 
 	/** Get Moving Time.
 		@return Moving Time	  */
-	public int getMovingTime () 
+	public BigDecimal getMovingTime () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_MovingTime);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_MovingTime);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	/** Set Name.
@@ -724,43 +725,43 @@ public class X_AD_Workflow extends PO implements I_AD_Workflow, I_Persistent
 	}
 
 	/** Set Queuing Time.
-		@param QueuingTime 
-		Queue time is the time a job waits at a work center before begin handled.
+	@param QueuingTime 
+	Queue time is the time a job waits at a work center before begin handled.
 	  */
-	public void setQueuingTime (int QueuingTime)
+	public void setQueuingTime (BigDecimal QueuingTime)
 	{
-		set_Value (COLUMNNAME_QueuingTime, Integer.valueOf(QueuingTime));
+		set_Value (COLUMNNAME_QueuingTime, QueuingTime);
 	}
 
 	/** Get Queuing Time.
 		@return Queue time is the time a job waits at a work center before begin handled.
 	  */
-	public int getQueuingTime () 
+	public BigDecimal getQueuingTime () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_QueuingTime);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_QueuingTime);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	/** Set Setup Time.
-		@param SetupTime 
-		Setup time before starting Production
+	@param SetupTime 
+	Setup time before starting Production
 	  */
-	public void setSetupTime (int SetupTime)
+	public void setSetupTime (BigDecimal SetupTime)
 	{
-		set_Value (COLUMNNAME_SetupTime, Integer.valueOf(SetupTime));
+		set_Value (COLUMNNAME_SetupTime, SetupTime);
 	}
-
+	
 	/** Get Setup Time.
 		@return Setup time before starting Production
 	  */
-	public int getSetupTime () 
+	public BigDecimal getSetupTime () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_SetupTime);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_SetupTime);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	public org.compiere.model.I_S_Resource getS_Resource() throws RuntimeException
@@ -897,23 +898,23 @@ public class X_AD_Workflow extends PO implements I_AD_Workflow, I_Persistent
 	}
 
 	/** Set Waiting Time.
-		@param WaitingTime 
-		Workflow Simulation Waiting time
+	@param WaitingTime 
+	Workflow Simulation Waiting time
 	  */
-	public void setWaitingTime (int WaitingTime)
+	public void setWaitingTime (BigDecimal WaitingTime)
 	{
-		set_Value (COLUMNNAME_WaitingTime, Integer.valueOf(WaitingTime));
+		set_Value (COLUMNNAME_WaitingTime,WaitingTime);
 	}
-
+	
 	/** Get Waiting Time.
 		@return Workflow Simulation Waiting time
 	  */
-	public int getWaitingTime () 
+	public BigDecimal getWaitingTime () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_WaitingTime);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_WaitingTime);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	/** WorkflowType AD_Reference_ID=328 */
@@ -949,23 +950,23 @@ public class X_AD_Workflow extends PO implements I_AD_Workflow, I_Persistent
 	}
 
 	/** Set Working Time.
-		@param WorkingTime 
-		Workflow Simulation Execution Time
+	@param WorkingTime 
+	Workflow Simulation Execution Time
 	  */
-	public void setWorkingTime (int WorkingTime)
+	public void setWorkingTime (BigDecimal WorkingTime)
 	{
-		set_Value (COLUMNNAME_WorkingTime, Integer.valueOf(WorkingTime));
+		set_Value (COLUMNNAME_WorkingTime, WorkingTime);
 	}
-
+	
 	/** Get Working Time.
 		@return Workflow Simulation Execution Time
 	  */
-	public int getWorkingTime () 
+	public BigDecimal getWorkingTime () 
 	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_WorkingTime);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_WorkingTime);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 
 	/** Set Yield %.

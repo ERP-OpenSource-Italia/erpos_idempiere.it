@@ -213,14 +213,14 @@ public class MWorkflow extends X_AD_Workflow implements ImmutablePOSupport
 			setAccessLevel (ACCESSLEVEL_Organization);
 			setAuthor ("ComPiere, Inc.");
 			setDurationUnit(DURATIONUNIT_Day);
-			setDuration (1);
+			setDuration (Env.ONE);
 			setEntityType (ENTITYTYPE_UserMaintained);	// U
 			setIsDefault (false);
 			setPublishStatus (PUBLISHSTATUS_UnderRevision);	// U
 			setVersion (0);
 			setCost (Env.ZERO);
-			setWaitingTime (0);
-			setWorkingTime (0);
+			setWaitingTime (Env.ZERO);
+			setWorkingTime (Env.ZERO);
 			setIsBetaFunctionality(false);
 		}
 		loadTrl();
@@ -948,7 +948,7 @@ public class MWorkflow extends X_AD_Workflow implements ImmutablePOSupport
 		node10.setDescription("(Standard Node)");
 		node10.setEntityType (ENTITYTYPE_Dictionary);
 		node10.setAction(MWFNode.ACTION_WaitSleep);
-		node10.setWaitTime(0);
+		node10.setWaitTime(Env.ZERO);
 		node10.setPosition(5, 5);
 		node10.saveEx();
 		wf.setAD_WF_Node_ID(node10.getAD_WF_Node_ID());

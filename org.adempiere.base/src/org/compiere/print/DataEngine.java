@@ -1302,7 +1302,7 @@ public class DataEngine
 		log.info("Analyzing Expression " + expression);
 		String token;
 		String inStr = new String(expression);
-		StringBuffer outStr = new StringBuffer();
+		StringBuilder outStr = new StringBuilder();
 		int i = inStr.indexOf('@');
 		while (i != -1)
 		{

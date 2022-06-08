@@ -1169,7 +1169,7 @@ public class VLookup extends JComponent
 	 */
 	private String getDirectAccessSQL (String text)
 	{
-		StringBuffer sql = new StringBuffer();
+		StringBuilder sql = new StringBuilder();
 		m_tableName = MQuery.getZoomTableName(m_columnName);
 		m_keyColumnName = MQuery.getZoomColumnName(m_columnName);
 		//
@@ -1273,7 +1273,7 @@ public class VLookup extends JComponent
 				}
 				if (displayColumnName != null)
 				{
-					sql = new StringBuffer();
+					sql = new StringBuilder();
 					sql.append("SELECT ").append(m_keyColumnName)
 						.append(" FROM ").append(m_tableName)
 						.append(" WHERE UPPER(").append(displayColumnName)
@@ -1298,7 +1298,7 @@ public class VLookup extends JComponent
 			+ " AND c.AD_Reference_ID IN (10,14)"
 			+ " AND EXISTS (SELECT * FROM AD_Column cc WHERE cc.AD_Table_ID=t.AD_Table_ID"
 				+ " AND cc.IsKey='Y' AND cc.ColumnName=?)";
-		sql = new StringBuffer();
+		sql = new StringBuilder();
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
@@ -1330,7 +1330,7 @@ public class VLookup extends JComponent
 			return "";
 		}
 		//
-		StringBuffer retValue = new StringBuffer ("SELECT ")
+		StringBuilder retValue = new StringBuilder ("SELECT ")
 			.append(m_columnName).append(" FROM ").append(m_tableName)
 			.append(" WHERE (").append(sql).append(")")
 			.append(" AND IsActive='Y'");

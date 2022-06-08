@@ -38,21 +38,21 @@ public class ProcessAccessElementHandler extends AbstractElementHandler {
 		log.info(elementValue);
 		int roleid =0;
 		int processid =0;		
-		StringBuffer sqlB = null;
+		StringBuilder sqlB = null;
 		Attributes atts = element.attributes;
 		if (atts.getValue("rolename")!=null){
 			String name = atts.getValue("rolename");		
-			sqlB = new StringBuffer ("SELECT AD_Role_ID FROM AD_Role WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_Role_ID FROM AD_Role WHERE Name= ?");
 			roleid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 		}
 		
 		if (atts.getValue("processname")!=null){
 			String name = atts.getValue("processname");		
-			sqlB = new StringBuffer ("SELECT AD_Process_ID FROM AD_Process WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_Process_ID FROM AD_Process WHERE Name= ?");
 			processid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 		}
 		
-		sqlB = new StringBuffer ("SELECT count(*) FROM AD_Process_Access WHERE AD_Role_ID=? and AD_Process_ID=?");		
+		sqlB = new StringBuilder ("SELECT count(*) FROM AD_Process_Access WHERE AD_Role_ID=? and AD_Process_ID=?");		
 		int count = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),roleid,processid);
 		@SuppressWarnings("unused")
 		int AD_Backup_ID = -1;
@@ -61,7 +61,7 @@ public class ProcessAccessElementHandler extends AbstractElementHandler {
 		
 		if (count>0){		   	
 			Object_Status = "Update";			
-			sqlB = new StringBuffer ("UPDATE AD_Process_Access ")
+			sqlB = new StringBuilder ("UPDATE AD_Process_Access ")
 					.append( "SET isActive = '" + atts.getValue("isActive") )
 					.append( "', isReadWrite = '" + atts.getValue("isReadWrite") )
 					.append( "' WHERE AD_Role_ID = " + roleid )
@@ -76,7 +76,7 @@ public class ProcessAccessElementHandler extends AbstractElementHandler {
 		else{
 			Object_Status = "New";
 			AD_Backup_ID =0;
-			sqlB = new StringBuffer ("INSERT INTO AD_Process_Access")
+			sqlB = new StringBuilder ("INSERT INTO AD_Process_Access")
 					.append( "(AD_Client_ID, AD_Org_ID, CreatedBy, UpdatedBy, " ) 
 					.append( "AD_Role_ID, AD_Process_ID, isActive, isReadWrite) " )
 					.append( "VALUES(" ) 

@@ -25,14 +25,14 @@ import org.compiere.util.Env;
 
 /** Generated Model for I_Invoice
  *  @author iDempiere (generated) 
- *  @version Release 8.2 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_I_Invoice extends PO implements I_I_Invoice, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20201220L;
+	private static final long serialVersionUID = 20190106L;
 
     /** Standard Constructor */
     public X_I_Invoice (Properties ctx, int I_Invoice_ID, String trxName)
@@ -68,8 +68,8 @@ public class X_I_Invoice extends PO implements I_I_Invoice, I_Persistent
 
     public String toString()
     {
-      StringBuilder sb = new StringBuilder ("X_I_Invoice[")
-        .append(get_ID()).append(",Name=").append(getName()).append("]");
+      StringBuffer sb = new StringBuffer ("X_I_Invoice[")
+        .append(get_ID()).append("]");
       return sb.toString();
     }
 
@@ -1304,5 +1304,25 @@ public class X_I_Invoice extends PO implements I_I_Invoice, I_Persistent
 	public String getUPC () 
 	{
 		return (String)get_Value(COLUMNNAME_UPC);
+	}
+	
+	/** Set List Price.
+	@param PriceList 
+	List Price 
+	 */
+	public void setPriceList (BigDecimal PriceList)
+	{
+		set_Value (COLUMNNAME_PriceList, PriceList);
+	}
+	
+	/** Get List Price.
+		@return List Price 
+	  */
+	public BigDecimal getPriceList () 
+	{
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_PriceList);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
 	}
 }

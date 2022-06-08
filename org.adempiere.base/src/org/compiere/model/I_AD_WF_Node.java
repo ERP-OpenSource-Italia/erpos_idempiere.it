@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_WF_Node
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 6.2
  */
 public interface I_AD_WF_Node 
 {
@@ -360,12 +360,12 @@ public interface I_AD_WF_Node
 	/** Set Duration.
 	  * Normal Duration in Duration Unit
 	  */
-	public void setDuration (int Duration);
+	public void setDuration (BigDecimal Duration);
 
 	/** Get Duration.
 	  * Normal Duration in Duration Unit
 	  */
-	public int getDuration();
+	public BigDecimal getDuration();
 
     /** Column name DynPriorityChange */
     public static final String COLUMNNAME_DynPriorityChange = "DynPriorityChange";
@@ -499,10 +499,10 @@ public interface I_AD_WF_Node
     public static final String COLUMNNAME_IsSubcontracting = "IsSubcontracting";
 
 	/** Set Is Subcontracting	  */
-	public void setIsSubcontracting (boolean IsSubcontracting);
+	public void setIsSubcontracting (String IsSubcontracting);
 
 	/** Get Is Subcontracting	  */
-	public boolean isSubcontracting();
+	public String isSubcontracting();
 
     /** Column name JoinElement */
     public static final String COLUMNNAME_JoinElement = "JoinElement";
@@ -534,10 +534,10 @@ public interface I_AD_WF_Node
     public static final String COLUMNNAME_MovingTime = "MovingTime";
 
 	/** Set Moving Time	  */
-	public void setMovingTime (int MovingTime);
+	public void setMovingTime (BigDecimal MovingTime);
 
 	/** Get Moving Time	  */
-	public int getMovingTime();
+	public BigDecimal getMovingTime();
 
     /** Column name Name */
     public static final String COLUMNNAME_Name = "Name";
@@ -584,12 +584,12 @@ public interface I_AD_WF_Node
 	/** Set Queuing Time.
 	  * Queue time is the time a job waits at a work center before begin handled.
 	  */
-	public void setQueuingTime (int QueuingTime);
+	public void setQueuingTime (BigDecimal QueuingTime);
 
 	/** Get Queuing Time.
 	  * Queue time is the time a job waits at a work center before begin handled.
 	  */
-	public int getQueuingTime();
+	public BigDecimal getQueuingTime();
 
     /** Column name R_MailText_ID */
     public static final String COLUMNNAME_R_MailText_ID = "R_MailText_ID";
@@ -612,12 +612,12 @@ public interface I_AD_WF_Node
 	/** Set Setup Time.
 	  * Setup time before starting Production
 	  */
-	public void setSetupTime (int SetupTime);
+	public void setSetupTime (BigDecimal SetupTime);
 
 	/** Get Setup Time.
 	  * Setup time before starting Production
 	  */
-	public int getSetupTime();
+	public BigDecimal getSetupTime();
 
     /** Column name SplitElement */
     public static final String COLUMNNAME_SplitElement = "SplitElement";
@@ -747,12 +747,12 @@ public interface I_AD_WF_Node
 	/** Set Waiting Time.
 	  * Workflow Simulation Waiting time
 	  */
-	public void setWaitingTime (int WaitingTime);
+	public void setWaitingTime (BigDecimal WaitingTime);
 
 	/** Get Waiting Time.
 	  * Workflow Simulation Waiting time
 	  */
-	public int getWaitingTime();
+	public BigDecimal getWaitingTime();
 
     /** Column name WaitTime */
     public static final String COLUMNNAME_WaitTime = "WaitTime";
@@ -760,12 +760,12 @@ public interface I_AD_WF_Node
 	/** Set Wait Time.
 	  * Time in minutes to wait (sleep)
 	  */
-	public void setWaitTime (int WaitTime);
+	public void setWaitTime (BigDecimal WaitTime);
 
 	/** Get Wait Time.
 	  * Time in minutes to wait (sleep)
 	  */
-	public int getWaitTime();
+	public BigDecimal getWaitTime();
 
     /** Column name Workflow_ID */
     public static final String COLUMNNAME_Workflow_ID = "Workflow_ID";
@@ -788,12 +788,12 @@ public interface I_AD_WF_Node
 	/** Set Working Time.
 	  * Workflow Simulation Execution Time
 	  */
-	public void setWorkingTime (int WorkingTime);
+	public void setWorkingTime (BigDecimal WorkingTime);
 
 	/** Get Working Time.
 	  * Workflow Simulation Execution Time
 	  */
-	public int getWorkingTime();
+	public BigDecimal getWorkingTime();
 
     /** Column name XPosition */
     public static final String COLUMNNAME_XPosition = "XPosition";

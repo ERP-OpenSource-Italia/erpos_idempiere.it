@@ -88,7 +88,7 @@ public class ADLookup {
 
 		String m_tableName = null;
 		String m_keyColumnName = null;
-		StringBuffer sql = new StringBuffer();
+		StringBuilder sql = new StringBuilder();
 		if (m_columnName.indexOf(".") > 0) {
 			m_tableName = m_columnName.substring(0, m_columnName.indexOf("."));
 			m_keyColumnName = m_columnName.substring(m_columnName.indexOf(".")+1);
@@ -215,7 +215,7 @@ public class ADLookup {
 
 				if (displayColumnName != null)
 				{
-					sql = new StringBuffer();
+					sql = new StringBuilder();
 					sql.append("SELECT ").append(m_keyColumnName)
 						.append(" FROM ").append(m_tableName)
 						.append(" WHERE (UPPER(").append(displayColumnName)
@@ -254,7 +254,7 @@ public class ADLookup {
 			+ " AND EXISTS (SELECT * FROM AD_Column cc WHERE cc.AD_Table_ID=t.AD_Table_ID"
 				+ " AND cc.IsKey='Y' AND cc.ColumnName=?)";
 
-		sql = new StringBuffer();
+		sql = new StringBuilder();
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try
@@ -294,7 +294,7 @@ public class ADLookup {
 		sql.insert(0,"("); 
 		sql.append(") ");
 
-		StringBuffer retValue = new StringBuffer ("SELECT ")
+		StringBuilder retValue = new StringBuilder ("SELECT ")
 			.append(m_columnName).append(" FROM ").append(m_tableName)
 			.append(" WHERE ").append(sql)
 			.append(" AND IsActive='Y'");

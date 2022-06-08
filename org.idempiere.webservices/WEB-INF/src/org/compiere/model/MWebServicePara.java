@@ -34,6 +34,8 @@ import java.util.Properties;
 
 import org.compiere.util.Env;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *	Web Services Parameters Model
  *	

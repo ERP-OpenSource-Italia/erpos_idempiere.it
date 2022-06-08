@@ -474,7 +474,7 @@ public class Viewer extends CFrame
 		if (   MRole.getDefault().isTableAccess(MPrintFormat.Table_ID, false) 
 			&& (Boolean.TRUE.equals(MRole.getDefault().getWindowAccess(pfAD_Window_ID))))
 		{
-			StringBuffer sb = new StringBuffer("** ").append(Msg.getMsg(m_ctx, "NewReport")).append(" **");
+			StringBuilder sb = new StringBuilder("** ").append(Msg.getMsg(m_ctx, "NewReport")).append(" **");
 			KeyNamePair pp = new KeyNamePair(-1, sb.toString());
 			comboReport.addItem(pp);
 		}
@@ -791,7 +791,7 @@ public class Viewer extends CFrame
 
 		//	Set Page
 		spinnerModel.setValue(Integer.valueOf(m_pageNo));
-		StringBuffer sb = new StringBuffer (Msg.getMsg(m_ctx, "Page"))
+		StringBuilder sb = new StringBuilder (Msg.getMsg(m_ctx, "Page"))
 			.append(" ").append(m_pageNo)
 			.append(m_viewPanel.getPageInfo(m_pageNo))
 			.append(" ").append(Msg.getMsg(m_ctx, "of")).append(" ")

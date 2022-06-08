@@ -97,7 +97,7 @@ public class MRequestAction extends X_R_RequestAction
 	 */
 	public String getChangesHTML()
 	{
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		getChangeHTML(sb, "Priority");
 		getChangeHTML(sb, "PriorityUser");
 		getChangeHTML(sb, "R_Category_ID");
@@ -130,7 +130,7 @@ public class MRequestAction extends X_R_RequestAction
 			sb.append("./.");
 		//	Unicode check
 		char[] chars = sb.toString().toCharArray();
-		sb = new StringBuffer(chars.length);
+		sb = new StringBuilder(chars.length);
 		for (int i = 0; i < chars.length; i++)
 		{
 			char c = chars[i];
@@ -148,7 +148,7 @@ public class MRequestAction extends X_R_RequestAction
 	 *	@param sb string to append to
 	 *	@param columnName column name
 	 */
-	private void getChangeHTML (StringBuffer sb, String columnName)
+	private void getChangeHTML (StringBuilder sb, String columnName)
 	{
 		if (get_Value(columnName) != null)
 		{

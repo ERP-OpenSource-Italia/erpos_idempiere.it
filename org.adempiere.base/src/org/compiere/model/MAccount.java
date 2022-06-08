@@ -902,7 +902,7 @@ public class MAccount extends X_C_ValidCombination implements ImmutablePOSupport
 		MAccount acct = get (Env.getCtx(), 11, 11, 101, 600, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 		System.out.println(acct);
-		System.out.println(acct.get_xmlString(new StringBuffer ("xxxx")));
+		System.out.println(acct.get_xmlString(new StringBuilder ("xxxx")));
 		
 		//
 		MAccount acct2 = get (Env.getCtx(), 11, 12, 101, 600, 0,
@@ -910,6 +910,39 @@ public class MAccount extends X_C_ValidCombination implements ImmutablePOSupport
 		System.out.println(acct2);
 		
 	}	//	main
+	
+	/**
+	 *  Get Account
+	 *  @param ctx context
+	 *  @param trxName transaction
+	 *  @param C_ValidCombination_ID combination
+	 *  @return Account
+	 */
+	public static MAccount get (Properties ctx, String trxName, int C_ValidCombination_ID)
+	{
+		//	Maybe later cache
+		return new MAccount(ctx, C_ValidCombination_ID, trxName);
+	}   //  getAccount
+	//Angelo Dabala' (genied) end
+	
 
+	/**
+	 * 	Get from existing Accounting fact
+	 *	@param fa accounting fact
+	 * 	@param trxName transaction
+	 *	@return account
+	 */
+	public static MAccount get (X_Fact_Acct fa, String trxName)
+	{
+		MAccount acct = get (fa.getCtx(),
+			fa.getAD_Client_ID(), fa.getAD_Org_ID(), fa.getC_AcctSchema_ID(), 
+			fa.getAccount_ID(), fa.getC_SubAcct_ID(),
+			fa.getM_Product_ID(), fa.getC_BPartner_ID(), fa.getAD_OrgTrx_ID(), 
+			fa.getC_LocFrom_ID(), fa.getC_LocTo_ID(), fa.getC_SalesRegion_ID(), 
+			fa.getC_Project_ID(), fa.getC_Campaign_ID(), fa.getC_Activity_ID(),
+			fa.getUser1_ID(), fa.getUser2_ID(), fa.getUserElement1_ID(), 
+			fa.getUserElement2_ID(), trxName);
+		return acct;
+	}	//	get
 }	//	Account
 

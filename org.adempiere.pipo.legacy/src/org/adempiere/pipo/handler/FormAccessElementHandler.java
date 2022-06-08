@@ -38,21 +38,21 @@ public class FormAccessElementHandler extends AbstractElementHandler {
 		log.info(elementValue);
 		int roleid =0;
 		int formid =0;		
-		StringBuffer sqlB = null;
+		StringBuilder sqlB = null;
 		Attributes atts = element.attributes;
 		if (atts.getValue("rolename")!=null){
 			String name = atts.getValue("rolename");		
-			sqlB = new StringBuffer ("SELECT AD_Role_ID FROM AD_Role WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_Role_ID FROM AD_Role WHERE Name= ?");
 			roleid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 		}
 		
 		if (atts.getValue("formname")!=null){
 			String name = atts.getValue("formname");		
-			sqlB = new StringBuffer ("SELECT AD_Form_ID FROM AD_Form WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_Form_ID FROM AD_Form WHERE Name= ?");
 			formid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 		}
 		
-		sqlB = new StringBuffer ("SELECT count(*) FROM AD_Form_Access WHERE AD_Role_ID=? and AD_Form_ID=?");		
+		sqlB = new StringBuilder ("SELECT count(*) FROM AD_Form_Access WHERE AD_Role_ID=? and AD_Form_ID=?");		
 		int count = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),roleid,formid);
 		@SuppressWarnings("unused")
 		String Object_Status = null;
@@ -60,7 +60,7 @@ public class FormAccessElementHandler extends AbstractElementHandler {
 		int AD_Backup_ID = -1;
 		if (count>0){		   	
 			Object_Status = "Update";			
-			sqlB = new StringBuffer ("UPDATE AD_Form_Access ")
+			sqlB = new StringBuilder ("UPDATE AD_Form_Access ")
 					.append( "SET isActive = '" + atts.getValue("isActive") )
 					.append( "', isReadWrite = '" + atts.getValue("isReadWrite") )
 					.append( "' WHERE AD_Role_ID = " + roleid )
@@ -75,7 +75,7 @@ public class FormAccessElementHandler extends AbstractElementHandler {
 		else{
 			Object_Status = "New";
 			AD_Backup_ID =0;
-			sqlB = new StringBuffer ("INSERT INTO AD_Form_Access" 
+			sqlB = new StringBuilder ("INSERT INTO AD_Form_Access" 
 					+   "(AD_Client_ID, AD_Org_ID, CreatedBy, UpdatedBy, " 
 					+   "AD_Role_ID, AD_Form_ID, isActive, isReadWrite) "
 					+	"VALUES(" 

@@ -16,6 +16,7 @@ package org.adempiere.webui.adwindow;
 import org.adempiere.base.IServiceHolder;
 import org.adempiere.webui.action.Actions;
 import org.adempiere.webui.action.IAction;
+import org.adempiere.webui.action.IAction2;
 import org.compiere.model.MToolBarButton;
 import org.compiere.util.Env;
 import org.compiere.util.Evaluatee;
@@ -53,8 +54,10 @@ public class ToolbarCustomButton implements EventListener<Event>, Evaluatee {
 		if (serviceHolder != null) {
 			IAction action = serviceHolder.getService();
 			if (action != null) {
-				action.execute(ADWindow.get(windowNo));
+				action.execute(ADWindow.get(windowNo)); 
 			}
+		}
+	}
 	
 	private IAction getAction()
 	{
@@ -139,10 +142,6 @@ public class ToolbarCustomButton implements EventListener<Event>, Evaluatee {
 		toolbarButton.setVisible(visible);
 	}
 	
-	public void dynamicDisplay() 
-	{
-		dynamicDisplay(-1);
-	}
 	public Toolbarbutton getToolbarbutton() {
 		return toolbarButton;
 	}

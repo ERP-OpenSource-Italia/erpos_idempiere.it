@@ -82,7 +82,7 @@ public class TrialBalance extends SvrProcess
 	
 	
 	/**	Parameter Where Clause			*/
-	private StringBuffer		m_parameterWhere = new StringBuffer();
+	private StringBuilder		m_parameterWhere = new StringBuilder();
 	/**	Account							*/ 
 	private MElementValue 		m_acct = null;
 	

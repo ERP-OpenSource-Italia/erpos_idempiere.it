@@ -347,5 +347,17 @@ public class MUOM extends X_C_UOM implements ImmutablePOSupport
 		makeImmutable();
 		return this;
 	}
+	
+	/**
+	 * 	Get Precision
+	 * 	@param ctx context
+	 *	@param C_UOM_ID ID
+	 * 	@return Precision
+	 */
+	public static int getCostingPrecision (Properties ctx, int C_UOM_ID)
+	{
+		MUOM uom = get(ctx, C_UOM_ID);
+		return uom.getCostingPrecision();
+	}	//	getPrecision
 
 }	//	MUOM

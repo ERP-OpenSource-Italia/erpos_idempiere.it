@@ -81,11 +81,11 @@ public class UIFeedbackNotifier
 			}
 			else if(currentRequest.getType() == FeedbackRequest.TYPE_NOTICE)
 			{
-				FDialog.warn(windowNo,component,  null, currentRequest.getMessage(), currentRequest.getTitle(), new NoticeCallback());
+				//FDialog.warn(windowNo,component,  null, currentRequest.getMessage(), currentRequest.getTitle(), new NoticeCallback());
 			}
 			else
 			{
-				FDialog.warn(windowNo,component,  null, currentRequest.getMessage(), currentRequest.getTitle(), new WarningCallback());
+				//FDialog.warn(windowNo,component,  null, currentRequest.getMessage(), currentRequest.getTitle(), new WarningCallback());
 			}			
 		}
 		else

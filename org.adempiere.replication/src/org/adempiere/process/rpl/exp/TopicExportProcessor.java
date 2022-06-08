@@ -142,8 +142,7 @@ public class TopicExportProcessor implements IExportProcessor {
         aTransformer.transform(src, dest2);
         
         sendJMSMessage(host, port, writer.toString(), protocol, topicName, clientID, account, password, timeToLive, isDeliveryModePersistent);
-		
-	}
+	} 
 
 	private void sendJMSMessage(String host, int port, String msg, String protocol, String topicName
 			, String clientID, String userName, String password, int timeToLive
@@ -212,5 +211,6 @@ public class TopicExportProcessor implements IExportProcessor {
 			}
 		}
 	}
+	
 
 }

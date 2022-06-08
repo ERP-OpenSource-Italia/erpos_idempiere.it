@@ -1440,7 +1440,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	 * 	@param paymentDate ignored Payment Date
 	 * 	@return Open Amt
 	 */
-	public BigDecimal getOpenAmt (boolean creditMemoAdjusted, Timestamp paymentDate)
+	public BigDecimal getOpenAmt (boolean creditMemoAdjusted, Timestamp paymentDate,boolean requery)
 	{
 		if (isPaid())
 			return Env.ZERO;

@@ -78,6 +78,23 @@ public class MDocType extends X_C_DocType implements ImmutablePOSupport
 	}	//	getOfDocBaseType
 	
 	/**
+	 * 	Get Client Document Type with DocBaseType
+	 *	@param ctx context
+	 *	@param DocBaseType base document type
+	 *	@return array of doc types
+	 */
+	static public MDocType[] getOfDocBaseType (Properties ctx, String DocBaseType)
+	{
+		final String whereClause  = "AD_Client_ID=? AND DocBaseType=?";
+		List<MDocType> list = new Query(ctx, Table_Name, whereClause, null)
+									.setParameters(Env.getAD_Client_ID(ctx), DocBaseType)
+									.setOnlyActiveRecords(true)
+									.setOrderBy("IsDefault DESC, C_DocType_ID")
+									.list();
+		return list.toArray(new MDocType[list.size()]);
+	}	//	getOfDocBaseType
+	
+	/**
 	 * 	Get Client Document Types
 	 *	@param ctx context
 	 *	@return array of doc types
@@ -112,10 +129,11 @@ public class MDocType extends X_C_DocType implements ImmutablePOSupport
 		MDocType retValue = (MDocType)s_cache.get(C_DocType_ID);
 		if (retValue == null)
 		{
+			retValue = new MDocType (ctx, C_DocType_ID, null);
 			s_cache.put(C_DocType_ID, retValue, e -> new MDocType(Env.getCtx(), e));
 			return retValue;
 		}
-		return null;		 
+		return retValue;  
 	} 	//	get
 	
 	/**	Cache					*/

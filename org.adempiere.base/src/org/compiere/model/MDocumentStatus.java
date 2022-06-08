@@ -105,7 +105,7 @@ public class MDocumentStatus extends X_PA_DocumentStatus {
 	{
 		//LS:Fix Use tableName for identify column appartenence 
 		String tableName = documentStatus.getAD_Table().getTableName();
-		StringBuffer where = new StringBuffer(tableName);
+		StringBuilder where = new StringBuilder(tableName);
 		where.append(".AD_Client_ID=" + Env.getAD_Client_ID(Env.getCtx()) );
 		if (documentStatus.getC_Project_ID() > 0) 
 		{

@@ -75,7 +75,7 @@ public class GenericPaymentExport implements PaymentExport
 	 *  @return number of lines
 	 */
 	public int exportToFile(MPaySelectionCheck[] checks, boolean depositBatch, String paymentRule, File file,
-			StringBuffer err) {
+			StringBuilder err) {
 		if (checks == null || checks.length == 0)
 			return 0;
 		//  Must be a file

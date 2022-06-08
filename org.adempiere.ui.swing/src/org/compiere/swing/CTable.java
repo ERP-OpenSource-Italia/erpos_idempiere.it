@@ -434,7 +434,7 @@ public class CTable extends JTable
 	 */
 	public String toString()
 	{
-		return new StringBuffer("CTable[").append(getModel()).append("]").toString();
+		return new StringBuilder("CTable[").append(getModel()).append("]").toString();
 	}   //  toString
 
 	

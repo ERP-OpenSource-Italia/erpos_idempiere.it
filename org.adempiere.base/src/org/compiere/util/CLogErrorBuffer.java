@@ -395,7 +395,7 @@ public class CLogErrorBuffer extends Handler
 	{
 		checkContext();
 
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		//
 		if (errorsOnly)
 		{

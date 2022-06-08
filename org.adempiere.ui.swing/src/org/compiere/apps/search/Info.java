@@ -459,7 +459,7 @@ public abstract class Info extends CDialog
 	protected void prepareTable (Info_Column[] layout, String from, String staticWhere, String orderBy)
 	{
 		p_layout = layout;
-		StringBuffer sql = new StringBuffer ("SELECT ");
+		StringBuilder sql = new StringBuilder ("SELECT ");
 		//  add columns & sql
 		for (int i = 0; i < layout.length; i++)
 		{

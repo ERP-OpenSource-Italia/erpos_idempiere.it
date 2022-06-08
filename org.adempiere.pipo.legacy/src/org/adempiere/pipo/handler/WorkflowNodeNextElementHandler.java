@@ -57,7 +57,7 @@ public class WorkflowNodeNextElementHandler extends AbstractElementHandler {
 			String workflowNodeName = atts.getValue("ADWorkflowNodeNameID").trim();
 			String workflowNodeNextName = atts.getValue("ADWorkflowNodeNextNameID").trim();
 
-			StringBuffer sqlB = new StringBuffer ("SELECT ad_wf_node_id FROM AD_WF_Node WHERE AD_Workflow_ID=? and Name =?");		
+			StringBuilder sqlB = new StringBuilder ("SELECT ad_wf_node_id FROM AD_WF_Node WHERE AD_Workflow_ID=? and Name =?");		
 
 			int wfNodeId = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),workflowId,workflowNodeName);
 			if (wfNodeId <= 0) {
@@ -73,7 +73,7 @@ public class WorkflowNodeNextElementHandler extends AbstractElementHandler {
 				return;
 			}
 
-			sqlB = new StringBuffer ("SELECT  ad_wf_nodenext_id FROM AD_WF_NodeNext  WHERE ad_wf_node_id =? and ad_wf_next_id =?");		
+			sqlB = new StringBuilder ("SELECT  ad_wf_nodenext_id FROM AD_WF_NodeNext  WHERE ad_wf_node_id =? and ad_wf_next_id =?");		
 
 			int id = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),wfNodeId,wfNodeNextId);
 

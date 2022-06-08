@@ -54,6 +54,12 @@ public class MCharge extends X_C_Charge implements ImmutablePOSupport
 	{
 		return getAccount (C_Charge_ID, as);
 	}   //  getAccount
+	
+	public static MAccount getAccount (int C_Charge_ID, MAcctSchema as)
+	{
+		String trxName = null;
+		return getAccount (C_Charge_ID, as, trxName);
+	}
 
 	/**
 	 *  Get Charge Account
@@ -61,13 +67,13 @@ public class MCharge extends X_C_Charge implements ImmutablePOSupport
 	 *  @param as account schema
 	 *  @return Charge Account or null
 	 */
-	public static MAccount getAccount (int C_Charge_ID, MAcctSchema as)
+	public static MAccount getAccount (int C_Charge_ID, MAcctSchema as,String trxName)
 	{
 		if (C_Charge_ID == 0 || as == null)
 			return null;
 
 		String sql = "SELECT Ch_Expense_Acct FROM C_Charge_Acct WHERE C_Charge_ID=? AND C_AcctSchema_ID=?";
-		int Account_ID = DB.getSQLValueEx(null, sql, C_Charge_ID, as.get_ID());
+		int Account_ID = DB.getSQLValueEx(trxName, sql, C_Charge_ID, as.get_ID());
 		//	No account
 		if (Account_ID <= 0)
 		{

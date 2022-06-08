@@ -2006,9 +2006,9 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 	 *	@param content content
 	 *	@return <tag>content</tag>
 	 */
-	private StringBuffer getHTMLpart (String tag, String content)
+	private StringBuilder getHTMLpart (String tag, String content)
 	{
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		if (content == null || content.length() == 0)
 			return sb;
 		if (tag != null && tag.length() > 0)

@@ -1088,7 +1088,7 @@ public final class APanel extends CPanel
 		if (query != null && query.isActive() && !role.isQueryMax(query.getRecordCount()))
 			return query;
 		//
-		StringBuffer where = new StringBuffer(Env.parseContext(m_ctx, m_curWindowNo, mTab.getWhereExtended(), false));
+		StringBuilder where = new StringBuilder(Env.parseContext(m_ctx, m_curWindowNo, mTab.getWhereExtended(), false));
 		//	Query automatically if high volume and no query
 		boolean require = mTab.isHighVolume();
 		if (!require && !m_onlyCurrentRows)				//	No Trx Window
@@ -1105,7 +1105,7 @@ public final class APanel extends CPanel
 				}
 			}
 			//
-			StringBuffer sql = new StringBuffer("SELECT COUNT(*) FROM ")
+			StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM ")
 				.append(mTab.getTableName());
 			if (where.length() > 0)
 				sql.append(" WHERE ").append(where);
@@ -1989,7 +1989,7 @@ public final class APanel extends CPanel
 		int noOfRows = m_curTab.getRowCount();
 		for(int i = 0; i < noOfRows; i++)
 		{
-			StringBuffer displayValue = new StringBuffer();
+			StringBuilder displayValue = new StringBuilder();
 			if ("".equals(keyColumnName))
 			{
 				ArrayList<String> parentColumnNames = m_curTab.getParentColumnNames();

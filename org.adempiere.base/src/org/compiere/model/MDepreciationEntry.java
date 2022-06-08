@@ -521,4 +521,27 @@ implements DocAction, DocOptions	// F3P: added support for ReActivate
 		
 		return index;
 	}
+	
+	public static final String COLUMNNAME_IsDepExpOutPeriod = "IsDepExpOutPeriod";
+	
+	/** Set Registrazioni di ammortamento fuori periodo.
+	@param IsDepExpOutPeriod Registrazioni di ammortamento fuori periodo	  */
+	public void setIsDepExpOutPeriod (boolean IsDepExpOutPeriod)
+	{
+		set_Value (COLUMNNAME_IsDepExpOutPeriod, Boolean.valueOf(IsDepExpOutPeriod));
+	}
+	
+	/** Get Registrazioni di ammortamento fuori periodo.
+		@return Registrazioni di ammortamento fuori periodo	  */
+	public boolean isDepExpOutPeriod () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsDepExpOutPeriod);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
 }

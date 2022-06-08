@@ -48,15 +48,15 @@ public class ChangeLogProcess extends SvrProcess
 	private boolean			p_SetCustomization = false;
 
 	/**	The Update Set Command		*/
-	private StringBuffer	m_sqlUpdate = null;
+	private StringBuilder	m_sqlUpdate = null;
 	/**	The Where Clause			*/
-	private StringBuffer	m_sqlUpdateWhere = null;
+	private StringBuilder	m_sqlUpdateWhere = null;
 	/**	Is it an insert command		*/
 	private boolean			m_isInsert = false;
 	/**	The Insert Command			*/
-	private StringBuffer	m_sqlInsert = null;
+	private StringBuilder	m_sqlInsert = null;
 	/**	The Insert Value clause		*/
-	private StringBuffer	m_sqlInsertValue = null;
+	private StringBuilder	m_sqlInsertValue = null;
 	
 	/** The Table					*/
 	private MTable			m_table = null;
@@ -189,11 +189,11 @@ public class ChangeLogProcess extends SvrProcess
 			if (tableName.equals("AD_Ref_Table"))
 				m_keyColumn = "AD_Reference_ID";
 			//
-			m_sqlUpdate = new StringBuffer ("UPDATE ")
+			m_sqlUpdate = new StringBuilder ("UPDATE ")
 				.append(tableName)
 				.append(" SET ");
 			//	Single Key Only
-			m_sqlUpdateWhere = new StringBuffer (" WHERE ")
+			m_sqlUpdateWhere = new StringBuilder (" WHERE ")
 				.append(m_keyColumn).append("=").append(cLog.getRecord_ID());
 			m_oldRecord_ID = cLog.getRecord_ID();
 			
@@ -202,10 +202,10 @@ public class ChangeLogProcess extends SvrProcess
 			m_isInsert = MChangeLog.EVENTCHANGELOG_Insert.equals(cLog.getEventChangeLog());
 			if (m_isInsert)
 			{
-				m_sqlInsert = new StringBuffer ("INSERT INTO ")
+				m_sqlInsert = new StringBuilder ("INSERT INTO ")
 					.append(tableName).append("(")
 					.append(m_keyColumn);
-				m_sqlInsertValue = new StringBuffer (") VALUES (")
+				m_sqlInsertValue = new StringBuilder (") VALUES (")
 					.append(cLog.getRecord_ID());
 				if (!m_keyColumn.equals(m_column.getColumnName()))
 				{

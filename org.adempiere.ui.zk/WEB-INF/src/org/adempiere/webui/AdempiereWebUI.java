@@ -18,13 +18,16 @@
 package org.adempiere.webui;
 
 import java.lang.ref.WeakReference;
+import java.math.BigDecimal;
 import java.util.Enumeration;
 import java.util.Locale;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
@@ -39,6 +42,7 @@ import org.adempiere.webui.component.ZoomCommand;
 import org.adempiere.webui.desktop.DefaultDesktop;
 import org.adempiere.webui.desktop.FavouriteController;
 import org.adempiere.webui.desktop.IDesktop;
+import org.adempiere.webui.panel.InfoPanel;
 import org.adempiere.webui.session.SessionContextListener;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ITheme;
@@ -47,6 +51,8 @@ import org.adempiere.webui.util.BrowserToken;
 import org.adempiere.webui.util.DesktopWatchDog;
 import org.adempiere.webui.util.UserPreference;
 import org.compiere.Adempiere;
+import org.compiere.model.MColumn;
+import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.model.MSession;
 import org.compiere.model.MSysConfig;
@@ -56,6 +62,7 @@ import org.compiere.model.MUser;
 import org.compiere.model.MUserPreference;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Language;
 import org.compiere.util.Msg;
@@ -209,6 +216,10 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     public void onCancel()
     {
     }
+    
+    // Query param prefix
+ 	private static String QUERYPARAM_PREFIX = "q_";
+ 	private static String RUNQUERY = "runquery";
 
     /* (non-Javadoc)
 	 * @see org.adempiere.webui.IWebClient#loginCompleted()
@@ -473,7 +484,6 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
     				}
     			}
     		}
-    	}
     	else if ("Info".equalsIgnoreCase(action)) {
     		int AD_InfoWindow_ID = getPrmInt("AD_InfoWindow_ID");
     		

@@ -5,7 +5,8 @@ Bundle-SymbolicName: org.adempiere.ui.zk;singleton:=true
 Bundle-Version: 8.2.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-11
 Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version>=11))"
-Import-Package: groovy.transform.stc;version="2.4.7",
+Import-Package: com.f3p.adempiere.extrep.report.engine,
+ groovy.transform.stc;version="2.4.7",
  javax.annotation,
  javax.annotation.processing,
  javax.annotation.security,

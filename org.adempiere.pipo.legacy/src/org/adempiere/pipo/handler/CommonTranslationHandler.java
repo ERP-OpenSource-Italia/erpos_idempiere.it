@@ -89,7 +89,7 @@ public class CommonTranslationHandler extends AbstractElementHandler implements 
 		ArrayList<String> pipoColumns = getExportableColumns(parentTable);
 		
 		
-		StringBuffer sql = new StringBuffer(
+		StringBuilder sql = new StringBuilder(
 			"INSERT INTO "+parentTable+"_trl ("+parentTable+"_ID, "+
 			" ad_client_ID, ad_org_id, CreatedBy, UpdatedBy, "+cast(pipoColumns)+
 			") VALUES ( ?, ?, ?, ?, ? ");
@@ -147,7 +147,7 @@ public class CommonTranslationHandler extends AbstractElementHandler implements 
 
 		ArrayList<String> pipoColumns = getExportableColumns(parentTable);
 		
-		StringBuffer sqlBuf = new StringBuffer("UPDATE "+parentTable+"_trl SET ");
+		StringBuilder sqlBuf = new StringBuilder("UPDATE "+parentTable+"_trl SET ");
 		
 		
 		for (String columnName : pipoColumns) {

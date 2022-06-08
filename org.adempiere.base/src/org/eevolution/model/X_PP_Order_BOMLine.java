@@ -796,16 +796,16 @@ public class X_PP_Order_BOMLine extends PO implements I_PP_Order_BOMLine, I_Pers
 
 	/** Set Qty Requiered.
 		@param QtyRequiered Qty Requiered	  */
-	public void setQtyRequiered (BigDecimal QtyRequiered)
+	public void setQtyRequired (BigDecimal QtyRequiered)
 	{
-		set_Value (COLUMNNAME_QtyRequiered, QtyRequiered);
+		set_Value (COLUMNNAME_QtyRequired, QtyRequiered);
 	}
 
 	/** Get Qty Requiered.
 		@return Qty Requiered	  */
-	public BigDecimal getQtyRequiered () 
+	public BigDecimal getQtyRequired () 
 	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_QtyRequiered);
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_QtyRequired);
 		if (bd == null)
 			 return Env.ZERO;
 		return bd;

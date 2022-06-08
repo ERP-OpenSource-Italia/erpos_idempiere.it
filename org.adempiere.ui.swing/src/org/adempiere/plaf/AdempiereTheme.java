@@ -356,7 +356,7 @@ public class AdempiereTheme extends com.jgoodies.looks.plastic.PlasticTheme {
 	{
 		if (c == null)
 			c = SystemColor.control;
-		StringBuffer sb = new StringBuffer("[r=").append(c.getRed())
+		StringBuilder sb = new StringBuilder("[r=").append(c.getRed())
 			.append(",g=").append(c.getGreen())
 			.append(",b=").append(c.getBlue())
 			.append(",a=").append(c.getAlpha())

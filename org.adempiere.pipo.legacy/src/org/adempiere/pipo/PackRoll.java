@@ -62,11 +62,11 @@ public class PackRoll extends SvrProcess {
 	private int m_AD_Package_Imp_ID = 0;
 	@SuppressWarnings("unused")
 	private String m_Processing = null;
-	StringBuffer sql = null;
-	StringBuffer sqlB = null;
+	StringBuilder sql = null;
+	StringBuilder sqlB = null;
 	String columnIDName = null;
-	StringBuffer sqlC = null;
-	StringBuffer sqlD = null;
+	StringBuilder sqlC = null;
+	StringBuilder sqlD = null;
 
 	/**
 	 * Prepare - e.g., get Parameters.
@@ -94,7 +94,7 @@ public class PackRoll extends SvrProcess {
 	 */
 	protected String doIt() throws Exception {
 
-		sqlB = new StringBuffer("UPDATE AD_Package_Imp "
+		sqlB = new StringBuilder("UPDATE AD_Package_Imp "
 				+ "SET PK_Status = 'Uninstalling' "
 				+ "WHERE AD_Package_Imp_ID = " + m_AD_Package_Imp_ID);
 		@SuppressWarnings("unused")
@@ -103,7 +103,7 @@ public class PackRoll extends SvrProcess {
 		log.info("Starting Package Reversal");
 		// select all records that are new or have been updated by package
 		// install
-		sql = new StringBuffer("SELECT * " + "FROM AD_Package_Imp_Detail "
+		sql = new StringBuilder("SELECT * " + "FROM AD_Package_Imp_Detail "
 				+ "WHERE AD_Package_Imp_ID=" + m_AD_Package_Imp_ID
 				+ " ORDER BY AD_Package_Imp_Detail_ID DESC");
 		if (log.isLoggable(Level.INFO)) log.info(sql.toString());
@@ -117,7 +117,7 @@ public class PackRoll extends SvrProcess {
 
 				if (rs.getString("Type").compareTo("file") == 0) {
 
-					sqlB = new StringBuffer("SELECT * "
+					sqlB = new StringBuilder("SELECT * "
 							+ "FROM AD_Package_Imp_Backup "
 							+ "WHERE AD_Package_Imp_Detail_ID="
 							+ rs.getInt("AD_Package_Imp_Detail_ID")
@@ -139,7 +139,7 @@ public class PackRoll extends SvrProcess {
 							}
 
 							// Update uninstall field for column
-							sqlD = new StringBuffer(
+							sqlD = new StringBuilder(
 									"UPDATE AD_Package_Imp_Backup"
 											+ " SET Uninstall = 'Y'"
 											+ " WHERE AD_Package_Imp_Backup_ID = "
@@ -148,7 +148,7 @@ public class PackRoll extends SvrProcess {
 							no = DB.executeUpdate(sqlD.toString(), null);
 
 							// Update uninstall field for record
-							sqlD = new StringBuffer(
+							sqlD = new StringBuilder(
 									"UPDATE AD_Package_Imp_Detail"
 											+ " SET Uninstall = 'Y'"
 											+ " WHERE AD_Package_Imp_Detail_ID = "
@@ -182,7 +182,7 @@ public class PackRoll extends SvrProcess {
 					// else inactivate record
 					if (rs.getString("ACTION").compareTo("Update") == 0) {
 						// select all backed up columns for the record
-						sqlB = new StringBuffer("SELECT * "
+						sqlB = new StringBuilder("SELECT * "
 								+ "FROM AD_Package_Imp_Backup "
 								+ "WHERE AD_Package_Imp_Detail_ID="
 								+ rs.getInt("AD_Package_Imp_Detail_ID")
@@ -197,21 +197,21 @@ public class PackRoll extends SvrProcess {
 
 							while (rs2.next()) {
 
-								sql = new StringBuffer(
+								sql = new StringBuilder(
 										"SELECT IsKey FROM AD_Column WHERE AD_Column_ID = ?");
 								String IsKey = DB.getSQLValueString(
 										get_TrxName(), sql.toString(), rs2
 												.getInt("AD_Column_ID"));
 
 								// Get Table value
-								sql = new StringBuffer(
+								sql = new StringBuilder(
 										"SELECT TableName FROM AD_Table WHERE AD_Table_ID = ?");
 								tableName = DB.getSQLValueString(get_TrxName(),
 										sql.toString(), rs2
 												.getInt("AD_Table_ID"));
 
 								// Get Column Name
-								sql = new StringBuffer(
+								sql = new StringBuilder(
 										"SELECT ColumnName FROM AD_Column WHERE AD_Column_ID = ?");
 								String columnName = DB.getSQLValueString(
 										get_TrxName(), sql.toString(), rs2
@@ -236,14 +236,14 @@ public class PackRoll extends SvrProcess {
 								// Update "Updated" field with current date
 								else if (columnName.equals("Updated")) {
 									// Format Date
-									sqlC = new StringBuffer("UPDATE "
+									sqlC = new StringBuilder("UPDATE "
 											+ tableName + " SET " + columnName
 											+ " = SYSDATE WHERE "
 											+ columnIDName + " = " + recordID);
 
 									no = DB.executeUpdate(sqlC.toString(), null);
 									// Update uninstall field
-									sqlD = new StringBuffer(
+									sqlD = new StringBuilder(
 											"UPDATE AD_Package_Imp_Backup"
 													+ " SET Uninstall = 'Y'"
 													+ " WHERE AD_Package_Imp_Backup_ID = "
@@ -252,7 +252,7 @@ public class PackRoll extends SvrProcess {
 								}
 								// Update "UpdatedBy" field with current user
 								else if (columnName.equals("UpdatedBy")) {
-									sqlC = new StringBuffer("UPDATE "
+									sqlC = new StringBuilder("UPDATE "
 											+ tableName + " SET " + columnName
 											+ " = '"
 											+ Env.getAD_User_ID(Env.getCtx())
@@ -262,7 +262,7 @@ public class PackRoll extends SvrProcess {
 											.executeUpdate(sqlC.toString(),
 													null);
 
-									sqlD = new StringBuffer(
+									sqlD = new StringBuilder(
 											"UPDATE AD_Package_Imp_Backup"
 													+ " SET Uninstall = 'Y'"
 													+ " WHERE AD_Package_Imp_Backup_ID = "
@@ -294,7 +294,7 @@ public class PackRoll extends SvrProcess {
 												.toString().equals("null")) {
 											;// Ignore null values
 										} else {
-											sqlC = new StringBuffer("UPDATE "
+											sqlC = new StringBuilder("UPDATE "
 													+ tableName
 													+ " SET "
 													+ columnName
@@ -310,7 +310,7 @@ public class PackRoll extends SvrProcess {
 									// Update true/false columns
 									else if (v_AD_Reference_ID == REFERENCE_DATATYPE_YES_NO
 											|| v_AD_Reference_ID == REFERENCE_DATATYPE_BUTTON) {
-										sqlC = new StringBuffer("UPDATE "
+										sqlC = new StringBuilder("UPDATE "
 												+ tableName
 												+ " SET "
 												+ columnName
@@ -333,7 +333,7 @@ public class PackRoll extends SvrProcess {
 											|| v_AD_Reference_ID == REFERENCE_DATATYPE_SEARCH
 											|| v_AD_Reference_ID == REFERENCE_DATATYPE_LOCATOR
 											|| v_AD_Reference_ID == REFERENCE_DATATYPE_PRODUCTATTRIBUTE)
-										sqlC = new StringBuffer("UPDATE "
+										sqlC = new StringBuilder("UPDATE "
 												+ tableName
 												+ " SET "
 												+ columnName
@@ -348,7 +348,7 @@ public class PackRoll extends SvrProcess {
 											|| v_AD_Reference_ID == REFERENCE_DATATYPE_AMOUNT
 											|| v_AD_Reference_ID == REFERENCE_DATATYPE_NUMBER
 											|| v_AD_Reference_ID == REFERENCE_DATATYPE_QUANTITY)
-										sqlC = new StringBuffer("UPDATE "
+										sqlC = new StringBuilder("UPDATE "
 												+ tableName
 												+ " SET "
 												+ columnName
@@ -374,7 +374,7 @@ public class PackRoll extends SvrProcess {
 													null);
 
 									// Update uninstall field for column
-									sqlD = new StringBuffer(
+									sqlD = new StringBuilder(
 											"UPDATE AD_Package_Imp_Backup"
 													+ " SET Uninstall = 'Y'"
 													+ " WHERE AD_Package_Imp_Backup_ID = "
@@ -385,7 +385,7 @@ public class PackRoll extends SvrProcess {
 													null);
 
 									// Update uninstall field for record
-									sqlD = new StringBuffer(
+									sqlD = new StringBuilder(
 											"UPDATE AD_Package_Imp_Detail"
 													+ " SET Uninstall = 'Y'"
 													+ " WHERE AD_Package_Imp_Detail_ID = "
@@ -419,7 +419,7 @@ public class PackRoll extends SvrProcess {
 							columnIDName = "Node_ID";
 						else
 							columnIDName = tableName + "_ID";
-						sqlC = new StringBuffer("UPDATE " + tableName
+						sqlC = new StringBuilder("UPDATE " + tableName
 								+ " SET IsActive = 'N'" + " WHERE "
 								+ columnIDName + " = " + recordID);
 
@@ -427,7 +427,7 @@ public class PackRoll extends SvrProcess {
 						no = DB.executeUpdate(sqlC.toString(), null);
 
 						// Update uninstall field for record
-						sqlD = new StringBuffer("UPDATE AD_Package_Imp_Detail"
+						sqlD = new StringBuilder("UPDATE AD_Package_Imp_Detail"
 								+ " SET Uninstall = 'Y'"
 								+ " WHERE AD_Package_Imp_Detail_ID = "
 								+ rs.getInt("AD_Package_Imp_Detail_ID"));
@@ -450,12 +450,12 @@ public class PackRoll extends SvrProcess {
 			pstmt = null;
 		}
 		// Update uninstall field for package
-		sqlD = new StringBuffer("UPDATE AD_Package_Imp"
+		sqlD = new StringBuilder("UPDATE AD_Package_Imp"
 				+ " SET Uninstall = 'Y'" + " WHERE AD_Package_Imp_ID = "
 				+ m_AD_Package_Imp_ID);
 		no = DB.executeUpdate(sqlD.toString(), get_TrxName());
 
-		sqlB = new StringBuffer("UPDATE AD_Package_Imp "
+		sqlB = new StringBuilder("UPDATE AD_Package_Imp "
 				+ " SET PK_Status = 'Uninstalled'"
 				+ " WHERE AD_Package_Imp_ID = " + m_AD_Package_Imp_ID);
 		no = DB.executeUpdate(sqlB.toString(), get_TrxName());

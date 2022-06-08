@@ -26,14 +26,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for A_Asset_Addition
  *  @author iDempiere (generated) 
- *  @version Release 8.2 - $Id$ */
+ *  @version Release 6.2 - $Id$ */
 public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20201220L;
+	private static final long serialVersionUID = 20190106L;
 
     /** Standard Constructor */
     public X_A_Asset_Addition (Properties ctx, int A_Asset_Addition_ID, String trxName)
@@ -41,23 +41,36 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
       super (ctx, A_Asset_Addition_ID, trxName);
       /** if (A_Asset_Addition_ID == 0)
         {
+			setA_Accumulated_Depr (Env.ZERO);
+// 0
+			setA_Accumulated_Depr_Adjust (false);
+// N
+			setA_Accumulated_Depr_F (Env.ZERO);
+// 0
 			setA_Asset_Addition_ID (0);
 			setA_Asset_ID (0);
 			setA_CapvsExp (null);
 // 'Cap'
 			setA_CreateAsset (false);
 // 'N'
+			setA_Period_Start (0);
+// 0
 			setA_QTY_Current (Env.ZERO);
 // 0
 			setA_SourceType (null);
 // 'INV'
 			setAssetAmtEntered (Env.ZERO);
 // 0
+			setAssetSourceTaxAmt (Env.ZERO);
 			setAssetValueAmt (Env.ZERO);
 			setC_ConversionType_ID (0);
 			setC_Currency_ID (0);
 			setDateDoc (new Timestamp( System.currentTimeMillis() ));
 // @#Date@
+			setDeltaUseLifeYears (0);
+// 0
+			setDeltaUseLifeYears_F (0);
+// 0
 			setDocStatus (null);
 // 'DR'
 			setIsApproved (false);
@@ -98,6 +111,61 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
         .append(get_ID()).append("]");
       return sb.toString();
     }
+
+	/** Set Accumulated Depreciation.
+		@param A_Accumulated_Depr Accumulated Depreciation	  */
+	public void setA_Accumulated_Depr (BigDecimal A_Accumulated_Depr)
+	{
+		set_Value (COLUMNNAME_A_Accumulated_Depr, A_Accumulated_Depr);
+	}
+
+	/** Get Accumulated Depreciation.
+		@return Accumulated Depreciation	  */
+	public BigDecimal getA_Accumulated_Depr () 
+	{
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_A_Accumulated_Depr);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
+	}
+
+	/** Set Adjust Accumulated Depreciation.
+		@param A_Accumulated_Depr_Adjust Adjust Accumulated Depreciation	  */
+	public void setA_Accumulated_Depr_Adjust (boolean A_Accumulated_Depr_Adjust)
+	{
+		set_Value (COLUMNNAME_A_Accumulated_Depr_Adjust, Boolean.valueOf(A_Accumulated_Depr_Adjust));
+	}
+
+	/** Get Adjust Accumulated Depreciation.
+		@return Adjust Accumulated Depreciation	  */
+	public boolean isA_Accumulated_Depr_Adjust () 
+	{
+		Object oo = get_Value(COLUMNNAME_A_Accumulated_Depr_Adjust);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Accumulated Depreciation (fiscal).
+		@param A_Accumulated_Depr_F Accumulated Depreciation (fiscal)	  */
+	public void setA_Accumulated_Depr_F (BigDecimal A_Accumulated_Depr_F)
+	{
+		set_Value (COLUMNNAME_A_Accumulated_Depr_F, A_Accumulated_Depr_F);
+	}
+
+	/** Get Accumulated Depreciation (fiscal).
+		@return Accumulated Depreciation (fiscal)	  */
+	public BigDecimal getA_Accumulated_Depr_F () 
+	{
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_A_Accumulated_Depr_F);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
+	}
 
 	/** Set Asset Addition.
 		@param A_Asset_Addition_ID Asset Addition	  */
@@ -235,6 +303,23 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
 		return ii.intValue();
 	}
 
+	/** Set A_Period_Start.
+		@param A_Period_Start A_Period_Start	  */
+	public void setA_Period_Start (int A_Period_Start)
+	{
+		set_Value (COLUMNNAME_A_Period_Start, Integer.valueOf(A_Period_Start));
+	}
+
+	/** Get A_Period_Start.
+		@return A_Period_Start	  */
+	public int getA_Period_Start () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_A_Period_Start);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
 	/** Set Current Qty.
 		@param A_QTY_Current Current Qty	  */
 	public void setA_QTY_Current (BigDecimal A_QTY_Current)
@@ -317,7 +402,7 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
 		@param AssetSourceAmt Source Amount	  */
 	public void setAssetSourceAmt (BigDecimal AssetSourceAmt)
 	{
-		set_Value (COLUMNNAME_AssetSourceAmt, AssetSourceAmt);
+		set_ValueNoCheck (COLUMNNAME_AssetSourceAmt, AssetSourceAmt);
 	}
 
 	/** Get Source Amount.
@@ -325,6 +410,26 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
 	public BigDecimal getAssetSourceAmt () 
 	{
 		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_AssetSourceAmt);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
+	}
+
+	/** Set Source Tax Amount.
+		@param AssetSourceTaxAmt 
+		Source Tax Due to sales Tax
+	  */
+	public void setAssetSourceTaxAmt (BigDecimal AssetSourceTaxAmt)
+	{
+		set_Value (COLUMNNAME_AssetSourceTaxAmt, AssetSourceTaxAmt);
+	}
+
+	/** Get Source Tax Amount.
+		@return Source Tax Due to sales Tax
+	  */
+	public BigDecimal getAssetSourceTaxAmt () 
+	{
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_AssetSourceTaxAmt);
 		if (bd == null)
 			 return Env.ZERO;
 		return bd;
@@ -600,6 +705,43 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
 		return (Timestamp)get_Value(COLUMNNAME_DateDoc);
 	}
 
+	/** Set Delta Use Life Years.
+		@param DeltaUseLifeYears Delta Use Life Years	  */
+	public void setDeltaUseLifeYears (int DeltaUseLifeYears)
+	{
+		set_Value (COLUMNNAME_DeltaUseLifeYears, Integer.valueOf(DeltaUseLifeYears));
+	}
+
+	/** Get Delta Use Life Years.
+		@return Delta Use Life Years	  */
+	public int getDeltaUseLifeYears () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_DeltaUseLifeYears);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	/** Set Delta Use Life Years (fiscal).
+		@param DeltaUseLifeYears_F 
+		Delta Use Life Years (fiscal)
+	  */
+	public void setDeltaUseLifeYears_F (int DeltaUseLifeYears_F)
+	{
+		set_Value (COLUMNNAME_DeltaUseLifeYears_F, Integer.valueOf(DeltaUseLifeYears_F));
+	}
+
+	/** Get Delta Use Life Years (fiscal).
+		@return Delta Use Life Years (fiscal)
+	  */
+	public int getDeltaUseLifeYears_F () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_DeltaUseLifeYears_F);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
 	/** Set Description.
 		@param Description 
 		Optional short description of the record
@@ -764,11 +906,6 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
 			 return 0;
 		return ii.intValue();
 	}
-
-	public org.compiere.model.I_I_FixedAsset getI_FixedAsset() throws RuntimeException
-    {
-		return (org.compiere.model.I_I_FixedAsset)MTable.get(getCtx(), org.compiere.model.I_I_FixedAsset.Table_Name)
-			.getPO(getI_FixedAsset_ID(), get_TrxName());	}
 
 	/** Set Imported Fixed Asset.
 		@param I_FixedAsset_ID Imported Fixed Asset	  */
@@ -1010,6 +1147,8 @@ public class X_A_Asset_Addition extends PO implements I_A_Asset_Addition, I_Pers
 	public static final String POSTINGTYPE_Statistical = "S";
 	/** Reservation = R */
 	public static final String POSTINGTYPE_Reservation = "R";
+	/** Competence = C */
+	public static final String POSTINGTYPE_Competence = "C";
 	/** Set PostingType.
 		@param PostingType 
 		The type of posted amount for the transaction

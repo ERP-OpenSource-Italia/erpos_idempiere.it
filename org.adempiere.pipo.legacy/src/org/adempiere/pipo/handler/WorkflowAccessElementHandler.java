@@ -38,21 +38,21 @@ public class WorkflowAccessElementHandler extends AbstractElementHandler {
 		log.info(elementValue);
 		int roleid =0;
 		int workflowid =0;		
-		StringBuffer sqlB = null;
+		StringBuilder sqlB = null;
 		Attributes atts = element.attributes;
 		if (getStringValue(atts,"rolename")!=null){
 			String name = atts.getValue("rolename");		
-			sqlB = new StringBuffer ("SELECT AD_Role_ID FROM AD_Role WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_Role_ID FROM AD_Role WHERE Name= ?");
 			roleid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 		}
 		
 		if (getStringValue(atts,"workflowname")!=null){
 			String name = atts.getValue("workflowname");		
-			sqlB = new StringBuffer ("SELECT AD_Workflow_ID FROM AD_Workflow WHERE Name= ?");
+			sqlB = new StringBuilder ("SELECT AD_Workflow_ID FROM AD_Workflow WHERE Name= ?");
 			workflowid = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),name);
 		}
 		
-		sqlB = new StringBuffer ("SELECT count(*) FROM AD_Workflow_Access WHERE AD_Role_ID=? and AD_Workflow_ID=?");		
+		sqlB = new StringBuilder ("SELECT count(*) FROM AD_Workflow_Access WHERE AD_Role_ID=? and AD_Workflow_ID=?");		
 		int count = DB.getSQLValue(getTrxName(ctx),sqlB.toString(),roleid,workflowid);
 		@SuppressWarnings("unused")
 		int AD_Backup_ID = -1;
@@ -60,7 +60,7 @@ public class WorkflowAccessElementHandler extends AbstractElementHandler {
 		String Object_Status = null;
 		if (count>0){		   	
 			Object_Status = "Update";			
-			sqlB = new StringBuffer ("UPDATE AD_Workflow_Access ")
+			sqlB = new StringBuilder ("UPDATE AD_Workflow_Access ")
 					.append( "SET isActive = '" + atts.getValue("isActive") )
 					.append( "', isReadWrite = '" + atts.getValue("isReadWrite") )
 					.append( "' WHERE AD_Role_ID = " + roleid )
@@ -75,7 +75,7 @@ public class WorkflowAccessElementHandler extends AbstractElementHandler {
 		else{
 			Object_Status = "New";
 			AD_Backup_ID =0;
-			sqlB = new StringBuffer ("INSERT INTO AD_Workflow_Access") 
+			sqlB = new StringBuilder ("INSERT INTO AD_Workflow_Access") 
 					.append( "(AD_Client_ID, AD_Org_ID, CreatedBy, UpdatedBy, " ) 
 					.append( "AD_Role_ID, AD_Workflow_ID, isActive, isReadWrite) " )
 					.append( "VALUES(" ) 

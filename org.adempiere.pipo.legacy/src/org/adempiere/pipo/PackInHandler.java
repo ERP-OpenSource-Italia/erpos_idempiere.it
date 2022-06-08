@@ -322,7 +322,7 @@ public class PackInHandler extends DefaultHandler {
 			
 			AD_Package_Imp_ID = DB.getNextID (Env.getAD_Client_ID(m_ctx), "AD_Package_Imp", null);
 			
-			StringBuffer sqlB = new StringBuffer ("INSERT INTO AD_Package_Imp") 
+			StringBuilder sqlB = new StringBuilder ("INSERT INTO AD_Package_Imp") 
 					.append( "(AD_Client_ID, AD_Org_ID, CreatedBy, UpdatedBy, " ) 
 					.append( "AD_PACKAGE_IMP_ID, RELEASENO, PK_VERSION, VERSION " ) 
 					.append( ", DESCRIPTION, NAME, CREATOR" ) 
@@ -353,7 +353,7 @@ public class PackInHandler extends DefaultHandler {
 				AD_Package_Imp_Inst_ID = DB.getNextID (Env.getAD_Client_ID(m_ctx), "AD_Package_Imp_Inst", null);
 				
 				//Insert Package into package install log
-				sqlB = new StringBuffer ("INSERT INTO AD_Package_Imp_Inst") 
+				sqlB = new StringBuilder ("INSERT INTO AD_Package_Imp_Inst") 
 						.append( "(AD_Client_ID, AD_Org_ID, CreatedBy, UpdatedBy, " ) 
 						.append( "AD_PACKAGE_IMP_INST_ID, RELEASENO, PK_VERSION, VERSION " ) 
 						.append( ", DESCRIPTION, NAME, CREATOR" ) 
@@ -384,7 +384,7 @@ public class PackInHandler extends DefaultHandler {
 			else{
 				//Update package list with package status
 				AD_Package_Imp_Inst_ID = PK_preInstalled;
-				sqlB = new StringBuffer ("UPDATE AD_Package_Imp_Inst "
+				sqlB = new StringBuilder ("UPDATE AD_Package_Imp_Inst "
 						+ "SET PK_Status = '" + PK_Status 
 						+ "' WHERE AD_Package_Imp_Inst_ID = "+AD_Package_Imp_Inst_ID);		
 				no = DB.executeUpdate (sqlB.toString(), m_trxName);
@@ -456,7 +456,7 @@ public class PackInHandler extends DefaultHandler {
     		}
     		else {        		
     			if (tablename.equals("AD_Package_Imp")){
-    				StringBuffer sqlB = new StringBuffer ("CREATE TABLE "+ tablename.toUpperCase() + "( ")
+    				StringBuilder sqlB = new StringBuilder ("CREATE TABLE "+ tablename.toUpperCase() + "( ")
     						.append( tablename.toUpperCase()+"_ID   NUMBER(10) NOT NULL, " )
     						.append( "AD_CLIENT_ID NUMBER(10) NOT NULL, " )
     						.append( "AD_ORG_ID  NUMBER(10) NOT NULL, " )
@@ -493,7 +493,7 @@ public class PackInHandler extends DefaultHandler {
     				}
     			}
     			if (tablename.equals("AD_Package_Imp_Inst")){
-    				StringBuffer sqlB = new StringBuffer ("CREATE TABLE "+ tablename.toUpperCase() + "( ")
+    				StringBuilder sqlB = new StringBuilder ("CREATE TABLE "+ tablename.toUpperCase() + "( ")
     						.append( tablename.toUpperCase()+"_ID   NUMBER(10) NOT NULL, " )
     						.append( "AD_CLIENT_ID NUMBER(10) NOT NULL, " )
     						.append( "AD_ORG_ID  NUMBER(10) NOT NULL, " )
@@ -530,7 +530,7 @@ public class PackInHandler extends DefaultHandler {
     				}
     			}
     			if (tablename.equals("AD_Package_Imp_Detail")){
-    				StringBuffer sqlB = new StringBuffer ("CREATE TABLE "+ tablename.toUpperCase() + "( ")
+    				StringBuilder sqlB = new StringBuilder ("CREATE TABLE "+ tablename.toUpperCase() + "( ")
     						.append( tablename.toUpperCase()+"_ID   NUMBER(10) NOT NULL, " )
     						.append( "AD_CLIENT_ID NUMBER(10) NOT NULL, " )
     						.append( "AD_ORG_ID  NUMBER(10) NOT NULL, " )
@@ -564,7 +564,7 @@ public class PackInHandler extends DefaultHandler {
     				}
     			}
     			if (tablename.equals("AD_Package_Imp_Backup")){
-    				StringBuffer sqlB = new StringBuffer ("CREATE TABLE "+ tablename.toUpperCase() + "( ")
+    				StringBuilder sqlB = new StringBuilder ("CREATE TABLE "+ tablename.toUpperCase() + "( ")
     						.append( tablename.toUpperCase()+"_ID NUMBER(10) NOT NULL, " )
     						.append( "AD_CLIENT_ID NUMBER(10) NOT NULL, " )
     						.append( "AD_ORG_ID  NUMBER(10) NOT NULL, " )
@@ -640,7 +640,7 @@ public class PackInHandler extends DefaultHandler {
     			PK_Status = "Completed successfully";
     		
     		//Update package history log with package status
-    		StringBuffer sqlB = new StringBuffer ("UPDATE AD_Package_Imp "
+    		StringBuilder sqlB = new StringBuilder ("UPDATE AD_Package_Imp "
     				+ "SET PK_Status = '" + PK_Status
     				+ "' WHERE AD_Package_Imp_ID = " + AD_Package_Imp_ID);		
     		int no = DB.executeUpdate (sqlB.toString(), m_trxName);
@@ -648,7 +648,7 @@ public class PackInHandler extends DefaultHandler {
     			log.info("Update to package summary failed");
     		
     		//Update package list with package status		
-    		sqlB = new StringBuffer ("UPDATE AD_Package_Imp_Inst "
+    		sqlB = new StringBuilder ("UPDATE AD_Package_Imp_Inst "
     				+ "SET PK_Status = '" + PK_Status
     				+ "' WHERE AD_Package_Imp_Inst_ID = " + AD_Package_Imp_Inst_ID);		
     		no = DB.executeUpdate (sqlB.toString(), m_trxName);

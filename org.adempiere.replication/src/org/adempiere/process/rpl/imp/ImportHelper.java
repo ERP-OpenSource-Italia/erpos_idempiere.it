@@ -104,7 +104,7 @@ public class ImportHelper {
 	 * @throws SQLException
 	 * @throws XPathExpressionException
 	 */
-	public void importXMLDocument(StringBuffer result, Document documentToBeImported, String trxName) 
+	public void importXMLDocument(StringBuilder result, Document documentToBeImported, String trxName) 
 		throws Exception, SQLException,	XPathExpressionException 
 	{
 		Element rootElement = documentToBeImported.getDocumentElement();
@@ -261,7 +261,7 @@ public class ImportHelper {
 	 * @throws Exception
 	 * @throws XPathExpressionException
 	 */
-	private PO importElement(Properties ctx, StringBuffer result, Element rootElement,
+	private PO importElement(Properties ctx, StringBuilder result, Element rootElement,
 			MEXPFormat expFormat, String ReplicationType, String trxName) throws Exception, XPathExpressionException 
 	{
 		//Getting the Object for the replicate
@@ -321,7 +321,7 @@ public class ImportHelper {
 	 * @throws Exception
 	 */
 	private Object getValueFromFormat(MEXPFormatLine line,PO po,Element rootElement,
-					StringBuffer result, String ReplicationType) throws Exception
+					StringBuilder result, String ReplicationType) throws Exception
 	{
 		Object value = null;
 		
@@ -428,7 +428,7 @@ public class ImportHelper {
 	 * @param result
 	 * @throws Exception
 	 */
-	private void setReplicaValues(Object value,MEXPFormatLine line,PO po,StringBuffer result)throws Exception
+	private void setReplicaValues(Object value,MEXPFormatLine line,PO po,StringBuilder result)throws Exception
 	{
 		MColumn column = MColumn.get(ctx, line.getAD_Column_ID());
 		if (log.isLoggable(Level.INFO)) log.info("column=[" + column + "]");

@@ -158,7 +158,7 @@ public class MDistributionLine extends X_GL_DistributionLine
 	 * 	Get Account Combination based on Account and Overwrite
 	 *	@return account
 	 */
-	public MAccount getAccount()
+	public MAccount getAccount(String trxName)
 	{
 		MAccount acct = MAccount.get(getCtx(), 
 			m_account.getAD_Client_ID(), 
@@ -180,9 +180,21 @@ public class MDistributionLine extends X_GL_DistributionLine
 			isOverwriteUser2() ? getUser2_ID() : m_account.getUser2_ID(),
 				m_account.getUserElement1_ID(),
 				m_account.getUserElement2_ID(),
-				get_TrxName());
+				trxName);
 		return acct;
 	}	//	setAccount
+	
+	/**
+	 * 	Get Account Combination based on Account and Overwrite
+	 *	@return account
+	 */
+	public MAccount getAccount()
+	{
+		return getAccount(get_TrxName());
+	}	//	setAccount
+	
+	
+	
 
 	
 	/**************************************************************************
