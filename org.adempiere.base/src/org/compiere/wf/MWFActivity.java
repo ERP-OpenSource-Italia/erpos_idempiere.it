@@ -2194,4 +2194,8 @@ public class MWFActivity extends X_AD_WF_Activity implements Runnable
 		
 		return cap;
 	}
+	
+	public MWFProcess getWFProcess() {
+		return m_process;
+	}
 }	//	MWFActivity
