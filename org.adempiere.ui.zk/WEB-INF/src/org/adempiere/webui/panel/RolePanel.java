@@ -69,6 +69,7 @@ import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Button;
+import org.zkoss.zul.Checkbox;
 import org.zkoss.zul.Comboitem;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Image;
@@ -95,7 +96,9 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
 	protected Label lblRole, lblClient, lblDef, lblOrganisation, lblWarehouse, lblDate;
 	protected WDateEditor lstDate;
 	protected Button btnOk, btnCancel;
-
+	//LS 
+	protected Checkbox chkNoDocStatus = null;
+	
     /** Context					*/
 	protected Properties      m_ctx;
     /** Username					*/
@@ -279,6 +282,22 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
     	tr.appendChild(td);
     	td.appendChild(lstDate.getComponent());
 
+    	//LS disabilita DocStatus, solo se SuperUser
+    	if(Env.getAD_User_ID(m_ctx) == 100)
+    	{
+    		tr = new Tr();
+    		tr.setId("rowNoDocStatus");
+    		table.appendChild(tr);
+    		td = new Td();
+    		tr.appendChild(td);
+    		td.setSclass(ITheme.LOGIN_LABEL_CLASS);
+    		td.appendChild(new Label(""));
+    		td = new Td();
+    		td.setSclass(ITheme.LOGIN_FIELD_CLASS);
+    		tr.appendChild(td);
+    		td.appendChild(chkNoDocStatus);
+    	}
+    	
     	div = new Div();
     	div.setSclass(ITheme.LOGIN_BOX_FOOTER_CLASS);
         ConfirmPanel pnlButtons = new ConfirmPanel(true, false, false, false, false, false, true);
@@ -357,7 +376,7 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
         lstDate = new WDateEditor();
         lstDate.setValue(new Timestamp(System.currentTimeMillis()));
         lstDate.getComponent().setId("loginDate");
-
+        
         btnOk = new Button();
         btnOk.setId("btnOk");
         btnOk.setLabel("Ok");
@@ -414,6 +433,14 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
         setUserID();
         updateRoleList();
 
+        //LS after setUserID();
+        if(Env.getAD_User_ID(m_ctx) == 100)
+        {
+        	chkNoDocStatus = new Checkbox(Msg.getMsg(Language.getBaseAD_Language(), "Disattiva Cruscotti"));
+        	chkNoDocStatus.setId("chkNoDocStatus");
+        }
+        //LS END
+        
         this.component = this;
     	component.addEventListener(ON_DEFER_LOGOUT, this);
     }
@@ -721,6 +748,13 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
             }
         }
 
+        //LS
+        if(chkNoDocStatus != null && chkNoDocStatus.isChecked())
+        	Env.setContext(m_ctx, "#LSNoDocStatus", "Y");
+        else
+        	Env.setContext(m_ctx, "#LSNoDocStatus", "N");
+        //LS END
+        
         wndLogin.loginCompleted();
 
         // Elaine 2009/02/06 save preference to AD_Preference
