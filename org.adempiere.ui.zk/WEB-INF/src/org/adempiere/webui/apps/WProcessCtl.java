@@ -221,6 +221,10 @@ public class WProcessCtl extends AbstractProcessCtl {
 			return; // Operation complete
 		}
 		
+		if(aProcessUI instanceof AbstractProcessDialog)
+		{
+			((AbstractProcessDialog) aProcessUI).saveSelection(pi.getAD_PInstance_ID(), null);
+		}
 		//	execute
 		WProcessCtl worker = new WProcessCtl(aProcessUI, WindowNo, pi, trx);
 		worker.run();

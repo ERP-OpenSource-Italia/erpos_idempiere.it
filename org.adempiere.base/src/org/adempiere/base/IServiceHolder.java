@@ -27,4 +27,9 @@ public interface IServiceHolder<T> {
 	 */
 	public T getService();
 	
+	/**
+	 * Get service reference for service with highest service.ranking value
+	 * @return {@link IServiceReferenceHolder}
+	 */
+	public IServiceReferenceHolder<T> getServiceReference();
 }

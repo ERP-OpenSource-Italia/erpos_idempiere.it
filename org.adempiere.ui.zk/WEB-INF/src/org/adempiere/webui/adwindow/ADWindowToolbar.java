@@ -214,6 +214,7 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
         btnRequests = createButton("Requests", "Request", "Request");
         if (isAllowProductInfo) {
             btnProductInfo = createButton("ProductInfo", "Product", "InfoProduct");
+            btnProductInfo.setTooltiptext(btnProductInfo.getTooltiptext()+ "    Alt+I");
             btnProductInfo.setDisabled(!isAllowProductInfo); // Elaine 2008/07/22
             btnProductInfo.setVisible(isAllowProductInfo);
         }
@@ -383,6 +384,8 @@ public class ADWindowToolbar extends FToolbar implements EventListener<Event>
 		altKeyMap.put(VK_R, btnReport);		
 		altKeyMap.put(VK_P, btnPrint);
 		altKeyMap.put(VK_O, btnProcess);
+		if (isAllowProductInfo)
+			altKeyMap.put(VK_I, btnProductInfo); 
 	}
 
 	protected void addSeparator()

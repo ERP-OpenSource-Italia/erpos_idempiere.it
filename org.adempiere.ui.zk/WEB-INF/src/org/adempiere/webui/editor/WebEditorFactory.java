@@ -47,23 +47,38 @@ public class WebEditorFactory
     {
         logger = CLogger.getCLogger(WebEditorFactory.class);
     }
+    
+    public static WEditor getEditor(GridField gridField, boolean tableEditor,boolean searchWindow)
+    {
+    	return getEditor(gridField.getGridTab(), gridField, tableEditor, false, null, 0,searchWindow);
+    }
 
     public static WEditor getEditor(GridField gridField, boolean tableEditor)
     {
-    	return getEditor(gridField.getGridTab(), gridField, tableEditor, false, null, 0);
+    	return getEditor(gridField.getGridTab(), gridField, tableEditor, false, null, 0,false);
     }
     
     public static WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor)
     {
-    	return getEditor(gridTab, gridField, tableEditor, false, null, 0);
+    	return getEditor(gridTab, gridField, tableEditor, false, null, 0,false);
+    }
+    
+    public static WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor,boolean searchWindow)
+    {
+    	return getEditor(gridTab, gridField, tableEditor, false, null, 0,searchWindow);
     }
     
     public static WEditor getEditor(GridField gridField, boolean tableEditor, boolean infoEditor, Properties ctx, int WindowNo)
     {
-    	return getEditor(gridField.getGridTab(), gridField, tableEditor, infoEditor, ctx, WindowNo);
+    	return getEditor(gridField.getGridTab(), gridField, tableEditor, infoEditor, ctx, WindowNo,false);
+    }
+    
+    public static WEditor getEditor(GridField gridField, boolean tableEditor, boolean infoEditor, Properties ctx, int WindowNo,boolean searchWindow)
+    {
+    	return getEditor(gridField.getGridTab(), gridField, tableEditor, infoEditor, ctx, WindowNo,false);
     }
 
-    public static WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor, boolean infoEditor, Properties ctx, int WindowNo)
+    public static WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor, boolean infoEditor, Properties ctx, int WindowNo,boolean searchWindow)
     {
         WEditor editor = null;
         List<IEditorFactory> factoryList = Service.locator().list(IEditorFactory.class).getServices();
@@ -72,10 +87,10 @@ public class WebEditorFactory
         	if(factory instanceof IEditorFactory2)
         	{
         		IEditorFactory2 factory2 = (IEditorFactory2)factory;
-        		editor = factory2.getEditor(gridTab, gridField, tableEditor, infoEditor, WindowNo, ctx);
+        		editor = factory2.getEditor(gridTab, gridField, tableEditor, infoEditor, WindowNo, ctx,searchWindow);
         	}
         	else
-        		editor = factory.getEditor(gridTab, gridField, tableEditor);
+        		editor = factory.getEditor(gridTab, gridField, tableEditor,searchWindow);
         	
         	if (editor != null)
         		break;

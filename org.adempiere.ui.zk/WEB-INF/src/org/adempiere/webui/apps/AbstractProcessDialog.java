@@ -19,6 +19,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Future;
@@ -947,6 +948,8 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			m_pi.setAD_PInstance_ID(instance.getAD_PInstance_ID());
 			getParameterPanel().saveParameters();
 			
+			saveSelection(instance.getAD_PInstance_ID(), null);
+			
 			MPInstance.publishChangedEvent(AD_User_ID);
 			Adempiere.getThreadPoolExecutor().schedule(new BackgroundJobRunnable(getCtx()), 1000, TimeUnit.MILLISECONDS);
 			
@@ -1394,4 +1397,24 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			}
 		});
 	}
+
+	protected Collection<Integer> m_selection = new ArrayList<Integer>();
+	
+	public void setSelection(Collection<Integer> selection) {
+		m_selection = selection;
+	}
+
+	public Collection<Integer> getSelection() {
+		return m_selection;
+	}
+
+	public void saveSelection(int AD_PInstance_ID, String trx) {
+		if (getSelection().isEmpty() == false)
+		{
+			// store in T_Selection table selected rows for Execute Process that retrieves from T_Selection in code.
+			DB.createT_Selection(AD_PInstance_ID, getSelection(), trx);	
+		}
+	}
+	
+	
 }

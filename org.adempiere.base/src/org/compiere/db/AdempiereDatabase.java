@@ -339,5 +339,29 @@ public interface AdempiereDatabase
 	
 	public String getNameOfUniqueConstraintError(Exception e);
 
+	String getNameOfConstraintError(Exception e);
+
+	/**
+	 * @param columnName
+	 * @param csv comma separated value
+	 * @return subset sql clause
+	 */
+	public String subsetClauseForCSV(String columnName, String csv);
+	
+	/**
+	 * @param columnName
+	 * @param csv comma separated value
+	 * @return subset sql clause
+	 */
+	public String intersectClauseForCSV(String columnName, String csv);
+	
+	/**
+	 * Quote column name if necessary (usually to avoid conflict with reserved keywords)
+	 * @param columnName
+	 * @return columnName or quoted columnName
+	 */
+	public default String quoteColumnName(String columnName) {
+		return columnName;
+	}
 }   //  AdempiereDatabase
 

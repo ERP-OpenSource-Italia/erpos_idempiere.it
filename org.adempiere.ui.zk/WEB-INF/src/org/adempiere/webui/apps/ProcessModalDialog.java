@@ -16,10 +16,12 @@
  *****************************************************************************/
 package org.adempiere.webui.apps;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.logging.Level;
 
-import org.adempiere.webui.ClientInfo;
 import org.adempiere.util.FeedbackContainer;
+import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.component.Window;
 import org.adempiere.webui.event.DialogEvents;
@@ -104,6 +106,19 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 	 */
 	public ProcessModalDialog(EventListener<Event> listener, int WindowNo, ProcessInfo pi, boolean autoStart, FeedbackContainer feedbackContainer)
 	{
+		this(listener, WindowNo, pi, autoStart, feedbackContainer, Collections.emptyList());
+	}
+	
+	/**
+	 * @param aProcess
+	 * @param WindowNo
+	 * @param pi
+	 * @param autoStart
+	 * @param feedbackContainer
+	 * @param selection
+	 */
+	public ProcessModalDialog(EventListener<Event> listener, int WindowNo, ProcessInfo pi, boolean autoStart, FeedbackContainer feedbackContainer, Collection<Integer> selection)
+	{
 		super();
 		
 		if(feedbackContainer != null)
@@ -148,6 +163,9 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 			log.log(Level.SEVERE, "", ex);
 		}
 		addEventListener(ON_OK_ECHO, this);
+		
+		setSelection(selection);
+				
 	}
 	
 	/**
@@ -203,6 +221,22 @@ public class ProcessModalDialog extends AbstractProcessDialog implements EventLi
 	public ProcessModalDialog (EventListener<Event> listener, int WindowNo, int AD_Process_ID, int tableId, int recordId, boolean autoStart, FeedbackContainer feedbackContainer)
 	{
 		this(listener, WindowNo, new ProcessInfo("", AD_Process_ID, tableId, recordId), autoStart, feedbackContainer);
+	}
+	
+	/**
+	 * Dialog to start a process/report
+	 * @param listenere
+	 * @param WindowNo
+	 * @param AD_Process_ID
+	 * @param tableId
+	 * @param recordId
+	 * @param autoStart
+	 * @param feedbackContainer
+	 * @param selection
+	 */
+	public ProcessModalDialog (EventListener<Event> listener, int WindowNo, int AD_Process_ID, int tableId, int recordId, boolean autoStart, FeedbackContainer feedbackContainer, Collection<Integer> selection)
+	{
+		this(listener, WindowNo, new ProcessInfo("", AD_Process_ID, tableId, recordId), autoStart, feedbackContainer, selection);
 	}
 
 	/**

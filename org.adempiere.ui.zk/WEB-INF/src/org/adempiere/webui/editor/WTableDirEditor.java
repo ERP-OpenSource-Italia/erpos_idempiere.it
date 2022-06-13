@@ -17,7 +17,6 @@
 
 package org.adempiere.webui.editor;
 
-import java.beans.PropertyChangeEvent;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.Properties;
@@ -610,7 +609,14 @@ ContextMenuListener, IZoomableEditor
 			Object curValue = getValue();
 			
 			if (isReadWrite())
-				lookup.refresh();
+			{
+				//LS Backporting 7.1 multiselction search
+				if (lookup instanceof MLookup)
+					((MLookup) lookup).refreshItemsAndCache();
+				else
+					lookup.refresh();
+				//LS END
+			}
 			else
 				refreshList();
             if (curValue != null)

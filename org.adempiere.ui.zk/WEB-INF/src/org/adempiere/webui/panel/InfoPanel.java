@@ -3243,5 +3243,9 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 		desktop.updateHelpQuickInfo(m_lastRenderedQuickInfo);			
 	}	
 	
+	public Integer getRowKeyAt(int row) {
+		return contentPanel.getRowKeyAt(row);
+	}
+	
 }	//	Info
 
