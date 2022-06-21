@@ -7,26 +7,171 @@ categories:
   - erp
 description:
   it:
+    documentation: 'https://www.erp-opensource.it/%20'
     features:
       - |-
         Amministrazione e Finanza, Logistica e Magazzino, Produzione, Gestione
+
         Acquisti, Vendite
     genericName: ERP
     longDescription: |
-      iDempiere è la suite più robusta, flessibile, affidabile e dinamica
-      esistente al mondo, un ERP-CRM-SCM senza pari, una soluzione integrata per
-      aziende manifatturiere o distribuzione di Medie o Grandi dimensioni e per
-      la pubblica amministrazione
+      iDempiere Business Suite ERP è una **piattaforma software OpenSource**
+      internazionale modulare e scalabile.
 
-      Il modello flessibile, i flussi di lavoro, i documenti e le transazione si
-      adattano alle esigenze del business, a differenza delle applicazioni
-      tradizionali che impongono alle aziende di adattarsi al modello del
-      software. 
+
+      È un sistema adatto per gestire tutti i processi tipici di una Azienda, di
+      un Ente pubblico e della Sanità pubblica e privata.
+
+
+      iDempiere ERP è un sistema **Intercompany** che permette di gestire su
+      un'unica installazione più Aziende collegate (gruppi). 
+
+
+      Prevede un sistema **multi-lingua** che consente a ciascun utente la
+      visualizzazione di dati aziendali con maschere, report ed help nella
+      propria lingua. Supporta nativamente le operazioni in **Multi-Valuta**
+
+
+      La Suite ha un’interfaccia web ed è **Multi-Piattaforma**: caratteristica
+      che lo rende indipendente dal Sistema Operativo del server ed utilizzabile
+      dagli utenti con qualunque browser web (non necessita di alcuna
+      installazione sul pc degli utenti).
+
+
+      **Idempiere ERP** è dotato di un sistema integrato di workflow che
+      permette il controllo e la tracciatura puntuale dei flussi e
+      l’identificazione dei colli di bottiglia nei processi aziendali.
+
+
+      Le principali aree di copertura di iDempiere ERP sono la Gestione
+      amministrativa, Contabilità, Controllo di gestione, Ciclo attivo, Ciclo
+      passivo, Logistica, Magazzini e Gestione della produzione. È dotato di un
+      sistema integrato di analisi dati e KPI (Key Performance Indicators) con
+      cruscotti configurabili.
+
+
+      IDempiere ERP è facilmente personalizzabile per adattarsi ad ogni
+      esigenza, inoltre è facilmente integrabile con altri Sistemi presenti in
+      Azienda mediante diversi connettori (API) sia in tecnologia JSON-REST che
+      SOAP.
+
+
+      Realizzato in Java, supporta i database PostgreSQL ed Oracle, può essere
+      personalizzato attraverso moduli costruiti in base alle specifiche OSGi
+      (installazione, avvio, stop e rimozione di moduli a runtime), si adatta
+      perfettamente alla gestione di tutti gli scenari di business da quelli
+      meno articolati a quelli più complessi. 
+
+
+      **Vantaggi per l'utilizzatore**
+
+
+      Affidabilità:
+
+
+      • Elevata qualità e aderenza agli standard del Software.
+
+
+      • Test  effettuato costantemente e worldwide.
+
+
+      • Correzioni veloci e facilmente reperibili.
+
+
+      Efficienza:
+
+
+      • Il software è controllato ed ottimizzato da una comunità che compete nel
+      migliorarlo, e le nuove funzioni nascono dalle esigenze degli utilizzatori
+      e non dalle esigenze di marketing.
+
+
+      • Il software è di tutti quindi ci si può rivolgere a qualsiasi software
+      house per manutenerlo od implementarlo, senza legarsi ad un unico
+      fornitore.
+
+
+      • Basso TCO (Total Cost of Ownership): licenze ed upgrade senza costo,
+      solo apprendimento, manutenzione ed implementazioni.
+
+
+      Flessibilità: 
+
+
+      • Disponendo dei sorgenti non vi sono limiti nelle possibilità applicative
+      e alle integrazioni con sistemi esterni.
+
+
+      ​
+
+        **IDempiere ERP Tools**
+
+      IDempiere è strutturato in modo da permetterne la customizzazione con
+      tools e interventi che non modificano il core dell'applicativo. Ciò
+      permette di customizzare l'applicativo senza per ciò perdere la
+      compatibilità con nuove versioni.
+
+
+      I tools di IDempiere comprendono:
+
+
+      • Uno strato di metadati descrittivi dell’applicativo, chiamato data
+      dictionary, che consente definizione di tabelle e relazioni, maschere e
+      form, permettendo di introdurre nuovi campi o intere strutture dati
+      integrate con il resto del sistema, senza scrivere alcun codice e con i
+      servizi di ricerca, gestione documenti allegati e reportistica di base
+      generati automaticamente.
+
+
+      • Tre sistemi di reportistica:
+
+
+      - Nativo IDempiere.
+
+
+      - Jasperreports.
+
+
+      - OpenOffice.
+
+
+      • La possibilità di introdurre funzionalità a codice tramite la struttura
+      del “Model Validator” che permette di innestarsi nei processi di
+      IDempiere. In questo modo eventuali dati inseriti automaticamente vengono
+      processati come fossero caricati manualmente, con il medesimo impatto
+      sulle transazioni e le medesime validazioni.
+
+
+      **ERP OPEN SOURCE ITALIA**
+
+
+      ERP Open Source Italia è l‘Associazione di imprese distribuite sul
+      territorio Italiano nata con lo scopo di: 
+
+
+      • Manutenere la **localizzazione amministrativa Italiana.**
+
+
+      • **Definire lo standard **in Italia per gestione di progetto e sviluppo
+      del codice.
+
+
+      • **Assicurare le competenze **dei consulenti.
+
+
+      • Gestire progetti distribuiti sul territorio assicurando la **robustezza
+      **di una grande azienda e la **flessibilità **di piccole aziende collegate
+      tra loro.
+
+
+      ​
 
 
       Visita https://www.erp-opensource.it/ per maggiori dettagli
     shortDescription: 'iDempiere, la soluzione ERP open source per la tua azienda'
-developmentStatus: stable
+developmentStatus: concept
+isBasedOn:
+  - 'https://github.com/idempiere/idempiere'
 it:
   conforme:
     gdpr: false
