@@ -60,7 +60,7 @@ public class MDocumentStatus extends X_PA_DocumentStatus {
 	 */
 	public static MDocumentStatus[] getDocumentStatusIndicators(Properties ctx, int AD_User_ID, int AD_Role_ID)
 	{
-		if (AD_User_ID < 0)
+		if (AD_User_ID < 0 || Env.getContext(ctx, "#LSNoDocStatus").equals("Y"))
 			return new MDocumentStatus[0];
 
 		String whereClause = "AD_Client_ID IN (0,?) AND ((AD_User_ID IS NULL OR AD_User_ID=?) AND ( AD_Role_ID IS NULL OR AD_Role_ID=?))";
