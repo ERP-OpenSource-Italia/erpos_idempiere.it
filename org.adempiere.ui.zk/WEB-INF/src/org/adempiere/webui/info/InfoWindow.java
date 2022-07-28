@@ -1367,7 +1367,8 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 						}
 					}
 					//F3P filter special chars
-					if(function.equalsIgnoreCase("upper") && mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_Like) &&
+					if(function.equalsIgnoreCase("upper") && (mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_Like) 
+							|| mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_FullLike)) &&
 							STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
 					{
 						function = FilterQuery.SPECIAL_CHAR_FUNCTION;
@@ -1385,8 +1386,9 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 					}
 				} else {
 					//F3P filter special chars
-					if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())) &&
-						mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_Like))
+					if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())) 
+							&& (mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_Like) 
+									|| mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_FullLike)))
 					{
 						columnClause = FilterQuery.SPECIAL_CHAR_FUNCTION;
 						
