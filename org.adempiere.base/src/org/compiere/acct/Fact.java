@@ -30,6 +30,7 @@ import org.compiere.model.MDistribution;
 import org.compiere.model.MDistributionLine;
 import org.compiere.model.MElementValue;
 import org.compiere.model.MFactAcct;
+import org.compiere.model.MSysConfig;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 
@@ -135,12 +136,29 @@ public final class Fact
 		line.setPostingType(m_postingType);
 		line.setAccount(m_acctSchema, account);
 
-		//  Amounts - one needs to not zero
-		if (!line.setAmtSource(C_Currency_ID, debitAmt, creditAmt))
-		{//LS non contabilizziamo le righe a 0 anche se hanno una quantità
-			if (log.isLoggable(Level.FINE)) log.fine("Both amounts = 0/Null - " + docLine		
-					+ " - " + toString());			
+		if(MSysConfig.getBooleanValue(MSysConfig.LIT_CREATE_ZERO_FACT,false, m_acctSchema.getAD_Client_ID()))
+		{//LS Comportamento Standard Idempiere
+			//  Amounts - one needs to not zero
+			if (!line.setAmtSource(C_Currency_ID, debitAmt, creditAmt))
+			{
+				if (docLine == null || docLine.getQty() == null || docLine.getQty().signum() == 0)
+				{
+					if (log.isLoggable(Level.FINE)) log.fine("Both amounts & qty = 0/Null - " + docLine		
+							+ " - " + toString());			
+					return null;
+				}
+				if (log.isLoggable(Level.FINE)) log.fine("Both amounts = 0/Null, Qty=" + docLine.getQty() + " - " + docLine		
+						+ " - " + toString());			
+			}
+		}
+		else
+		{
+			if (!line.setAmtSource(C_Currency_ID, debitAmt, creditAmt))
+			{//LS non contabilizziamo le righe a 0 anche se hanno una quantita'
+				if (log.isLoggable(Level.FINE)) log.fine("Both amounts = 0/Null - " + docLine		
+						+ " - " + toString());			
 				return null;
+			}
 		}
 		//  Convert
 		line.convert();
