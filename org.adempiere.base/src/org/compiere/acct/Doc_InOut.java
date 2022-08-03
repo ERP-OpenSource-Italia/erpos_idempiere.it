@@ -622,10 +622,13 @@ public class Doc_InOut extends Doc
 						    costs = costs.multiply(line.getQty());
 	                    }
 	                    else
-	                    {	                    	
-	                    	p_Error = "Resubmit - No Costs for " + product.getName() + " (required order line)";
-	                        log.log(Level.WARNING, p_Error);
-	                        return null;
+	                    {	      
+	                    	//LS: Se non ho l'ordine contabilizzo a 0
+	                    	costs = Env.ZERO;
+	                    	 
+//	                    	p_Error = "Resubmit - No Costs for " + product.getName() + " (required order line)";
+//	                        log.log(Level.WARNING, p_Error);
+//	                        return null;
 	                    }
 	                    //
 					}
@@ -641,11 +644,13 @@ public class Doc_InOut extends Doc
                     	{
 							costs = BigDecimal.ZERO;
                     	}
+						//LS: Se non ho l'ordine contabilizzo a 0
 						else
 						{
-							p_Error = "Resubmit - No Costs for " + product.getName();
-							log.log(Level.WARNING, p_Error);
-							return null;
+							costs = BigDecimal.ZERO;
+//							p_Error = "Resubmit - No Costs for " + product.getName();
+//							log.log(Level.WARNING, p_Error);
+//							return null;
 						}
 					}										
 				} 
@@ -838,9 +843,11 @@ public class Doc_InOut extends Doc
 						
 						if (costs == null || costs.signum() == 0)
 						{
-							p_Error = "Resubmit - No Costs for " + product.getName();
-							log.log(Level.WARNING, p_Error);
-							return null;
+							//TODO verificare
+							costs = Env.ZERO;
+//							p_Error = "Resubmit - No Costs for " + product.getName();
+//							log.log(Level.WARNING, p_Error);
+//							return null;
 						}
 					}
 				}
