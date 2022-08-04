@@ -219,6 +219,8 @@ public class MSysConfig extends X_AD_SysConfig
 	public static final String LIT_PRODUCT_NOT_ON_PRICELIST_PRODUCT_COLUMN = "LIT_PRODUCT_NOT_ON_PRICELIST_PRODUCT_COLUMN";	
 	public static final String LIT_PRODUCT_NOT_ON_PRICELIST_PRICELIST_COLUMN = "LIT_PRODUCT_NOT_ON_PRICELIST_PRICELIST_COLUMN";
 	
+	//Rispristino comportamento standard idempiere della contabilizzazione righe a 0
+	public static final String LIT_CREATE_ZERO_FACT = "LIT_CREATE_ZERO_FACT";
 	//LS End
 	/**
 	 * 	Standard Constructor
