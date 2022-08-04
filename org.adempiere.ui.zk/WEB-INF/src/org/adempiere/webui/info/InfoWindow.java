@@ -958,8 +958,16 @@
  		//	for(int i=0; i <  relatedinfoList.length - 1 ; i++) {
  		for (MInfoRelated relatedInfo:relatedInfoList) {
  
+ 			
+ 			
  			String tableName = null;		
  			int infoRelatedID = relatedInfo.getRelatedInfo_ID(); 
+ 			
+ 			MRole mRole = MRole.get(Env.getCtx(), Env.getAD_Role_ID(Env.getCtx()));
+ 			if(mRole.getInfoAccess(infoRelatedID) == null || mRole.getInfoAccess(infoRelatedID) == false)
+ 			{
+ 				continue;
+ 			}
  
  			MInfoWindow embedInfo = new MInfoWindow(Env.getCtx(), infoRelatedID, null);
  
