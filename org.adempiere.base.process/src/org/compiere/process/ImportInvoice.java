@@ -762,6 +762,7 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 			.append( "WHERE I_IsImported='N'")
 			//F3P: Import only full-doc. Does not proceed with ones that has at least one line with error 
 			.append("AND NOT EXISTS (SELECT * FROM I_INVOICE i WHERE I_INVOICE.documentno = i.documentNo AND I_IsImported='E'")
+			.append(" AND I_INVOICE.C_BPartner_ID = i.C_BPartner_ID AND I_INVOICE.C_BPartner_Location_ID = i.C_BPartner_Location_ID ")
 			.append(clientCheck).append(")")
 			//F3P: End
 			.append (clientCheck)
@@ -863,6 +864,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 					//
 					//F3P: replaced with saveEx
 					//invoice.saveEx();
+					ModelValidationEngine.get().fireImportValidate(ImportInvoice.this, imp, invoice, ImportValidator.TIMING_BEFORE_IMPORT);
+					
 					invoice.saveEx(get_TrxName());
 					previousImp = imp;						
 					noInsert++;
@@ -921,6 +924,9 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 				
 				//F3P: was saveEx)=
 				line.saveEx(get_TrxName());
+				
+				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_AFTER_IMPORT);
+				
 				//F3P: save this line as imported
 				lstImportedIInvoice.add(imp);
 				//
