@@ -730,10 +730,10 @@ public abstract class Doc
 		//F3P check if delete
 		if(isToDeleteAcct())
 		{
-			StringBuffer sql = new StringBuffer ("DELETE Fact_Acct WHERE AD_Table_ID=")
-			.append(get_Table_ID())
-			.append(" AND Record_ID=").append(p_po.get_ID());
-		
+			StringBuilder sql = new StringBuilder ("DELETE Fact_Acct WHERE AD_Table_ID=")
+					.append(get_Table_ID())
+					.append(" AND Record_ID=").append(p_po.get_ID())
+					.append(" AND C_AcctSchema_ID=").append(m_as.getC_AcctSchema_ID());
 			no = DB.executeUpdate(sql.toString(), getTrxName());
 			if (no != 0)
 				log.info("deleted=" + no);
@@ -746,7 +746,8 @@ public abstract class Doc
 	{
 		StringBuffer sql = new StringBuffer ("SELECT count(1) FROM Fact_Acct WHERE AD_Table_ID=")
 		.append(get_Table_ID())
-		.append(" AND Record_ID=").append(p_po.get_ID());
+		.append(" AND Record_ID=").append(p_po.get_ID())
+		.append(" AND C_AcctSchema_ID=").append(m_as.getC_AcctSchema_ID());;
 		
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
