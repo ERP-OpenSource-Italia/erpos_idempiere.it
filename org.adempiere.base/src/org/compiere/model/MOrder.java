@@ -1741,6 +1741,8 @@ public class MOrder extends X_C_Order implements DocAction
 					freightLine.setQty(BigDecimal.ONE);
 					freightLine.setPrice(BigDecimal.ZERO);
 					freightLine.saveEx();
+				}else {
+					getLines(true, null);
 				}
 			}
 		}
