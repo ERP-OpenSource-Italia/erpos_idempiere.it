@@ -29,6 +29,7 @@ import org.adempiere.base.Core;
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.model.ITaxProvider;
 import org.compiere.process.DocAction;
+import org.compiere.process.DocOptions;
 import org.compiere.process.DocumentEngine;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -42,7 +43,7 @@ import org.compiere.util.Msg;
  *
  *  Modifications: Completed RMA functionality (Ashley Ramdass)
  */
-public class MRMA extends X_M_RMA implements DocAction
+public class MRMA extends X_M_RMA implements DocAction, DocOptions
 {
 	/**
 	 * 
@@ -806,7 +807,12 @@ public class MRMA extends X_M_RMA implements DocAction
 		if (m_processMsg != null)
 			return false;
 
-		return false;
+		setDocAction(DOCACTION_Complete);
+		setDocStatus(DOCSTATUS_InProgress);
+		setProcessed(false);
+		setIsApproved(false);
+		
+		return true;
 	}	//	reActivateIt
 	
 	/**
@@ -977,4 +983,19 @@ public class MRMA extends X_M_RMA implements DocAction
 		providers.values().toArray(retValue);
 		return retValue;
 	}
+	
+	// LS: needed to manage reactivate state
+	@Override
+	public int customizeValidActions(String docStatus, Object processing,
+			String orderType, String isSOTrx, int AD_Table_ID, String[] docAction,
+			String[] options, int index)
+	{
+		
+		if (docStatus.equals(DOCSTATUS_Completed)) {
+			options[index++] = DocumentEngine.ACTION_ReActivate;
+		}
+		
+		return index;
+	}
+	//F3P end
 }	//	MRMA
