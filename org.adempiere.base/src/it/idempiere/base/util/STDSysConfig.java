@@ -756,4 +756,11 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LS_ZK_DISABLE_HEADER_COLLAPSE_BTN, false, 0, 0);
 	}
+	
+	public static final String LS_IS_LIT_VALUE_STRUCTURE_COA = "LS_IS_LIT_VALUE_STRUCTURE_COA"; 
+	
+	public static boolean isLITValueStructureCoA(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_IS_LIT_VALUE_STRUCTURE_COA, false, AD_Client_ID, 0);
+	}
 }
