@@ -2404,10 +2404,14 @@ public class MInOut extends X_M_InOut implements DocAction
 			return null;
 		}
 		reversal.setReversal(true);
-
+		
 		//	Reverse Line Qty
 		MInOutLine[] sLines = getLines(false);
 		MInOutLine[] rLines = reversal.getLines(false);
+		
+		// LS: managing of reopen in progress
+		reversal.setReopenInProgress(isReopenInProgress());
+
 		for (int i = 0; i < rLines.length; i++)
 		{
 			MInOutLine rLine = rLines[i];
@@ -2665,4 +2669,16 @@ public class MInOut extends X_M_InOut implements DocAction
 			|| DOCSTATUS_Reversed.equals(ds);
 	}	//	isComplete
 
+	// LS: is reopen in progress ?
+	private boolean reopenInProgress = false;
+	// LS: mark reopen in progress
+	public boolean isReopenInProgress()
+	{
+		return reopenInProgress;
+	}
+
+	public void setReopenInProgress(boolean reopenInProgress)
+	{
+		this.reopenInProgress = reopenInProgress;
+	}
 }	//	MInOut
