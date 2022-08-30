@@ -74,8 +74,6 @@ import org.osgi.service.event.Event;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import it.idempiere.base.util.POTrxData;
-
 /**
  *  Persistent Object.
  *  Superclass for actual implementations
@@ -123,10 +121,6 @@ public abstract class PO
 	
 	/**	Cache						*/
 	private static CCache<String,PO>	s_cache	= new CCache<String,PO>("POCache", 200, 5, true);	//	5 minutes
-	
-	//F3P
-	protected POTrxData trxData;
-	
 	
 	/** Creates a new model (equivalent to new MInvoice(ctx,0,trxName); )
 	 * 
@@ -300,8 +294,6 @@ public abstract class PO
 		else
 			load(ID, trxName);
 		
-		//F3P add POTrxData
-		trxData = new POTrxData(p_info.getTableName());
 	}   //  PO
 
 	/**
@@ -2212,7 +2204,7 @@ public abstract class PO
 		}
 		
 		//F3P start saving session 
-		trxData.startSaveTrx();
+		startSaveTrx();
 
 		//	Before Save
 		try
@@ -2237,7 +2229,7 @@ public abstract class PO
 				}
 				
 				//F3P end saving session 
-				trxData.endSaveTrx();
+				endSaveTrx();
 				
 				return false;
 			}
@@ -2263,7 +2255,7 @@ public abstract class PO
 			}
 			
 			//F3P end saving session 
-			trxData.endSaveTrx();
+			endSaveTrx();
 			
 			return false;
 		}
@@ -2375,9 +2367,15 @@ public abstract class PO
 			}
 			
 			//F3P end saving session 
-			trxData.endSaveTrx();
+			endSaveTrx();
 		}
 	}	//	save
+
+	protected void endSaveTrx() {
+	}
+
+	protected void startSaveTrx() {
+	}
 
 	/**
 	 * Update Value or create new record.
@@ -5032,12 +5030,6 @@ public abstract class PO
 	{
 		String key = getCacheKey(po.get_TableName(), po.get_ID());		
 		s_cache.put(key,po);
-	}
-	
-	//F3P
-	public POTrxData getPOTrxData()
-	{
-		return trxData;
 	}
 	
 	public static void overWriteDataOnImport(PO from,PO to,boolean includeNull,ArrayList<String> columnnameToExclude )
