@@ -436,7 +436,7 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
         //LS after setUserID();
         if(Env.getAD_User_ID(m_ctx) == 100)
         {
-        	chkNoDocStatus = new Checkbox(Msg.getMsg(Language.getBaseAD_Language(), "Disattiva Cruscotti"));
+        	chkNoDocStatus = new Checkbox(Msg.getMsg(language, "Disattiva Cruscotti"));
         	chkNoDocStatus.setId("chkNoDocStatus");
         }
         //LS END
