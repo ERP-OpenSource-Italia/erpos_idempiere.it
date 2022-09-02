@@ -2296,4 +2296,17 @@ public final class Env
 		getCtx().put(LANGUAGE, Language.getBaseAD_Language());
 	}   //  static
 
+	/*********************************** LS **********************************/
+	public static final String C_ACCTSCHEMA_ID = "$C_AcctSchema_ID";
+
+	/**
+	 * 	LS: Get Login C_AcctSchema_ID
+	 *	@param ctx context
+	 *	@return login C_AcctSchema_ID
+	 */
+	public static int getC_AcctSchema_ID (Properties ctx)
+	{
+		return 	Env.getContextAsInt(ctx, C_ACCTSCHEMA_ID);
+	}	//	getAD_User_ID
+	/**********************************LS END*********************************/
 }   //  Env
