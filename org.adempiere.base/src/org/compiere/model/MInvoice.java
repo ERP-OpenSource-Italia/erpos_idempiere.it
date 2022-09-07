@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,11 +49,14 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
+import org.compiere.util.Trx;
+import org.compiere.util.ValueNamePair;
 
 import it.idempiere.base.model.FreeOfCharge;
-import it.idempiere.base.model.LITMInvoice;
 import it.idempiere.base.model.LITMBPartner;
+import it.idempiere.base.model.LITMInvoice;
 import it.idempiere.base.util.GenericPOAdvancedComparator;
+import it.idempiere.base.util.POTrxData;
 import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
 
@@ -341,6 +345,9 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			super.setProcessed (false);
 			setProcessing(false);
 		}
+		
+		//F3P add POTrxData
+		trxData = new POTrxData(p_info.getTableName());
 	}	//	MInvoice
 
 	/**
@@ -352,6 +359,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	public MInvoice (Properties ctx, ResultSet rs, String trxName)
 	{
 		super(ctx, rs, trxName);
+		//F3P add POTrxData
+		trxData = new POTrxData(p_info.getTableName());
 	}	//	MInvoice
 
 	/**
@@ -3073,4 +3082,25 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		
 		return orderedLines;
 	}
+	
+	//F3P
+	protected POTrxData trxData;
+		
+		
+	public POTrxData getPOTrxData()
+	{
+		return trxData;
+	}
+	
+	@Override
+	protected void endSaveTrx() {
+		trxData.endSaveTrx();
+	}
+
+	
+	@Override
+	protected void startSaveTrx() {
+		trxData.startSaveTrx();
+	}
+	
 }	//	MInvoice
