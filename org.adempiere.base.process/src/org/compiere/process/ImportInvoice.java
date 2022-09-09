@@ -71,6 +71,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 	protected boolean m_bNotOverWritePrice = false;
 	
 	protected int lineBufferThreshold = 0;
+	
+	protected boolean m_ValidateOnly = false;
 	/**
 	 *  Prepare - e.g., get Parameters.
 	 */
@@ -94,6 +96,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 				m_bAvoidPartialImport = "Y".equals(para[i].getParameter());
 			else if (name.equals("IsNotOverWritePrice")) //F3P: param added 
 				m_bNotOverWritePrice = "Y".equals(para[i].getParameter());
+			else if (name.equals("IsValidateOnly"))
+				m_ValidateOnly = para[i].getParameterAsBoolean();
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -607,6 +611,9 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE); //F3P
 		
 		commitEx();
+		
+		if (m_ValidateOnly)
+			return "Solo validazione dati";
 		
 		//	-- New BPartner ---------------------------------------------------
 
