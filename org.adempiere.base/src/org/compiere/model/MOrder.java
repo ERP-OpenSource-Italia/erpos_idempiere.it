@@ -3208,27 +3208,7 @@ public class MOrder extends X_C_Order implements DocAction
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
 //		String DocSubTypeSO = dt.getDocSubTypeSO();
 		String DocSubTypeSO = LITMOrder.getDocSubTypeSO(this, dt);
-		
-		//	Replace Prepay with POS to revert all doc
-		if (MDocType.DOCSUBTYPESO_PrepayOrder.equals (DocSubTypeSO))
-		{
-			MDocType newDT = null;
-			MDocType[] dts = MDocType.getOfClient (getCtx());
-			for (int i = 0; i < dts.length; i++)
-			{
-				MDocType type = dts[i];
-				if (MDocType.DOCSUBTYPESO_PrepayOrder.equals(type.getDocSubTypeSO()))
-				{
-					if (type.isDefault() || newDT == null)
-						newDT = type;
-				}
-			}
-			if (newDT == null)
-				return false;
-			else
-				setC_DocType_ID (newDT.getC_DocType_ID());
-		}
-
+	
 		//	PO - just re-open
 		if (!isSOTrx()) {
 			if (log.isLoggable(Level.INFO)) log.info("Existing documents not modified - " + dt);
