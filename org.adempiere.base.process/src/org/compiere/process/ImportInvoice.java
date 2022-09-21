@@ -125,7 +125,7 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 		if (m_deleteOldImported)
 		{
 			sql = new StringBuilder ("DELETE I_Invoice ")
-				  .append("WHERE I_IsImported='Y'").append (clientCheck);
+				  .append("WHERE I_IsImported='Y'").append (getDocumentNoFilter());
 			no = DB.executeUpdate(sql.toString(), get_TrxName());
 			if (log.isLoggable(Level.FINE)) log.fine("Delete Old Impored =" + no);
 		}
@@ -141,7 +141,7 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 			  .append(" UpdatedBy = COALESCE (UpdatedBy, 0),")
 			  .append(" I_ErrorMsg = ' ',")
 			  .append(" I_IsImported = 'N' ")
-			  .append("WHERE I_IsImported<>'Y' OR I_IsImported IS NULL")
+			  .append("WHERE (I_IsImported<>'Y' OR I_IsImported IS NULL )")
 				.append(getDocumentNoFilter()); //F3P: added filter by docNo
 
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
