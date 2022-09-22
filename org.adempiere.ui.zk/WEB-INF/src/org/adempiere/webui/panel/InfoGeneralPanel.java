@@ -523,7 +523,7 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 				if (columnSql == null || columnSql.length() == 0)
 					columnSql = tableName+"."+columnName;
 				int AD_Column_ID = rs.getInt(7);
-				boolean isTranslated = rs.getString(7).equals("Y"); // F3P: we need to know if the column is translated
+				boolean isTranslated = rs.getString(8).equals("Y"); // F3P: we need to know if the column is translated
 
 				//  Default
 				StringBuffer colSql = new StringBuffer(columnSql);
@@ -587,7 +587,7 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 						
 						for(int i=0, len = m_queryColumnsSql.size(); i < len; i++)
 						{
-							if(m_queryColumnsSql.get(i).equals(columnName))
+							if(m_queryColumnsSql.get(i).equals(p_tableName+"."+columnName))
 							{
 								String sWhereCol = TRANSLATED_COLUMN.format(new Object[]{columnName,p_tableName});
 								m_queryColumnsSql.set(i, sWhereCol);
