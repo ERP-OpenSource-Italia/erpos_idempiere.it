@@ -70,6 +70,10 @@ public final class UserPreference implements Serializable {
 	public static final String P_HEADER_COLLAPSED = "HeaderCollapsed";
 	public static final String DEFAULT_HEADER_COLLAPSED = "N";
 
+	/** LS Disable DocStatus**/
+	public static final String P_DISABLE_DOCSTATUS = "DisableDocStatus";
+	public static final String DEFAULT_DISABLE_DOCSTATUS = "N";
+	
 	/** Ini Properties */
 	private static final String[] PROPERTIES = new String[] {
 		P_LANGUAGE,
@@ -79,7 +83,9 @@ public final class UserPreference implements Serializable {
 		P_WAREHOUSE,
 		P_MENU_COLLAPSED,
 		P_HELP_COLLAPSED,
-		P_HEADER_COLLAPSED};
+		P_HEADER_COLLAPSED
+		,P_DISABLE_DOCSTATUS //LS
+		};
 	/** Ini Property Values */
 	private static final String[] VALUES = new String[] {
 		DEFAULT_LANGUAGE,
@@ -89,7 +95,9 @@ public final class UserPreference implements Serializable {
 		DEFAULT_WAREHOUSE,
 		DEFAULT_MENU_COLLAPSED,
 		DEFAULT_HELP_COLLAPSED,
-		DEFAULT_HEADER_COLLAPSED};
+		DEFAULT_HEADER_COLLAPSED
+		,DEFAULT_DISABLE_DOCSTATUS //LS
+	};
 
 	/** Container for Properties */
 	private Properties props = new Properties();
