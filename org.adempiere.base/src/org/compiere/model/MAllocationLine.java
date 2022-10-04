@@ -27,6 +27,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+import it.idempiere.base.util.STDSysConfig;
+
 
 /**
  *	Allocation Line Model
@@ -302,6 +304,8 @@ public class MAllocationLine extends X_C_AllocationLine
 					+ (reverse ? "NULL " : "(SELECT C_Payment_ID FROM C_Invoice WHERE C_Invoice_ID=" + C_Invoice_ID + ") ")
 				+ "WHERE o.C_Order_ID = (SELECT i.C_Order_ID FROM C_Invoice i "
 					+ "WHERE i.C_Invoice_ID=" + C_Invoice_ID + ")";
+			if (STDSysConfig.isAllocLineProcessItLinkOrderExcludePrepaidSO(getAD_Client_ID(), getAD_Org_ID()))
+				update += " AND not exists (select 'ok' from c_doctype d where o.c_doctype_id = d.c_doctype_id and d.DocSubTypeSO = '" + MDocType.DOCSUBTYPESO_PrepayOrder + "') ";
 			if (DB.executeUpdate(update, get_TrxName()) > 0)
 				if (log.isLoggable(Level.FINE)) log.fine("C_Payment_ID=" + C_Payment_ID 
 					+ (reverse ? " UnLinked from" : " Linked to")

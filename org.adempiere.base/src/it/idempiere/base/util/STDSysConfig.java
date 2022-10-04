@@ -853,5 +853,12 @@ public class STDSysConfig
 	{
 		return MSysConfig.getIntValue(LS_EXPORT_ACTION_EXTENSION_ITEM_SELECTED, LS_EXPORT_ACTION_EXTENSION_ITEM_SELECTED_DEFAULT, AD_Client_ID, AD_Org_ID);
 	}
+	
+	public static final String LS_ALLOCLINE_PROCESSIT_LINKORDER_EXCLUDE_PREPAIDSO = "LS_ALLOCLINE_PROCESSIT_LINKORDER_EXCLUDE_PREPAIDSO";
+
+	public static boolean isAllocLineProcessItLinkOrderExcludePrepaidSO(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_ALLOCLINE_PROCESSIT_LINKORDER_EXCLUDE_PREPAIDSO, false, AD_Client_ID, AD_Org_ID);
+	}
 	//LS END
 }
