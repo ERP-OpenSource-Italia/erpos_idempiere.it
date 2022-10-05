@@ -795,6 +795,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 			int oldC_BPartner_ID = 0;
 			int oldC_BPartner_Location_ID = 0;
 			String oldDocumentNo = "";
+			int oldC_DocType_ID = 0;
+			Timestamp oldDateInvoiced = null;
 			int lineBuffer = 0;
 
 			int lineNo = 0;
@@ -808,7 +810,9 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 				//	New Invoice
 				if (oldC_BPartner_ID != imp.getC_BPartner_ID() 
 					|| oldC_BPartner_Location_ID != imp.getC_BPartner_Location_ID()
-					|| !oldDocumentNo.equals(cmpDocumentNo)	)
+					|| !oldDocumentNo.equals(cmpDocumentNo)
+					|| oldC_DocType_ID != imp.getC_DocType_ID()
+					|| (oldDateInvoiced == null || oldDateInvoiced.compareTo(imp.getDateInvoiced()) != 0) )
 					{
 						//salviamo la fattura precedente
 						if (bSingleLineImportOk && invoice != null)
@@ -832,6 +836,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 					oldDocumentNo = imp.getDocumentNo();
 					if (oldDocumentNo == null)
 						oldDocumentNo = "";
+					oldC_DocType_ID = imp.getC_DocType_ID();
+					oldDateInvoiced = imp.getDateInvoiced();
 					//
 					invoice = new MInvoice (getCtx(), 0, get_TrxName());
 					//F3P: reset list
