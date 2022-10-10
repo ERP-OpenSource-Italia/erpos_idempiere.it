@@ -438,6 +438,8 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
         {
         	chkNoDocStatus = new Checkbox(Msg.getMsg(language, "Disattiva Cruscotti"));
         	chkNoDocStatus.setId("chkNoDocStatus");
+        	userPreference = SessionManager.getSessionApplication().getUserPreference();
+        	chkNoDocStatus.setChecked(userPreference.isPropertyBool(UserPreference.P_DISABLE_DOCSTATUS));
         }
         //LS END
         
@@ -672,6 +674,10 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
     	updateWarehouseList();
     	int M_Warehouse_ID = Env.getContextAsInt(ctx, Env.M_WAREHOUSE_ID);
     	lstWarehouse.setValue(M_Warehouse_ID);
+    	//LS
+    	if(chkNoDocStatus!= null)
+    		chkNoDocStatus.setChecked("Y".equals(Env.getContext(ctx,"#LSNoDocStatus")));
+    	//LS END
     }
 
     /**
@@ -764,6 +770,10 @@ public class RolePanel extends Window implements EventListener<Event>, Deferrabl
         userPreference.setProperty(UserPreference.P_CLIENT, (String) lstItemClient.getValue());
         userPreference.setProperty(UserPreference.P_ORG, (String) lstItemOrg.getValue());
         userPreference.setProperty(UserPreference.P_WAREHOUSE, lstItemWarehouse != null ? (String) lstItemWarehouse.getValue() : "0");
+        //LS
+        if(chkNoDocStatus != null)
+        	userPreference.setProperty(UserPreference.P_DISABLE_DOCSTATUS, chkNoDocStatus.isChecked() ? "Y" : "N");
+        //LS END
         userPreference.savePreference();
         //
     }

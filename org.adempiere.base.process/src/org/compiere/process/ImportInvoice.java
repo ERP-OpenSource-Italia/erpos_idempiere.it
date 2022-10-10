@@ -125,7 +125,7 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 		if (m_deleteOldImported)
 		{
 			sql = new StringBuilder ("DELETE I_Invoice ")
-				  .append("WHERE I_IsImported='Y'").append (getDocumentNoFilter());
+				  .append("WHERE I_IsImported='Y'").append (clientCheck);
 			no = DB.executeUpdate(sql.toString(), get_TrxName());
 			if (log.isLoggable(Level.FINE)) log.fine("Delete Old Impored =" + no);
 		}
@@ -141,8 +141,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 			  .append(" UpdatedBy = COALESCE (UpdatedBy, 0),")
 			  .append(" I_ErrorMsg = ' ',")
 			  .append(" I_IsImported = 'N' ")
-			  .append("WHERE (I_IsImported<>'Y' OR I_IsImported IS NULL )")
-				.append(getDocumentNoFilter()); //F3P: added filter by docNo
+			  .append("WHERE (I_IsImported<>'Y' OR I_IsImported IS NULL )").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info ("Reset=" + no);
@@ -795,6 +795,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 			int oldC_BPartner_ID = 0;
 			int oldC_BPartner_Location_ID = 0;
 			String oldDocumentNo = "";
+			int oldC_DocType_ID = 0;
+			Timestamp oldDateInvoiced = null;
 			int lineBuffer = 0;
 
 			int lineNo = 0;
@@ -808,7 +810,9 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 				//	New Invoice
 				if (oldC_BPartner_ID != imp.getC_BPartner_ID() 
 					|| oldC_BPartner_Location_ID != imp.getC_BPartner_Location_ID()
-					|| !oldDocumentNo.equals(cmpDocumentNo)	)
+					|| !oldDocumentNo.equals(cmpDocumentNo)
+					|| oldC_DocType_ID != imp.getC_DocType_ID()
+					|| (oldDateInvoiced == null || oldDateInvoiced.compareTo(imp.getDateInvoiced()) != 0) )
 					{
 						//salviamo la fattura precedente
 						if (bSingleLineImportOk && invoice != null)
@@ -832,6 +836,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 					oldDocumentNo = imp.getDocumentNo();
 					if (oldDocumentNo == null)
 						oldDocumentNo = "";
+					oldC_DocType_ID = imp.getC_DocType_ID();
+					oldDateInvoiced = imp.getDateInvoiced();
 					//
 					invoice = new MInvoice (getCtx(), 0, get_TrxName());
 					//F3P: reset list
