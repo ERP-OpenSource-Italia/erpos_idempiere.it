@@ -860,5 +860,13 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LS_ALLOCLINE_PROCESSIT_LINKORDER_EXCLUDE_PREPAIDSO, false, AD_Client_ID, AD_Org_ID);
 	}
+	
+	public static final String LS_RESET_WF_CACHE_ON_SAVE = "LS_RESET_WF_CACHE_ON_SAVE";
+
+	public static boolean isResetWFCacheOnSave() 
+	{
+		return MSysConfig.getBooleanValue(LS_RESET_WF_CACHE_ON_SAVE, false);
+	}
+	
 	//LS END
 }
