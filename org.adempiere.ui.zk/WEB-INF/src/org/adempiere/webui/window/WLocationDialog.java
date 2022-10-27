@@ -70,6 +70,9 @@ import org.zkoss.zul.Center;
 import org.zkoss.zul.South;
 import org.zkoss.zul.Vbox;
 
+import it.idempiere.base.util.STDSysConfig;
+import it.idempiere.base.util.STDUtils;
+
 /**
  * @author Sendy Yagambrum
  * @date July 16, 2007
@@ -887,8 +890,11 @@ public class WLocationDialog extends Window implements EventListener<Event>
 			inCountryAction = true;
 			MCountry c = (MCountry)lstCountry.getSelectedItem().getValue();
 			m_location.setCountry(c);
-			m_location.setC_City_ID(0);
-			m_location.setCity(null);
+			if (STDSysConfig.isLSWLocatorDlgDisableEmptyCityOnCountryRegionChange(Env.getAD_Client_ID(Env.getCtx())) == false)
+			{
+				m_location.setC_City_ID(0);
+				m_location.setCity(null);
+			}
 			//  refresh
 			initLocation();
 			
@@ -919,8 +925,11 @@ public class WLocationDialog extends Window implements EventListener<Event>
 				return;
 			MRegion r = (MRegion)lstRegion.getSelectedItem().getValue();
 			m_location.setRegion(r);
-			m_location.setC_City_ID(0);
-			m_location.setCity(null);
+			if (STDSysConfig.isLSWLocatorDlgDisableEmptyCityOnCountryRegionChange(Env.getAD_Client_ID(Env.getCtx())) == false)
+			{
+				m_location.setC_City_ID(0);
+				m_location.setCity(null);
+			}
 			//  refresh
 			initLocation();
 			lstRegion.focus();
