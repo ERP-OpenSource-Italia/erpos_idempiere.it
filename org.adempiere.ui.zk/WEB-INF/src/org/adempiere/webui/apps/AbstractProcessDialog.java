@@ -15,6 +15,7 @@
 package org.adempiere.webui.apps;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -1395,4 +1396,20 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			}
 		});
 	}
+
+	@Override
+	public void showPDF(File pdf, String title) {
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					SessionManager.getAppDesktop().showPDFContent(pdf, title, true);
+				} catch (FileNotFoundException e) {
+					log.log(Level.WARNING, e.getMessage(), e);
+				}
+			}
+		});
+	}
+	
+	
 }

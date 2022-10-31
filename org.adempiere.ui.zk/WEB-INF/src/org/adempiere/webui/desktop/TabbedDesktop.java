@@ -13,6 +13,8 @@
  *****************************************************************************/
 package org.adempiere.webui.desktop;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.List;
 
 import org.adempiere.util.Callback;
@@ -413,4 +415,17 @@ public abstract class TabbedDesktop extends AbstractDesktop {
 		windowContainer.setTabTitle(title, windowNo);		
 	}
 
+	@Override
+	public void showPDFContent(File pdf, String title, boolean closeable) throws FileNotFoundException {
+		Iframe iframe = new Iframe();
+
+    	AMedia media;
+		media = new AMedia(title, "pdf", "application/pdf", pdf, true);
+		iframe.setContent(media);
+
+	    addWin(iframe, title, closeable);
+		
+	}
+
+	
 }
