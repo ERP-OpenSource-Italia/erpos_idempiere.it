@@ -848,7 +848,7 @@ public class MMovement extends X_M_Movement implements DocAction, DocOptions
 		}
 
 		//	Deep Copy
-		MMovement reversal = new MMovement(getCtx(), 0, get_TrxName());
+		MMovement reversal = PO.create (getCtx(),MMovement.Table_Name, get_TrxName());
 		copyValues(this, reversal, getAD_Client_ID(), getAD_Org_ID());
 		reversal.setDocStatus(DOCSTATUS_Drafted);
 		reversal.setDocAction(DOCACTION_Complete);
