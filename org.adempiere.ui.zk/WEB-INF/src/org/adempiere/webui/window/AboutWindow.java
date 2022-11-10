@@ -107,6 +107,7 @@ public class AboutWindow extends Window implements EventListener<Event> {
 
 	protected Button btnAdempiereLog;
 	protected Button btnReloadLogProps;
+	protected Button btnDeleteLog;
 
 	private Listbox levelListBox;
 
@@ -287,6 +288,13 @@ public class AboutWindow extends Window implements EventListener<Event> {
 				hbox.appendChild(btnReloadLogProps);
 			}
 		}
+		
+		btnDeleteLog = new Button("Delete Log");
+		btnDeleteLog.setTooltiptext("Delete Log");
+		LayoutUtils.addSclass("txt-btn", btnDeleteLog);
+		btnDeleteLog.addEventListener(Events.ON_CLICK, this);
+		hbox.appendChild(new Space());
+		hbox.appendChild(btnDeleteLog);
 
 		ZKUpdateUtil.setHflex(hbox, "1");
 		ZKUpdateUtil.setVflex(hbox, "0");
@@ -727,6 +735,8 @@ public class AboutWindow extends Window implements EventListener<Event> {
 			downloadAdempiereLogFile();
 		else if (event.getTarget() == btnReloadLogProps)
 			reloadLogProps();
+		else if (event.getTarget() == btnDeleteLog)
+			deleteLog();
 		else if (event.getTarget() == levelListBox)
 			setTraceLevel();
         else if (Events.ON_SELECT.equals(event.getName()) && event.getTarget() == pluginsTable)
@@ -784,6 +794,11 @@ public class AboutWindow extends Window implements EventListener<Event> {
 				}
 			}
 		}
+	}
+	
+	private void deleteLog() {
+		CLogErrorBuffer.get(true).resetBuffer(false);
+		this.updateLogTable();
 	}
 
 	private void setTraceLevel() {
