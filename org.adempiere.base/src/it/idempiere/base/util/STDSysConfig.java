@@ -868,5 +868,19 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LS_RESET_WF_CACHE_ON_SAVE, false);
 	}
 	
+	public static final String LS_IS_LIT_VALUE_STRUCTURE_COA = "LS_IS_LIT_VALUE_STRUCTURE_COA"; 
+	
+	public static boolean isLITValueStructureCoA(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_IS_LIT_VALUE_STRUCTURE_COA, false, AD_Client_ID, 0);
+	}
+	
+	public static final String LS_LOCDLG_DISABLE_EMPTYCITYONCOUREGCHANGE = "LS_LOCDLG_DISABLE_EMPTYCITYONCOUREGCHANGE"; 
+	
+	public static boolean isLSWLocatorDlgDisableEmptyCityOnCountryRegionChange(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_LOCDLG_DISABLE_EMPTYCITYONCOUREGCHANGE, false, AD_Client_ID, 0);
+	}
+	
 	//LS END
 }

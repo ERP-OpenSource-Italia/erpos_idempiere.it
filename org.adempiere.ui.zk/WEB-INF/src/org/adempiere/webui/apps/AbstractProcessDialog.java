@@ -488,6 +488,7 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 		
 		lSaved = new Label(Msg.getMsg(Env.getCtx(), "SavedParameter"));
 		lSaved.setClass("saved-parameter-label");
+		lSaved.setStyle("padding-left:10px"); //LS avoid truncated label on left when in dialog mode
 		savePrameterLayout.appendChild(lSaved);
 		fSavedName = new Combobox();
 		fSavedName.addEventListener(Events.ON_CHANGE, this);

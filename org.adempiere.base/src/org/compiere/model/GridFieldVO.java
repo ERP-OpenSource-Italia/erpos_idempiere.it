@@ -272,6 +272,9 @@ public class GridFieldVO implements Serializable
 		{
 			if (userDef.getIsDisplayed()!= null)
 				vo.IsDisplayed = "Y".equals(userDef.getIsDisplayed());
+			//LS IsDisplayed e IsDisplayedGrid vanno gestiti in parallelo
+			if(userDef.getIsDisplayedGrid() != null)
+				vo.IsDisplayedGrid = Util.asBoolean(userDef.getIsDisplayedGrid());
 		}
 		
 		// ASP
@@ -281,11 +284,14 @@ public class GridFieldVO implements Serializable
 			//   in order to have the proper context variable filled with defaults
 			// Validate field and put IsDisplayed=N if must be hidden
 			if (! client.isDisplayField(AD_Field_ID))
+			{
 				vo.IsDisplayed = false;
+				vo.IsDisplayedGrid = false;
+			}
 		}
 		// FR IDEMPIERE-177
 		// Field Customization
-		if (vo.IsDisplayed && userDef != null) 
+		if ((vo.IsDisplayed || vo.IsDisplayedGrid) && userDef != null) 
 		{
 
 			if (userDef.getName() != null)
@@ -370,8 +376,8 @@ public class GridFieldVO implements Serializable
 			if(userDef.getSeqNoSelection() > 0)
 				vo.SeqNoSelection = userDef.getSeqNoSelection();
 
-			if(userDef.getIsDisplayedGrid() != null)
-				vo.IsDisplayedGrid = Util.asBoolean(userDef.getIsDisplayedGrid());
+//			if(userDef.getIsDisplayedGrid() != null)
+//				vo.IsDisplayedGrid = Util.asBoolean(userDef.getIsDisplayedGrid());
 
 			if(userDef.getIsDefaultFocus() != null)
 				vo.IsDefaultFocus = Util.asBoolean(userDef.getIsDefaultFocus());

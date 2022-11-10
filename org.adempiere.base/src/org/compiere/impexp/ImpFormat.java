@@ -392,7 +392,8 @@ public final class ImpFormat
 				info = "";
 
 			//	Interpret Data
-			entry.append(row.parse(info));
+			String parsed = row.parse(info);
+			entry.append(parsed);
 
 			//	Label-End
 			if (withLabel)
@@ -403,7 +404,7 @@ public final class ImpFormat
 					entry.append("','YYYY-MM-DD HH24:MI:SS')");		//	JDBC Timestamp format w/o miliseconds
 			}
 
-			if (!ignoreEmpty || (ignoreEmpty && info.length() != 0))
+			if (!ignoreEmpty || (ignoreEmpty && parsed.length() != 0))
 				list.add(entry.toString());
 			//
 			if (trace)

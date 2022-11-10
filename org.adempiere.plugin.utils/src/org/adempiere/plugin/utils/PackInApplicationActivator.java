@@ -333,7 +333,7 @@ public class PackInApplicationActivator extends AbstractActivator {
 		Arrays.sort(fileArray, new Comparator<File>() {
 			@Override
 			public int compare(File f1, File f2) {
-				return f1.getName().compareTo(f2.getName());
+				return f1.getName().replace("_", "-").compareTo(f2.getName().replace("_", "-"));
 			}
 		});
 

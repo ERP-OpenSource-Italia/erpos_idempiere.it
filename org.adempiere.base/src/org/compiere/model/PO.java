@@ -74,6 +74,8 @@ import org.osgi.service.event.Event;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import it.idempiere.base.util.STDSysConfig;
+import it.idempiere.base.util.STDUtils;
 /**
  *  Persistent Object.
  *  Superclass for actual implementations
@@ -4184,13 +4186,37 @@ public abstract class PO
 	private int retrieveIdOfElementValue(String value, int clientID, int elementID, String trxName)
 	{
 		String sql = "SELECT C_ElementValue_ID FROM C_ElementValue WHERE IsSummary='Y' AND AD_Client_ID=? AND C_Element_ID=? AND Value=?";
-		int pos = value.length()-1;
-		while (pos > 0) {
-			String testParentValue = value.substring(0, pos);
+		if (STDSysConfig.isLITValueStructureCoA(clientID))
+		{
+			//LIT behaviour
+			String separator = "-";
+			String testParentValue = null;
+			String[] valueSplit = value.split(separator, 4);
+			String gruppo = valueSplit[0];
+			String mastro = valueSplit[1];
+			String conto = valueSplit[2];
+			String sottoconto = valueSplit[3];
+			if (sottoconto.equals("00000") == false)
+				testParentValue = gruppo + separator + mastro + separator + conto + separator + "00000";
+			else if (conto.equals("000") == false)
+				testParentValue = gruppo + separator + mastro + separator + "000" + separator + "00000";
+			else if (mastro.equals("000") == false)
+				testParentValue = gruppo + separator + "000" + separator + "000" + separator + "00000";
+			
 			int parentID = DB.getSQLValueEx(trxName, sql, clientID, elementID, testParentValue);
 			if (parentID > 0)
 				return parentID;
-			pos--;
+		} else
+		{
+			//STD behaviour
+			int pos = value.length()-1;
+			while (pos > 0) {
+				String testParentValue = value.substring(0, pos);
+				int parentID = DB.getSQLValueEx(trxName, sql, clientID, elementID, testParentValue);
+				if (parentID > 0)
+					return parentID;
+				pos--;
+			}
 		}
 		return 0; // rootID
 	}
