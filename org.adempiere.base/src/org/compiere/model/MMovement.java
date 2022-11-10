@@ -872,7 +872,7 @@ public class MMovement extends X_M_Movement implements DocAction, DocOptions
 		for (int i = 0; i < oLines.length; i++)
 		{
 			MMovementLine oLine = oLines[i];
-			MMovementLine rLine = new MMovementLine(getCtx(), 0, get_TrxName());
+			MMovementLine rLine = PO.create(getCtx(), MMovementLine.Table_Name, get_TrxName());
 			copyValues(oLine, rLine, oLine.getAD_Client_ID(), oLine.getAD_Org_ID());
 			rLine.setM_Movement_ID(reversal.getM_Movement_ID());
 			//AZ Goodwill			
