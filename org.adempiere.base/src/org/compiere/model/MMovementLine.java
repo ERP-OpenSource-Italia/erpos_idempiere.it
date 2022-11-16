@@ -180,6 +180,7 @@ public class MMovementLine extends X_M_MovementLine
 		}
 		
 		 //either movement between locator or movement between lot
+		/* LS: modificato per estensibilità
 		if (getM_Locator_ID() == getM_LocatorTo_ID() && getM_AttributeSetInstance_ID() == getM_AttributeSetInstanceTo_ID())
 		{
 			MLocator mLocator = PO.get(getCtx(), MLocator.Table_Name, getM_Locator_ID(),get_TrxName());
@@ -188,6 +189,12 @@ public class MMovementLine extends X_M_MovementLine
 			log.saveError("Error", Msg.parseTranslation(getCtx(), "@M_Locator_ID@ == @M_LocatorTo_ID@ ("
 											+mLocator != null ? mLocator.getValue() : ""+") and @M_AttributeSetInstance_ID@ == @M_AttributeSetInstanceTo_ID@ ("
 											+mAttributeSetInstance != null ? mAttributeSetInstance.getLot():""+")"));
+			return false;
+		}
+		*/
+		if (!isValid())//LS metodi per estensibilità
+		{
+			log.saveError("Error", Msg.parseTranslation(getCtx(), getNotValidErrorMsg()));
 			return false;
 		}
 
@@ -228,6 +235,23 @@ public class MMovementLine extends X_M_MovementLine
 		return true;
 	}	//	beforeSave
 	
+	protected boolean isValid()
+	{
+		if(getM_Locator_ID() == getM_LocatorTo_ID() && getM_AttributeSetInstance_ID() == getM_AttributeSetInstanceTo_ID())
+			return false;
+		return true;
+	}
+	
+	protected String getNotValidErrorMsg()
+	{
+		MLocator mLocator = PO.get(getCtx(), MLocator.Table_Name, getM_Locator_ID(),get_TrxName());
+		MAttributeSetInstance mAttributeSetInstance = PO.get(getCtx(), MAttributeSetInstance.Table_Name, getM_AttributeSetInstance_ID(),get_TrxName());
+		
+		return "@M_Locator_ID@ == @M_LocatorTo_ID@ ("
+				+mLocator != null ? mLocator.getValue() : ""+") and @M_AttributeSetInstance_ID@ == @M_AttributeSetInstanceTo_ID@ ("
+				+mAttributeSetInstance != null ? mAttributeSetInstance.getLot():""+")";
+	}
+
 	/** 
 	 *      Set Distribution Order Line. 
 	 *      Does not set Quantity! 
