@@ -35,7 +35,12 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 
+import javax.script.Bindings;
+import javax.script.ScriptEngine;
+import javax.script.ScriptException;
+
 import org.adempiere.base.LookupFactoryHelper;
+import org.adempiere.base.UIBehaviour;
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.util.CLogMgt;
 import org.compiere.util.CLogger;
@@ -342,10 +347,16 @@ public class GridField
 		if (checkContext && m_vo.MandatoryLogic.length() > 0)
 		{
 			boolean retValue  = false;
-			if (m_vo.MandatoryLogic != null && m_vo.MandatoryLogic.startsWith("@SQL=")) {
+			if (m_vo.MandatoryLogic != null && m_vo.MandatoryLogic.startsWith("@SQL=")) 
+			{
 				retValue = Evaluator.parseSQLLogic(m_vo.MandatoryLogic, m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName);
-
+			}
+			// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+			else if (m_vo.MandatoryLogic != null && m_vo.MandatoryLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+			{
+				retValue = evaluateScript(m_vo.MandatoryLogic);	
 			} else{
+				
 				retValue= Evaluator.evaluateLogic(this, m_vo.MandatoryLogic);
 
 			}
@@ -388,6 +399,11 @@ public class GridField
 				boolean retValue = !Evaluator.parseSQLLogic(m_vo.ReadOnlyLogic, m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName);
 				if (!retValue)
 					return false;
+			}
+			// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+			else if(m_vo.ReadOnlyLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+			{
+				return evaluateScript(m_vo.ReadOnlyLogic);			
 			}
 			else
 			{
@@ -433,6 +449,10 @@ public class GridField
 			return false;
 		if (m_lockedRecord)
 			return false;
+		// FIN (st): IDEMPIERE-3308, check ui behaviour
+		
+		if(UIBehaviour.isEditable(ctx, this, checkContext, isGrid) == false)
+			return false;	
 		//  Fields always enabled (are usually not updateable)
 		if (m_vo.ColumnName.equals("Posted")
 			|| (m_vo.ColumnName.equals("Record_ID") && m_vo.displayType == DisplayType.Button))	//  Zoom
@@ -509,6 +529,11 @@ public class GridField
 				boolean retValue = !Evaluator.parseSQLLogic(m_vo.ReadOnlyLogic, m_vo.ctx, m_vo.WindowNo, m_vo.TabNo, m_vo.ColumnName);
 				if (!retValue)
 					return false;
+			}
+			// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+			else if(m_vo.ReadOnlyLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+			{
+				return evaluateScript(m_vo.ReadOnlyLogic);
 			}
 			else
 			{
@@ -1186,6 +1211,11 @@ public class GridField
 		if (m_vo.DisplayLogic.equals(""))
 			return true;
 
+		// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+		if (checkContext && m_vo.DisplayLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+		{
+			return evaluateScript(m_vo.DisplayLogic);
+		}
 		//  ** dynamic content **
 		if (checkContext)
 		{
@@ -1204,6 +1234,78 @@ public class GridField
 		}
 		return true;
 	}	//	isDisplayed
+	
+	//Angelo Dabala' (genied)
+	/**
+	 * Evaluate Display, ReadOnly and Mandatory logic using a script
+	 * @author Angelo Dabala' (genied)
+	 * @param ruleName name of the script to invoke
+	 * @return true or false
+	 */
+	private boolean evaluateScript(String ruleName)
+	{
+			String retValue;
+		MRule rule = MRule.get(m_vo.ctx, ruleName.substring(MRule.SCRIPT_PREFIX.length()));
+			if (rule == null) {
+			retValue = "Script Rule " + ruleName + " not found"; 
+				log.log(Level.SEVERE, retValue);
+				return true;
+			}
+			// TODO add new EVENTTYPE
+			if ( !  (rule.getRuleType().equals(MRule.RULETYPE_JSR223ScriptingAPIs))) {
+			retValue = "Script Rule " + ruleName
+					+ " must be of type JSR 223"; 
+				log.log(Level.SEVERE, retValue);
+				return true;
+			}
+
+			ScriptEngine engine = rule.getScriptEngine();
+			Bindings bindings = engine.createBindings();
+
+			// Window context are    W_
+			// Login context  are    G_
+			MRule.setContext(bindings, m_vo.ctx, m_vo.WindowNo);
+			// now add the callout parameters windowNo, tab, field, value, oldValue to the engine 
+			// Method arguments context are A_
+			bindings.put(MRule.ARGUMENTS_PREFIX + "WindowNo", m_vo.WindowNo);
+			bindings.put(MRule.ARGUMENTS_PREFIX + "Tab", getGridTab());
+			bindings.put(MRule.ARGUMENTS_PREFIX + "Field", this);
+			bindings.put(MRule.ARGUMENTS_PREFIX + "Value", getValue());
+			bindings.put(MRule.ARGUMENTS_PREFIX + "OldValue", getOldValue());
+			bindings.put(MRule.ARGUMENTS_PREFIX + "Ctx", m_vo.ctx);
+
+		Object result = null;
+			try 
+			{
+			String script = rule.getScript();
+			if(script != null)
+				result = engine.eval(script, bindings);
+			}
+		catch (ScriptException se)
+			{
+			retValue = 	"Script Rule Invalid: " + se.getMessage();
+			log.log(Level.SEVERE, "", retValue);
+				return true;
+			}
+		catch (Exception e)
+		{
+			retValue = 	"Script Rule Invalid: " + e.toString();
+			log.log(Level.SEVERE, "", retValue);
+			return true;
+		}
+		if (result != null) 
+		{
+			 if (result instanceof Boolean) 
+				 return ((Boolean)result).booleanValue();
+			 if (result instanceof String)
+			 {
+				 if("Y".equals(result) || "true".equalsIgnoreCase((String)result))
+		return true;
+			 }
+		}
+		return false;
+	}
+	//Angelo Dabala' (genied) end 
 
 	/**
 	 * 	Get Variable Value (Evaluatee)
@@ -1243,13 +1345,14 @@ public class GridField
 	    	}
 	    	value = Env.getContext (ctx, m_vo.WindowNo, m_vo.TabNo, variableName, tabOnly, true);
 	    }
-		if (!Util.isEmpty(value) && !Util.isEmpty(foreignColumn) && variableName.endsWith("_ID")) {
+		if (!Util.isEmpty(value) && !Util.isEmpty(foreignColumn) && variableName.endsWith("_ID")
+				&& getGridTab() != null) {
+			String refValue = "";
 			int id = 0;
 			try {
 				id = Integer.parseInt(value);
 			} catch (Exception e){}
 			if (id > 0) {
-				String refValue = "";
 				if (getGridTab() != null) {
 					MColumn column = MColumn.get(ctx, getGridTab().getTableName(), variableName);
 					if (column != null) {
@@ -1271,6 +1374,8 @@ public class GridField
 					}
 				}
 			}
+			
+			return refValue;
 		}
 		return value;
 	}	//	get_ValueAsString
@@ -2584,6 +2689,18 @@ public class GridField
 		}
 		
 	}
+	
+	/* F3P: new accesors functions */
+	public int getSeqNo()
+	{
+		return m_vo.SeqNo;
+	}
+
+	public boolean getInserting()
+	{
+		return m_inserting;
+	}
+	//F3P end
 	
 	/**
 	 * @param b

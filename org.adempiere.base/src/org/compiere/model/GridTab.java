@@ -27,6 +27,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -36,11 +37,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 
+import javax.script.Bindings;
 import javax.script.ScriptEngine;
 import javax.swing.event.EventListenerList;
 
 import org.adempiere.base.Core;
 import org.adempiere.base.IColumnCallout;
+import org.adempiere.base.UIBehaviour;
 import org.adempiere.model.MTabCustomization;
 import org.adempiere.util.ContextRunnable;
 import org.adempiere.util.ICalloutUI;
@@ -58,6 +61,7 @@ import org.compiere.util.ValueNamePair;
 
 import it.idempiere.base.model.LITMGridTab;
 import it.idempiere.base.util.BaseEnvHelper;
+import it.idempiere.base.util.STDSysConfig;
 
 /**
  *	Tab Model.
@@ -119,6 +123,13 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 
 	public static final String DEFAULT_STATUS_MESSAGE = "NavigateOrUpdate";
 
+	
+	// F3P: added to support sql callouts
+	public static final String SQL_PREFIX = "@sql:";
+	
+	//F3P 
+	boolean m_bIsCopiedFromUI = false;
+	
 	/**
 	 *	Create Tab (Model) from Value Object.
 	 *  <p>
@@ -235,12 +246,6 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	public static final String CTX_IsLookupOnlySelection = "_TabInfo_IsLookupOnlySelection";
 	public static final String CTX_IsAllowAdvancedLookup = "_TabInfo_IsAllowAdvancedLookup";
 	
-	// F3P: added to support sql callouts
-	public static final String SQL_PREFIX = "@sql:";
-	
-	//F3P 
-	boolean m_bIsCopiedFromUI = false;
-
 	//private HashMap<Integer,Integer>	m_PostIts = null;
 
 	/**************************************************************************
@@ -1203,6 +1208,23 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		if (!retValue)
 			return retValue;
 		setCurrentRow(m_currentRow + 1, true);
+		
+		//LS Callout when copy
+		m_bIsCopiedFromUI = copy;
+		
+		m_mTable.setChanged(false);	
+		
+		try
+		{
+			//  process all Callouts (no dependency check - assumed that settings are valid)
+			for (int i = 0; i < getFieldCount(); i++)
+				processCallout(getField(i));
+			//m_mTable.setChanged(false);		
+		}
+		finally
+		{
+			m_bIsCopiedFromUI = false;
+		}
 
 		//  process all Callouts (no dependency check - assumed that settings are valid)
 		for (int i = 0; i < getFieldCount(); i++)
@@ -1289,7 +1311,7 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	 *	Return Table Model
 	 *  @return MTable
 	 */
-	protected GridTable getMTable()
+	public GridTable getMTable()
 	{
 		return m_mTable;
 	}	//	getMTable
@@ -1563,10 +1585,21 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 
 		//hengsin, make detail readonly when parent is empty
 		if (m_parentNeedSave) return true;
+		
+		// FIN (st): IDEMPIERE-3308, check ui behaviour
+		
+		if(UIBehaviour.isEditable(m_vo.ctx,this) == false)
+			return true;
 
 		//  no restrictions
 		if (m_vo.ReadOnlyLogic == null || m_vo.ReadOnlyLogic.equals(""))
 			return m_vo.IsReadOnly;
+		
+		// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+		if (m_vo.ReadOnlyLogic.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+		{
+			return evaluateScript(m_vo.ReadOnlyLogic);
+		}
 
 		//  ** dynamic content **  uses get_ValueAsString
 		boolean retValue = Evaluator.evaluateLogic(this, m_vo.ReadOnlyLogic);
@@ -1628,6 +1661,12 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		String parsed = Env.parseContext (m_vo.ctx, 0, dl, false, false).trim();
 		if (parsed.length() == 0)
 			return true;
+		// Angelo Dabala' (genied) add script support, must return a Boolean or "Y/N" or "true/false"
+		if (dl.toLowerCase().startsWith(MRule.SCRIPT_PREFIX))
+		{
+			return evaluateScript(dl);
+		}
+		
 		boolean retValue = Evaluator.evaluateLogic(this, dl);
 		if (log.isLoggable(Level.CONFIG)) log.config(m_vo.Name + " (" + dl + ") => " + retValue);
 		return retValue;
@@ -1899,20 +1938,75 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 			if (isOrder)
 			{
 				Record_ID = Env.getContextAsInt(m_vo.ctx, m_vo.WindowNo, "C_Order_ID");
+				//F3P:
+				sql.append("currencyBase(o.GrandTotal,o.C_Currency_ID,o.DateAcct, o.AD_Client_ID,o.AD_Org_ID) AS ConvAmt ");
+				//F3P:end
 				sql.append("FROM C_Order o"
 					+ " INNER JOIN C_Currency c ON (o.C_Currency_ID=c.C_Currency_ID)"
 					+ " INNER JOIN C_OrderLine l ON (o.C_Order_ID=l.C_Order_ID) "
 					+ "WHERE o.C_Order_ID=? ");
+				//F3P:
+				sql.append("GROUP BY o.C_Currency_ID, c.ISO_Code, o.TotalLines, o.GrandTotal, o.DateAcct, o.AD_Client_ID, o.AD_Org_ID");
+				//F3P end
 			}
 			else
 			{
 				Record_ID = Env.getContextAsInt(m_vo.ctx, m_vo.WindowNo, "C_Invoice_ID");
+				//F3P: invoice conversion is based on dateInvoiced
+				boolean bUseDateInvoiced = true; 
+				
+				if(Record_ID > 0)
+				{
+					try
+					{
+						MInvoice inv = PO.get(m_vo.ctx, MInvoice.Table_Name, Record_ID, null);
+						
+						if(inv != null)
+						{
+							Timestamp dateAcct = inv.getDateAcct(),
+												convDateTerm = STDSysConfig.getInvConvDateTerm(inv.getAD_Client_ID(), inv.getAD_Org_ID());
+				
+							if(convDateTerm != null)
+							{
+								if(dateAcct.compareTo(convDateTerm) <= 0)
+								{
+									bUseDateInvoiced = false;
+								}
+							}
+						}
+					}
+					catch(ParseException e)
+					{
+						log.severe(e.getMessage());
+					}
+				}
+				
+				if(bUseDateInvoiced)
+				{
+					sql.append("currencyBase(o.GrandTotal,o.C_Currency_ID,o.DateInvoiced, o.AD_Client_ID,o.AD_Org_ID) AS ConvAmt ");					
+				}
+				else
+				{
+					sql.append("currencyBase(o.GrandTotal,o.C_Currency_ID,o.DateAcct, o.AD_Client_ID,o.AD_Org_ID) AS ConvAmt ");
+				}
+				
 				sql.append("FROM C_Invoice o"
 					+ " INNER JOIN C_Currency c ON (o.C_Currency_ID=c.C_Currency_ID)"
 					+ " INNER JOIN C_InvoiceLine l ON (o.C_Invoice_ID=l.C_Invoice_ID) "
 					+ "WHERE o.C_Invoice_ID=? ");
+				
+				if(bUseDateInvoiced)
+				{
+					sql.append("GROUP BY o.C_Currency_ID, c.ISO_Code, o.TotalLines, o.GrandTotal, o.DateInvoiced, o.AD_Client_ID, o.AD_Org_ID");
+				}
+				else
+				{
+					sql.append("GROUP BY o.C_Currency_ID, c.ISO_Code, o.TotalLines, o.GrandTotal, o.DateAcct, o.AD_Client_ID, o.AD_Org_ID");
+				}
+				//F3P end
 			}
-			sql.append("GROUP BY o.C_Currency_ID, c.ISO_Code, o.TotalLines, o.GrandTotal, o.DateAcct, o.AD_Client_ID, o.AD_Org_ID");
+			//F3P:
+			//sql.append("GROUP BY o.C_Currency_ID, c.ISO_Code, o.TotalLines, o.GrandTotal, o.DateAcct, o.AD_Client_ID, o.AD_Org_ID");
 
 			if (log.isLoggable(Level.FINE)) log.fine(m_vo.TableName + " - " + Record_ID);
 			MessageFormat mf = null;
@@ -2108,6 +2202,16 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 				C_DocTyp_ID = target.intValue();
 			if (C_DocTyp_ID == 0)
 				return;
+			
+			if (STDSysConfig.isAllowDifferentOrderType(Env.getAD_Client_ID(m_vo.ctx), Env.getAD_Org_ID(m_vo.ctx)))
+			{
+				String ot = (String)getValue("OrderType");
+				if (Util.isEmpty(ot) == false)
+				{
+					Env.setContext(m_vo.ctx, m_vo.WindowNo, "OrderType", ot);
+					return;
+				}
+			}
 
 			String sql = "SELECT DocSubTypeSO FROM C_DocType WHERE C_DocType_ID=?";
 			PreparedStatement pstmt = null;
@@ -3559,5 +3663,69 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 		m_mTable.reset();
 		setCurrentRow(0, true);
 	}
+	
+	// Angelo Dabala' (genied)
+	/**
+	 * Evaluate Display, ReadOnly and Mandatory logic using a script
+	 * @author Angelo Dabala' (genied)
+	 * @param ruleName name of the script to invoke
+	 * @return true or false
+	 */
+	private boolean evaluateScript(String ruleName)
+	{
+		String retValue;
+		MRule rule = MRule.get(m_vo.ctx, ruleName.substring(MRule.SCRIPT_PREFIX.length()));
+		if (rule == null) {
+			retValue = "Script Rule " + ruleName + " not found"; 
+			log.log(Level.SEVERE, retValue);
+			return true;
+		}
+		// TODO add new EVENTTYPE
+		if ( !  (rule.getRuleType().equals(MRule.RULETYPE_JSR223ScriptingAPIs))) {
+			retValue = "Script Rule " + ruleName
+				+ " must be of type JSR 223"; 
+			log.log(Level.SEVERE, retValue);
+			return true;
+		}
+
+		ScriptEngine engine = rule.getScriptEngine();
+		Bindings bindings = engine.createBindings();
+							
+		// Window context are    W_
+		// Login context  are    G_
+		MRule.setContext(bindings, m_vo.ctx, m_vo.WindowNo);
+		// now add the callout parameters windowNo, tab, field, value, oldValue to the engine 
+		// Method arguments context are A_
+		bindings.put(MRule.ARGUMENTS_PREFIX + "WindowNo", m_vo.WindowNo);
+		bindings.put(MRule.ARGUMENTS_PREFIX + "Tab", this);
+		bindings.put(MRule.ARGUMENTS_PREFIX + "Field", null);
+		bindings.put(MRule.ARGUMENTS_PREFIX + "Value", null);
+		bindings.put(MRule.ARGUMENTS_PREFIX + "OldValue", null);
+		bindings.put(MRule.ARGUMENTS_PREFIX + "Ctx", m_vo.ctx);
+
+		Object result = null;
+		try 
+		{
+			result = engine.eval(rule.getScript(), bindings).toString();
+		}
+		catch (Exception e)
+		{
+			log.log(Level.SEVERE, "", e);
+			retValue = 	"Script Rule Invalid: " + e.toString();
+			return true;
+		}
+		if (result != null) 
+		{
+			 if (result instanceof Boolean) 
+				 return ((Boolean)result).booleanValue();
+			 if (result instanceof String)
+			 {
+				 if("Y".equals(result) || "true".equalsIgnoreCase((String)result))
+					 return true;
+			 }
+		}
+		return false;
+	}
+	//Angelo Dabala' (genied) end
 
 }	//	GridTab

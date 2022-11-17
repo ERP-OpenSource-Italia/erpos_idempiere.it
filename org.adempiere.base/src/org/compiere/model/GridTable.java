@@ -2243,7 +2243,7 @@ public class GridTable extends AbstractTableModel
 		//	Refresh - update buffer
 		String whereClause = po.get_WhereClause(true);
 		if (log.isLoggable(Level.FINE)) log.fine("Reading ... " + whereClause);
-		StringBuilder refreshSQL = new StringBuilder(m_SQL_Select)
+		StringBuffer refreshSQL = new StringBuffer(m_SQL_Select)
 			.append(" WHERE ").append(whereClause);
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -2420,10 +2420,9 @@ public class GridTable extends AbstractTableModel
 			}	//	Data changed
 
 		}	//	for every column
-		
-		return po;
 
-	}	//	dataSavePO	
+		return po;
+	}	//	dataSavePO		
 	
 	/**
 	 * 	Get Record Where Clause from data (single key or multi-parent)

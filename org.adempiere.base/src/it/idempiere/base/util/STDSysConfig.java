@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 
 import org.compiere.model.MOrder;
 import org.compiere.model.MSysConfig;
+import org.compiere.process.DocAction;
 import org.compiere.util.Ini;
 import org.compiere.util.Util;
 
@@ -804,12 +805,82 @@ public class STDSysConfig
 	{
 		return MSysConfig.getBooleanValue(LS_STORAGEONHAND_USE_DATEFIRSTMOVEMENT, false);
 	}
+
+	public static final String LS_CHECK_ORDER_ON_SHIPMENT_PREPARE = "LS_CHECK_ORDER_ON_SHIPMENT_PREPARE";
+
+	public static boolean isCheckOrderOnShipmentPrepare(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_CHECK_ORDER_ON_SHIPMENT_PREPARE, false, AD_Client_ID, AD_Org_ID);
+	}
 	
 	public static final String LS_STORAGEONHAND_USE_TRANSACTION_ID = "LS_STORAGEONHAND_USE_TRANSACTION_ID";
 
 	public static boolean isStorageOnHandUseTransaction_ID()
 	{
 		return MSysConfig.getBooleanValue(LS_STORAGEONHAND_USE_TRANSACTION_ID, false);
+	}
+	
+	public static final String LS_ALLOW_DIFFERENT_ORDERTYPE = "LS_ALLOW_DIFFERENT_ORDERTYPE";
+
+	
+	public static boolean isAllowDifferentOrderType(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_ALLOW_DIFFERENT_ORDERTYPE, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static final String LS_GRIDTAB_INACTIVE_STYLE_BY_DOCSTATUS = "LS_GRIDTAB_INACTIVE_STYLE_BY_DOCSTATUS";
+
+	public static boolean iGridTabInactiveStyleByDocStatus(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_GRIDTAB_INACTIVE_STYLE_BY_DOCSTATUS, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static boolean iGridTabInactiveStyleDocStatus(String DocStatus)
+	{
+		if (Util.isEmpty(DocStatus))
+			return false;
+		if (DocAction.STATUS_Completed.equalsIgnoreCase(DocStatus)
+			|| DocAction.STATUS_Closed.equalsIgnoreCase(DocStatus)
+			|| DocAction.STATUS_Voided.equalsIgnoreCase(DocStatus))
+			return true;
+		
+		return false;
+	}
+	
+	private static final String LS_EXPORT_ACTION_EXTENSION_ITEM_SELECTED = "LS_EXPORT_ACTION_EXTENSION_ITEM_SELECTED";
+	private static final int LS_EXPORT_ACTION_EXTENSION_ITEM_SELECTED_DEFAULT = 0;
+
+	public static int getExportActionExtensionItemSelected(int AD_Client_ID, int AD_Org_ID) 
+	{
+		return MSysConfig.getIntValue(LS_EXPORT_ACTION_EXTENSION_ITEM_SELECTED, LS_EXPORT_ACTION_EXTENSION_ITEM_SELECTED_DEFAULT, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static final String LS_ALLOCLINE_PROCESSIT_LINKORDER_EXCLUDE_PREPAIDSO = "LS_ALLOCLINE_PROCESSIT_LINKORDER_EXCLUDE_PREPAIDSO";
+
+	public static boolean isAllocLineProcessItLinkOrderExcludePrepaidSO(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_ALLOCLINE_PROCESSIT_LINKORDER_EXCLUDE_PREPAIDSO, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static final String LS_RESET_WF_CACHE_ON_SAVE = "LS_RESET_WF_CACHE_ON_SAVE";
+
+	public static boolean isResetWFCacheOnSave() 
+	{
+		return MSysConfig.getBooleanValue(LS_RESET_WF_CACHE_ON_SAVE, false);
+	}
+	
+	public static final String LS_IS_LIT_VALUE_STRUCTURE_COA = "LS_IS_LIT_VALUE_STRUCTURE_COA"; 
+	
+	public static boolean isLITValueStructureCoA(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_IS_LIT_VALUE_STRUCTURE_COA, false, AD_Client_ID, 0);
+	}
+	
+	public static final String LS_LOCDLG_DISABLE_EMPTYCITYONCOUREGCHANGE = "LS_LOCDLG_DISABLE_EMPTYCITYONCOUREGCHANGE"; 
+	
+	public static boolean isLSWLocatorDlgDisableEmptyCityOnCountryRegionChange(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_LOCDLG_DISABLE_EMPTYCITYONCOUREGCHANGE, false, AD_Client_ID, 0);
 	}
 	//LS END
 }
