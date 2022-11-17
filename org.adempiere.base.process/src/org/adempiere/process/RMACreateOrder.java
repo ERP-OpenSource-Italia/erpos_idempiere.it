@@ -34,7 +34,7 @@ import org.compiere.process.SvrProcess;
 public class RMACreateOrder extends SvrProcess
 {
 	
-	private int rmaId = 0;
+	protected  int rmaId = 0;
     @Override
     protected void prepare()
     {
@@ -77,10 +77,12 @@ public class RMACreateOrder extends SvrProcess
         order.setC_PaymentTerm_ID(originalOrder.getC_PaymentTerm_ID());
         order.setDeliveryRule(originalOrder.getDeliveryRule());
         
-        if (!order.save())
-        {
-            throw new IllegalStateException("Could not create order");
-        }
+//        if (!order.save())
+//        {
+//            throw new IllegalStateException("Could not create order");
+//        }
+        customizeOrderGeneration(order, rma, originalOrder);
+        order.saveEx();
         
     	MInOut originalShipment = rma.getShipment();
     	MInvoice originalInvoice = rma.getOriginalInvoice();
@@ -107,10 +109,12 @@ public class RMACreateOrder extends SvrProcess
                 orderLine.setPrice();
                 orderLine.setPrice(line.getAmt());
                 
-                if (!orderLine.save())
-                {
-                    throw new IllegalStateException("Could not create Order Line");
-                }
+//                if (!orderLine.save())
+//                {
+//                    throw new IllegalStateException("Could not create Order Line");
+//                }
+                customizeOrderLineGeneration(orderLine, line, originalOLine);
+                orderLine.saveEx();
             }
             else if (line.getM_Product_ID() != 0)
             {
@@ -131,10 +135,12 @@ public class RMACreateOrder extends SvrProcess
                     orderLine.setPrice();
                     orderLine.setPrice(line.getAmt());       
                     
-                    if (!orderLine.save())
-                    {
-                        throw new IllegalStateException("Could not create Order Line");
-                    }
+//                    if (!orderLine.save())
+//                    {
+//                        throw new IllegalStateException("Could not create Order Line");
+//                    }
+                    customizeOrderLineGenerationInv(orderLine, line, originalShipment, originalInvoice);
+                    orderLine.saveEx();
             	}
             	else if (originalOrder != null)
             	{
@@ -153,10 +159,12 @@ public class RMACreateOrder extends SvrProcess
                     orderLine.setPrice();
                     orderLine.setPrice(line.getAmt());
                     
-                    if (!orderLine.save())
-                    {
-                        throw new IllegalStateException("Could not create Order Line");
-                    }
+//                    if (!orderLine.save())
+//                    {
+//                        throw new IllegalStateException("Could not create Order Line");
+//                    }
+                    customizeOrderLineGenerationOrd(orderLine, line, originalOrder);
+                    orderLine.saveEx();
             	}
             }
         }
@@ -167,7 +175,26 @@ public class RMACreateOrder extends SvrProcess
             throw new IllegalStateException("Could not update RMA document");
         }
         
+        addLog(order.getC_Invoice_ID(), order.getDateOrdered(), order.getGrandTotal(), order.getDocumentNo(), order.get_Table_ID(), order.getC_Order_ID()); 
+       
         return "Order Created: " + order.getDocumentNo();
     }
 
+    protected void customizeOrderLineGenerationOrd(MOrderLine orderLine, MRMALine line, MOrder originalOrder) {
+    	//only for override
+	}
+
+	protected void customizeOrderLineGenerationInv(MOrderLine orderLine, MRMALine line, MInOut originalShipment, MInvoice originalInvoice) {
+		//only for override
+	}
+
+	protected void customizeOrderLineGeneration(MOrderLine orderLine, MRMALine line, MOrderLine originalOLine) {
+		//only for override
+	}
+
+	protected void customizeOrderGeneration(MOrder order, MRMA rma, MOrder originalOrder) {
+		//only for override
+	}
+
+    
 }

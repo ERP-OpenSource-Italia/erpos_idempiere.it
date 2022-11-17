@@ -862,7 +862,7 @@ public class MMovement extends X_M_Movement implements DocAction, DocOptions
 		}
 
 		//	Deep Copy
-		MMovement reversal = new MMovement(getCtx(), 0, get_TrxName());
+		MMovement reversal = PO.create (getCtx(),MMovement.Table_Name, get_TrxName());
 		copyValues(this, reversal, getAD_Client_ID(), getAD_Org_ID());
 		reversal.setDocStatus(DOCSTATUS_Drafted);
 		reversal.setDocAction(DOCACTION_Complete);
@@ -886,7 +886,7 @@ public class MMovement extends X_M_Movement implements DocAction, DocOptions
 		for (int i = 0; i < oLines.length; i++)
 		{
 			MMovementLine oLine = oLines[i];
-			MMovementLine rLine = new MMovementLine(getCtx(), 0, get_TrxName());
+			MMovementLine rLine = PO.create(getCtx(), MMovementLine.Table_Name, get_TrxName());
 			copyValues(oLine, rLine, oLine.getAD_Client_ID(), oLine.getAD_Org_ID());
 			rLine.setM_Movement_ID(reversal.getM_Movement_ID());
 			//AZ Goodwill			
@@ -1212,7 +1212,13 @@ public class MMovement extends X_M_Movement implements DocAction, DocOptions
 		{
 			options[index++] = ACTION_ReActivate;
 		}
-		
+		else if (docStatus.equals(DocumentEngine.STATUS_Drafted)
+					|| docStatus.equals(DocumentEngine.STATUS_InProgress)
+					|| docStatus.equals(DocumentEngine.STATUS_Invalid))
+		{
+			options[index++] = DocumentEngine.ACTION_Prepare;
+		}
+
 		return index;
 	}	
 	

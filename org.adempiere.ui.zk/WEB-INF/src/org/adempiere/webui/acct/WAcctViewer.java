@@ -628,7 +628,23 @@ public class WAcctViewer extends Window implements EventListener<Event>
 		m_data.fillAcctSchema(selAcctSchema );
 		selAcctSchema.addEventListener(Events.ON_SELECT, this);
 
-		selAcctSchema.setSelectedIndex(0);
+		//LS if multiple AcctSchema, set the one in the context as default
+		int selectedIndex = 0;
+		int C_AcctSchema_ID = Env.getContextAsInt(Env.getCtx(), "$C_AcctSchema_ID");
+		if (C_AcctSchema_ID > 0)
+		{
+			for (int i = 0; i< selAcctSchema.getItemCount(); i++) {
+				Listitem item = selAcctSchema.getItemAtIndex(i);
+				KeyNamePair knp = item.getValue();
+				if (knp.getKey() == C_AcctSchema_ID)
+				{
+					selectedIndex = i;
+					break;
+				}
+			}
+		}
+		selAcctSchema.setSelectedIndex(selectedIndex);
+		//LS end
 		actionAcctSchema();
 
 		m_data.fillTable(selTable);

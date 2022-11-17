@@ -206,7 +206,8 @@ public class MResource extends X_S_Resource implements ImmutablePOSupport
 			
 			if(product == null)
 			{
-				m_product = new MProduct(this, getResourceType());
+				m_product = PO.create(getCtx(), MProduct.Table_Name, get_TrxName());
+				m_product = m_product.setDefaultData(this, getResourceType());
 				m_product.saveEx(get_TrxName());
 			}
 			else

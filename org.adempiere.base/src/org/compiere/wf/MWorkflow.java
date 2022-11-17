@@ -51,6 +51,8 @@ import org.compiere.util.Trx;
 import org.idempiere.cache.ImmutablePOSupport;
 import org.idempiere.cache.ImmutablePOCache;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *	WorkFlow Model
  *
@@ -735,6 +737,14 @@ public class MWorkflow extends X_AD_Workflow implements ImmutablePOSupport
 				menues[i].saveEx();
 			}
 		}
+		
+		//AD_Workflow.WorkflowType='M' OR AD_Workflow.WorkflowType='Q'
+		if(STDSysConfig.isResetWFCacheOnSave() && newRecord == false && 
+				(getWorkflowType().equals(WORKFLOWTYPE_Manufacturing) || (getWorkflowType().equals(WORKFLOWTYPE_Quality))))
+		{
+			s_cache.remove( Env.getAD_Language(Env.getCtx()) + "_" +get_ID());
+		}
+		
 
 		return success;
 	}   //  afterSave

@@ -41,6 +41,8 @@ import org.compiere.util.Msg;
 import org.idempiere.cache.ImmutablePOSupport;
 import org.idempiere.cache.ImmutablePOCache;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *	Workflow Node Model
  *
@@ -742,6 +744,15 @@ public class MWFNode extends X_AD_WF_Node implements ImmutablePOSupport
 	@Override
 	protected boolean afterSave (boolean newRecord, boolean success)
 	{
+		//AD_Workflow.WorkflowType='M' OR AD_Workflow.WorkflowType='Q'
+		
+		MWorkflow parent = getAD_Workflow();
+		if(STDSysConfig.isResetWFCacheOnSave() && newRecord == false && 
+				(parent.getWorkflowType().equals(MWorkflow.WORKFLOWTYPE_Manufacturing) || (parent.getWorkflowType().equals(MWorkflow.WORKFLOWTYPE_Quality))))
+		{
+			s_cache.remove( Env.getAD_Language(Env.getCtx()) + "_" +get_ID());
+		}
+		
 		if (!success)
 			return success;
 		return true;

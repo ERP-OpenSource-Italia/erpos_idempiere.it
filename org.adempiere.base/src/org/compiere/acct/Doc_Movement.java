@@ -57,7 +57,11 @@ public class Doc_Movement extends Doc
 	{
 		super (as, MMovement.class, rs, DOCTYPE_MatMovement, trxName);
 	}   //  Doc_Movement
-
+	
+	public Doc_Movement (MAcctSchema as, Class<?> clazz, ResultSet rs, String defaultDocumentType, String trxName)
+	{
+		super (as, clazz, rs, DOCTYPE_MatMovement, trxName);
+	}
 	/**
 	 *  Load Document Details
 	 *  @return error message or null

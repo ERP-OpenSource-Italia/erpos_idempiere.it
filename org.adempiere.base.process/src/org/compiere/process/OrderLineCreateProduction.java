@@ -28,6 +28,8 @@ import org.compiere.model.MWarehouse;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+
+import it.idempiere.base.model.LITMOrder;
  
 /**
  *	Create (Generate) Invoice from Shipment
@@ -91,7 +93,7 @@ public class OrderLineCreateProduction extends SvrProcess
 		
 		if ( (line.getQtyOrdered().subtract(line.getQtyDelivered())).compareTo(Env.ZERO) <= 0 )
 		{
-			if (!doc.getDocSubTypeSO().equals("ON"))  //Consignment and stock orders both have subtype of ON
+			if (!LITMOrder.getDocSubTypeSO(order, doc).equals("ON"))  //Consignment and stock orders both have subtype of ON
 			{
 			    return "Ordered quantity already shipped";
 			}

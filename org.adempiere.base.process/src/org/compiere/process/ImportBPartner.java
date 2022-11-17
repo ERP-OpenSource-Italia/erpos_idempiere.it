@@ -400,12 +400,13 @@ implements ImportProcess
 					if (impBP.getC_BPartner_ID() == 0)	//	Insert new BPartner
 					{
 						bp = new MBPartner(impBP);
-						ModelValidationEngine.get().fireImportValidate(this, impBP, bp, ImportValidator.TIMING_AFTER_IMPORT);
 						
 						setTypeOfBPartner(impBP,bp);
 						
+						ModelValidationEngine.get().fireImportValidate(this, impBP, bp, ImportValidator.TIMING_BEFORE_IMPORT);
 						if (SavedFromImport.save(bp))
 						{
+							ModelValidationEngine.get().fireImportValidate(this, impBP, bp, ImportValidator.TIMING_AFTER_IMPORT);
 							impBP.setC_BPartner_ID(bp.getC_BPartner_ID());
 							msglog = new StringBuilder("Insert BPartner - ").append(bp.getC_BPartner_ID());
 							if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
@@ -442,13 +443,14 @@ implements ImportProcess
 							bp.setDescription(impBP.getDescription());
 						if (impBP.getC_BP_Group_ID() != 0)
 							bp.setC_BP_Group_ID(impBP.getC_BP_Group_ID());
-						ModelValidationEngine.get().fireImportValidate(this, impBP, bp, ImportValidator.TIMING_AFTER_IMPORT);
 						
 						setTypeOfBPartner(impBP,bp);
 						
 						//
+						ModelValidationEngine.get().fireImportValidate(this, impBP, bp, ImportValidator.TIMING_BEFORE_IMPORT);
 						if (SavedFromImport.save(bp))
 						{
+							ModelValidationEngine.get().fireImportValidate(this, impBP, bp, ImportValidator.TIMING_AFTER_IMPORT);
 							msglog = new StringBuilder("Update BPartner - ").append(bp.getC_BPartner_ID());
 							if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
 							noUpdate++;
@@ -488,8 +490,9 @@ implements ImportProcess
 							bpl.setPhone2(impBP.getPhone2());
 						if (impBP.getFax() != null)
 							bpl.setFax(impBP.getFax());
-						ModelValidationEngine.get().fireImportValidate(this, impBP, bpl, ImportValidator.TIMING_AFTER_IMPORT);
+						ModelValidationEngine.get().fireImportValidate(this, impBP, bpl, ImportValidator.TIMING_BEFORE_IMPORT);
 						SavedFromImport.save(bpl);
+						ModelValidationEngine.get().fireImportValidate(this, impBP, bpl, ImportValidator.TIMING_AFTER_IMPORT);
 					}
 					//	New Location
 					else if (impBP.getC_Country_ID() != 0
@@ -523,9 +526,10 @@ implements ImportProcess
 						bpl.setPhone(impBP.getPhone());
 						bpl.setPhone2(impBP.getPhone2());
 						bpl.setFax(impBP.getFax());
-						ModelValidationEngine.get().fireImportValidate(this, impBP, bpl, ImportValidator.TIMING_AFTER_IMPORT);
+						ModelValidationEngine.get().fireImportValidate(this, impBP, bpl, ImportValidator.TIMING_BEFORE_IMPORT);
 						if (SavedFromImport.save(bpl))
 						{
+							ModelValidationEngine.get().fireImportValidate(this, impBP, bpl, ImportValidator.TIMING_AFTER_IMPORT);
 							msglog = new StringBuilder("Insert BP Location - ").append(bpl.getC_BPartner_Location_ID());
 							if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
 							impBP.setC_BPartner_Location_ID(bpl.getC_BPartner_Location_ID());
@@ -588,9 +592,10 @@ implements ImportProcess
 						user.setBirthday(impBP.getBirthday());
 					if (bpl != null)
 						user.setC_BPartner_Location_ID(bpl.getC_BPartner_Location_ID());
-					ModelValidationEngine.get().fireImportValidate(this, impBP, user, ImportValidator.TIMING_AFTER_IMPORT);
+					ModelValidationEngine.get().fireImportValidate(this, impBP, user, ImportValidator.TIMING_BEFORE_IMPORT);
 					if (SavedFromImport.save(user))
 					{
+						ModelValidationEngine.get().fireImportValidate(this, impBP, user, ImportValidator.TIMING_AFTER_IMPORT);
 						msglog = new StringBuilder("Update BP Contact - ").append(user.getAD_User_ID());
 						if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
 					}
@@ -626,9 +631,10 @@ implements ImportProcess
 						user.setBirthday(impBP.getBirthday());
 						if (bpl != null)
 							user.setC_BPartner_Location_ID(bpl.getC_BPartner_Location_ID());
-						ModelValidationEngine.get().fireImportValidate(this, impBP, user, ImportValidator.TIMING_AFTER_IMPORT);
+						ModelValidationEngine.get().fireImportValidate(this, impBP, user, ImportValidator.TIMING_BEFORE_IMPORT);
 						if (SavedFromImport.save(user))
 						{
+							ModelValidationEngine.get().fireImportValidate(this, impBP, user, ImportValidator.TIMING_AFTER_IMPORT);
 							msglog = new StringBuilder("Insert BP Contact - ").append(user.getAD_User_ID());
 							if (log.isLoggable(Level.FINEST)) log.finest(msglog.toString());
 							impBP.setAD_User_ID(user.getAD_User_ID());
@@ -652,7 +658,9 @@ implements ImportProcess
 					MContactInterest ci = MContactInterest.get(getCtx(), 
 							impBP.getR_InterestArea_ID(), user.getAD_User_ID(), 
 							true, get_TrxName());
+					ModelValidationEngine.get().fireImportValidate(this, impBP, ci, ImportValidator.TIMING_BEFORE_IMPORT);
 					SavedFromImport.save(ci);//	don't subscribe or re-activate
+					ModelValidationEngine.get().fireImportValidate(this, impBP, ci, ImportValidator.TIMING_AFTER_IMPORT);
 				}
 				
 				try

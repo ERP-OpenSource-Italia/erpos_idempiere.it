@@ -44,14 +44,14 @@ import org.compiere.util.DB;
 public class ImportProduct extends SvrProcess implements ImportProcess
 {
 	/**	Client to be imported to		*/
-	private int				m_AD_Client_ID = 0;
+	protected int				m_AD_Client_ID = 0;
 	/**	Delete old Imported				*/
-	private boolean			m_deleteOldImported = false;
+	protected boolean			m_deleteOldImported = false;
 
 	/** Effective						*/
-	private Timestamp		m_DateValue = null;
+	protected Timestamp		m_DateValue = null;
 	/** Pricelist to Update				*/
-	private int 			p_M_PriceList_Version_ID = 0;
+	protected int 			p_M_PriceList_Version_ID = 0;
 
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -389,7 +389,7 @@ public class ImportProduct extends SvrProcess implements ImportProcess
 		ResultSet rs = null;
 		try
 		{
-			StringBuilder dbpst = new StringBuilder("SELECT C_TaxCategory_ID FROM C_TaxCategory WHERE IsDefault='Y'").append(clientCheck);
+			StringBuilder dbpst = new StringBuilder("SELECT C_TaxCategory_ID FROM C_TaxCategory WHERE IsDefault='Y'").append(" AND AD_Client_ID=").append(m_AD_Client_ID);
 			pstmt = DB.prepareStatement(dbpst.toString(), get_TrxName());
 			rs = pstmt.executeQuery();
 			if (rs.next())

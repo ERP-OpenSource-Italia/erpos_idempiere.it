@@ -282,6 +282,17 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 		setResource(resource);
 		setResource(resourceType);
 	}	//	MProduct
+	
+	
+	public MProduct setDefaultData(MResource resource, MResourceType resourceType)
+	{
+		setAD_Org_ID(resource.getAD_Org_ID());
+		setProductType(X_M_Product.PRODUCTTYPE_Resource);
+		setResource(resource);
+		setResource(resourceType);
+		
+		return this;
+	}	//	MProduct
 
 	/**
 	 * 	Import Constructor

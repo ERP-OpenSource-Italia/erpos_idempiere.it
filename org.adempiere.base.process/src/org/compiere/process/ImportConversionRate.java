@@ -22,7 +22,10 @@ import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.logging.Level;
 
+import org.adempiere.model.ImportValidator;
+import org.adempiere.process.ImportProcess;
 import org.compiere.model.MConversionRate;
+import org.compiere.model.ModelValidationEngine;
 import org.compiere.model.X_I_Conversion_Rate;
 import org.compiere.util.DB;
 
@@ -33,6 +36,7 @@ import org.compiere.util.DB;
  *  @version $Id: ImportConversionRate.java,v 1.2 2006/07/30 00:51:01 jjanke Exp $
  */
 public class ImportConversionRate extends SvrProcess
+implements ImportProcess
 {
 	
 	/**	Client to be imported to			*/
@@ -93,7 +97,8 @@ public class ImportConversionRate extends SvrProcess
 		//
 		StringBuilder sql = null;
 		int no = 0;
-		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(p_AD_Client_ID);
+//		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(p_AD_Client_ID);
+		String clientCheck = getWhereClause();
 		//	****	Prepare	****
 
 		//	Delete Old Imported
@@ -127,6 +132,8 @@ public class ImportConversionRate extends SvrProcess
 			.append("WHERE I_IsImported<>'Y' OR I_IsImported IS NULL");
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info ("Reset =" + no);
+		
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_BEFORE_VALIDATE);
 
 		//	Org
 		sql = new StringBuilder ("UPDATE I_Conversion_Rate o ")
@@ -228,6 +235,8 @@ public class ImportConversionRate extends SvrProcess
 	//	if (no != 0)
 	//		log.warn ("Inconsistent Rates =" + no);
 		
+		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE);
+		
 		commitEx();
 		/*********************************************************************/
 
@@ -250,8 +259,10 @@ public class ImportConversionRate extends SvrProcess
 					imp.getMultiplyRate(), imp.getValidFrom());
 				if (imp.getValidTo() != null)
 					rate.setValidTo(imp.getValidTo());
+				ModelValidationEngine.get().fireImportValidate(this, imp, rate, ImportValidator.TIMING_BEFORE_IMPORT);
 				if (rate.save())
 				{
+					ModelValidationEngine.get().fireImportValidate(this, imp, rate, ImportValidator.TIMING_AFTER_IMPORT);
 					imp.setC_Conversion_Rate_ID(rate.getC_Conversion_Rate_ID());
 					imp.setI_IsImported(true);
 					imp.setProcessed(true);
@@ -266,8 +277,12 @@ public class ImportConversionRate extends SvrProcess
 							imp.getDivideRate(), imp.getValidFrom());
 						if (imp.getValidTo() != null)
 							rate.setValidTo(imp.getValidTo());
-						if (rate.save())					
+						ModelValidationEngine.get().fireImportValidate(this, imp, rate, ImportValidator.TIMING_BEFORE_IMPORT);
+						if (rate.save())
+						{
+							ModelValidationEngine.get().fireImportValidate(this, imp, rate, ImportValidator.TIMING_AFTER_IMPORT);
 							noInsert++;
+						}
 					}
 				}
 			}
@@ -293,5 +308,18 @@ public class ImportConversionRate extends SvrProcess
 		addLog (0, null, new BigDecimal (noInsert), "@C_Conversion_Rate_ID@: @Inserted@");
 		return "";
 	}	//	doIt
+
+
+	@Override
+	public String getImportTableName() {
+		return X_I_Conversion_Rate.Table_Name;
+	}
+
+
+	@Override
+	public String getWhereClause() {
+		StringBuilder msgreturn = new StringBuilder(" AND AD_Client_ID=").append(p_AD_Client_ID);
+		return msgreturn.toString();
+	}
 
 }	//	ImportConversionRate

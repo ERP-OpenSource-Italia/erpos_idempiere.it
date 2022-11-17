@@ -47,6 +47,7 @@ import org.compiere.util.TimeUtil;
 
 import it.idempiere.base.model.LITMBPartner;
 import it.idempiere.base.model.LITMInOut;
+import it.idempiere.base.model.LITMOrder;
 import it.idempiere.base.util.STDSysConfig;
 
 /**
@@ -1107,7 +1108,8 @@ public class MInOut extends X_M_InOut implements DocAction
         }
 
 		//	Shipment - Needs Order/RMA
-		if (!getMovementType().contentEquals(MInOut.MOVEMENTTYPE_CustomerReturns) && isSOTrx() && getC_Order_ID() == 0 && getM_RMA_ID() == 0)
+		if (!getMovementType().contentEquals(MInOut.MOVEMENTTYPE_CustomerReturns) && isSOTrx() && getC_Order_ID() == 0 && getM_RMA_ID() == 0
+				&& STDSysConfig.isCheckOrderOnShipmentPrepare(getAD_Client_ID(), getAD_Org_ID()) == false)
 		{
 			log.saveError("FillMandatory", Msg.translate(getCtx(), "C_Order_ID"));
 			return false;
@@ -1222,7 +1224,7 @@ public class MInOut extends X_M_InOut implements DocAction
 				&& MSysConfig.getBooleanValue(MSysConfig.LIT_INOUT_CHECK_CREDIT_AS_WARNING, false, getAD_Client_ID(), getAD_Org_ID()) == false)
 		{
 			I_C_Order order = getC_Order();
-			if (order != null && MDocType.DOCSUBTYPESO_PrepayOrder.equals(order.getC_DocType().getDocSubTypeSO())
+			if (order != null && MDocType.DOCSUBTYPESO_PrepayOrder.equals(LITMOrder.getDocSubTypeSO((X_C_Order) order, null))
 					&& !MSysConfig.getBooleanValue(MSysConfig.CHECK_CREDIT_ON_PREPAY_ORDER, true, getAD_Client_ID(), getAD_Org_ID())) {
 				// ignore -- don't validate Prepay Orders depending on sysconfig parameter
 			} else {
@@ -2446,10 +2448,14 @@ public class MInOut extends X_M_InOut implements DocAction
 			return null;
 		}
 		reversal.setReversal(true);
-
+		
 		//	Reverse Line Qty
 		MInOutLine[] sLines = getLines(false);
 		MInOutLine[] rLines = reversal.getLines(false);
+		
+		// LS: managing of reopen in progress
+		reversal.setReopenInProgress(isReopenInProgress());
+
 		for (int i = 0; i < rLines.length; i++)
 		{
 			MInOutLine rLine = rLines[i];
@@ -2707,4 +2713,16 @@ public class MInOut extends X_M_InOut implements DocAction
 			|| DOCSTATUS_Reversed.equals(ds);
 	}	//	isComplete
 
+	// LS: is reopen in progress ?
+	private boolean reopenInProgress = false;
+	// LS: mark reopen in progress
+	public boolean isReopenInProgress()
+	{
+		return reopenInProgress;
+	}
+
+	public void setReopenInProgress(boolean reopenInProgress)
+	{
+		this.reopenInProgress = reopenInProgress;
+	}
 }	//	MInOut

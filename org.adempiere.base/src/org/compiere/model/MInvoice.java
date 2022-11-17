@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,11 +49,14 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
+import org.compiere.util.Trx;
+import org.compiere.util.ValueNamePair;
 
 import it.idempiere.base.model.FreeOfCharge;
-import it.idempiere.base.model.LITMInvoice;
 import it.idempiere.base.model.LITMBPartner;
+import it.idempiere.base.model.LITMInvoice;
 import it.idempiere.base.util.GenericPOAdvancedComparator;
+import it.idempiere.base.util.POTrxData;
 import it.idempiere.base.util.STDSysConfig;
 import it.idempiere.base.util.STDUtils;
 
@@ -341,6 +345,9 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			super.setProcessed (false);
 			setProcessing(false);
 		}
+		
+		//F3P add POTrxData
+		trxData = new POTrxData(p_info.getTableName());
 	}	//	MInvoice
 
 	/**
@@ -352,6 +359,8 @@ public class MInvoice extends X_C_Invoice implements DocAction
 	public MInvoice (Properties ctx, ResultSet rs, String trxName)
 	{
 		super(ctx, rs, trxName);
+		//F3P add POTrxData
+		trxData = new POTrxData(p_info.getTableName());
 	}	//	MInvoice
 
 	/**
@@ -2019,6 +2028,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		//F3P reorder invoice
 		//MInvoiceLine[] lines = getLines(false);
 		MInvoiceLine[] lines = getOrderedLines();
+		boolean checkMatchInv = false;
 		
 		for (int i = 0; i < lines.length; i++)
 		{
@@ -2089,24 +2099,7 @@ public class MInvoice extends X_C_Invoice implements DocAction
 						if (!po.isPosted())
 							addDocsPostProcess(po);
 						
-						MMatchInv[] matchInvoices = MMatchInv.getInvoiceLine(getCtx(), line.getC_InvoiceLine_ID(), get_TrxName());
-						if (matchInvoices != null && matchInvoices.length > 0) 
-						{
-							for(MMatchInv matchInvoice : matchInvoices)
-							{
-								if (!matchInvoice.isPosted())
-								{
-									addDocsPostProcess(matchInvoice);
-								}
-								
-								if (matchInvoice.getRef_MatchInv_ID() > 0)
-								{
-									MMatchInv refMatchInv = new MMatchInv(getCtx(), matchInvoice.getRef_MatchInv_ID(), get_TrxName());
-									if (!refMatchInv.isPosted())
-										addDocsPostProcess(refMatchInv);
-								}
-							}
-						}
+						checkMatchInv = true;
 					}
 				}
 			}
@@ -2128,6 +2121,32 @@ public class MInvoice extends X_C_Invoice implements DocAction
 			//			
 
 		}	//	for all lines
+		
+		if(checkMatchInv)
+		{
+			Query mQuery = new Query(getCtx(),MMatchInv.Table_Name,
+					" c.C_Invoice_ID = ? AND c.M_Product_ID IS NOT NULL AND ( M_MatchInv.Posted='N' OR M_MatchInv.Ref_MatchInv_ID IS NOT NULL ) ",get_TrxName())
+					.addJoinClause(" INNER JOIN C_InvoiceLine c on M_MatchInv.C_InvoiceLine_ID = c.C_InvoiceLine_ID ");
+			mQuery.setParameters(get_ID());
+			
+			//MMatchInv[] matchInvoices = MMatchInv.getInvoiceLine(getCtx(), line.getC_InvoiceLine_ID(), get_TrxName());
+			List<MMatchInv> matchInvoices = mQuery.list();
+			for(MMatchInv matchInvoice : matchInvoices)
+			{
+				if (!matchInvoice.isPosted())
+				{
+					addDocsPostProcess(matchInvoice);
+				}
+				
+				if (matchInvoice.getRef_MatchInv_ID() > 0)
+				{
+					MMatchInv refMatchInv = new MMatchInv(getCtx(), matchInvoice.getRef_MatchInv_ID(), get_TrxName());
+					if (!refMatchInv.isPosted())
+						addDocsPostProcess(refMatchInv);
+				}
+			}
+		}
+		
 		if (matchInv > 0)
 			info.append(" @M_MatchInv_ID@#").append(matchInv).append(" ");
 		if (matchPO > 0)
@@ -3144,4 +3163,25 @@ public class MInvoice extends X_C_Invoice implements DocAction
 		
 		return orderedLines;
 	}
+	
+	//F3P
+	protected POTrxData trxData;
+		
+		
+	public POTrxData getPOTrxData()
+	{
+		return trxData;
+	}
+	
+	@Override
+	protected void endSaveTrx() {
+		trxData.endSaveTrx();
+	}
+
+	
+	@Override
+	protected void startSaveTrx() {
+		trxData.startSaveTrx();
+	}
+	
 }	//	MInvoice

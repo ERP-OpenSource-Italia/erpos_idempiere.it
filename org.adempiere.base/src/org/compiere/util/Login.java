@@ -703,13 +703,14 @@ public class Login
 			throw new IllegalArgumentException("Org missing");
 
 	//	s_log.info("loadWarehouses - Org: " + org.toStringX());
-
+		//LS WH of orginfo is the default
 		ArrayList<KeyNamePair> list = new ArrayList<KeyNamePair>();
 		KeyNamePair[] retValue = null;
-		String sql = "SELECT M_Warehouse_ID, Name FROM M_Warehouse "
-			+ "WHERE AD_Org_ID=? AND IsActive='Y' "
-			+ " AND "+I_M_Warehouse.COLUMNNAME_IsInTransit+"='N' " // do not show in tranzit warehouses - teo_sarca [ 2867246 ]
-			+ "ORDER BY Name";
+		String sql = "SELECT w.M_Warehouse_ID, w.Name FROM M_Warehouse w "
+			+ "LEFT JOIN ad_orginfo i ON i.M_Warehouse_ID = w.M_Warehouse_id AND i.AD_Org_ID = w.AD_Org_ID "
+			+ "WHERE w.AD_Org_ID=? AND w.IsActive='Y' "
+			+ " AND w."+I_M_Warehouse.COLUMNNAME_IsInTransit+"='N' " // do not show in tranzit warehouses - teo_sarca [ 2867246 ]
+			+ "ORDER BY i.AD_Org_ID nulls last, w.Name";
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try

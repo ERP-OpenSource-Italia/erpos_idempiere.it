@@ -611,7 +611,7 @@ public class MOrderLine extends X_C_OrderLine
 	 */
 	public boolean canChangeWarehouse() 
 	{
-		return canChangeWarehouse(false); // F3P: added flag to try undo reservation before failing
+		return canChangeWarehouse(true); // F3P: added flag to try undo reservation before failing
 	}
 	
 	/**

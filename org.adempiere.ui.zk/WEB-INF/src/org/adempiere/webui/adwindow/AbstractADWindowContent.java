@@ -25,6 +25,7 @@ import java.sql.SQLException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -3396,7 +3397,15 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 		}
 		else
 		{
-			ProcessModalDialog dialog = new ProcessModalDialog(this, curWindowNo, wButton.getProcess_ID(), table_ID, record_ID, startWOasking, feedbackContainer);
+			//LS save row IDs selected like infoWindow in order to be able to use them in processes
+			int[] indices = adTabbox.getSelectedGridTab().getSelection();
+			Collection<Integer> selection = new ArrayList<Integer>();
+			for (int i : indices) {
+				Integer keyData = adTabbox.getSelectedGridTab().getKeyID(i);
+				selection.add(keyData);
+			} 
+			//LS end
+			ProcessModalDialog dialog = new ProcessModalDialog(this, curWindowNo, wButton.getProcess_ID(), table_ID, record_ID, startWOasking, feedbackContainer, selection);
 
 			if (dialog.isValid())
 			{

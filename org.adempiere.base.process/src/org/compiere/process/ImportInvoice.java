@@ -49,27 +49,30 @@ import org.compiere.util.Env;
 public class ImportInvoice extends SvrProcess implements ImportProcess 
 {
 	/**	Client to be imported to		*/
-	private int				m_AD_Client_ID = 0;
+	protected int				m_AD_Client_ID = 0;
 	/**	Organization to be imported to		*/
-	private int				m_AD_Org_ID = 0;
+	protected int				m_AD_Org_ID = 0;
 	/**	Delete old Imported				*/
-	private boolean			m_deleteOldImported = false;
+	protected boolean			m_deleteOldImported = false;
 	/**	Document Action					*/
-	private String			m_docAction = MInvoice.DOCACTION_Prepare;
+	protected String			m_docAction = MInvoice.DOCACTION_Prepare;
 
 
 	/** Effective						*/
-	private Timestamp		m_DateValue = null;
+	protected Timestamp		m_DateValue = null;
 	/** F3P: Document no*/
-	private String 			m_documentNo;
+	protected String 			m_documentNo;
 	/** F3P: avoid partial import */
-	private boolean 		m_bAvoidPartialImport = false;
+	protected boolean 		m_bAvoidPartialImport = false;
 	/** F3P: lista delle fatture da rollbackare */
-	private Set<InvoiceForRollback> m_invoiceForRollback = new HashSet<InvoiceForRollback>();
+	protected Set<InvoiceForRollback> m_invoiceForRollback = new HashSet<InvoiceForRollback>();
 
 	/** LS: sovrascrive o no il prezzo sulla linea della fattura dal listino prezzi**/
-	private boolean m_bNotOverWritePrice = false;
+	protected boolean m_bNotOverWritePrice = false;
 	
+	protected int lineBufferThreshold = 0;
+	
+	protected boolean m_ValidateOnly = false;
 	/**
 	 *  Prepare - e.g., get Parameters.
 	 */
@@ -93,6 +96,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 				m_bAvoidPartialImport = "Y".equals(para[i].getParameter());
 			else if (name.equals("IsNotOverWritePrice")) //F3P: param added 
 				m_bNotOverWritePrice = "Y".equals(para[i].getParameter());
+			else if (name.equals("IsValidateOnly"))
+				m_ValidateOnly = para[i].getParameterAsBoolean();
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -136,8 +141,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 			  .append(" UpdatedBy = COALESCE (UpdatedBy, 0),")
 			  .append(" I_ErrorMsg = ' ',")
 			  .append(" I_IsImported = 'N' ")
-			  .append("WHERE I_IsImported<>'Y' OR I_IsImported IS NULL")
-				.append(getDocumentNoFilter()); //F3P: added filter by docNo
+			  .append("WHERE (I_IsImported<>'Y' OR I_IsImported IS NULL )").append (clientCheck)
+			  .append(getDocumentNoFilter()); //F3P: added filter by docNo
 
 		no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.INFO)) log.info ("Reset=" + no);
@@ -432,6 +437,7 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 			  .append("SET C_BPartner_Location_ID=(SELECT MAX(C_BPartner_Location_ID) FROM C_BPartner_Location l")
 			  .append(" WHERE l.C_BPartner_ID=o.C_BPartner_ID AND o.AD_Client_ID=l.AD_Client_ID")
 			  .append(" AND ((l.IsBillTo='Y' AND o.IsSOTrx='Y') OR o.IsSOTrx='N')")
+			  .append(" AND l.IsActive='Y' ")
 			  .append(") ")
 			  .append("WHERE C_BPartner_ID IS NOT NULL AND C_BPartner_Location_ID IS NULL")
 			  .append(" AND I_IsImported<>'Y'").append (clientCheck)
@@ -605,6 +611,9 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 		ModelValidationEngine.get().fireImportValidate(this, null, null, ImportValidator.TIMING_AFTER_VALIDATE); //F3P
 		
 		commitEx();
+		
+		if (m_ValidateOnly)
+			return "Solo validazione dati";
 		
 		//	-- New BPartner ---------------------------------------------------
 
@@ -786,6 +795,9 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 			int oldC_BPartner_ID = 0;
 			int oldC_BPartner_Location_ID = 0;
 			String oldDocumentNo = "";
+			int oldC_DocType_ID = 0;
+			Timestamp oldDateInvoiced = null;
+			int lineBuffer = 0;
 
 			int lineNo = 0;
 			while (rs.next ())
@@ -798,7 +810,9 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 				//	New Invoice
 				if (oldC_BPartner_ID != imp.getC_BPartner_ID() 
 					|| oldC_BPartner_Location_ID != imp.getC_BPartner_Location_ID()
-					|| !oldDocumentNo.equals(cmpDocumentNo)	)
+					|| !oldDocumentNo.equals(cmpDocumentNo)
+					|| oldC_DocType_ID != imp.getC_DocType_ID()
+					|| (oldDateInvoiced == null || oldDateInvoiced.compareTo(imp.getDateInvoiced()) != 0) )
 					{
 						//salviamo la fattura precedente
 						if (bSingleLineImportOk && invoice != null)
@@ -822,6 +836,8 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 					oldDocumentNo = imp.getDocumentNo();
 					if (oldDocumentNo == null)
 						oldDocumentNo = "";
+					oldC_DocType_ID = imp.getC_DocType_ID();
+					oldDateInvoiced = imp.getDateInvoiced();
 					//
 					invoice = new MInvoice (getCtx(), 0, get_TrxName());
 					//F3P: reset list
@@ -863,19 +879,23 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 					//
 					//F3P: replaced with saveEx
 					//invoice.saveEx();
+					ModelValidationEngine.get().fireImportValidate(ImportInvoice.this, imp, invoice, ImportValidator.TIMING_BEFORE_IMPORT);
+					
 					invoice.saveEx(get_TrxName());
 					previousImp = imp;						
 					noInsert++;
 					lineNo = 10;
+					lineBuffer = 0;
 				}
 				imp.setC_Invoice_ID (invoice.getC_Invoice_ID());
 				//	New InvoiceLine
 				MInvoiceLine line = new MInvoiceLine (invoice);
-				
+
 				if (imp.getLineDescription() != null)
 					line.setDescription(imp.getLineDescription());
 				line.setLine(lineNo);
 				lineNo += 10;
+				lineBuffer ++;
 				if (imp.getM_Product_ID() != 0)
 					line.setM_Product_ID(imp.getM_Product_ID(), true);
 				// globalqss - import invoice with charges
@@ -921,6 +941,9 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 				
 				//F3P: was saveEx)=
 				line.saveEx(get_TrxName());
+				
+				ModelValidationEngine.get().fireImportValidate(this, imp, line, ImportValidator.TIMING_AFTER_IMPORT);
+				
 				//F3P: save this line as imported
 				lstImportedIInvoice.add(imp);
 				//
@@ -940,6 +963,13 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 					if(m_bAvoidPartialImport && bErrorsOccurred)
 						markInvoiceForRollback(invoice, lstImportedIInvoice, imp, "another line has a problem");
 					//F3P: End
+
+				if (lineBufferThreshold > 0 && lineBuffer >= lineBufferThreshold)
+				{
+					commitEx();
+					lineBuffer = 0;
+				}
+				
 			}
 			if (bSingleLineImportOk && invoice != null)
 			{

@@ -681,7 +681,7 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 
         	if (! field.isHeading()) {
 
-        		WEditor editor = update ? findEditor(field) : WebEditorFactory.getEditor(gridTab, field, false);
+        		WEditor editor = update ? findEditor(field) : WebEditorFactory.getEditor(gridTab, field, false,false);
 
         		if (editor != null) // Not heading
         		{

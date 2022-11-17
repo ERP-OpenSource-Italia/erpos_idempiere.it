@@ -58,33 +58,33 @@ import org.compiere.util.ValueNamePair;
 public class ImportInventory extends SvrProcess implements ImportProcess
 {
 	/**	Client to be imported to		*/
-	private int				p_AD_Client_ID = 0;
+	protected int				p_AD_Client_ID = 0;
 	/**	Organization to be imported to	*/
-	private int				p_AD_Org_ID = 0;
+	protected int				p_AD_Org_ID = 0;
 	/**	Location to be imported to		*/
-	private int				p_M_Locator_ID = 0;
+	protected int				p_M_Locator_ID = 0;
 	/**	Default Date					*/
-	private Timestamp		p_MovementDate = null;
+	protected Timestamp		p_MovementDate = null;
 	/**	Delete old Imported				*/
-	private boolean			p_DeleteOldImported = false;
+	protected boolean			p_DeleteOldImported = false;
 	
 	//@Trifon
 	/**	Update Costing					*/
-	private boolean			p_UpdateCosting = false;
+	protected boolean			p_UpdateCosting = false;
 	/**	Accounting Schema in which costing to be updated	*/
-	private int				p_C_AcctSchema_ID = 0;
-	MAcctSchema acctSchema 	= null;
+	protected int				p_C_AcctSchema_ID = 0;
+	protected MAcctSchema acctSchema 	= null;
 	/**	Cost Type for which costing to be updated		*/
-	private int				p_M_CostType_ID = 0;
+	protected int				p_M_CostType_ID = 0;
 	/**	Cost Element for which costing to be updated	*/
-	private int				p_M_CostElement_ID = 0;
+	protected int				p_M_CostElement_ID = 0;
 	/**	Organization for which Costing record must be updated	*/
-	private int				p_AD_OrgTrx_ID = 0;
+	protected int				p_AD_OrgTrx_ID = 0;
 	/**	Document Action					*/
-	private String			m_docAction = null;
-	private MInventory 		costingDoc = null;
+	protected String			m_docAction = null;
+	protected MInventory 		costingDoc = null;
 	
-	private int 			p_C_DocType_ID = 0;
+	protected int 			p_C_DocType_ID = 0;
 	/**
 	 *  Prepare - e.g., get Parameters.
 	 */
@@ -157,7 +157,7 @@ public class ImportInventory extends SvrProcess implements ImportProcess
 		
 		StringBuilder sql = null;
 		int no = 0;
-		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(p_AD_Client_ID);
+		StringBuilder clientCheck = new StringBuilder(getWhereClause());
 
 		//	****	Prepare	****
 

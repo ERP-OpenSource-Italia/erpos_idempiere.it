@@ -586,6 +586,30 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 		}
 		return false;
 	}
+	
+	/** Set Query Criteria is Read Only.
+		@param IsQueryCriteriaReadOnly 
+		Query Criteria Field is read only
+	  */
+	public void setIsQueryCriteriaReadOnly (boolean IsQueryCriteriaReadOnly)
+	{
+		set_Value (COLUMNNAME_IsQueryCriteriaReadOnly, Boolean.valueOf(IsQueryCriteriaReadOnly));
+	}
+	
+	/** Get Query Criteria is Read Only.
+		@return Query Criteria Field is read only
+	  */
+	public boolean isQueryCriteriaReadOnly () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsQueryCriteriaReadOnly);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
 
 	/** Set Read Only.
 		@param IsReadOnly 

@@ -15,5 +15,7 @@
 	<classpathentry exported="true" kind="lib" path="lib/jasperreports-functions.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/olap4j.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xmpcore.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/core.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/javase.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

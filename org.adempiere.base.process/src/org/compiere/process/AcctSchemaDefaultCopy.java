@@ -29,6 +29,8 @@ import org.compiere.util.DB;
  *	
  *  @author Jorg Janke
  *  @version $Id: AcctSchemaDefaultCopy.java,v 1.2 2006/07/30 00:51:01 jjanke Exp $
+ *  
+ *  LS: ATTENZIONE: riportare le modifiche a questo processo in Libero manufacturing LSMFGAcctSchemaDefaultCopy
  */
 public class AcctSchemaDefaultCopy extends SvrProcess
 {

@@ -1,7 +1,6 @@
 package it.idempiere.base.model;
 
 import org.compiere.model.MSequence;
-import org.compiere.model.X_M_Attribute;
 
 public class LITMSequence {
 	

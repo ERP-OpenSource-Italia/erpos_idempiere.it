@@ -388,6 +388,19 @@ public interface I_AD_InfoColumn
 	  * The column is also used as a query criteria
 	  */
 	public boolean isQueryCriteria();
+	
+	/** Column name IsQueryCriteriaReadOnly */
+    public static final String COLUMNNAME_IsQueryCriteriaReadOnly = "IsQueryCriteriaReadOnly";
+
+	/** Set Query Criteria is Read Only.
+	  * Query Criteria Field is read only
+	  */
+	public void setIsQueryCriteriaReadOnly (boolean IsQueryCriteriaReadOnly);
+
+	/** Get Query Criteria is Read Only.
+	  * Query Criteria Field is read only
+	  */
+	public boolean isQueryCriteriaReadOnly();
 
     /** Column name IsReadOnly */
     public static final String COLUMNNAME_IsReadOnly = "IsReadOnly";
