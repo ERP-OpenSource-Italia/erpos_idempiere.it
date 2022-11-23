@@ -135,6 +135,48 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 
 	    repaint();
 	}
+	
+	/**
+	 * Set the data model and column header names for the Listbox.
+	 *
+	 * @param model        The data model to assign to the table
+	 * @param columnNames  The names of the table columns
+	 * @param identifier   Unique Listbox Identifier 
+	 * @param columnWidths Column widths
+	 */
+	//FIN: possibilit� di indicare il width
+	public void setData(ListModelTable model, List< ? extends String> columnNames, String identifier, List< ? extends Integer> columnWidths)
+	{
+		WListItemRenderer rowRenderer = null;
+		if (columnNames != null && columnNames.size() > 0)
+		{
+	    	//	 instantiate our custom row renderer
+		    rowRenderer = new WListItemRenderer(columnNames, identifier);	//F3P: add id
+
+	    	// add listener for listening to component changes
+	    	rowRenderer.addTableValueChangeListener(this);
+		}
+	    // assign the model and renderer
+	    this.setModel(model);
+	    if (rowRenderer != null)
+	    {
+	    	getModel().setNoColumns(columnNames.size());
+	    	this.setItemRenderer(rowRenderer);
+
+	    	//recreate listhead if needed
+		    ListHead head = super.getListHead();
+		    if (head != null)
+		    {
+		    	head.getChildren().clear();
+		    	rowRenderer.renderListHead(head, columnWidths);//FIN: possibilit� di indicare il width
+	    	}
+	    }
+
+	    // re-render
+	    repaint(columnWidths);
+
+	    return;
+	}
 
     public void setModel(ListModel<?> model)
     {
@@ -1083,9 +1125,62 @@ public class WListbox extends Listbox implements IMiniTable, TableValueChangeLis
 	 */
 	public void repaint()
 	{
-	    // create header (if needed)
-	    initialiseHeader();
-	    invalidate();
+		repaint(null);
+	}
+	
+	/**
+	 * FIN possibilit� di indicare il width
+	 * Repaint the Table.
+	 * 
+	 * @param columnWidths
+	 */
+	public void repaint(List<? extends Integer> columnWidths)
+	{
+	    // create the head
+	    initialiseHeader(columnWidths);
+
+	    // this causes re-rendering of the Listbox
+		this.setModel(this.getModel());
+
+		return;
+	}
+	
+	/**
+	 * Create the listbox header by fetching it from the renderer and adding
+	 * it to the Listbox.
+	 *
+	 * @param columnWidths
+	 *
+	 */
+	private void initialiseHeader(List<? extends Integer> columnWidths) //FIN possibilit� di indicare il width
+	{
+	    ListHead head = null;
+
+	    head = super.getListHead();
+
+	    //init only once
+	    if (head != null)
+	    {
+	    	return;
+	    }
+
+	    head = new ListHead();
+
+	    // render list head
+	    if (this.getItemRenderer() instanceof WListItemRenderer)
+	    {
+	    	((WListItemRenderer)this.getItemRenderer()).renderListHead(head, columnWidths);
+	    }
+	    else
+	    {
+	    	throw new ApplicationException("Rendering of the ListHead is unsupported for "
+	    			+ this.getItemRenderer().getClass().getSimpleName());
+	    }
+
+	    //attach the listhead
+	    head.setParent(this);
+
+	    return;
 	}
 
     /**

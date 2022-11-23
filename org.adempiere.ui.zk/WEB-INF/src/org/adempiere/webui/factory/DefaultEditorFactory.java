@@ -239,4 +239,9 @@ public class DefaultEditorFactory implements IEditorFactory {
         return editor;
 	}
 
+	@Override
+	public WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor, boolean searchWindow) {
+		return getEditor(gridTab, gridField, tableEditor, null);
+	}
+
 }

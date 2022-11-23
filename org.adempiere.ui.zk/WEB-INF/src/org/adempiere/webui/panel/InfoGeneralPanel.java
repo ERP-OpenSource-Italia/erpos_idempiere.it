@@ -37,6 +37,7 @@ import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
 import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
+import org.compiere.model.GridField;
 import org.compiere.model.I_C_ElementValue;
 import org.compiere.model.MColumn;
 import org.compiere.model.MLookupFactory;
@@ -97,6 +98,87 @@ public class InfoGeneralPanel extends InfoPanel implements EventListener<Event>
 	public InfoGeneralPanel(String queryValue, int windowNo,String tableName,String keyColumn, boolean isSOTrx, String whereClause)
 	{
 		this(queryValue, windowNo, tableName, keyColumn, isSOTrx, whereClause, true);
+	}
+	
+	// FIN: (st) 13/12/17 Added constructor with grid field
+	public InfoGeneralPanel(String queryValue, int windowNo,String tableName,String keyColumn, boolean isSOTrx, String whereClause, boolean lookup, GridField gridField)
+	{
+		this(queryValue, windowNo,tableName,keyColumn, isSOTrx, whereClause, lookup, gridField, false);
+	}
+	
+	// F3P: constructor with multiselection
+	
+	public InfoGeneralPanel(String queryValue, int windowNo,String tableName,String keyColumn, boolean isSOTrx, String whereClause, boolean lookup, GridField gridField, boolean bMulstiselection)
+	{
+		super(windowNo, tableName, keyColumn, bMulstiselection, whereClause, lookup, 0, gridField); // FIN: st (13/12/17) propagate gridfield
+		
+		setTitle(Msg.getMsg(Env.getCtx(), "Info"));
+
+		try
+		{
+			init();
+			initComponents();
+
+			p_loadedOK = initInfo ();
+			
+			if (queryValue != null && queryValue.length() > 0)
+			{				
+				Textbox[] txts = new Textbox[] {txt1, txt2, txt3, txt4};
+				for(Textbox t : txts) 
+				{
+					if (t != null && t.isVisible())
+					{
+						t.setValue(queryValue);
+						testCount();
+						if (m_count <= 0)
+							t.setValue(null);
+						else
+							break;
+					}
+				}
+				if (m_count <= 0)
+				{
+					txt1.setValue(queryValue);
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			return;
+		}
+
+		// Elaine 2008/12/15
+		int no = contentPanel.getRowCount();
+		setStatusLine(Integer.toString(no) + " " + Msg.getMsg(Env.getCtx(), "SearchRows_EnterQuery"), false);
+		setStatusDB(Integer.toString(no));
+		//
+
+		if (queryValue != null && queryValue.length() > 0)
+        {
+			MTable table = MTable.get(Env.getCtx(), p_tableName);
+			if (   table.getIdentifierColumns().length > 1
+				&& !p_tableName.startsWith("AD_"))  // 32 AD tables with identifiers containing _
+			{
+				String separator = I_C_ElementValue.Table_Name.equalsIgnoreCase(p_tableName) ? "-" : "_";
+				if (txt2.isVisible())
+				{
+					String[] values = queryValue.split("["+separator+"]");
+					if (values != null && values.length == 2) 
+					{
+						txt1.setValue(values[0]);
+						txt2.setValue(values[1]);
+					}
+				}
+
+			}			
+			
+            executeQuery();
+            renderItems();
+        }
+		
+		if (ClientInfo.isMobile()) {
+			ClientInfo.onClientInfo(this, this::onClientInfo);
+		}
 	}
 
 	public InfoGeneralPanel(String queryValue, int windowNo,String tableName,String keyColumn, boolean isSOTrx, String whereClause, boolean lookup)

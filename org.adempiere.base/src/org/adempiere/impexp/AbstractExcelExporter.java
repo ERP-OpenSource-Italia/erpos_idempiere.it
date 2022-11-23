@@ -683,4 +683,14 @@ public abstract class AbstractExcelExporter
 	protected HSSFRow getFormRow(HSSFSheet sheet, int colnum) {
 		return null;
 	}
+	
+	//LS
+	protected boolean isGridView = false;
+	public boolean isGridView() {
+		return isGridView;
+	}
+	public void setGridView(boolean isGridView) {
+		this.isGridView = isGridView;
+	}
+	//LS end
 }

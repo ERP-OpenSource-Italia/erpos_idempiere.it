@@ -42,4 +42,12 @@ public interface IEditorFactory {
 	 * @return {@link WEditor}
 	 */
 	public WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor, IEditorConfiguration editorConfiguration);
+	
+	/**
+	 * @param gridTab
+	 * @param gridField
+	 * @param tableEditor
+	 * @return WEditor
+	 */
+	public WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor,boolean searchWindow);
 }

@@ -1,5 +1,5 @@
-/******************************************************************************
- * Copyright (C) 2014 Elaine Tan                                              *
+/*****************************************************************************
+* Copyright (C) 2014 Elaine Tan                                              *
  * Copyright (C) 2014 Trek Global
  * This program is free software; you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
@@ -15,11 +15,11 @@
 package org.adempiere.webui.apps;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Future;
@@ -50,14 +50,12 @@ import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.editor.WTableDirEditor;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.factory.ButtonFactory;
-import org.adempiere.webui.info.InfoWindow;
 import org.adempiere.webui.process.WProcessInfo;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.util.UIFeedbackNotifier;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.FDialog;
 import org.adempiere.webui.window.MultiFileDownloadDialog;
-import org.adempiere.webui.window.SimplePDFViewer;
 import org.compiere.Adempiere;
 import org.compiere.model.Lookup;
 import org.compiere.model.MAttachment;
@@ -68,18 +66,16 @@ import org.compiere.model.MLookupFactory;
 import org.compiere.model.MLookupInfo;
 import org.compiere.model.MNote;
 import org.compiere.model.MPInstance;
-import org.compiere.model.MPInstanceLog;
 import org.compiere.model.MPInstancePara;
 import org.compiere.model.MProcess;
 import org.compiere.model.MQuery;
-import org.compiere.model.MReportView;
 import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MUser;
-import org.compiere.model.MUserDefProc;
 import org.compiere.model.PO;
 import org.compiere.model.Query;
 import org.compiere.model.SystemIDs;
+import org.compiere.model.X_AD_ReportView;
 import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportCtl;
 import org.compiere.print.ReportEngine;
@@ -118,12 +114,12 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -7374210834757533221L;
+	private static final long serialVersionUID = 8232462327114180974L;
 
 	private static final String ON_COMPLETE = "onComplete";
 	private static final String ON_STATUS_UPDATE = "onStatusUpdate";
 	
-	private static final CLogger log = CLogger.getCLogger(AbstractProcessDialog.class);
+	private static CLogger log = CLogger.getCLogger(AbstractProcessDialog.class);
 
 	protected int m_WindowNo;
 	private Properties m_ctx;
@@ -138,8 +134,6 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 	private BusyDialog progressWindow;	
 	
 	private String		    m_Name = null;
-	private String		    m_Description = null;
-	private String		    m_Help = null;
 	private String          m_ShowHelp = null; // Determine if a Help Process Window is shown
 	private String initialMessage;
 	
@@ -150,7 +144,7 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 	private List<File> downloadFiles;
 	private boolean m_locked = false;
 	private String	m_AD_Process_UU = "";
-		
+	
 	// F3p: keep and propagate feedback container
 	private FeedbackContainer feedbackContainer;
 		
@@ -205,27 +199,19 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			if (rs.next())
 			{
 				m_Name = rs.getString(1);
-				m_Description = rs.getString(2);
-				m_Help = rs.getString(3);
 				m_ShowHelp = rs.getString(5);
-
-				// User Customization
-				MUserDefProc userDef = MUserDefProc.getBestMatch(ctx, AD_Process_ID);
-				if (userDef != null) {
-					if (userDef.getName() != null)
-						m_Name = userDef.getName();
-					if (userDef.getDescription() != null)
-						m_Description = userDef.getDescription();
-					if (userDef.getHelp() != null)
-						m_Help = userDef.getHelp();
-				}
-
+				//
 				buildMsg.append("<b>");
-				buildMsg.append(Util.isEmpty(m_Description) ? Msg.getMsg(m_ctx, "StartProcess?") : m_Description);
+				String s = rs.getString(2);		//	Description
+				if (rs.wasNull())
+					buildMsg.append(Msg.getMsg(m_ctx, "StartProcess?"));
+				else
+					buildMsg.append(s);
 				buildMsg.append("</b>");
 
-				if (!Util.isEmpty(m_Help))
-					buildMsg.append("<p>").append(m_Help).append("</p>");
+				s = rs.getString(3);			//	Help
+				if (!rs.wasNull())
+					buildMsg.append("<p>").append(s).append("</p>");
 				m_AD_Process_UU = rs.getString(6);
 			}
 			
@@ -502,6 +488,7 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 		
 		lSaved = new Label(Msg.getMsg(Env.getCtx(), "SavedParameter"));
 		lSaved.setClass("saved-parameter-label");
+		lSaved.setStyle("padding-left:10px"); //LS avoid truncated label on left when in dialog mode
 		savePrameterLayout.appendChild(lSaved);
 		fSavedName = new Combobox();
 		fSavedName.addEventListener(Events.ON_CHANGE, this);
@@ -567,7 +554,7 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 		{
 			if (pr.getAD_ReportView_ID() > 0)
 			{
-				MReportView m_Reportview = MReportView.get(m_ctx, pr.getAD_ReportView_ID());
+				X_AD_ReportView m_Reportview = new X_AD_ReportView(m_ctx, pr.getAD_ReportView_ID(), null);
 				table_ID = m_Reportview.getAD_Table_ID();
 			}
 			else if (pr.getAD_PrintFormat_ID() > 0)
@@ -636,9 +623,8 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 		
 		if (m_isCanExport)
 		{
-			freportType.appendItem("XLS", "XLS");
+			freportType.appendItem("Excel", "XLS");
 			freportType.appendItem("CSV", "CSV");
-			freportType.appendItem("XLSX", "XLSX");
 		}
 		freportType.setSelectedIndex(-1);
 	}
@@ -846,15 +832,15 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 	
 	protected void startProcess()
 	{
-		if (!parameterPanel.validateParameters())
-			return;
-
 		if (m_pi.isProcessRunning(parameterPanel.getParameters())) {
-			FDialog.error(getWindowNo(), "ProcessAlreadyRunning");
+			FDialog.error(getWindowNo(), "ProcessAlreadyRunning"+m_pi.getAD_Process_ID());
 			log.log(Level.WARNING, "Abort process " + m_AD_Process_ID + " because it is already running");
 			return;
 		}
 
+		if (!parameterPanel.validateParameters())
+			return;
+		
 		startProcess0();
 	}
 	
@@ -913,7 +899,7 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			onComplete();
 		}
 		else
-		future = Adempiere.getThreadPoolExecutor().submit(new DesktopRunnable(new ProcessDialogRunnable(null), getDesktop()));
+			future = Adempiere.getThreadPoolExecutor().submit(new DesktopRunnable(new ProcessDialogRunnable(null), getDesktop()));
 	}
 
 	public void runBackgroundJob() 
@@ -962,6 +948,8 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			
 			m_pi.setAD_PInstance_ID(instance.getAD_PInstance_ID());
 			getParameterPanel().saveParameters();
+			
+			saveSelection(instance.getAD_PInstance_ID(), null);
 			
 			MPInstance.publishChangedEvent(AD_User_ID);
 			Adempiere.getThreadPoolExecutor().schedule(new BackgroundJobRunnable(getCtx()), 1000, TimeUnit.MILLISECONDS);
@@ -1269,9 +1257,9 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			
 			int AD_Client_ID = Env.getAD_Client_ID(m_ctx);
 			int AD_User_ID = Env.getAD_User_ID(m_ctx);
-			MProcess process = null;
+			
 			try {
-				process = new MProcess(m_ctx, m_pi.getAD_Process_ID(), null);	
+				MProcess process = new MProcess(m_ctx, m_pi.getAD_Process_ID(), null);	
 				if (process.isReport() && process.getJasperReport() != null) {
 					if (!Util.isEmpty(process.getJasperReport())) 
 					{
@@ -1282,8 +1270,6 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 							m_pi.setExportFileExtension("csv");
 						else if ("XLS".equals(m_pi.getReportType()))
 							m_pi.setExportFileExtension("xls");
-						else if ("XLSX".equals(m_pi.getReportType()))
-							m_pi.setExportFileExtension("xlsx");
 						else
 							m_pi.setExportFileExtension("pdf");
 					}
@@ -1306,7 +1292,6 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 				{
 					MClient client = MClient.get(m_ctx, AD_Client_ID);
 					client.sendEMailAttachments(AD_User_ID, process.get_Translation("Name", Env.getAD_Language(Env.getCtx())), m_pi.getSummary() + " " + m_pi.getLogInfo(), getDownloadFiles());
-					sendEmail = false;
 				}
 				
 				if (createNotice)
@@ -1331,20 +1316,9 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 					}
 					if (attachment != null)
 						attachment.saveEx();
-					MPInstanceLog il = instance.addLog(null, 0, null, Msg.parseTranslation(m_ctx, "@Created@ @AD_Note_ID@ " + note.getAD_Note_ID()),
-							MNote.Table_ID, note.getAD_Note_ID());
-					il.saveEx();
 				}
 			} catch (Exception e) {
 				log.log(Level.SEVERE, e.getLocalizedMessage());				
-				
-				if (sendEmail )
-				{
-					MClient client = MClient.get(m_ctx, AD_Client_ID);
-					client.sendEMailAttachments(AD_User_ID, process.get_Translation("Name", Env.getAD_Language(Env.getCtx())), (m_pi != null ? m_pi.getSummary()+" "+m_pi.getLogInfo() : "") 
-						+ " in errore durante l'esecuzione del processo \n "+e.getMessage()  , getDownloadFiles());
-				}
-				
 			} finally {
 				instance.setIsProcessing(false);
 				instance.saveEx();
@@ -1364,66 +1338,6 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 		}, new Event("onAskForInput"));
 	}
 
-	@Override
-	public void askForInput(final String message, MLookup lookup, int editorType, final Callback<Object> callback) {
-		FDialog.askForInput(message, lookup, editorType, callback, getDesktop(), m_WindowNo);
-	}
-
-	@Override
-	public void showReports(List<File> pdfList) {
-
-		if (pdfList == null || pdfList.isEmpty())
-			return;
-
-		AEnv.executeAsyncDesktopTask(new Runnable() {
-			@Override
-			public void run() {
-				if (pdfList.size() > 1) {
-					try {
-						File outFile = File.createTempFile(m_Name, ".pdf");
-						AEnv.mergePdf(pdfList, outFile);
-						Window win = new SimplePDFViewer(m_Name, new FileInputStream(outFile));
-						win.setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
-						SessionManager.getAppDesktop().showWindow(win, "center");
-					} catch (Exception e) {
-						log.log(Level.SEVERE, e.getLocalizedMessage(), e);
-					}
-				} else if (pdfList.size() > 0) {
-					try {
-						Window win = new SimplePDFViewer(m_Name, new FileInputStream(pdfList.get(0)));
-						win.setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);
-						SessionManager.getAppDesktop().showWindow(win, "center");
-					} catch (Exception e) {
-						log.log(Level.SEVERE, e.getLocalizedMessage(), e);
-					}
-				}
-			}
-		});
-	}
-
-	@Override
-	public void showInfoWindow(int WindowNo, String tableName, String keyColumn, String queryValue,
-			boolean multipleSelection, String whereClause, Integer AD_InfoWindow_ID, boolean lookup) {
-
-		if (AD_InfoWindow_ID <= 0)
-			return;
-
-		AEnv.executeAsyncDesktopTask(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					Window win = new InfoWindow(WindowNo, tableName, keyColumn, queryValue, multipleSelection,
-							whereClause, AD_InfoWindow_ID, lookup);
-
-					SessionManager.getAppDesktop().showWindow(win, "center");
-				} catch (Exception e) {
-					log.log(Level.SEVERE, e.getLocalizedMessage(), e);
-				}
-
-			}
-		});
-	}
-	
 	//F3P
 	@Override
 	public void zoom(PO po, int AD_Window_ID) {
@@ -1484,4 +1398,24 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 			}
 		});
 	}
+
+	protected Collection<Integer> m_selection = new ArrayList<Integer>();
+	
+	public void setSelection(Collection<Integer> selection) {
+		m_selection = selection;
+	}
+
+	public Collection<Integer> getSelection() {
+		return m_selection;
+	}
+
+	public void saveSelection(int AD_PInstance_ID, String trx) {
+		if (getSelection().isEmpty() == false)
+		{
+			// store in T_Selection table selected rows for Execute Process that retrieves from T_Selection in code.
+			DB.createT_Selection(AD_PInstance_ID, getSelection(), trx);	
+		}
+	}
+	
+	
 }

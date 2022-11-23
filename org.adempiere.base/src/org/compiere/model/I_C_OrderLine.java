@@ -61,6 +61,12 @@ public interface I_C_OrderLine
 	  * Organizational entity within client
 	  */
 	public int getAD_Org_ID();
+	
+	public static final String COLUMNNAME_M_PriceList_ID = "M_PriceList_ID";
+
+	public void setM_PriceList_ID(int M_PriceList_ID);
+	
+	public int getM_PriceList_ID();
 
     /** Column name AD_OrgTrx_ID */
     public static final String COLUMNNAME_AD_OrgTrx_ID = "AD_OrgTrx_ID";

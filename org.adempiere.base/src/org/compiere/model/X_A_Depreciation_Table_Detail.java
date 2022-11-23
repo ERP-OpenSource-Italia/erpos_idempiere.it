@@ -210,4 +210,24 @@ public class X_A_Depreciation_Table_Detail extends PO implements I_A_Depreciatio
 		}
 		return false;
 	}
+	
+	/** Set A_Depreciation_Table_Header_ID.
+	@param A_Depreciation_Table_Header_ID A_Depreciation_Table_Header_ID	  */
+	public void setA_Depreciation_Table_Header_ID (int A_Depreciation_Table_Header_ID)
+	{
+		if (A_Depreciation_Table_Header_ID < 1) 
+			set_ValueNoCheck (COLUMNNAME_A_Depreciation_Table_Header_ID, null);
+		else 
+			set_ValueNoCheck (COLUMNNAME_A_Depreciation_Table_Header_ID, Integer.valueOf(A_Depreciation_Table_Header_ID));
+	}
+	
+	/** Get A_Depreciation_Table_Header_ID.
+		@return A_Depreciation_Table_Header_ID	  */
+	public int getA_Depreciation_Table_Header_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_A_Depreciation_Table_Header_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
 }

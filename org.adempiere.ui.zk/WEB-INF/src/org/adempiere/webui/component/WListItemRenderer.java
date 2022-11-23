@@ -109,6 +109,28 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 			m_tableColumns.add(tableColumn);
 		}
 	}
+	
+	/**
+	 * Constructor specifying the column headers.
+	 *
+	 * @param columnNames	vector of column titles.
+	 * @param cellFactoryIdentifier	identifier
+	 */
+	public WListItemRenderer(List< ? extends String> columnNames, String cellFactoryIdentifier) //F3P: identifier
+	{
+		super();
+		
+		this.cellFactoryIdentifier = cellFactoryIdentifier;
+		
+		WTableColumn tableColumn;
+
+		for (String columnName : columnNames)
+		{
+			tableColumn = new WTableColumn();
+			tableColumn.setHeaderValue(Util.cleanAmp(columnName));
+			m_tableColumns.add(tableColumn);
+		}
+	}
 
 	/**
 	 * Get the column details of the specified <code>column</code>.
@@ -464,7 +486,7 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 	 * @return The generated ListHeader
 	 * @see #renderListHead(ListHead)
 	 */
-	private Component getListHeaderComponent(Object headerValue, String tooltipText, int headerIndex, Class<?> classType)
+	private Component getListHeaderComponent(Object headerValue, String tooltipText, int headerIndex, Class<?> classType, Integer columnWidth)
 	{
         ListHeader header = null;
 
@@ -534,6 +556,10 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
                 header.setLabel(headerText);
             }
         }
+        
+        //FINMATICA set width
+        if(columnWidth != null)
+        	ZKUpdateUtil.setWidth(header, columnWidth + "px");
 
 		return header;
 	}
@@ -611,7 +637,7 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 		for (int columnIndex = 0; columnIndex < m_tableColumns.size(); columnIndex++)
         {
             column = m_tableColumns.get(columnIndex);
-			header = getListHeaderComponent(column.getHeaderValue(), column.getTooltipText(), columnIndex, column.getColumnClass());
+			header = getListHeaderComponent(column.getHeaderValue(), column.getTooltipText(), columnIndex, column.getColumnClass(),column.getFixedWidth());
             head.appendChild(header);
 		}
 		head.setSizable(true);
@@ -912,6 +938,47 @@ public class WListItemRenderer implements ListitemRenderer<Object>, EventListene
 			private String event;
 			private EventListener<Event> listener;
 		}
+		
+	public void setCellFactoryIdentifier(String cellFactoryIdentifier) {
+		this.cellFactoryIdentifier = cellFactoryIdentifier;
+	}
+	
+	/**
+	 * FIN possibilit� di indicare il width
+	 * 
+	 * Render the ListHead for the table with headers for the table columns.
+	 *
+	 * @param head	The ListHead component to render.
+	 * @param columnWidths
+	 * @see #addColumn(String)
+	 * @see #WListItemRenderer(List)
+	 */
+	public void renderListHead(ListHead head, List<? extends Integer> columnWidths)
+	{
+		Component header;
+        WTableColumn column;
+        
+        if(columnWidths != null && columnWidths.size() == m_tableColumns.size())
+        {
+        	for (int columnIndex = 0; columnIndex < m_tableColumns.size(); columnIndex++)
+            {
+        		Integer width = columnWidths.get(columnIndex);
+        		
+        		if(width != null) // F3P: avoid setting zero-width, and use zero as a flag o
+        			m_tableColumns.get(columnIndex).setFixedWidth(width.intValue());
+            }
+        }
+
+		for (int columnIndex = 0; columnIndex < m_tableColumns.size(); columnIndex++)
+        {
+            column = m_tableColumns.get(columnIndex);
+			header = getListHeaderComponent(column.getHeaderValue(), column.getTooltipText(), columnIndex, column.getColumnClass(), column.getFixedWidth());
+			head.appendChild(header);
+		}
+		head.setSizable(true);
+
+		return;
+	}
 }
 
 

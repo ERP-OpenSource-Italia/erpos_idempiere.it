@@ -173,4 +173,13 @@ public interface I_A_Depreciation_Table_Detail
 	  * User who updated this records
 	  */
 	public int getUpdatedBy();
+	
+	 /** Column name A_Depreciation_Table_Header_ID */
+    public static final String COLUMNNAME_A_Depreciation_Table_Header_ID = "A_Depreciation_Table_Header_ID";
+
+	/** Set A_Depreciation_Table_Header_ID	  */
+	public void setA_Depreciation_Table_Header_ID (int A_Depreciation_Table_Header_ID);
+
+	/** Get A_Depreciation_Table_Header_ID	  */
+	public int getA_Depreciation_Table_Header_ID();
 }

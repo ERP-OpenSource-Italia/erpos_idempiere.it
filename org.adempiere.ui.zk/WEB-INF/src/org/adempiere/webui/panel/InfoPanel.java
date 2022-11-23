@@ -114,6 +114,8 @@ import org.zkoss.zul.event.PagingEvent;
 import org.zkoss.zul.event.ZulEvents;
 import org.zkoss.zul.ext.Sortable;
 
+import it.idempiere.base.model.LITMInfoWindow;
+
 /**
  *	Search Information and return selection - Base Class.
  *  Based on Info written by Jorg Janke
@@ -204,6 +206,67 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
     {
         return InfoManager.create(WindowNo, tableName, keyColumn, value, multiSelection, whereClause, true);
     }
+    
+    /**************************************************
+     *  Detail Constructor
+     * @param WindowNo  WindowNo
+     * @param tableName tableName
+     * @param keyColumn keyColumn
+     * @param whereClause   whereClause
+	 */
+	protected InfoPanel (int WindowNo,
+		String tableName, String keyColumn,boolean multipleSelection,
+		 String whereClause, boolean lookup, int ADInfoWindowID,GridField gridField)
+	{		
+		setGridfield(gridField); // FIN: st (13/12/17) propagate gridfield
+		
+		if (WindowNo <= 0) {
+			p_WindowNo = SessionManager.getAppDesktop().registerWindow(this);
+		} else {
+			p_WindowNo = WindowNo;
+		}
+		if (log.isLoggable(Level.INFO))
+			log.info("WinNo=" + WindowNo + " " + whereClause);
+		p_tableName = tableName;
+		this.m_infoWindowID = ADInfoWindowID;
+		p_keyColumn = keyColumn;
+		
+        p_multipleSelection = multipleSelection;
+        m_lookup = lookup;
+        loadInfoWindowData();
+		if (whereClause == null || whereClause.indexOf('@') == -1)
+			p_whereClause = whereClause == null ? "" : whereClause;
+		else
+		{
+			p_whereClause = Env.parseContext(Env.getCtx(), p_WindowNo, whereClause, false, false);
+			if (p_whereClause.length() == 0)
+				log.log(Level.SEVERE, "Cannot parse context= " + whereClause);
+		}
+		
+		pageSize = MSysConfig.getIntValue(MSysConfig.ZK_PAGING_SIZE, DEFAULT_PAGE_SIZE, Env.getAD_Client_ID(Env.getCtx()));
+		if (infoWindow != null && infoWindow.getPagingSize() > 0)
+			pageSize = infoWindow.getPagingSize();
+		
+		if(infoWindow != null)
+			isImmediateSaveSelection = LITMInfoWindow.isSaveSelectionImmediate(infoWindow);
+		else
+			isImmediateSaveSelection = false;
+		
+		init();
+
+		this.setAttribute(ITabOnSelectHandler.ATTRIBUTE_KEY, new ITabOnSelectHandler() {
+			public void onSelect() {
+				scrollToSelectedRow();
+			}
+		});
+		
+		setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "infopanel");
+		
+		addEventListener(WindowContainer.ON_WINDOW_CONTAINER_SELECTION_CHANGED_EVENT, this);
+		addEventListener(ON_RUN_PROCESS, this);
+		addEventListener(Events.ON_CLOSE, this);
+		
+	}	//	InfoPanel
 
 	/**
 	 * Show panel based on tablename (non modal)
@@ -248,7 +311,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 			 String whereClause, boolean lookup, int ADInfoWindowID)
 	{
 		this(WindowNo, tableName, keyColumn, multipleSelection, 
-				whereClause, lookup, ADInfoWindowID, null);
+				whereClause, lookup, ADInfoWindowID,(String)null);
 	}
 	
 	/**************************************************
@@ -2667,10 +2730,6 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	
 	public Integer getFirstRowKey() {
 		return contentPanel.getFirstRowKey();
-	}
-
-	public Integer getRowKeyAt(int row) {
-		return contentPanel.getRowKeyAt(row);
 	}
 
 	/**

@@ -498,21 +498,6 @@ public abstract class Lookup extends AbstractListModel<Object>
 	}
 
 	/**
-	 * 
-	 * @param keys
-	 * @return name pair arrays
-	 */
-	public NamePair[] getDirect(Object[] keys)
-	{
-		List<NamePair> list = new ArrayList<NamePair>();
-		for (Object key : keys)
-		{
-			list.add(getDirect(key, false, isValidated()));			
-		}
-		return list.toArray(new NamePair[0]);
-	}
-	
-	/**
 	 *  Dispose - clear items w/o firing events
 	 */
 	public void dispose()

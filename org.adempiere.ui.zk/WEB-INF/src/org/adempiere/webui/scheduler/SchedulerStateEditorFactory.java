@@ -62,4 +62,9 @@ public class SchedulerStateEditorFactory implements IEditorFactory {
 		return null;
 	}
 
+	@Override
+	public WEditor getEditor(GridTab gridTab, GridField gridField, boolean tableEditor, boolean searchWindow) {
+		return getEditor(gridTab, gridField, tableEditor, null);
+	}
+
 }

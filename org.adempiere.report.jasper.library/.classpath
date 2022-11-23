@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry exported="true" kind="lib" path="lib/SparseBitSet.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-11">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
@@ -15,7 +14,6 @@
 	<classpathentry exported="true" kind="lib" path="lib/jasperreports-functions.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/olap4j.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xmpcore.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/core.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/javase.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/SparseBitSet.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

@@ -2307,6 +2307,7 @@ public abstract class PO
 				trx = null;
 			}
 		}
+		
 	}	//	save
 
 	/**
@@ -5260,5 +5261,22 @@ public abstract class PO
 	/**	Cache						*/
 	private static CCache<String,PO>	s_cache	= new CCache<String,PO>("POCache", 200, 5, true);	//	5 minutes
 	
+	protected void endSaveTrx() {
+	}
 
+	protected void startSaveTrx() {
+	}
+	
+
+	/**************************************************************************
+	 *  Dump Record
+	 */
+	public void forceDump ()
+	{
+		log.warning(get_WhereClause (true));
+		for (int i = 0; i < get_ColumnCount (); i++)
+			dump (i);
+	}   //  dump
+	
+	
 }   //  PO
