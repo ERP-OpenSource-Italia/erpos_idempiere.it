@@ -3,9 +3,13 @@
  */
 package org.idempiere.fa.model;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.FillMandatoryException;
 import org.compiere.acct.Fact;
 import org.compiere.model.I_C_InvoiceLine;
@@ -89,7 +93,35 @@ implements org.compiere.model.ModelValidator, org.compiere.model.FactsValidator
 						*/
 					)
 				{
-					MAssetAddition.createAsset(mi);
+					boolean createAsset = true;
+					int iM_InOutLine_ID = mi.getM_InOutLine_ID();
+					if(iM_InOutLine_ID >0)
+					{
+						PreparedStatement st = DB.prepareStatement("SELECT A_Asset_ID FROM A_Asset WHERE M_InOutLine_ID = ? ", mi.get_TrxName());
+						ResultSet rs = null;
+						try 
+						{
+							st.setInt(1, iM_InOutLine_ID);
+							rs = st.executeQuery();
+							while(rs.next())
+							{
+								if(createAsset)
+									createAsset = false;
+								MAssetAddition.createAsset(mi, rs.getInt(1));
+							}
+						}
+						catch (SQLException e)
+						{
+							throw new AdempiereException(e);
+						}
+						finally
+						{
+							DB.close(rs, st);
+						}
+					}
+					
+					if(createAsset)
+						MAssetAddition.createAsset(mi);
 				}
 			}
 		}

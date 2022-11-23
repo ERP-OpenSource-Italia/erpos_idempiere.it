@@ -31,6 +31,8 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 
+import it.idempiere.base.model.LITMUserDefField;
+
 
 /**
  *  Field Model Value Object
@@ -369,6 +371,10 @@ public class GridFieldVO implements Serializable, Cloneable
 					vo.Placeholder = rs.getString(i);
 				else if (columnName.equalsIgnoreCase("IsHtml"))
 					vo.IsHtml = "Y".equals(rs.getString(i));
+				else if (columnName.equalsIgnoreCase("AD_SearchReference_ID"))//LS: add search column
+					vo.AD_SearchReference_ID = rs.getInt (i);
+				else if (columnName.equalsIgnoreCase("AD_SearchVal_Rule_ID"))//LS: add search column
+					vo.AD_SearchVal_Rule_ID = rs.getInt (i);
 			}
 			if (vo.Header == null)
 				vo.Header = vo.ColumnName;
@@ -378,6 +384,20 @@ public class GridFieldVO implements Serializable, Cloneable
 			CLogger.get().log(Level.SEVERE, "ColumnName=" + columnName, e);
 			return null;
 		}
+			//LS IsDisplayed e IsDisplayedGrid vanno gestiti in parallelo
+			if(userDef.getIsDisplayedGrid() != null)
+				vo.IsDisplayedGrid = Util.asBoolean(userDef.getIsDisplayedGrid());
+			{
+				vo.IsDisplayedGrid = false;
+			}
+			
+			//LS:add search column
+			if (LITMUserDefField.getAD_SearchReference_ID(userDef)>0)
+				vo.AD_SearchReference_ID = LITMUserDefField.getAD_SearchReference_ID(userDef);
+			
+			//LS:add search column
+			if (LITMUserDefField.getAD_SearchVal_Rule_ID(userDef)>0)
+				vo.AD_SearchVal_Rule_ID = LITMUserDefField.getAD_SearchVal_Rule_ID(userDef);
 		return vo;
 	}
 
@@ -430,6 +450,8 @@ public class GridFieldVO implements Serializable, Cloneable
 			vo.Placeholder = rs.getString("Placeholder");
 			vo.Placeholder2 = rs.getString("Placeholder2");
 			vo.IsAutocomplete = "Y".equals(rs.getString("IsAutoComplete"));
+			vo.AD_SearchReference_ID = rs.getInt("AD_SearchReference_ID"); //LS: add search column
+			vo.AD_SearchVal_Rule_ID = rs.getInt("AD_SearchVal_Rule_ID"); //LS: add search column
 		}
 		catch (SQLException e)
 		{
@@ -532,6 +554,9 @@ public class GridFieldVO implements Serializable, Cloneable
 		voT.ReadOnlyLogic = voF.ReadOnlyLogic;
 		voT.DisplayLogic = voF.DisplayLogic;
 		voT.AD_Process_ID_Of_Panel = voF.AD_Process_ID_Of_Panel;
+		voT.AD_SearchReference_ID = voF.AD_SearchReference_ID;
+		voT.AD_SearchVal_Rule_ID = voF.AD_SearchVal_Rule_ID;
+		
 		voT.initFinish();
 		
 		return voT;
@@ -748,6 +773,13 @@ public class GridFieldVO implements Serializable, Cloneable
 	public String	ValidationCodeLookup = "";
 	/**	Reference Value			*/
 	public int			AD_Reference_Value_ID = 0;
+	
+	/**	Reference Value	Search		*/
+	public int			AD_SearchReference_ID  = 0; //LS: add search column
+ 
+	/**	Val Rule Search		*/
+	public int			AD_SearchVal_Rule_ID   = 0; //LS: add search column
+	
 
 	/**	Process Parameter Range		*/
 	public boolean      isRange = false;
@@ -907,7 +939,12 @@ public class GridFieldVO implements Serializable, Cloneable
 				clone.ValidationCodeLookup = ValidationCodeLookup;
 				clone.lookupInfo = lookupInfo.clone();
 				clone.lookupInfo.ctx = clone.ctx;
+				//LS:add search column
+		                clone.AD_SearchReference_ID  = AD_SearchReference_ID ;
+		                clone.AD_SearchVal_Rule_ID  = AD_SearchVal_Rule_ID ;
 			}
+		clone.AD_SearchVal_Rule_ID  = AD_SearchVal_Rule_ID ;		
+				
 			return clone;
 		} catch (CloneNotSupportedException e) {
 			throw new RuntimeException(e);

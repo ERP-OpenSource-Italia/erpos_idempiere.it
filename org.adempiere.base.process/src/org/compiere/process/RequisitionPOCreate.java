@@ -212,11 +212,7 @@ public class RequisitionPOCreate extends SvrProcess
 		
 		if(p_Selection) // F3P: add support for T_Selection
 		{
-			String sql = "SELECT M_RequisitionLine.M_RequisitionLine_ID "
-					+ " FROM M_RequisitionLine M_RequisitionLine "
-					+ " JOIN T_Selection s on (M_RequisitionLine.M_RequisitionLine_ID = s.t_selection_ID) "
-					+ " WHERE s.AD_PInstance_ID = ?"
-					+ " ORDER BY " + getOrderByClause();
+			String sql = getTSelectionQuery() + getOrderByClause();
 			
 			PreparedStatement pstmt = null;
 			ResultSet rs = null;
@@ -731,6 +727,16 @@ public class RequisitionPOCreate extends SvrProcess
 	}
 	
 	protected List<Integer> m_excludedVendors = new ArrayList<Integer>();
+	
+	//LS per override Query T_Selection
+	protected String getTSelectionQuery()
+	{
+		return "SELECT M_RequisitionLine.M_RequisitionLine_ID "
+				+ " FROM M_RequisitionLine M_RequisitionLine "
+				+ " JOIN T_Selection s on (M_RequisitionLine.M_RequisitionLine_ID = s.t_selection_ID) "
+				+ " WHERE s.AD_PInstance_ID = ?"
+				+ " ORDER BY ";
+	}
 	
 	// F3P: Common order by clause for standard and T_Selection processing
 	

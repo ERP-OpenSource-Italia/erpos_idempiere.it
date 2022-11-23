@@ -1629,7 +1629,11 @@ public class GridTab implements DataStatusListener, Evaluatee, Serializable
 	 */
 	public boolean isInsertRecord()
 	{
-		if (isReadOnly())
+		// LS se il tab e' marcato come sola lettura OK, se no conta l'altro cb
+		// 'Inserisce record'; il isReadOnly() nn va bene xk mischia anche la
+		// readonlylogic, quindi se sono su un record in sola lettura non posso
+		// creare un nuovo record (che e' concettualmente sbagliato)
+		if (getTabLevel() > 0 && isReadOnly())
 			return false;
 		return m_vo.IsInsertRecord;
 	}	//	isInsertRecord

@@ -1724,7 +1724,11 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
         boolean deleteRecord = !readOnly;
         if (!detailTab)
         {
-	        if (insertRecord)
+	        //  update Change
+	        boolChanges = changed;
+	        
+	        // LS se sono su un tab lvl 0 non conta la logica di sola lettura
+	        if (tabPanel.getGridTab().getTabLevel() == 0 || insertRecord)
 	        {
 	            insertRecord = tabPanel.getGridTab().isInsertRecord();
 	        }
@@ -2070,7 +2074,8 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 			            breadCrumb.enableLastNavigation(adTabbox.getSelectedGridTab().getCurrentRow() + 1 < adTabbox.getSelectedGridTab().getRowCount());
 			            toolbar.enableTabNavigation(breadCrumb.hasParentLink(), adTabbox.getSelectedDetailADTabpanel() != null);
 			            toolbar.enableIgnore(true);
-			            if (adTabbox.getSelectedGridTab().isSingleRow()) 
+			            boolean isforcenewsingle = STDSysConfig.isGridTabOnNewForceSingleRow(Env.getAD_Client_ID(ctx), Env.getAD_Org_ID(ctx));
+			            if (adTabbox.getSelectedGridTab().isSingleRow() || isforcenewsingle) 
 			            {
 			            	if (adTabbox.getSelectedTabpanel().isGridView())
 			            	{

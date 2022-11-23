@@ -747,6 +747,10 @@ public class STDSysConfig
 	public static final String F3P_ACCT_NO_CLEARINGS_PAYMENTALLOCATION = "POST_PAYMENT_CLEARING";
 
 	public static boolean isAcctNoClearingsPaymentAlloc(int AD_Client_ID,int AD_Org_ID)
+	public static final String LIT_CREATEFROMSHIPMENT_ORDERLINE_LABEL = "LIT_CREATEFROMSHIPMENT_ORDERLINE_LABEL"; 
+	public static final String LIT_CREATEFROMSHIPMENT_ORDERLINE_LABEL_DEFAULT = " l.Line ";
+	public static String getCreateFromShipmentOrderLineLabel(int AD_Client_ID,int AD_Org_ID)
+	{
 	{
 		return MSysConfig.getBooleanValue(F3P_ACCT_NO_CLEARINGS_PAYMENTALLOCATION, false, 
 				AD_Client_ID,AD_Org_ID);
@@ -763,6 +767,23 @@ public class STDSysConfig
 
 	public static boolean isReqPOCreatePreferBPPriceList(int AD_Client_ID,int AD_Org_ID) {
 		return MSysConfig.getBooleanValue(LIT_REQ_PO_CREATE_PREFER_BP_PRICELIST, false,  AD_Client_ID,AD_Org_ID);
+		return MSysConfig.getValue(LIT_CREATEFROMSHIPMENT_ORDERLINE_LABEL, LIT_CREATEFROMSHIPMENT_ORDERLINE_LABEL_DEFAULT, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static final String GRIDTAB_ONNEW_FORCE_SINGLEROW = "LS_GRIDTAB_ONNEW_FORCE_SINGLEROW"; 
+	
+	public static boolean isGridTabOnNewForceSingleRow(int AD_Client_ID, int AD_Org_ID)
+	{
+		return MSysConfig.getBooleanValue(GRIDTAB_ONNEW_FORCE_SINGLEROW, false, AD_Client_ID, AD_Org_ID);
+	}
+	
+	public static final String LS_ZK_DISABLE_HEADER_COLLAPSE_BTN = "LS_ZK_DISABLE_HEADER_COLLAPSE_BTN"; 
+	
+	public static boolean isLSZKDisableHeaderCollapseBtn()
+	{
+		return MSysConfig.getBooleanValue(LS_ZK_DISABLE_HEADER_COLLAPSE_BTN, false, 0, 0);
+	}
+	
 	}
 	
 	public static final String LIT_DESCRIPTIONLINE_SET_LINENETAMT_0 = "LIT_DESCRIPTIONLINE_SET_LINENETAMT_0";
@@ -770,6 +791,11 @@ public class STDSysConfig
 	public static boolean isDescriptionLineWithLineNetAmt0(int AD_Client_ID, int AD_Org_ID) {
 		return MSysConfig.getBooleanValue(LIT_DESCRIPTIONLINE_SET_LINENETAMT_0, false,AD_Client_ID,AD_Org_ID);
 
+	public static final String LS_IS_LIT_VALUE_STRUCTURE_COA = "LS_IS_LIT_VALUE_STRUCTURE_COA"; 
+	
+	public static boolean isLITValueStructureCoA(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_IS_LIT_VALUE_STRUCTURE_COA, false, AD_Client_ID, 0);
 	}
 	
 	public static boolean isBlockAddInOutLineCompleted() {

@@ -771,6 +771,7 @@ public class ImportInvoice extends SvrProcess implements ImportProcess
 			.append( "WHERE I_IsImported='N'")
 			//F3P: Import only full-doc. Does not proceed with ones that has at least one line with error 
 			.append("AND NOT EXISTS (SELECT * FROM I_INVOICE i WHERE I_INVOICE.documentno = i.documentNo AND I_IsImported='E'")
+			.append(" AND I_INVOICE.C_BPartner_ID = i.C_BPartner_ID AND I_INVOICE.C_BPartner_Location_ID = i.C_BPartner_Location_ID ")
 			.append(clientCheck).append(")")
 			//F3P: End
 			.append (clientCheck)

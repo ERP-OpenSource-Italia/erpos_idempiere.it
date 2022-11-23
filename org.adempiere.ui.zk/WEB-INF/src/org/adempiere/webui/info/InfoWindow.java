@@ -1025,12 +1025,45 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 								function = s;
 							}
 						}
+					if(function.equalsIgnoreCase("upper") && (mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_Like) 
+							|| mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_FullLike)) &&
 						if (function.indexOf("?") >= 0) {
 							columnClause = function.replaceFirst("[?]", columnName);
 						} else {
 							columnClause = function+"("+columnName+")";
 						}
 					} else {
+							STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
+					{
+						function = FilterQuery.SPECIAL_CHAR_FUNCTION;
+						
+						if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
+						{
+							function = FilterQuery.getFilterFunction(function);
+						}
+					}
+					//F3P
+					if (function.indexOf("?") >= 0) {
+						columnClause = function.replaceFirst("[?]", columnName);
+					} else {
+						columnClause = function+"("+columnName+")";
+					}
+				} else {
+					//F3P filter special chars
+					if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())) 
+							&& (mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_Like) 
+									|| mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_FullLike)))
+					{
+						columnClause = FilterQuery.SPECIAL_CHAR_FUNCTION;
+						
+						if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
+						{
+							columnClause = FilterQuery.getFilterFunction(columnClause);
+						}
+						
+						columnClause.replaceFirst("[?]", columnName);
+					}
+					else
 						columnClause = columnName;
 					}
 					builder.append(columnClause)
@@ -1190,7 +1223,17 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			}
 			pstmt.setString(parameterIndex, valueStr.toString());
 		} else {
-			pstmt.setObject(parameterIndex, value);
+			//LS gestito operatore FullLike per poter fare ricerche _ID su colonne calcolate con lista _ID
+			if (queryOperator.equals(X_AD_InfoColumn.QUERYOPERATOR_FullLike)) {
+				StringBuilder valueStr = new StringBuilder();
+				valueStr.append("%");
+				valueStr.append(value.toString());
+				valueStr.append("%");
+
+				pstmt.setString(parameterIndex, valueStr.toString());
+			} else {
+				pstmt.setObject(parameterIndex, value);
+			}
 		}
 	}
 

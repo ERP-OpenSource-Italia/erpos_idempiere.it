@@ -272,7 +272,8 @@ implements ImportProcess
 				.append(" AND (i.Postal=l.Postal OR (i.Postal IS NULL AND l.Postal IS NULL))")
 				.append(" AND (i.Postal_Add=l.Postal_Add OR (l.Postal_Add IS NULL AND l.Postal_Add IS NULL))")
 				.append(" AND (i.C_Region_ID=l.C_Region_ID OR (l.C_Region_ID IS NULL AND i.C_Region_ID IS NULL))")
-				.append(" AND i.C_Country_ID=l.C_Country_ID) ")
+				.append(" AND i.C_Country_ID=l.C_Country_ID ")
+				.append(" AND bpl.isactive='Y')")
 				.append("WHERE C_BPartner_ID IS NOT NULL AND C_BPartner_Location_ID IS NULL")
 				.append(" AND I_IsImported='N'").append(clientCheck);
 		no = DB.executeUpdateEx(sql.toString(), get_TrxName());

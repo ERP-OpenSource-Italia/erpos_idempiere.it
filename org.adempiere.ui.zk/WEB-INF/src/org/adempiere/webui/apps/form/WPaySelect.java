@@ -22,6 +22,7 @@ import static org.compiere.model.SystemIDs.FORM_PAYMENT_PRINT_EXPORT;
 import static org.compiere.model.SystemIDs.PROCESS_C_PAYSELECTION_CREATEPAYMENT;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.logging.Level;
@@ -683,6 +684,20 @@ public class WPaySelect extends PaySelect
 			@Override
 			public void run() {
 				Executions.getCurrent().sendRedirect(html, "_blank");
+			}
+		});
+	}
+
+	@Override
+	public void showPDF(File pdf, String title) {
+		AEnv.executeAsyncDesktopTask(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					SessionManager.getAppDesktop().showPDFContent(pdf, title, true);
+				} catch (FileNotFoundException e) {
+					log.log(Level.WARNING, e.getMessage(), e);
+				}
 			}
 		});
 	}

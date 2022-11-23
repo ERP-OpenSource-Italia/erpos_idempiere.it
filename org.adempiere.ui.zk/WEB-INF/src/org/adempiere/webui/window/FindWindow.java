@@ -282,6 +282,7 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
         m_title = title;
         m_AD_Table_ID = AD_Table_ID;
         m_tableName = tableName;
+//        m_whereExtended = Env.parseContext(Env.getCtx(), targetWindowNo, whereExtended, false);//F3P from adempiere parse context
         m_whereExtended = whereExtended;
         m_findFields = findFields;
         if (findFields != null && findFields.length > 0)
@@ -316,6 +317,7 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
         Env.setContext(Env.getCtx(), m_targetWindowNo, "Find_Table_ID", m_AD_Table_ID);
         //
         initPanel();
+        customizeFindFields();
         initFind();
         initFindAdvanced();
 
@@ -333,7 +335,30 @@ public class FindWindow extends Window implements EventListener<Event>, ValueCha
         return true;
     }
     
-    public boolean validate(int targetWindowNo, String title,
+    private void customizeFindFields()
+	{
+    	 for (int i = 0; i < m_findFields.length; i++)
+         {
+             GridField mField = m_findFields[i];
+             boolean isCustomized = false;
+             
+             if (mField.getVO().AD_SearchReference_ID > 0){
+            	 mField.getVO().displayType = mField.getVO().AD_SearchReference_ID;
+            	 isCustomized = true;
+             }
+             
+             if(mField.getVO().AD_SearchVal_Rule_ID > 0){
+        		 mField.getVO().ValidationCode = MValRule.get(m_simpleCtx, mField.getVO().AD_SearchVal_Rule_ID).getCode();
+        		 isCustomized = true;
+        	 }
+        	 
+             if (isCustomized)             
+            	 mField.getVO().loadLookupInfo();
+             
+         }
+	}
+
+	public boolean validate(int targetWindowNo, String title,
             int AD_Table_ID, String tableName, String whereExtended,
             GridField[] findFields, int minRecords, int adTabId)
     {

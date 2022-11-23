@@ -19,7 +19,6 @@ package org.adempiere.webui;
 
 import java.lang.ref.WeakReference;
 import java.math.BigDecimal;
-import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -33,6 +32,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.adempiere.util.Callback;
 import org.adempiere.util.ServerContext;
 import org.adempiere.util.ServerContextURLHandler;
 import org.adempiere.webui.apps.AEnv;
@@ -52,6 +52,7 @@ import org.adempiere.webui.util.DesktopWatchDog;
 import org.adempiere.webui.util.UserPreference;
 import org.compiere.Adempiere;
 import org.compiere.model.MColumn;
+import org.compiere.model.MOrg;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.model.MSession;
@@ -60,17 +61,23 @@ import org.compiere.model.MSystem;
 import org.compiere.model.MTable;
 import org.compiere.model.MUser;
 import org.compiere.model.MUserPreference;
+import org.compiere.model.MWarehouse;
+import org.compiere.model.ModelValidationEngine;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
+import org.compiere.util.KeyNamePair;
 import org.compiere.util.Language;
+import org.compiere.util.Login;
 import org.compiere.util.Msg;
+import org.compiere.util.TimeUtil;
 import org.compiere.util.Util;
 import org.zkforge.keylistener.Keylistener;
 import org.zkoss.web.Attributes;
 import org.zkoss.web.servlet.Servlets;
 import org.zkoss.zk.au.out.AuScript;
+import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Desktop;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.Page;
@@ -165,11 +172,14 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
         
         Properties ctx = Env.getCtx();
         langSession = Env.getContext(ctx, Env.LANGUAGE);
+        
+        
         if (session.getAttribute(SessionContextListener.SESSION_CTX) == null || !SessionManager.isUserLoggedIn(ctx))
         {
             loginDesktop = new WLogin(this);
             loginDesktop.createPart(this.getPage());
-            loginDesktop.getComponent().getRoot().addEventListener(Events.ON_CLIENT_INFO, this);
+            if(loginDesktop != null) 
+            	loginDesktop.getComponent().getRoot().addEventListener(Events.ON_CLIENT_INFO, this);
         }
         else
         {

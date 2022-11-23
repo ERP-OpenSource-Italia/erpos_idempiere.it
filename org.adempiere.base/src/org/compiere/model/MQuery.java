@@ -31,6 +31,7 @@ import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 
 /**
@@ -333,9 +334,30 @@ public class MQuery implements Serializable, Cloneable
 	 */
 	public static MQuery getEqualQuery (String columnName, int value)
 	{
+		return getEqualQuery(null, columnName, value);
+	}	//	getEqualQuery
+	
+	/**
+	 * 	Create simple Equal Query.
+	 *  Creates columnName=value
+	 *  @param tableName tableName
+	 * 	@param columnName columnName
+	 * 	@param value value
+	 * 	@return query
+	 */
+	public static MQuery getEqualQuery (String tableName, String columnName, int value)
+	{
 		MQuery query = new MQuery();
+		String table = null;
 		if (columnName.endsWith("_ID"))
-			query.setTableName(columnName.substring(0, columnName.length()-3));
+			table = columnName.substring(0, columnName.length()-3);
+		if (Util.isEmpty(table)==false)
+		{
+			if(Util.isEmpty(tableName) == false && MTable.get(Env.getCtx(), table) == null)
+				table = tableName;
+			
+			query.setTableName(table);
+		}
 		query.addRestriction(columnName, EQUAL, Integer.valueOf(value));
 		query.setRecordCount(1);	//	guess
 		return query;

@@ -13,6 +13,9 @@
  *****************************************************************************/
 package org.adempiere.webui.desktop;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+
 import org.adempiere.util.Callback;
 import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.adwindow.ADWindow;
@@ -224,4 +227,13 @@ public interface IDesktop extends UIPart {
     * @return ADWindow
     */
 	public InfoPanel openInfo(int infoId, int WindowNo);
+	
+	/**
+	 *
+	 * @param doc
+	 * @param string
+	 * @param closeable
+	 * @throws FileNotFoundException 
+	 */
+	public void showPDFContent(File pdf, String title, boolean closeable) throws FileNotFoundException;
 }

@@ -7,6 +7,13 @@
      <bolditalic>org/adempiere/report/jasper/fonts/Arial_Bold_Italic.ttf</bolditalic>
      <pdfembedded>true</pdfembedded>
   </fontFamily>
+  <fontFamily name="Cambria">
+     <normal>org/adempiere/report/jasper/fonts/Cambria.ttf</normal>
+     <bold>org/adempiere/report/jasper/fonts/Cambria_Bold.ttf</bold>
+     <italic>org/adempiere/report/jasper/fonts/Cambria_Italic.ttf</italic>
+     <bolditalic>org/adempiere/report/jasper/fonts/Cambria_Bold_Italic.ttf</bolditalic>
+     <pdfembedded>true</pdfembedded>
+  </fontFamily>
   <fontFamily name="Comic Sans Test">
      <normal>org/adempiere/report/jasper/fonts/Comic_Sans_MS.ttf</normal>
      <bold>org/adempiere/report/jasper/fonts/Comic_Sans_MS_Bold.ttf</bold>
