@@ -1627,13 +1627,17 @@ DataStatusListener, IADTabpanel, IdSpace, IFieldEditorContainer
 
 				boolean changed = false;
 				if (isValueDisplayed()) {
-					String value = (String) gridTab.getValue("Value");
-					String name = (String) gridTab.getValue("Name");
-					String full = value + " - " + name;
-
-					if (full != null && !full.equals(data.getName())) {
-						data.setName(full);
-						changed = true;
+					//LS elementvalue tree shown with trl like menu tree
+					if (gridTab.getKeyColumnName().equals("C_ElementValue_ID") == false || Env.isBaseLanguage(Env.getCtx(), "AD_Menu"))
+					{
+						String value = (String) gridTab.getValue("Value");
+						String name = (String) gridTab.getValue("Name");
+						String full = value + " - " + name;
+	
+						if (full != null && !full.equals(data.getName())) {
+							data.setName(full);
+							changed = true;
+						}
 					}
 				} else if (Env.isBaseLanguage(Env.getCtx(), "AD_Menu")) {
 					String name = (String) gridTab.getValue("Name");

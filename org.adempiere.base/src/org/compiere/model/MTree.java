@@ -453,8 +453,8 @@ public class MTree extends MTree_Base
 		String fromClause = getSourceTableName(false);	//	fully qualified
 		String columnNameX = getSourceTableName(true);
 		String color = getActionColorName();
+		boolean base = Env.isBaseLanguage(p_ctx, "AD_Menu");
 		if (getTreeType().equals(TREETYPE_Menu)) {
-			boolean base = Env.isBaseLanguage(p_ctx, "AD_Menu");
 			sourceTable = "m";
 			if (base)
 				sqlNode.append("SELECT m.AD_Menu_ID, m.Name,m.Description,m.IsSummary,m.Action, "
@@ -508,9 +508,24 @@ public class MTree extends MTree_Base
 			if (!m_editable)
 			sqlNode.append(" WHERE t.IsActive='Y'");
 		}  else if (isValueDisplayed()) {
-			sqlNode.append("SELECT t.").append(columnNameX)
-			.append("_ID, t.Value || ' - ' || t.Name, t.Description, t.IsSummary,").append(color)
-			.append(" FROM ").append(fromClause);
+			//LS elementvalue tree shown with trl like menu tree
+			if (getTreeType().equals(TREETYPE_ElementValue)) {
+				if (base)
+				{
+					sqlNode.append("SELECT t.C_ElementValue_ID, t.Value || ' - ' || t.Name, t.Description,t.IsSummary,").append(color)
+					.append(" FROM C_ElementValue t");
+				}
+				else
+				{
+					sqlNode.append("SELECT t.C_ElementValue_ID,  t.Value || ' - ' || coalesce(m.Name,t.Name) as Name, coalesce(m.Description,t.Description) as Description, t.IsSummary,").append(color)
+					.append(" FROM C_ElementValue t JOIN C_ElementValue_Trl m ON m.C_ElementValue_ID=t.C_ElementValue_ID AND m.AD_Language='")
+						.append(Env.getAD_Language(p_ctx)).append("'");
+				}
+			}else {
+				sqlNode.append("SELECT t.").append(columnNameX)
+				.append("_ID, t.Value || ' - ' || t.Name, t.Description, t.IsSummary,").append(color)
+				.append(" FROM ").append(fromClause);
+			}
 			if (!m_editable)
 				sqlNode.append(" WHERE t.IsActive='Y'");
 		}
