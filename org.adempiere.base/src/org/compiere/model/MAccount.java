@@ -222,7 +222,7 @@ public class MAccount extends X_C_ValidCombination
 			return existingAccount;
 
 		//	New
-		MAccount newAccount = new MAccount (ctx, 0, trxName);
+		MAccount newAccount = PO.create(ctx, MAccount.Table_Name, trxName);
 		newAccount.setClientOrg(AD_Client_ID, AD_Org_ID);
 		newAccount.setC_AcctSchema_ID(C_AcctSchema_ID);
 		newAccount.setAccount_ID(Account_ID);
@@ -466,7 +466,7 @@ public class MAccount extends X_C_ValidCombination
 	}	//	Account
 
 	/**	Account Segment				*/
-	private MElementValue	m_accountEV = null;
+	protected MElementValue	m_accountEV = null;
 
 	
 	/**************************************************************************
