@@ -37,6 +37,8 @@ import java.util.Properties;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 
+import it.idempiere.base.util.STDSysConfig;
+
 public class MDocumentStatus extends X_PA_DocumentStatus {
 	/**
 	 * 
@@ -64,7 +66,13 @@ public class MDocumentStatus extends X_PA_DocumentStatus {
 			return new MDocumentStatus[0];
 
 		String whereClause = "AD_Client_ID IN (0,?) AND ((AD_User_ID IS NULL OR AD_User_ID=?) AND ( AD_Role_ID IS NULL OR AD_Role_ID=?))";
-
+		if (STDSysConfig.isLSDocumentStatusAccess(Env.getAD_Client_ID(ctx)))
+		{
+			whereClause = "AD_Client_ID IN (0,?) AND exists (select 1 from LS_DocumentStatusAccess a where a.PA_DocumentStatus_ID = PA_DocumentStatus.PA_DocumentStatus_ID "
+					+ "and ((a.AD_User_ID IS NULL OR a.AD_User_ID=?) AND ( a.AD_Role_ID IS NULL OR a.AD_Role_ID=?)) and a.AD_Org_ID IN (0," + Env.getAD_Org_ID(ctx) + ") "
+							+ "and a.isactive='Y')";
+		}
+		
 		List<MDocumentStatus> list = new Query(ctx, MDocumentStatus.Table_Name, whereClause, null)
 				.setOnlyActiveRecords(true)
 				.setOrderBy(MDocumentStatus.COLUMNNAME_SeqNo)

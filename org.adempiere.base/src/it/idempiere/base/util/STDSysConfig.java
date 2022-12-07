@@ -882,5 +882,12 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LS_LOCDLG_DISABLE_EMPTYCITYONCOUREGCHANGE, false, AD_Client_ID, 0);
 	}
 	
+	public static final String LS_DOCUMENTSTATUS_ACCESS = "LS_DOCUMENTSTATUS_ACCESS"; 
+	
+	public static boolean isLSDocumentStatusAccess(int AD_Client_ID)
+	{
+		return MSysConfig.getBooleanValue(LS_DOCUMENTSTATUS_ACCESS, false, AD_Client_ID, 0);
+	}
+	
 	//LS END
 }

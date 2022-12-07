@@ -1092,70 +1092,65 @@ public class MInventory extends X_M_Inventory implements DocAction, DocOptions
 				qtyDiff = line.getQtyCount().subtract(line.getQtyBook()).negate();
 
 			MClient client = MClient.get(getCtx(), getAD_Client_ID());
-			MAcctSchema as = client.getAcctSchema();
+
 			MAcctSchema[] ass = MAcctSchema.getClientAcctSchema(getCtx(), client.get_ID());
 
-			if (as.getC_Currency_ID() != getC_Currency_ID()) 
+			//LS: eliminazione CostDeail di tutti gli schemi contabili
+			//TODO Valutare se sia possibile fare query senza acct_schema o se implica qualche problema
+			for (int i = 0; i < ass.length ; i ++)
 			{
-				for (int i = 0; i < ass.length ; i ++)
-				{
-					MAcctSchema a =  ass[i];
-					if (a.getC_Currency_ID() ==  getC_Currency_ID()) 
-						as = a ; 
-				}
-			}
-
-			MCostDetail cd = MCostDetail.get(getCtx(), "M_InventoryLine_ID=?", 
-					line.getM_InventoryLine_ID(), line.getM_AttributeSetInstance_ID(), 
-					as.getC_AcctSchema_ID(), get_TrxName());
-			if (cd !=  null)
-			{
-				// history
-
-				Query qCostHistory= new Query(getCtx(), X_M_CostHistory.Table_Name, "M_CostDetail_ID=?", get_TrxName());
-				qCostHistory.setParameters(cd.getM_CostDetail_ID());
-				List<X_M_CostHistory> costHistories = qCostHistory.list();
-
-				for(X_M_CostHistory history:costHistories)
-					history.deleteEx(true);
-
-				//				Revert delle modifiche sugli altri Cost Detail
-				revertCostDetail(cd);
-				cd.setProcessed(false);
-				cd.delete(true);
-
-				//costdetail inverso
-				// history
-				qCostHistory= new Query(getCtx(), X_M_CostHistory.Table_Name, "M_CostDetail_ID=?", get_TrxName());
-				qCostHistory.setParameters(cd.getM_CostDetail_ID());
-				costHistories = qCostHistory.list();
-
-				for(X_M_CostHistory history:costHistories)
-					history.deleteEx(true);
-				
-				String CostingLevel = product.getCostingLevel(as);
-				
-				int M_ASI_ID = line.getM_AttributeSetInstance_ID();
-				
-				//in base al costinglevel viene creato un record di reverse con asi 0 o valorizzato quindi andiamo a cercare
-				//il cost_detail generato con l'asi corretto
-				if (MAcctSchema.COSTINGLEVEL_Client.equals(CostingLevel))  
-				{
-					M_ASI_ID = 0;
-				}
-				else if (MAcctSchema.COSTINGLEVEL_Organization.equals(CostingLevel))
-					M_ASI_ID = 0;
-				
-				cd = MCostDetail.get(getCtx(), "Description = 'Reverse' AND M_InventoryLine_ID=?", 
-						line.getM_InventoryLine_ID(), M_ASI_ID, 
+				MAcctSchema as =  ass[i];
+				MCostDetail cd = MCostDetail.get(getCtx(), "M_InventoryLine_ID=?", 
+						line.getM_InventoryLine_ID(), line.getM_AttributeSetInstance_ID(), 
 						as.getC_AcctSchema_ID(), get_TrxName());
-				if(cd != null)
+				if (cd !=  null)
 				{
+					// history
+	
+					Query qCostHistory= new Query(getCtx(), X_M_CostHistory.Table_Name, "M_CostDetail_ID=?", get_TrxName());
+					qCostHistory.setParameters(cd.getM_CostDetail_ID());
+					List<X_M_CostHistory> costHistories = qCostHistory.list();
+	
+					for(X_M_CostHistory history:costHistories)
+						history.deleteEx(true);
+	
+					//				Revert delle modifiche sugli altri Cost Detail
+					revertCostDetail(cd);
 					cd.setProcessed(false);
 					cd.delete(true);
+	
+					//costdetail inverso
+					// history
+					qCostHistory= new Query(getCtx(), X_M_CostHistory.Table_Name, "M_CostDetail_ID=?", get_TrxName());
+					qCostHistory.setParameters(cd.getM_CostDetail_ID());
+					costHistories = qCostHistory.list();
+	
+					for(X_M_CostHistory history:costHistories)
+						history.deleteEx(true);
+					
+					String CostingLevel = product.getCostingLevel(as);
+					
+					int M_ASI_ID = line.getM_AttributeSetInstance_ID();
+					
+					//in base al costinglevel viene creato un record di reverse con asi 0 o valorizzato quindi andiamo a cercare
+					//il cost_detail generato con l'asi corretto
+					if (MAcctSchema.COSTINGLEVEL_Client.equals(CostingLevel))  
+					{
+						M_ASI_ID = 0;
+					}
+					else if (MAcctSchema.COSTINGLEVEL_Organization.equals(CostingLevel))
+						M_ASI_ID = 0;
+					
+					cd = MCostDetail.get(getCtx(), "Description = 'Reverse' AND M_InventoryLine_ID=?", 
+							line.getM_InventoryLine_ID(), M_ASI_ID, 
+							as.getC_AcctSchema_ID(), get_TrxName());
+					if(cd != null)
+					{
+						cd.setProcessed(false);
+						cd.delete(true);
+					}
 				}
 			}
-
 			//If Quantity Count minus Quantity Book = Zero, then no change in Inventory
 			if (qtyDiff.signum() == 0)
 				continue;

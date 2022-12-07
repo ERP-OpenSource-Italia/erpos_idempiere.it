@@ -253,7 +253,7 @@ implements ImportProcess
 		//	Existing Contact ? Match Name
 		//	F3P add lower
 		sql = new StringBuilder ("UPDATE I_BPartner i ")
-				.append("SET AD_User_ID=(SELECT AD_User_ID FROM AD_User c")
+				.append("SET AD_User_ID=(SELECT MAX(AD_User_ID) FROM AD_User c")
 				.append(" WHERE lower(i.ContactName)=lower(c.Name) AND i.C_BPartner_ID=c.C_BPartner_ID AND c.AD_Client_ID=i.AD_Client_ID) ")
 				.append("WHERE C_BPartner_ID IS NOT NULL AND AD_User_ID IS NULL AND ContactName IS NOT NULL")
 				.append(" AND I_IsImported='N'").append(clientCheck);
