@@ -70,6 +70,8 @@ import org.zkoss.zul.Vlayout;
 import org.zkoss.zul.event.ZulEvents;
 import org.zkoss.zul.impl.CustomGridDataLoader;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  * Grid view implemented using the Grid component.
  * @author Low Heng Sin
@@ -485,7 +487,7 @@ public class GridView extends Vlayout implements EventListener<Event>, IdSpace, 
 		Columns columns = new Columns();
 		
 		//frozen not working well on tablet devices yet
-		if (!ClientInfo.isMobile())
+		if (!ClientInfo.isMobile() && 1==2) //LS Removed Frozen column because not working
 		{
 			Frozen frozen = new Frozen();
 			//freeze selection and indicator column
