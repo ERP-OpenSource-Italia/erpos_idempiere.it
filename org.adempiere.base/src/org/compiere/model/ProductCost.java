@@ -197,8 +197,8 @@ public class ProductCost
 			+ "P_CostOfProduction_Acct,P_Labor_Acct,P_Burden_Acct,P_OutsideProcessing_Acct,"	//  17.18,19,20
 			+ "P_Overhead_Acct,P_Scrap_Acct,P_AverageCostVariance_Acct,"	//  21,23
 			+ "P_LandedCostClearing_Acct "									//  24
-			//LS
-			+ ",PPVOffset,P_LaborVariance_Acct,P_Asset_NF_Acct "		//	25,26,27
+			// LS
+			+ ",PPVOffset_Acct,P_LaborVariance_Acct,P_Asset_NF_Acct "		//	25,26,27
 			// LS END
 			+ "FROM M_Product_Acct "
 			+ "WHERE M_Product_ID=? AND C_AcctSchema_ID=?";
@@ -250,7 +250,7 @@ public class ProductCost
 			+ "P_Overhead_Acct,P_Scrap_Acct,P_AverageCostVariance_Acct,"			//  21,23
 			+ "P_LandedCostClearing_Acct "											//  24
 			// LS
-			+ ",PPVOffset,P_LaborVariance_Acct,P_Asset_NF_Acct "				//	25,26,27
+			+ ",PPVOffset_Acct,P_LaborVariance_Acct,P_Asset_NF_Acct "				//	25,26,27
 			// LS END
 			+ "FROM M_Product_Category pc, M_Product_Category_Acct pca "
 			+ "WHERE pc.M_Product_Category_ID=pca.M_Product_Category_ID"
