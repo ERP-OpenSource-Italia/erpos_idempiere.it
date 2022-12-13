@@ -826,20 +826,6 @@ public class STDSysConfig
 		return MSysConfig.getBooleanValue(LS_STORAGEONHAND_USE_DATEFIRSTMOVEMENT, false);
 	}
 	
-	public static final String LS_STORAGEONHAND_USE_TRANSACTION_ID = "LS_STORAGEONHAND_USE_TRANSACTION_ID";
-
-	public static boolean isStorageOnHandUseTransaction_ID()
-	{
-		return MSysConfig.getBooleanValue(LS_STORAGEONHAND_USE_TRANSACTION_ID, false);
-	}
-	
-	public static final String LS_CHECK_ORDER_ON_SHIPMENT_PREPARE = "LS_CHECK_ORDER_ON_SHIPMENT_PREPARE";
-
-	public static boolean isCheckOrderOnShipmentPrepare(int AD_Client_ID, int AD_Org_ID)
-	{
-		return MSysConfig.getBooleanValue(LS_CHECK_ORDER_ON_SHIPMENT_PREPARE, false, AD_Client_ID, AD_Org_ID);
-	}
-
 	public static final String LS_CHECK_ORDER_ON_SHIPMENT_PREPARE = "LS_CHECK_ORDER_ON_SHIPMENT_PREPARE";
 
 	public static boolean isCheckOrderOnShipmentPrepare(int AD_Client_ID, int AD_Org_ID)
