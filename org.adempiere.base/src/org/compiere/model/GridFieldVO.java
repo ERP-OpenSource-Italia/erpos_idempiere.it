@@ -30,8 +30,7 @@ import java.util.logging.Level;
 import org.compiere.util.CLogger;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
-
-import it.idempiere.base.model.LITMUserDefField;
+import org.compiere.util.Util;
 
 
 /**
@@ -108,6 +107,18 @@ public class GridFieldVO implements Serializable, Cloneable
 	 */
 	public GridFieldVO afterCreate() {
 		GridFieldVO vo = this;
+		
+		//LS: custom isDisplayed
+		MUserDefField userDef = null;
+		userDef = MUserDefField.get(vo.ctx,AD_Field_ID, AD_Tab_ID, AD_Window_ID);
+		if (userDef != null)
+		{
+			//LS IsDisplayed e IsDisplayedGrid vanno gestiti in parallelo
+			if(userDef.getIsDisplayedGrid() != null)
+				vo.IsDisplayedGrid = Util.asBoolean(userDef.getIsDisplayedGrid());
+		}
+		
+		
 		// ASP
 		if (vo.IsDisplayed) {
 			MClient client = MClient.get(ctx);
@@ -119,9 +130,7 @@ public class GridFieldVO implements Serializable, Cloneable
 		}
 		// FR IDEMPIERE-177
 		// Field Customization
-		if (vo.IsDisplayed) {
-			MUserDefField userDef = null;
-			userDef = MUserDefField.get(vo.ctx,vo.AD_Field_ID, vo.AD_Tab_ID, vo.AD_Window_ID);
+		if (vo.IsDisplayed && vo.IsDisplayedGrid) {
 			if (userDef != null)
 			{
 				if (userDef.getName() != null)
@@ -301,7 +310,14 @@ public class GridFieldVO implements Serializable, Cloneable
 				else if (columnName.equalsIgnoreCase("Description"))
 				{
 					String s = rs.getString (i);
-					vo.Description = s != null ? s.intern() : s;
+
+                    vo.Description = s != null ? s.intern() : s;
+
+                    // OPSoftware from Adempiere: Added column name to tooltip
+                    if (vo.Description == null)
+                          vo.Description = vo.ColumnName;
+                    else
+                          vo.Description = vo.ColumnName + ": " + vo.Description;
 				}
 				else if (columnName.equalsIgnoreCase("Help"))
 				{
@@ -384,20 +400,9 @@ public class GridFieldVO implements Serializable, Cloneable
 			CLogger.get().log(Level.SEVERE, "ColumnName=" + columnName, e);
 			return null;
 		}
-			//LS IsDisplayed e IsDisplayedGrid vanno gestiti in parallelo
-			if(userDef.getIsDisplayedGrid() != null)
-				vo.IsDisplayedGrid = Util.asBoolean(userDef.getIsDisplayedGrid());
-			{
-				vo.IsDisplayedGrid = false;
-			}
-			
-			//LS:add search column
-			if (LITMUserDefField.getAD_SearchReference_ID(userDef)>0)
-				vo.AD_SearchReference_ID = LITMUserDefField.getAD_SearchReference_ID(userDef);
-			
-			//LS:add search column
-			if (LITMUserDefField.getAD_SearchVal_Rule_ID(userDef)>0)
-				vo.AD_SearchVal_Rule_ID = LITMUserDefField.getAD_SearchVal_Rule_ID(userDef);
+		
+		
+		
 		return vo;
 	}
 

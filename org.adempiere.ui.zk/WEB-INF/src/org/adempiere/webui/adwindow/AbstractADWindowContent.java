@@ -133,6 +133,8 @@ import org.zkoss.zul.RowRenderer;
 import org.zkoss.zul.Window.Mode;
 import org.zkoss.zul.impl.LabelImageElement;
 
+import it.idempiere.base.util.STDSysConfig;
+
 /**
  *
  * This class is based on org.compiere.apps.APanel written by Jorg Janke.
@@ -185,6 +187,8 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
     protected ADWindowToolbar     toolbar;
 
     protected String             title;
+    
+    private boolean 			 boolChanges = false;
 
 	private int m_onlyCurrentDays = 0;
 
@@ -1724,9 +1728,6 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
         boolean deleteRecord = !readOnly;
         if (!detailTab)
         {
-	        //  update Change
-	        boolChanges = changed;
-	        
 	        // LS se sono su un tab lvl 0 non conta la logica di sola lettura
 	        if (tabPanel.getGridTab().getTabLevel() == 0 || insertRecord)
 	        {

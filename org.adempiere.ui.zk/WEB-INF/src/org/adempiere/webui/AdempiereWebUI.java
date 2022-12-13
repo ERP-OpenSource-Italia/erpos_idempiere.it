@@ -19,6 +19,7 @@ package org.adempiere.webui;
 
 import java.lang.ref.WeakReference;
 import java.math.BigDecimal;
+import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -176,7 +177,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
         
         if (session.getAttribute(SessionContextListener.SESSION_CTX) == null || !SessionManager.isUserLoggedIn(ctx))
         {
-            loginDesktop = new WLogin(this);
+            loginDesktop = new WLogin(this, false);  // FIN: (st) 20/09/2017 need to know if its a role change
             loginDesktop.createPart(this.getPage());
             if(loginDesktop != null) 
             	loginDesktop.getComponent().getRoot().addEventListener(Events.ON_CLIENT_INFO, this);
@@ -742,8 +743,7 @@ public class AdempiereWebUI extends Window implements EventListener<Event>, IWeb
 
 	private void onChangeRole(Locale locale, Properties context) {
 		SessionManager.setSessionApplication(this);
-		loginDesktop = new WLogin(this);
-		//loginDesktop = new WLogin(this, true);  // FIN: (st) 20/09/2017 need to know if its a role change
+		loginDesktop = new WLogin(this, true);  // FIN: (st) 20/09/2017 need to know if its a role change
         loginDesktop.createPart(this.getPage());
         loginDesktop.changeRole(locale, context);
         loginDesktop.getComponent().getRoot().addEventListener(Events.ON_CLIENT_INFO, this);

@@ -10,10 +10,12 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 
@@ -90,6 +92,7 @@ import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
+import org.compiere.util.TrxRunnable;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 import org.zkoss.util.media.AMedia;
@@ -128,16 +131,17 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 5041961608373943362L;
+	protected static final long serialVersionUID = 5041961608373943362L;
 
 	protected Grid parameterGrid;
-	private Borderlayout layout;
-	private Vbox southBody;
+	protected Borderlayout layout;
+	protected Vbox southBody;
 	/** List of WEditors            */
     protected List<WEditor> editors;
     protected List<WEditor> identifiers;
     protected Properties infoContext;
-
+    //F3P editor to fill when queryValue is not null and no identifier is filled
+    protected WEditor defaultQueryCriteria;
     /** embedded Panel **/
     Tabbox embeddedPane = new Tabbox();
     ArrayList <EmbedWinInfo> embeddedWinList = new ArrayList <EmbedWinInfo>();
@@ -152,28 +156,42 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 	
 	protected WQuickEntry vqe;
 	
-	private List<GridField> gridFields;
-	private TreeMap<Integer, List<Object[]>> parameterTree;
-	private Checkbox checkAND;
+	protected List<GridField> gridFields;
+	protected TreeMap<Integer, List<Object[]>> parameterTree;
+	protected Checkbox checkAND;
 		
 	// F3P: Keep original values: when a row is unselected, restore original values
 		
-	private boolean hasEditable = false;
-	private Map<Integer, List<Object>> cacheOriginalValues = new HashMap<>();
-	private Map<Integer, List<Object>> temporarySelectedData = new HashMap<>(); 	
-	private WInfoWindowListItemRenderer infoWindowListItemRenderer = null;
+	protected boolean hasEditable = false;
+	protected Map<Integer, List<Object>> cacheOriginalValues = new HashMap<>();
+	protected Map<Integer, List<Object>> temporarySelectedData = new HashMap<>(); 	
+	
+	// F3P: additional data for editabillity end selection persist
+ 	
+ 	protected WInfoWindowListItemRenderer infoWindowListItemRenderer = null;	
+ 	protected String tableSelectionColumn = null;
+ 	protected String tableSelectionColumnUpdate = null;
  	protected EventListener<Event> listitemClickListener = null;	
-
+ 	protected boolean forceAllowEditable;
+ 	protected boolean	addCheckAND;
 	
 	// F3P: export 
 	
-	private Button exportButton = null;
+	protected Button exportButton = null;
+	
+	// F3P: Zoom from detail tab
+ 	
+ 	private Button zoomDetailButton = null;
+ 	
+ 	protected QuickInfoSLEmbedWinListener quickInfoSLEmbedWinListener;
+	 	
+	
 	
 	/**
 	 * Menu contail process menu item
 	 */
 	protected Menupopup ipMenu;
-	private int noOfParameterColumn;
+	protected int noOfParameterColumn;
 	/**
 	 * @param WindowNo
 	 * @param tableName
@@ -229,10 +247,44 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
    					{
    						row = selEvent.getReference().getIndex();
    					}
-   				}
-   				   				
-   				updateSubcontent(row);
-   			}
+   					
+   					// F3P: update selection status on DB before refreshing panels
+					
+ 					final Set<List<Object>> selectedItems = selEvent.getSelectedObjects();
+ 					final Set<List<Object>> unselectedItems = selEvent.getUnselectedObjects();
+ 	   				
+ 	   				if((tableSelectionColumnUpdate != null || isImmediateSaveSelection) && 
+ 	   						(selectedItems.size() > 0 || unselectedItems.size() >0 ))
+ 	   				{
+ 	   					Trx.run(new TrxRunnable() {
+ 							
+ 							@Override
+ 							public void run(String trxName) {
+ 								
+ 								// Select
+ 								
+ 								for(List<Object> row:selectedItems)
+ 								{
+ 									updateSelectionColumn(row, true, trxName);
+ 								}
+ 
+ 								// Unselect
+ 
+ 								for(List<Object> row:unselectedItems)
+ 								{
+ 									updateSelectionColumn(row, false, trxName);
+ 								}
+ 							}
+ 						});
+ 					}   
+ 	   				
+ 	   				// Selecion has changed, force refresh if the subcontent may depend on persisted selection
+ 	   				if(tableSelectionColumnUpdate != null)
+ 	   					mainContentRowUsedInSubcontent = -1;   				
+ 
+ 	   					updateSubcontent(row); 				
+    				}
+    			}
    		}); //xolali --end-
 
 		infoContext = new Properties(Env.getCtx());
@@ -267,11 +319,48 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		if (ClientInfo.isMobile()) {
 			ClientInfo.onClientInfo(this, this::onClientInfo);
 		}
+		// F3P: add zoom detail button		
+ 		initZoomDetail();
 		
 		// F3P: add export button
 		if (!isAutoComplete)
 			initExport();
 	}
+	
+	protected void updateSelectionColumn(List<Object> row, boolean isSelected, String trxName)
+ 	{
+ 		Object potentialIDC = row.get(0);
+ 
+ 		if(potentialIDC instanceof IDColumn)
+ 		{
+ 			IDColumn idc = (IDColumn)potentialIDC;
+ 			
+ 			if(tableSelectionColumnUpdate != null)
+ 			{
+ 				Object[] params = {isSelected?"Y":"N", idc.getRecord_ID()};			
+ 				DB.executeUpdate(tableSelectionColumnUpdate, params, false, trxName);
+ 			}
+ 			
+ 			if(isImmediateSaveSelection && editAD_Pinstance_ID > 0)
+ 			{
+ 				if(isSelected)
+ 				{
+ 					String existsSQL = "SELECT T_Selection_ID FROM T_Selection WHERE AD_PInstance_ID = ? AND T_Selection_ID = ?";
+ 					if(DB.getSQLValueEx(null, existsSQL, editAD_Pinstance_ID, idc.getRecord_ID()) <=0 )
+ 					{
+ 						List<Integer> selection = new LinkedList<Integer>();
+ 						selection.add( idc.getRecord_ID());
+ 						DB.createT_Selection(editAD_Pinstance_ID, selection, null);
+ 					}
+ 				}
+ 				else
+ 				{
+ 					Object params[] = {editAD_Pinstance_ID, idc.getRecord_ID()};
+ 					DB.executeUpdateEx("DELETE FROM T_Selection WHERE AD_Pinstance_ID = ? AND T_Selection_ID = ?", params, null);
+ 				}
+ 			}
+ 		}		
+ 	}
 	
 	/** 
 	 * 
@@ -696,7 +785,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		}
 	}
 
-	//private InfoColumnVO[] topinfoColumns;//infoWindow.getInfoColumns(tableInfos);
+	//protected InfoColumnVO[] topinfoColumns;//infoWindow.getInfoColumns(tableInfos);
 	protected boolean loadInfoRelatedTabs() {
 		if (infoWindow == null)
 			return false;
@@ -1025,45 +1114,12 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 								function = s;
 							}
 						}
-					if(function.equalsIgnoreCase("upper") && (mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_Like) 
-							|| mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_FullLike)) &&
 						if (function.indexOf("?") >= 0) {
 							columnClause = function.replaceFirst("[?]", columnName);
 						} else {
 							columnClause = function+"("+columnName+")";
 						}
 					} else {
-							STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
-					{
-						function = FilterQuery.SPECIAL_CHAR_FUNCTION;
-						
-						if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
-						{
-							function = FilterQuery.getFilterFunction(function);
-						}
-					}
-					//F3P
-					if (function.indexOf("?") >= 0) {
-						columnClause = function.replaceFirst("[?]", columnName);
-					} else {
-						columnClause = function+"("+columnName+")";
-					}
-				} else {
-					//F3P filter special chars
-					if(STDSysConfig.isFilterQuery(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())) 
-							&& (mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_Like) 
-									|| mInfoColumn.getQueryOperator().equals(X_AD_InfoColumn.QUERYOPERATOR_FullLike)))
-					{
-						columnClause = FilterQuery.SPECIAL_CHAR_FUNCTION;
-						
-						if(STDSysConfig.isFilterSpecialLetter(Env.getAD_Client_ID(Env.getCtx()),Env.getAD_Org_ID(Env.getCtx())))
-						{
-							columnClause = FilterQuery.getFilterFunction(columnClause);
-						}
-						
-						columnClause.replaceFirst("[?]", columnName);
-					}
-					else
 						columnClause = columnName;
 					}
 					builder.append(columnClause)
@@ -1223,17 +1279,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			}
 			pstmt.setString(parameterIndex, valueStr.toString());
 		} else {
-			//LS gestito operatore FullLike per poter fare ricerche _ID su colonne calcolate con lista _ID
-			if (queryOperator.equals(X_AD_InfoColumn.QUERYOPERATOR_FullLike)) {
-				StringBuilder valueStr = new StringBuilder();
-				valueStr.append("%");
-				valueStr.append(value.toString());
-				valueStr.append("%");
-
-				pstmt.setString(parameterIndex, valueStr.toString());
-			} else {
-				pstmt.setObject(parameterIndex, value);
-			}
+			pstmt.setObject(parameterIndex, value);
 		}
 	}
 
@@ -1752,7 +1798,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		return dataSql;
 	}
 
-    private String getOtherClauseParsed() {
+    protected String getOtherClauseParsed() {
     	String otherClause = "";
         if (infoWindow != null && infoWindow.getOtherClause() != null && infoWindow.getOtherClause().trim().length() > 0) {
         	otherClause = infoWindow.getOtherClause();
@@ -2622,7 +2668,7 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		exportButton.setEnabled(contentPanel.getRowCount() > 0);		
 	}
 	
-	private class XlsExportAction implements EventListener<Event>
+	protected class XlsExportAction implements EventListener<Event>
 	{		
 		@Override
 		public void onEvent(Event evt) throws Exception
@@ -2636,11 +2682,11 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 		}
 	}
 	
-	private class XlsExporter extends AbstractExcelExporter
+	protected class XlsExporter extends AbstractExcelExporter
 	{
-		private ResultSet m_rs = null;
-		private int rowCount = -1;
-		private int currentRow = -1;
+		protected ResultSet m_rs = null;
+		protected int rowCount = -1;
+		protected int currentRow = -1;
 		
 		public void doExport() throws Exception
 		{
@@ -2815,4 +2861,85 @@ public class InfoWindow extends InfoPanel implements ValueChangeListener, EventL
 			return true;
 		}	
 	}	
+	
+	@Override
+ 	protected void initStatusBarAndInfo() 
+ 	{
+ 		super.initStatusBarAndInfo();
+ 		
+ 		if(m_WindowNoStatusLine > 0)
+ 			quickInfoSLEmbedWinListener = new QuickInfoSLEmbedWinListener();
+ 		else
+ 			quickInfoSLEmbedWinListener = null;
+ 	}
+ 
+ 	private class QuickInfoSLEmbedWinListener implements EventListener<Event>
+ 	{
+ 		@Override
+ 		public void onEvent(Event event) throws Exception {
+ 			
+ 			if(event instanceof SelectEvent<?, ?>)
+ 			{
+ 				updateStatusBarAndInfo();
+ 			}
+ 		}
+ 		
+ 	}
+ 	
+ 	public static class InfoColumnLayout
+ 	{
+ 		public ArrayList<ColumnInfo>	columnInfos;
+ 		public ArrayList<MInfoColumn>	displayedInfoColumns;		
+ 	}	
+ 	
+ 	protected void initZoomDetail()
+ 	{
+ 		if(embeddedWinList != null && embeddedWinList.size() > 0)
+ 		{
+ 			zoomDetailButton = ButtonFactory.createNamedButton("ZoomAcross", false, true);  
+ 			zoomDetailButton.setTooltiptext(Msg.translate(Env.getCtx(), "ZoomRelatedInfo"));
+ 			zoomDetailButton.setId("ZoomDetail");
+ 			zoomDetailButton.setEnabled(false);       
+ 			zoomDetailButton.addEventListener(Events.ON_CLICK, new ZoomDetailAction());
+ 	
+ 		    confirmPanel.addComponentsLeft(zoomDetailButton);
+ 		}	
+ 	}
+ 	
+ 	private class ZoomDetailAction implements EventListener<Event>
+ 	{
+ 		@Override
+ 		public void onEvent(Event evt) throws Exception
+ 		{
+ 			if(evt.getTarget() == zoomDetailButton)
+ 			{
+ 				if(embeddedPane.getTabs() != null &&
+ 						embeddedPane.getSelectedTab() != null)
+ 				{
+ 					int selectedEmbedded = embeddedPane.getSelectedIndex();					
+ 					EmbedWinInfo embedWinInfo = embeddedWinList.get(selectedEmbedded);
+ 					WListbox listbox = (WListbox)embedWinInfo.getInfoTbl();
+ 					int embedSelectedRow = listbox.getSelectedRow();
+ 					int AD_Table_ID = embedWinInfo.getInfowin().getAD_Table_ID();
+ 					
+ 					if(embedSelectedRow >= 0)
+ 					{
+ 						Integer recordId = listbox.getSelectedRowKey();
+ 						
+ 				    	if (listeners != null && listeners.size() > 0)
+ 				    	{
+ 					        ValueChangeEvent event = new ValueChangeEvent(this,"zoomEmbed",
+ 					        		AD_Table_ID,contentPanel.getSelectedRowKey());
+ 					        fireValueChange(event);
+ 				    	}
+ 				    	else
+ 				    	{    		
+ 				    		if (AD_Table_ID > 0)
+ 				    			AEnv.zoom(AD_Table_ID, recordId);
+ 				    	}
+ 					}
+ 				}
+ 			}
+ 		}
+ 	}
 }

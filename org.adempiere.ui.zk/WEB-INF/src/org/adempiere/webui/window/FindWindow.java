@@ -92,6 +92,7 @@ import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
 import org.compiere.model.MUserQuery;
+import org.compiere.model.MValRule;
 import org.compiere.model.SystemIDs;
 import org.compiere.util.AdempiereSystemError;
 import org.compiere.util.CLogger;

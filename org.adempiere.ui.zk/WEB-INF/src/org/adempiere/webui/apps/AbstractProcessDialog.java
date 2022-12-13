@@ -1415,6 +1415,9 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 		{
 			// store in T_Selection table selected rows for Execute Process that retrieves from T_Selection in code.
 			DB.createT_Selection(AD_PInstance_ID, getSelection(), trx);	
+		}
+	}
+	
 	@Override
 	public void showPDF(File pdf, String title) {
 		AEnv.executeAsyncDesktopTask(new Runnable() {
@@ -1430,8 +1433,7 @@ public abstract class AbstractProcessDialog extends Window implements IProcessUI
 	}
 	
 	
-		}
-	}
+	
 	
 	
 }

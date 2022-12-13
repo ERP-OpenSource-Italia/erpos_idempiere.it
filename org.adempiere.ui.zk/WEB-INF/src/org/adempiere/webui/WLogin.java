@@ -53,10 +53,10 @@ public class WLogin extends AbstractUIPart
 	private LoginWindow loginWindow;
 	private boolean isChangeRole;  // FIN: (st) 20/09/2017 need to know if its a role change
 
-	public WLogin(IWebClient app)  // FIN: (st) 20/09/2017 need to know if its a role change
+	public WLogin(IWebClient app, boolean isChangeRole)  // FIN: (st) 20/09/2017 need to know if its a role change
     {
         this.app = app;
-        //this.isChangeRole = isChangeRole;
+        this.isChangeRole = isChangeRole;
     }
 
     protected Component doCreatePart(Component parent)
@@ -67,8 +67,7 @@ public class WLogin extends AbstractUIPart
         layout = (Borderlayout) loginPage.getFellow("layout");
 
         loginWindow = (LoginWindow) loginPage.getFellow("loginWindow");
-        loginWindow.init(app);
-        /*loginWindow.init(app, isChangeRole);  // FIN: (st) 20/09/2017 need to know if its a role change
+        loginWindow.init(app, isChangeRole);  // FIN: (st) 20/09/2017 need to know if its a role change
 
         if (!AEnv.isBrowserSupported())
         {
@@ -86,7 +85,7 @@ public class WLogin extends AbstractUIPart
         }
         		
 		if(layout == null) // FIN: (st) 20/09/2017 layout may already be destroyed because of sso autologin
-			return null;        */
+			return null;        
         
         boolean mobile = false;        
 		if (Executions.getCurrent().getBrowser("mobile") !=null) {

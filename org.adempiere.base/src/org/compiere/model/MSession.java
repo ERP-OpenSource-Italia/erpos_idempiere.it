@@ -46,12 +46,14 @@ public class MSession extends X_AD_Session
 	 */
 	private static final long serialVersionUID = 480745219310430126L;
 	
+	
+	//USIAMO QUELLE STD, SE DURANTE I TEST CI SONO PROBLEMI RIABILITIAMO LE NOSTRE CON LA CACHE
 	/**
 	 * 	Get existing or create local session
 	 *	@param ctx context
 	 *	@param createNew create if not found
 	 *	@return session session
-	 */
+	
 	public static MSession forceCreateNew (Properties ctx)
 	{
 		int AD_Session_ID = 0;
@@ -84,7 +86,7 @@ public class MSession extends X_AD_Session
 	 *	@param Remote_Host remote host
 	 *	@param WebSession web session
 	 *	@return session
-	 */
+	
 	public static MSession forceCreateNew (Properties ctx, String Remote_Addr, String Remote_Host, String WebSession)
 	{
 		int AD_Session_ID = 0;
@@ -100,7 +102,7 @@ public class MSession extends X_AD_Session
 		}	
 		return session;
 	}	//	get
-
+    */
 
 
 	/**
@@ -222,6 +224,13 @@ public class MSession extends X_AD_Session
 
 	/**	Sessions					*/
 	private static Vector<Integer> s_sessions = new Vector<>();	
+	
+	
+	/**	Sessions					
+	private static CCache<Integer, MSession> s_sessions = Ini.isClient() 
+		? new CCache<Integer, MSession>(null, "AD_Session_ID", 1, 0, false)		//	one client session 
+		: new CCache<Integer, MSession>(null, "AD_Session_ID", 30, 0, false);	//	no time-out	
+	*/
 	
 	
 	/**************************************************************************

@@ -82,6 +82,7 @@ div.z-column-cnt, div.z-grid-header div.z-auxheader-cnt {
 
 .z-grid-body {
 	background-color: #FFF;
+	overflow-x:auto;
 }
 
 <%-- grid layout --%>

@@ -522,7 +522,7 @@ public abstract class InfoPanel extends Window implements EventListener<Event>, 
 	protected String              sqlOrderColumn;
 	protected Boolean             isColumnSortAscending = null;
 	/**ValueChange listeners       */
-    private ArrayList<ValueChangeListener> listeners = new ArrayList<ValueChangeListener>();
+    public ArrayList<ValueChangeListener> listeners = new ArrayList<ValueChangeListener>();
 	/** Loading success indicator       */
 	protected boolean	        p_loadedOK = false;
 	/**	SO Zoom Window						*/

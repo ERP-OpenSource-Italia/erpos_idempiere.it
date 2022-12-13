@@ -20,15 +20,15 @@ import java.sql.SQLException;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
+import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
 import org.idempiere.cache.ImmutablePOCache;
 import org.idempiere.cache.ImmutablePOSupport;
-
-import it.idempiere.base.model.LITMUserDefField;
-
 
 /**
  *	User overrides for field model
@@ -180,6 +180,24 @@ public class MUserDefField extends X_AD_UserDef_Field implements ImmutablePOSupp
 		return retValue;
 	}
 	
+	private static final String Q_USERDEFFIELD = 
+			" select u.*, COALESCE(t.name,u.name) name_t, COALESCE(t.description,u.description) description_t, COALESCE(t.help,u.help) help_t, COALESCE(t.placeholder,u.placeholder) placeholder_t" +
+			" from AD_UserDef_Win w inner join AD_UserDef_Tab tb on (w.AD_UserDef_Win_ID = tb.AD_UserDef_Win_ID)" +
+			"   inner join AD_UserDef_Field u on (u.AD_UserDef_Tab_ID = tb.AD_UserDef_Tab_ID) " +
+			"	left outer join AD_UserDef_Field_Trl t on (u.AD_UserDef_Field_ID = t.AD_UserDef_Field_ID and t.AD_Language = ?)" +
+			" where u.AD_Field_ID IN (SELECT AD_Field.AD_Field_ID FROM AD_Field " +
+									  " INNER JOIN AD_Tab on AD_Tab.AD_Tab_ID = AD_Field.AD_Tab_ID " +
+									  "  WHERE AD_Tab.AD_Window_ID = ? " +
+									  "  AND AD_Tab.IsActive='Y'" +
+									  "  AND AD_Field.IsActive='Y') " +
+		    "  and u.isActive = 'Y' and tb.isActive = 'Y' and w.isActive = 'Y'" + // AD_Field_ID			
+//			"  and (t.AD_Language = ? or t.AD_Language IS NULL)" + // Language
+			"  and (w.ad_client_id = 0 or w.ad_client_id = ?) " + // AD_Client_ID
+			"  and (w.ad_org_id = 0 or w.ad_org_id = ?) " + // AD_Org_ID
+			"  and (w.ad_role_id is null or w.ad_role_id = ?) " + // AD_Role_ID
+			"  and (w.ad_user_id is null or w.ad_user_id = ?) " + // AD_User_ID
+			" order by u.AD_Field_ID, w.ad_user_id nulls first, w.ad_role_id nulls first, w.ad_org_id, w.ad_client_id";
+	
 	/**
 	 * F3P: Get a fake MUserDefField (NOT SUITABLE TO BE SAVED) for input tab and window, as an aggregate of all applicable records
 	 * the best match is cached
@@ -250,7 +268,7 @@ public class MUserDefField extends X_AD_UserDef_Field implements ImmutablePOSupp
 					currentAD_Field_ID = rsAD_Field_ID;
 					
 					String fieldKey = currentAD_Field_ID + keySuffix;							
-					
+
 					fakeField = new MUserDefField(ctx, -1, null);
 					fakeField.setAD_Field_ID(currentAD_Field_ID);
 					
@@ -444,11 +462,11 @@ public class MUserDefField extends X_AD_UserDef_Field implements ImmutablePOSupp
 					if(isSelectionColumn != null)
 						fakeField.setIsSelectionColumn(isSelectionColumn);
 					
-					if(rs.getInt(LITMUserDefField.COLUMNNAME_AD_SearchReference_ID)>0)
-						LITMUserDefField.setAD_SearchReference_ID(fakeField,rs.getInt(LITMUserDefField.COLUMNNAME_AD_SearchReference_ID));
+					if(rs.getInt(COLUMNNAME_AD_SearchReference_ID)>0)
+						fakeField.setAD_SearchReference_ID(rs.getInt(COLUMNNAME_AD_SearchReference_ID));
 					
-					if(rs.getInt(LITMUserDefField.COLUMNNAME_AD_SearchVal_Rule_ID)>0)
-						LITMUserDefField.setAD_SearchVal_Rule_ID(fakeField,rs.getInt(LITMUserDefField.COLUMNNAME_AD_SearchVal_Rule_ID));
+					if(rs.getInt(COLUMNNAME_AD_SearchVal_Rule_ID)>0)
+						fakeField.setAD_SearchVal_Rule_ID(rs.getInt(COLUMNNAME_AD_SearchVal_Rule_ID));
  					
 					
 					// Callouts are in append
@@ -527,6 +545,15 @@ public class MUserDefField extends X_AD_UserDef_Field implements ImmutablePOSupp
 	/**	F3P: Cache of aggregated selected MUserDefField entries 					**/
 	private static CCache<String,MUserDefField> s_cacheAggregated = new CCache<String,MUserDefField>(Table_Name + "_Aggregated", 3);	//  3 weights
 
+	private static final String Q_COLUMNCALLOUT = "SELECT c.callout FROM AD_Column c inner join AD_Field f on (c.AD_Column_ID = f.AD_Column_ID) WHERE f.AD_Field_ID = ?";
+
+	private static final String COLUMN_NAME_T = "name_t",
+			COLUMN_DESCRIPTION_T = "description_t",
+			COLUMN_HELP_T = "help_t",
+			COLUMN_PLACEHOLDER_T = "placeholder_t",
+			CALLOUT_REPLACE_PREFIX = "#rep:",
+			CALLOUT_SEP = ";";
+	
 	/**
 	 * 	Before Save
 	 *	@param newRecord new

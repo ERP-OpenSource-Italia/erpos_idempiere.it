@@ -1,5 +1,4 @@
-/******************************************************************************
- * Product: iDempiere ERP & CRM Smart Business Solution                       *
+/* Product: iDempiere ERP & CRM Smart Business Solution                       *
  * Copyright (C) 1999-2012 ComPiere, Inc. All Rights Reserved.                *
  * This program is free software, you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
@@ -152,6 +151,28 @@ public interface I_AD_UserDef_Field
 
 	public org.compiere.model.I_AD_Reference getAD_Reference_Value() throws RuntimeException;
 
+    /** Column name AD_SearchReference_ID */
+    public static final String COLUMNNAME_AD_SearchReference_ID = "AD_SearchReference_ID";
+
+	/** Set Riferimento Ricerca	  */
+	public void setAD_SearchReference_ID (int AD_SearchReference_ID);
+
+	/** Get Riferimento Ricerca	  */
+	public int getAD_SearchReference_ID();
+
+	public org.compiere.model.I_AD_Reference getAD_SearchReference() throws RuntimeException;
+
+    /** Column name AD_SearchVal_Rule_ID */
+    public static final String COLUMNNAME_AD_SearchVal_Rule_ID = "AD_SearchVal_Rule_ID";
+
+	/** Set Validazione Dinamica Ricerca	  */
+	public void setAD_SearchVal_Rule_ID (int AD_SearchVal_Rule_ID);
+
+	/** Get Validazione Dinamica Ricerca	  */
+	public int getAD_SearchVal_Rule_ID();
+
+	public org.compiere.model.I_AD_Val_Rule getAD_SearchVal_Rule() throws RuntimeException;
+
     /** Column name AD_UserDef_Field_ID */
     public static final String COLUMNNAME_AD_UserDef_Field_ID = "AD_UserDef_Field_ID";
 
@@ -196,20 +217,18 @@ public interface I_AD_UserDef_Field
 
 	public org.compiere.model.I_AD_Val_Rule getAD_Val_Rule() throws RuntimeException;
 
-    /** Column name AD_Val_Rule_Lookup_ID */
-    public static final String COLUMNNAME_AD_Val_Rule_Lookup_ID = "AD_Val_Rule_Lookup_ID";
+    /** Column name Callout */
+    public static final String COLUMNNAME_Callout = "Callout";
 
-	/** Set Dynamic Validation (Lookup).
-	  * Override Dynamic Validation Rule for Lookup Window
+	/** Set Callout.
+	  * Fully qualified class names and method - separated by semicolons
 	  */
-	public void setAD_Val_Rule_Lookup_ID (int AD_Val_Rule_Lookup_ID);
+	public void setCallout (String Callout);
 
-	/** Get Dynamic Validation (Lookup).
-	  * Override Dynamic Validation Rule for Lookup Window
+	/** Get Callout.
+	  * Fully qualified class names and method - separated by semicolons
 	  */
-	public int getAD_Val_Rule_Lookup_ID();
-
-	public org.compiere.model.I_AD_Val_Rule getAD_Val_Rule_Lookup() throws RuntimeException;
+	public String getCallout();
 
     /** Column name ColumnSpan */
     public static final String COLUMNNAME_ColumnSpan = "ColumnSpan";
@@ -320,6 +339,19 @@ public interface I_AD_UserDef_Field
 	  */
 	public boolean isActive();
 
+    /** Column name IsAllowCopy */
+    public static final String COLUMNNAME_IsAllowCopy = "IsAllowCopy";
+
+	/** Set Allow Copy.
+	  * Determine if a column must be copied when pushing the button to copy record
+	  */
+	public void setIsAllowCopy (String IsAllowCopy);
+
+	/** Get Allow Copy.
+	  * Determine if a column must be copied when pushing the button to copy record
+	  */
+	public String getIsAllowCopy();
+
     /** Column name IsAlwaysUpdateable */
     public static final String COLUMNNAME_IsAlwaysUpdateable = "IsAlwaysUpdateable";
 
@@ -346,6 +378,15 @@ public interface I_AD_UserDef_Field
 	  */
 	public String getIsAutocomplete();
 
+    /** Column name IsDefaultFocus */
+    public static final String COLUMNNAME_IsDefaultFocus = "IsDefaultFocus";
+
+	/** Set Default Focus	  */
+	public void setIsDefaultFocus (String IsDefaultFocus);
+
+	/** Get Default Focus	  */
+	public String getIsDefaultFocus();
+
     /** Column name IsDisplayed */
     public static final String COLUMNNAME_IsDisplayed = "IsDisplayed";
 
@@ -358,6 +399,41 @@ public interface I_AD_UserDef_Field
 	  * Determines, if this field is displayed
 	  */
 	public String getIsDisplayed();
+
+    /** Column name IsDisplayedGrid */
+    public static final String COLUMNNAME_IsDisplayedGrid = "IsDisplayedGrid";
+
+	/** Set Show in Grid	  */
+	public void setIsDisplayedGrid (String IsDisplayedGrid);
+
+	/** Get Show in Grid	  */
+	public String getIsDisplayedGrid();
+
+    /** Column name IsElaborationEnable */
+    public static final String COLUMNNAME_IsElaborationEnable = "IsElaborationEnable";
+
+	/** Set Manage Elaboration Fields.
+	  * If selected fields used for elaboration are overwritten
+	  */
+	public void setIsElaborationEnable (boolean IsElaborationEnable);
+
+	/** Get Manage Elaboration Fields.
+	  * If selected fields used for elaboration are overwritten
+	  */
+	public boolean isElaborationEnable();
+
+    /** Column name IsHtml */
+    public static final String COLUMNNAME_IsHtml = "IsHtml";
+
+	/** Set HTML.
+	  * Text has HTML tags
+	  */
+	public void setIsHtml (String IsHtml);
+
+	/** Get HTML.
+	  * Text has HTML tags
+	  */
+	public String getIsHtml();
 
     /** Column name IsMandatory */
     public static final String COLUMNNAME_IsMandatory = "IsMandatory";
@@ -398,6 +474,19 @@ public interface I_AD_UserDef_Field
 	  */
 	public String getIsSameLine();
 
+    /** Column name IsSelectionColumn */
+    public static final String COLUMNNAME_IsSelectionColumn = "IsSelectionColumn";
+
+	/** Set Selection Column.
+	  * Is this column used for finding rows in windows
+	  */
+	public void setIsSelectionColumn (String IsSelectionColumn);
+
+	/** Get Selection Column.
+	  * Is this column used for finding rows in windows
+	  */
+	public String getIsSelectionColumn();
+
     /** Column name IsToolbarButton */
     public static final String COLUMNNAME_IsToolbarButton = "IsToolbarButton";
 
@@ -411,9 +500,37 @@ public interface I_AD_UserDef_Field
 	  */
 	public String getIsToolbarButton();
 
+    /** Column name IsTranslationEnable */
+    public static final String COLUMNNAME_IsTranslationEnable = "IsTranslationEnable";
+
+	/** Set Manage Descriptive Fields.
+	  * If selected fiels name, description and help can be overwritten
+	  */
+	public void setIsTranslationEnable (boolean IsTranslationEnable);
+
+	/** Get Manage Descriptive Fields.
+	  * If selected fiels name, description and help can be overwritten
+	  */
+	public boolean isTranslationEnable();
+
     /** Column name IsUpdateable */
     public static final String COLUMNNAME_IsUpdateable = "IsUpdateable";
 
+    /** Column name AD_Val_Rule_Lookup_ID */
+    public static final String COLUMNNAME_AD_Val_Rule_Lookup_ID = "AD_Val_Rule_Lookup_ID";
+
+	/** Set Dynamic Validation (Lookup).
+	  * Override Dynamic Validation Rule for Lookup Window
+	  */
+	public void setAD_Val_Rule_Lookup_ID (int AD_Val_Rule_Lookup_ID);
+
+	/** Get Dynamic Validation (Lookup).
+	  * Override Dynamic Validation Rule for Lookup Window
+	  */
+	public int getAD_Val_Rule_Lookup_ID();
+
+	public org.compiere.model.I_AD_Val_Rule getAD_Val_Rule_Lookup() throws RuntimeException;
+	
 	/** Set Updatable.
 	  * Determines, if the field can be updated
 	  */
@@ -423,6 +540,19 @@ public interface I_AD_UserDef_Field
 	  * Determines, if the field can be updated
 	  */
 	public String getIsUpdateable();
+
+    /** Column name IsViewEnable */
+    public static final String COLUMNNAME_IsViewEnable = "IsViewEnable";
+
+	/** Set Manage Visualization Fields.
+	  * If selected fields used for visualization e window design are overwritten
+	  */
+	public void setIsViewEnable (boolean IsViewEnable);
+
+	/** Get Manage Visualization Fields.
+	  * If selected fields used for visualization e window design are overwritten
+	  */
+	public boolean isViewEnable();
 
     /** Column name MandatoryLogic */
     public static final String COLUMNNAME_MandatoryLogic = "MandatoryLogic";
@@ -506,6 +636,28 @@ public interface I_AD_UserDef_Field
  lowest number comes first
 	  */
 	public int getSeqNo();
+
+    /** Column name SeqNoGrid */
+    public static final String COLUMNNAME_SeqNoGrid = "SeqNoGrid";
+
+	/** Set Grid Sequence No	  */
+	public void setSeqNoGrid (int SeqNoGrid);
+
+	/** Get Grid Sequence No	  */
+	public int getSeqNoGrid();
+
+    /** Column name SeqNoSelection */
+    public static final String COLUMNNAME_SeqNoSelection = "SeqNoSelection";
+
+	/** Set Selection Column Sequence.
+	  * Selection Column Sequence
+	  */
+	public void setSeqNoSelection (int SeqNoSelection);
+
+	/** Get Selection Column Sequence.
+	  * Selection Column Sequence
+	  */
+	public int getSeqNoSelection();
 
     /** Column name SortNo */
     public static final String COLUMNNAME_SortNo = "SortNo";

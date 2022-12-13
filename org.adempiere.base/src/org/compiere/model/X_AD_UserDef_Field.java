@@ -850,4 +850,296 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 			 return 0;
 		return ii.intValue();
 	}
+	public org.compiere.model.I_AD_Reference getAD_SearchReference() throws RuntimeException
+    {
+		return (org.compiere.model.I_AD_Reference)MTable.get(getCtx(), org.compiere.model.I_AD_Reference.Table_Name)
+			.getPO(getAD_SearchReference_ID(), get_TrxName());	}
+
+	/** Set Riferimento Ricerca.
+		@param AD_SearchReference_ID Riferimento Ricerca	  */
+	public void setAD_SearchReference_ID (int AD_SearchReference_ID)
+	{
+		if (AD_SearchReference_ID < 1) 
+			set_Value (COLUMNNAME_AD_SearchReference_ID, null);
+		else 
+			set_Value (COLUMNNAME_AD_SearchReference_ID, Integer.valueOf(AD_SearchReference_ID));
+	}
+
+	/** Get Riferimento Ricerca.
+		@return Riferimento Ricerca	  */
+	public int getAD_SearchReference_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_AD_SearchReference_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_AD_Val_Rule getAD_SearchVal_Rule() throws RuntimeException
+    {
+		return (org.compiere.model.I_AD_Val_Rule)MTable.get(getCtx(), org.compiere.model.I_AD_Val_Rule.Table_Name)
+			.getPO(getAD_SearchVal_Rule_ID(), get_TrxName());	}
+
+	/** Set Validazione Dinamica Ricerca.
+		@param AD_SearchVal_Rule_ID Validazione Dinamica Ricerca	  */
+	public void setAD_SearchVal_Rule_ID (int AD_SearchVal_Rule_ID)
+	{
+		if (AD_SearchVal_Rule_ID < 1) 
+			set_Value (COLUMNNAME_AD_SearchVal_Rule_ID, null);
+		else 
+			set_Value (COLUMNNAME_AD_SearchVal_Rule_ID, Integer.valueOf(AD_SearchVal_Rule_ID));
+	}
+
+	/** Get Validazione Dinamica Ricerca.
+		@return Validazione Dinamica Ricerca	  */
+	public int getAD_SearchVal_Rule_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_AD_SearchVal_Rule_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+	
+	/** Set Callout.
+	@param Callout 
+		Fully qualified class names and method - separated by semicolons
+	  */
+	public void setCallout (String Callout)
+	{
+								 
+		set_Value (COLUMNNAME_Callout, Callout);
+	   
+																						
+	}
+	
+	/** Get Callout.
+		@return Fully qualified class names and method - separated by semicolons
+	  */
+	public String getCallout () 
+	{
+		return (String)get_Value(COLUMNNAME_Callout);
+	}
+
+	/** IsAllowCopy AD_Reference_ID=319 */
+	public static final int ISALLOWCOPY_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISALLOWCOPY_Yes = "Y";
+	/** No = N */
+	public static final String ISALLOWCOPY_No = "N";
+	/** Set Allow Copy.
+		@param IsAllowCopy 
+		Determine if a column must be copied when pushing the button to copy record
+	  */
+	public void setIsAllowCopy (String IsAllowCopy)
+	{
+
+		set_Value (COLUMNNAME_IsAllowCopy, IsAllowCopy);
+	}
+
+	/** Get Allow Copy.
+		@return Determine if a column must be copied when pushing the button to copy record
+	  */
+	public String getIsAllowCopy () 
+	{
+		return (String)get_Value(COLUMNNAME_IsAllowCopy);
+	}
+	
+	/** IsDefaultFocus AD_Reference_ID=319 */
+	public static final int ISDEFAULTFOCUS_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISDEFAULTFOCUS_Yes = "Y";
+	/** No = N */
+	public static final String ISDEFAULTFOCUS_No = "N";
+	/** Set Default Focus.
+		@param IsDefaultFocus Default Focus	  */
+	public void setIsDefaultFocus (String IsDefaultFocus)
+	{
+
+		set_Value (COLUMNNAME_IsDefaultFocus, IsDefaultFocus);
+	}
+
+	/** Get Default Focus.
+		@return Default Focus	  */
+	public String getIsDefaultFocus () 
+	{
+		return (String)get_Value(COLUMNNAME_IsDefaultFocus);
+	}
+	
+	/** IsDisplayedGrid AD_Reference_ID=319 */
+	public static final int ISDISPLAYEDGRID_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISDISPLAYEDGRID_Yes = "Y";
+	/** No = N */
+	public static final String ISDISPLAYEDGRID_No = "N";
+	/** Set Show in Grid.
+		@param IsDisplayedGrid Show in Grid	  */
+	public void setIsDisplayedGrid (String IsDisplayedGrid)
+	{
+
+		set_Value (COLUMNNAME_IsDisplayedGrid, IsDisplayedGrid);
+	}
+
+	/** Get Show in Grid.
+		@return Show in Grid	  */
+	public String getIsDisplayedGrid () 
+	{
+		return (String)get_Value(COLUMNNAME_IsDisplayedGrid);
+	}
+
+	/** Set Manage Elaboration Fields.
+		@param IsElaborationEnable 
+		If selected fields used for elaboration are overwritten
+	  */
+	public void setIsElaborationEnable (boolean IsElaborationEnable)
+	{
+		set_Value (COLUMNNAME_IsElaborationEnable, Boolean.valueOf(IsElaborationEnable));
+	}
+
+	/** Get Manage Elaboration Fields.
+		@return If selected fields used for elaboration are overwritten
+	  */
+	public boolean isElaborationEnable () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsElaborationEnable);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** IsHtml AD_Reference_ID=319 */
+	public static final int ISHTML_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISHTML_Yes = "Y";
+	/** No = N */
+	public static final String ISHTML_No = "N";
+	/** Set HTML.
+		@param IsHtml 
+		Text has HTML tags
+	  */
+	public void setIsHtml (String IsHtml)
+	{
+
+		set_Value (COLUMNNAME_IsHtml, IsHtml);
+	}
+
+	/** Get HTML.
+		@return Text has HTML tags
+	  */
+	public String getIsHtml () 
+	{
+		return (String)get_Value(COLUMNNAME_IsHtml);
+	}
+	
+	/** IsSelectionColumn AD_Reference_ID=319 */
+	public static final int ISSELECTIONCOLUMN_AD_Reference_ID=319;
+	/** Yes = Y */
+	public static final String ISSELECTIONCOLUMN_Yes = "Y";
+	/** No = N */
+	public static final String ISSELECTIONCOLUMN_No = "N";
+	/** Set Selection Column.
+		@param IsSelectionColumn 
+		Is this column used for finding rows in windows
+	  */
+	public void setIsSelectionColumn (String IsSelectionColumn)
+	{
+
+		set_Value (COLUMNNAME_IsSelectionColumn, IsSelectionColumn);
+	}
+
+	/** Get Selection Column.
+		@return Is this column used for finding rows in windows
+	  */
+	public String getIsSelectionColumn () 
+	{
+		return (String)get_Value(COLUMNNAME_IsSelectionColumn);
+	}
+
+	/** Set Manage Descriptive Fields.
+	@param IsTranslationEnable 
+	If selected fiels name, description and help can be overwritten
+	  */
+	public void setIsTranslationEnable (boolean IsTranslationEnable)
+	{
+		set_Value (COLUMNNAME_IsTranslationEnable, Boolean.valueOf(IsTranslationEnable));
+	}
+	
+	/** Get Manage Descriptive Fields.
+		@return If selected fiels name, description and help can be overwritten
+	  */
+	public boolean isTranslationEnable () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsTranslationEnable);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+	
+	/** Set Manage Visualization Fields.
+	@param IsViewEnable 
+	If selected fields used for visualization e window design are overwritten
+	  */
+	public void setIsViewEnable (boolean IsViewEnable)
+	{
+		set_Value (COLUMNNAME_IsViewEnable, Boolean.valueOf(IsViewEnable));
+	}
+	
+	/** Get Manage Visualization Fields.
+		@return If selected fields used for visualization e window design are overwritten
+	  */
+	public boolean isViewEnable () 
+	{
+		Object oo = get_Value(COLUMNNAME_IsViewEnable);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+	
+	/** Set Grid Sequence No.
+		@param SeqNoGrid Grid Sequence No	  */
+	public void setSeqNoGrid (int SeqNoGrid)
+	{
+		set_Value (COLUMNNAME_SeqNoGrid, Integer.valueOf(SeqNoGrid));
+	}
+	
+	/** Get Grid Sequence No.
+		@return Grid Sequence No	  */
+	public int getSeqNoGrid () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_SeqNoGrid);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+	
+	/** Set Selection Column Sequence.
+		@param SeqNoSelection 
+		Selection Column Sequence
+	  */
+	public void setSeqNoSelection (int SeqNoSelection)
+	{
+		set_Value (COLUMNNAME_SeqNoSelection, Integer.valueOf(SeqNoSelection));
+	}
+	
+	/** Get Selection Column Sequence.
+		@return Selection Column Sequence
+	  */
+	public int getSeqNoSelection () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_SeqNoSelection);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
 }
