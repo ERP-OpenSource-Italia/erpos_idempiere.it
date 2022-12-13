@@ -79,7 +79,7 @@ public class Doc_MatchPO extends Doc
 	@SuppressWarnings("unused")
 	private int         m_C_InvoiceLine_ID = 0;
 
-	private ProductCost m_pc;
+	protected ProductCost m_pc;
 	private int			m_M_AttributeSetInstance_ID = 0;
 	private MMatchPO m_matchPO;
 	private boolean 			m_deferPosting = false;
@@ -397,7 +397,7 @@ public class Doc_MatchPO extends Doc
 				{
 					//  PPV Offset
 					FactLine dr = fact.createLine(null,
-						getAccount(Doc.ACCTTYPE_PPVOffset, as), as.getC_Currency_ID(), Env.ONE);
+						getAccount(Doc.ACCTTYPE_PPVOffset, as, getM_Product_ID()), as.getC_Currency_ID(), Env.ONE);
 					if (!dr.updateReverseLine(MMatchPO.Table_ID, m_matchPO.getM_MatchPO_ID(), 0, Env.ONE)) 
 					{
 						p_Error = "Failed to create reversal entry for ACCTTYPE_PPVOffset";
@@ -454,7 +454,7 @@ public class Doc_MatchPO extends Doc
 	
 				//  PPV Offset
 				FactLine dr = fact.createLine(null,
-					getAccount(Doc.ACCTTYPE_PPVOffset, as),
+						getAccount(Doc.ACCTTYPE_PPVOffset, as, getM_Product_ID()),
 					as.getC_Currency_ID(), isReturnTrx ? difference : difference.negate());
 				MAccount acct_db = null;
 				if (dr != null)
@@ -499,6 +499,12 @@ public class Doc_MatchPO extends Doc
 			return facts;
 		}
 	}   //  createFact
+
+	protected MAccount getAccount(int accttype, MAcctSchema as, int m_Product_ID)
+	{
+		return getAccount(accttype, as);
+	}
+
 
 	/** Verify if the posting involves two or more organizations
 	@return true if there are more than one org involved on the posting

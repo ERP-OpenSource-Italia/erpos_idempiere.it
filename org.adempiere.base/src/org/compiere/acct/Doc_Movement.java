@@ -206,7 +206,7 @@ public class Doc_Movement extends Doc
 
 			//  ** InventoryTo     DR      CR
 			cr = fact.createLine(line,
-				line.getAccount(ProductCost.ACCTTYPE_P_Asset, as),
+				line.getAccount(ProductCost.ACCTTYPE_P_Asset, as, line.getM_LocatorTo_ID()),
 				as.getC_Currency_ID(), costs);			//	to (+) DR
 			if (cr == null)
 				continue;

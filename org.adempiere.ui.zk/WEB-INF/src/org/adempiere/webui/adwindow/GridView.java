@@ -889,6 +889,10 @@ public class GridView extends Vlayout implements EventListener<Event>, IdSpace, 
 	private void onSelectedRowChange(int index) {
 		if (updateModelIndex(index)) {
 			updateListIndex();
+			
+			// F3P: refresh parent on navigate
+			//if(gridTab.getParentTab() != null)
+			//	gridTab.refreshParentTabs();
 		}
 	}
 
@@ -1123,6 +1127,20 @@ public class GridView extends Vlayout implements EventListener<Event>, IdSpace, 
                     boolean rw = mField.isEditable(true);   //  r/w - check Context
                     if (rw && !comp.isReadWrite()) // IDEMPIERE-3421 - if it was read-only the list can contain direct values
                     	mField.refreshLookup();
+                	// 	F3P: refresh non-cacheable search editors
+                	
+                	//if(comp instanceof WSearchEditor)
+        		//			{
+        		//				Lookup lk = mField.getLookup();
+        		//				if(lk != null && UIBehaviour.isLookupCacheable(lk, null) == false)
+        		//				{
+          		//				WSearchEditor se = (WSearchEditor)comp;	              						
+          		//				se.setValue(se.getValue()); // Equivalent to actionRefreh()
+        		//				}
+        		//			}
+                	//
+                	// F3P end
+                	
                     comp.setReadWrite(rw);
                     comp.setMandatory(mField.isMandatory(true));    //  check context
                 	comp.dynamicDisplay(ctx);

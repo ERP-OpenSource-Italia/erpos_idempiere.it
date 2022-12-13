@@ -55,6 +55,9 @@ public class ADTreePanel extends Panel implements EventListener<Event>
 	private int m_windowno = -1;
 	private int m_tabno = -1;
 	private int AD_Tree_ID = -1;
+	private ToolBarButton refreshTree;
+	public static final String ON_REFRESH_MENU_EVENT = "onRefreshMenu";
+	private int treeBackUp = -1;
     	
     public ADTreePanel()
     {
@@ -82,6 +85,7 @@ public class ADTreePanel extends Panel implements EventListener<Event>
     	if (this.AD_Tree_ID != AD_Tree_ID)
     	{
 	    	this.AD_Tree_ID = AD_Tree_ID;
+	    	this.treeBackUp = AD_Tree_ID;
 	    	SimpleTreeModel.initADTree(tree, AD_Tree_ID, windowNo, linkColName, linkID);
 	    	MTree_Base tb = MTree_Base.get(Env.getCtx(), AD_Tree_ID, null);
 	    	if (tb.isLoadAllNodesImmediately())
@@ -125,9 +129,15 @@ public class ADTreePanel extends Panel implements EventListener<Event>
         expandToggle.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "ExpandTree")));
         expandToggle.addEventListener(Events.ON_CHECK, this);
         toolbar.appendChild(expandToggle);
+        refreshTree = new ToolBarButton();
+        refreshTree.setMode("toggle");
+        refreshTree.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "RefreshTree")));
+        refreshTree.addEventListener(Events.ON_CHECK, this);
+        toolbar.appendChild(refreshTree);
         this.appendChild(toolbar);
         
         this.addEventListener(ON_EXPAND_MENU_EVENT, this);
+        this.addEventListener(ON_REFRESH_MENU_EVENT, this);
     }
     
     //F3P
@@ -162,10 +172,19 @@ public class ADTreePanel extends Panel implements EventListener<Event>
         {
         	Clients.showBusy(null);
         	Events.echoEvent(ON_EXPAND_MENU_EVENT, this, null);
+        }else if (eventName.equals(Events.ON_CHECK) && event.getTarget() == refreshTree)
+        {
+        	Clients.showBusy(null);
+        	Events.echoEvent(ON_REFRESH_MENU_EVENT, this, null);
         }
         else if (eventName.equals(ON_EXPAND_MENU_EVENT)) 
         {
         	expandOnCheck();
+        	Clients.clearBusy();
+        }
+        else if (eventName.equals(ON_REFRESH_MENU_EVENT)) 
+        {
+        	refreshOnCheck();
         	Clients.clearBusy();
         }
         //
@@ -217,4 +236,10 @@ public class ADTreePanel extends Panel implements EventListener<Event>
 		this.AD_Tree_ID = -1;
 	}
 
+	public void refreshOnCheck()
+	{
+		int treeID = this.treeBackUp;
+		prepareForRefresh();
+		initTree(treeID, m_windowno);
+	}
 }

@@ -438,6 +438,10 @@ public class DocLine
 		return m_account;
 	}   //  getAccount
 
+	public MAccount getAccount (int AcctType, MAcctSchema as)
+	{
+		 return getAccount (AcctType, as, -1);
+	}
 	/**
 	 *  Line Account from Product (or Charge).
 	 *
@@ -445,7 +449,7 @@ public class DocLine
 	 *  @param as Accounting schema
 	 *  @return Requested Product Account
 	 */
-	public MAccount getAccount (int AcctType, MAcctSchema as)
+	public MAccount getAccount (int AcctType, MAcctSchema as, int M_Locator_ID)
 	{
 		//	Charge Account
 		if (getM_Product_ID() == 0 && getC_Charge_ID() != 0)
@@ -458,6 +462,15 @@ public class DocLine
 				return acct;
 		}
 		//	Product Account
+		if (AcctType == ProductCost.ACCTTYPE_P_Asset && (M_Locator_ID > 0 || getM_Locator_ID() > 0))
+		{
+			if (M_Locator_ID <= 0)
+				M_Locator_ID = getM_Locator_ID();
+			int no = DB.getSQLValue(p_po.get_TrxName(), "SELECT 1 FROM M_Locator l JOIN M_Warehouse w on l.M_Warehouse_ID = w.M_Warehouse_ID WHERE l.M_Locator_ID=? AND w.LIT_IsFiscalWarehouse = 'N' ", M_Locator_ID);
+			if (no > 0)
+				AcctType = ProductCost.ACCTTYPE_P_AssetNF;
+		}
+		
 		return getProductCost().getAccount (AcctType, as);
 	}   //  getAccount
 
