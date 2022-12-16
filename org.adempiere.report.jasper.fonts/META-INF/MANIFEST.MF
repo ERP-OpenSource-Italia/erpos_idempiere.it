@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: org.adempiere.report.jasper.fonts
 Bundle-SymbolicName: org.adempiere.report.jasper.fonts;singleton:=true
-Bundle-Version: 6.2.0.qualifier
+Bundle-Version: 8.2.0.qualifier
 Comment: Bundle-RequiredExecutionEnvironment: JavaSE-1.8, JavaSE-1.7
 Bundle-ClassPath: .
 Export-Package: org.adempiere.report.jasper.fonts

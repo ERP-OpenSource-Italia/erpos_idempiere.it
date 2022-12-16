@@ -100,7 +100,8 @@ Require-Bundle: org.adempiere.base;bundle-version="0.0.0",
  org.glassfish.hk2.osgi-resource-locator;bundle-version="1.0.3"
 Bundle-ClassPath: .,
  lib/idempiere-xmlbeans.jar
-Export-Package: org.compiere.model,
+Export-Package: com.ls.idempiere,
+ org.compiere.model,
  org.idempiere.adInterface.x10,
  org.idempiere.adInterface.x10.impl,
  org.idempiere.adinterface,
